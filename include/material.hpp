@@ -1,6 +1,7 @@
 #ifndef SCARABEE_MATERIAL_H
 #define SCARABEE_MATERIAL_H
 
+#include <cstdint>
 #include <map>
 #include <vector>
 
