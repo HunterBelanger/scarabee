@@ -19,6 +19,18 @@ set(YAML_CPP_INSTALL OFF CACHE BOOL "Enable generation of install target")
 FetchContent_MakeAvailable(yaml-cpp)
 
 #===============================================================================
+# Get PapillonNDL develop
+message(STATUS "Downloading PapillonNDL feature/sab branch")
+FetchContent_Declare(PapillonNDL
+  GIT_REPOSITORY https://github.com/HunterBelanger/papillon-ndl.git
+  GIT_TAG        develop
+)
+set(PNDL_SHARED OFF CACHE BOOL "Build PapillonNDL as a shared library")
+set(PNDL_INSTALL OFF CACHE BOOL "Install the PapillonNDL library and header files")
+set(PNDL_PYTHON OFF CACHE BOOL "Enable Python interface to PapillonNDL")
+FetchContent_MakeAvailable(PapillonNDL)
+
+#===============================================================================
 # Get Eigen version 3.4.0
 message(STATUS "Downloading Eigen")
 FetchContent_Declare(eigen
@@ -54,21 +66,19 @@ FetchContent_MakeAvailable(NDArray)
 
 #===============================================================================
 # Get ImApp
-if(ABEILLE_GUI_PLOT)
-  message(STATUS "Downloading ImApp")
-  FetchContent_Declare(ImApp
-    GIT_REPOSITORY https://github.com/HunterBelanger/ImApp.git
-    GIT_TAG        master
-  )
-  FetchContent_MakeAvailable(ImApp)
-endif()
+message(STATUS "Downloading ImApp")
+FetchContent_Declare(ImApp
+  GIT_REPOSITORY https://github.com/HunterBelanger/ImApp.git
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(ImApp)
 
 #===============================================================================
-add_executable(scarabee src/main.cpp src/material.cpp src/static_solver_1d.cpp)
+add_executable(scarabee src/main.cpp src/material.cpp src/static_solver_1d.cpp src/geometry_1d.cpp src/gauss_kronrod.cpp)
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
-target_link_libraries(scarabee PUBLIC docopt_s yaml-cpp NDArray::NDArray Eigen3::Eigen)
+target_link_libraries(scarabee PUBLIC docopt_s yaml-cpp NDArray::NDArray Eigen3::Eigen PapillonNDL::PapillonNDL ImApp::ImApp)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # Comile options for Windows
   target_compile_options(scarabee PRIVATE /W3)

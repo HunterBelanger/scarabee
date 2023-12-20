@@ -1,5 +1,8 @@
 #include <solver.hpp>
 
+#include <cmath>
+#include <iostream>
+
 StaticSolver1D::StaticSolver1D(Geom1D&& geom): geometry_(geom), indxr_(geometry_.size(), geometry_.ngroups()), L_(), F_() {
   this->load_operators();
 }
@@ -50,24 +53,28 @@ void StaticSolver1D::load_operators() {
         alph_ip1 = tile_ip1->material->D(gin) / geometry_.dx(i+1);
 
         Lk_.coeffRef(indxr_(i,gin), indxr_(i+1,gin)) += (-2.f*alph_i*alph_ip1/(alph_i+alph_ip1)) / dx;
-        Lk_.coeffRef(indxr_(i,gin), indxr_(i,gin)) += (2.f*alph_i + (2.f*alph_im1*alph_i/(alph_im1+alph_i)) - (2.f*alph_i*alph_i/(alph_i+alph_ip1))) / dx;
-        Lk_.coeffRef(indxr_(i,gin), indxr_(i-1,gin)) += (-2.f*alph_im1 + 2.f*alph_im1*alph_im1/(alph_im1+alph_i)) / dx;
+        Lk_.coeffRef(indxr_(i,gin), indxr_(i,gin)) += 2.f*(alph_i + (alph_im1*alph_i/(alph_im1+alph_i)) - (alph_i*alph_i/(alph_i+alph_ip1))) / dx;
+        Lk_.coeffRef(indxr_(i,gin), indxr_(i-1,gin)) += 2.f*(-alph_im1 + alph_im1*alph_im1/(alph_im1+alph_i)) / dx;
       } else if (tile_im1 && tile_im1->type == MatTile::Type::Reflection) {
         alph_ip1 = tile_ip1->material->D(gin) / geometry_.dx(i+1);
         
         Lk_.coeffRef(indxr_(i,gin), indxr_(i+1,gin)) += (-2.f*alph_i*alph_ip1/(alph_i+alph_ip1)) / dx;
-        Lk_.coeffRef(indxr_(i,gin), indxr_(i,gin)) += (2.f*alph_i - (2.f*alph_i*alph_i/(alph_i+alph_ip1))) / dx;
+        Lk_.coeffRef(indxr_(i,gin), indxr_(i,gin)) += 2.f*(alph_i - (alph_i*alph_i/(alph_i+alph_ip1))) / dx;
       } else if (tile_im1 && tile_im1->type == MatTile::Type::Vacuum) {
         alph_ip1 = tile_ip1->material->D(gin) / geometry_.dx(i+1);
 
+        Lk_.coeffRef(indxr_(i,gin), indxr_(i+1,gin)) += (-2.f*alph_i*alph_ip1/(alph_i+alph_ip1)) / dx;
+        Lk_.coeffRef(indxr_(i,gin), indxr_(i,gin)) += (2.f*alph_i - (2.f*alph_i*alph_i/(alph_i+alph_ip1)) + 1.f/(2.f + 1.f/(2.f*alph_ip1))) / dx;
       } else if (tile_ip1 && tile_ip1->type == MatTile::Type::Reflection) {
         alph_im1 = tile_im1->material->D(gin) / geometry_.dx(i-1);
         
         Lk_.coeffRef(indxr_(i,gin), indxr_(i,gin)) += (2.f*alph_im1*alph_i/(alph_im1+alph_i)) / dx;
-        Lk_.coeffRef(indxr_(i,gin), indxr_(i-1,gin)) += (-2.f*alph_im1 + 2.f*alph_im1*alph_im1/(alph_im1+alph_i)) / dx;
+        Lk_.coeffRef(indxr_(i,gin), indxr_(i-1,gin)) += 2.f*(-alph_im1 + alph_im1*alph_im1/(alph_im1+alph_i)) / dx;
       } else if (tile_ip1 && tile_ip1->type == MatTile::Type::Vacuum) {
         alph_im1 = tile_im1->material->D(gin) / geometry_.dx(i-1);
-
+        
+        Lk_.coeffRef(indxr_(i,gin), indxr_(i,gin)) += (1.f/(2.f + 1.f/(2.f*alph_i)) + 2.f*alph_im1*alph_i/(alph_im1+alph_i)) / dx;
+        Lk_.coeffRef(indxr_(i,gin), indxr_(i-1,gin)) += 2.f*(-alph_im1 + alph_im1*alph_im1/(alph_im1+alph_i)) / dx;
       }
       
       //------------------------------------------------------------------------
@@ -98,8 +105,48 @@ void StaticSolver1D::load_operators() {
     }
   }
 
+  // With all matrices loaded, we can calculate L_
+  L_ = -Lk_ + R_ - S_;
+
+  // Compress L and F
+  L_.makeCompressed();
+  F_.makeCompressed();
+
+  std::cout << L_ << "\n\n";
+  std::cout << F_ << "\n\n";
+
+  // Now we can initialize the solver
+  L_solver_.analyzePattern(L_);
+  L_solver_.factorize(L_);
 }
 
 void StaticSolver1D::solve() {
+  // Start with initial guess for keff and the flux
+  float keff = 1.;
+  Eigen::VectorX<float> flux;
+  const std::size_t elems = geometry_.size()*geometry_.ngroups();
+  flux.resize(elems);
+  flux.fill(std::sqrt(1.f / static_cast<float>(elems)));
 
+  float delta_keff = 1000.0;
+
+  std::size_t iteration = 0;
+  while (std::abs(delta_keff) > 1.E-6) {
+    iteration++;
+
+    // Apply F to flux and mult by 1 / keff
+    Eigen::VectorX<float> F_flux_keff = (1.f / keff) * F_ * flux;
+
+    // Now we solve L_ * flux = (1/keff) * F_ * flux
+    Eigen::VectorX<float> new_flux = L_solver_.solve(F_flux_keff);
+
+    // Get the new keff and new flux
+    float old_keff = keff;
+    keff = new_flux.dot(flux);
+    delta_keff = old_keff - keff;
+    flux = new_flux / keff;
+
+    // Write into
+    std::cout << "  Iteration: " << iteration << ", keff = " << keff << "\n";
+  }
 }

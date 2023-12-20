@@ -35,6 +35,7 @@ class StaticSolver1D : public Solver {
     Indexer1D indxr_; // Indexer for a 1D problem
     Eigen::SparseMatrix<float> L_; // Loses operator
     Eigen::SparseMatrix<float> F_; // Fission operator
+    Eigen::SparseLU<Eigen::SparseMatrix<float>, Eigen::COLAMDOrdering<int>> L_solver_;
 
     void load_operators();
 };

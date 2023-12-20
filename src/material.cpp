@@ -3,6 +3,8 @@
 #include <exception>
 #include <vector>
 
+std::map<std::uint32_t, Material> materials;
+
 Material::Material(const YAML::Node& node) {
   // Get material id
   if (node["id"] && node["id"].IsScalar()) {
@@ -28,7 +30,7 @@ Material::Material(const YAML::Node& node) {
     mssg << "Invalid diffusion coefficient entry in material " << id_ << ".";
     throw std::runtime_error(mssg.str());
   }
-  D_ = node["diffuison"].as<std::vector<float>>();
+  D_ = node["diffusion"].as<std::vector<float>>();
 
   //===========================================================================
   // Get Absorption XS
@@ -101,8 +103,8 @@ Material::Material(const YAML::Node& node) {
 
   //===========================================================================
   // Get Nu if we have fission
-  std::vector<float> nu_prmpt(ngroups_, 0.);
-  std::vector<float> nu_dlyd(ngroups_, 0.);
+  nu_prompt_.resize(ngroups_, 0.);
+  nu_delayed_.resize(ngroups_, 0);
   if (fissile) {
     if (node["nu"]) {
       // Treat nu as nu_prmpt
@@ -111,7 +113,7 @@ Material::Material(const YAML::Node& node) {
         mssg << "Invalid nu entry in material " << id_ << ".";
         throw std::runtime_error(mssg.str());
       }
-      nu_prmpt = node["nu"].as<std::vector<float>>();
+      nu_prompt_ = node["nu"].as<std::vector<float>>();
     } else if (node["nu_prompt"] && node["nu_delayed"]) {
       // Prompt
       if (!node["nu_prompt"].IsSequence() ||
@@ -120,7 +122,7 @@ Material::Material(const YAML::Node& node) {
         mssg << "Invalid nu_prompt entry in material " << id_ << ".";
         throw std::runtime_error(mssg.str());
       }
-      nu_prmpt = node["nu_prompt"].as<std::vector<float>>();
+      nu_prompt_ = node["nu_prompt"].as<std::vector<float>>();
 
       // Delayed
       if (!node["nu_delayed"].IsSequence() ||
@@ -129,7 +131,7 @@ Material::Material(const YAML::Node& node) {
         mssg << "Invalid nu_delayed entry in material " << id_ << ".";
         throw std::runtime_error(mssg.str());
       }
-      nu_dlyd = node["nu_delayed"].as<std::vector<float>>();
+      nu_delayed_ = node["nu_delayed"].as<std::vector<float>>();
     } else {
       if (node["nu_prompt"]) {
         // No nu_delayed data is given. This is bad
@@ -215,40 +217,38 @@ Material::Material(const YAML::Node& node) {
 
   //===========================================================================
   // Get the delayed group info
-  std::vector<float> P_delayed_grp;
-  std::vector<float> delayed_constants;
-  if (node["delayed_groups"] && node["delayed_groups"].IsMap()) {
+  if (node["delayed-groups"] && node["delayed-groups"].IsMap()) {
     // Get the probability of each group
-    if (!node["delayed_groups"]["probabilities"] ||
-        !node["delayed_groups"]["probabilities"].IsSequence()) {
+    if (!node["delayed-groups"]["probabilities"] ||
+        !node["delayed-groups"]["probabilities"].IsSequence()) {
       std::stringstream mssg;
-      mssg << "No probabilities entry in delayed_groups for material " << id_
+      mssg << "No probabilities entry in delayed-groups for material " << id_
            << ".";
       throw std::runtime_error(mssg.str());
     }
-    P_delayed_grp =
-        node["delayed_groups"]["probabilities"].as<std::vector<float>>();
+    P_delayed_group_ =
+        node["delayed-groups"]["probabilities"].as<std::vector<float>>();
 
     // Get the decay constant of each group
-    if (!node["delayed_groups"]["constants"] ||
-        !node["delayed_groups"]["constants"].IsSequence()) {
+    if (!node["delayed-groups"]["constants"] ||
+        !node["delayed-groups"]["constants"].IsSequence()) {
       std::stringstream mssg;
-      mssg << "No constants entry in delayed_groups for material " << id_ << ".";
+      mssg << "No constants entry in delayed-groups for material " << id_ << ".";
       throw std::runtime_error(mssg.str());
     }
-    delayed_constants =
-        node["delayed_groups"]["constants"].as<std::vector<float>>();
+    decay_constants_ =
+        node["delayed-groups"]["constants"].as<std::vector<float>>();
 
     // Make sure both have the same size
-    if (P_delayed_grp.size() != delayed_constants.size()) {
+    if (P_delayed_group_.size() != decay_constants_.size()) {
       std::stringstream mssg;
-      mssg << "In delayed_groups entry for material " << id_ << ", ";
+      mssg << "In delayed-groups entry for material " << id_ << ", ";
       mssg << "probabilities and constants entries have different sizes.";
       throw std::runtime_error(mssg.str());
     }
-  } else if (node["delayed_groups"]) {
+  } else if (node["delayed-groups"]) {
     std::stringstream mssg;
-    mssg << "Invalid delayed_groups entry in material " << id_ << ".";
+    mssg << "Invalid delayed-groups entry in material " << id_ << ".";
     throw std::runtime_error(mssg.str());
   }
 

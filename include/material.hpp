@@ -67,5 +67,6 @@ class Material {
     std::vector<float> velocity_;
 };
 
+extern std::map<std::uint32_t, Material> materials;
 
 #endif
