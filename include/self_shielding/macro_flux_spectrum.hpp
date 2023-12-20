@@ -5,6 +5,8 @@
 #include <self_shielding/watt.hpp>
 #include <self_shielding/one_over_e.hpp>
 
+#include <utils/scarabee_exception.hpp>
+
 #include <exception>
 #include <variant>
 
@@ -29,15 +31,15 @@ class MacroFluxSpectrum {
              thermal_point_{thermal_point},
              fission_point_{fission_point} {
       if (thermal_point_ < 0.) {
-        throw std::runtime_error("Thermal - epithermal transition energy must be > 0.");
+        throw ScarabeeException("Thermal - epithermal transition energy must be > 0.");
       }
 
       if (fission_point_ < 0.) {
-        throw std::runtime_error("Epithermal - fission transition energy must be > 0.");
+        throw ScarabeeException("Epithermal - fission transition energy must be > 0.");
       }
 
       if (fission_point_ <= thermal_point_) {
-        throw std::runtime_error("Epithermal-fission transition energy must be > thermal-epithermal transition energy.");
+        throw ScarabeeException("Epithermal-fission transition energy must be > thermal-epithermal transition energy.");
       }
 
       set_constants();
