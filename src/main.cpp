@@ -211,7 +211,7 @@ struct ScatteringFeedFunc {
 class PlotLayer : public ImApp::Layer {
   public:
     PlotLayer() {
-      pndl::ACE ace("/home/hunter/projects/scarabée/U238.293.6.ace");
+      pndl::ACE ace("U238.293.6.ace");
       pndl::STNeutron nuc(ace);
 
       energy = nuc.total_xs().energy();
