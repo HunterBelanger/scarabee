@@ -62,7 +62,6 @@ int main(int argc, char** argv) {
 
 #include <self_shielding/macro_flux_spectrum.hpp>
 #include <self_shielding/narrow_resonance.hpp>
-#include <tools/gauss_kronrod.hpp>
 
 #include <ImApp/imapp.hpp>
 
@@ -112,7 +111,7 @@ const std::vector<double> xmas_172 {
 std::pair<std::vector<double>, std::vector<double>> group_xs(const std::vector<double>& group_bounds,
                                                              const std::function<double(double)>& flux,
                                                              const std::vector<double>& energy,
-                                                             const std::vector<double>& tot_xs) {
+                                                             const std::vector<double>& xs) {
   std::vector<double> group_bounds_;
   std::vector<double> group_xs;
   
@@ -120,7 +119,7 @@ std::pair<std::vector<double>, std::vector<double>> group_xs(const std::vector<d
   std::vector<double> flux_xs_vals(energy.size());
   for (std::size_t i = 0; i < energy.size(); i++) {
     flux_vals[i] = flux(energy[i]);
-    flux_xs_vals[i] = flux(energy[i]) * tot_xs[i];
+    flux_xs_vals[i] = flux(energy[i]) * xs[i];
   }
 
   // Create functions which will be responsible for the integrations
@@ -143,70 +142,6 @@ std::pair<std::vector<double>, std::vector<double>> group_xs(const std::vector<d
 
   return {group_bounds_, group_xs};
 }
-
-struct CosineAngleCM {
-  double operator()(const double& E, const double& Eout) const {
-    const double R = A_ * std::sqrt(1. + (((A_+1.)*Q_)/(A_*E)));
-
-    const double num = (Eout * (1. + A_) * (1. + A_)) - (E * (1. + (R * R)));
-    const double denom = 2. * R * E;
-
-    return num / denom;
-  }
-
-  double A_, Q_;
-};
-
-double R(const double& E, const double& A, const double& Q) {
-  return A * std::sqrt(1. + (((A+1.)*Q)/(A*E)));
-}
-
-double lab_cosine(const double& R, const double& omega) {
-  return (1. + R*omega) / std::sqrt(1. + R*R + 2.*R*omega);
-}
-
-double cm_cosine(const double& E, const double& Eout, const double& A, const double& R) {
-  const double num = (Eout * (1. + A) * (1. + A)) - (E * (1. + (R * R)));
-  const double denom = 2. * R * E;
-  return num / denom;
-}
-
-struct ScatteringFeedFunc {
-
-  double operator()(const double& E) const {
-    const double R_ = R(E, A, Q);
-
-    // Get bounds of integration
-    double omega_low = cm_cosine(E, Eout_low, A, R_);
-    double omega_hi = cm_cosine(E, Eout_hi, A, R_);
-
-    // If scattering angles are outside of [-1,1], we need to truncate the
-    // domain of integration.
-    if (omega_low < -1. && omega_hi < -1.) { return 0.; }
-    else if (omega_low > 1. && omega_hi > 1.) { return 0.; }
-    else if (omega_low < -1.) { omega_low = -1.; }
-    if (omega_hi > 1.) { omega_hi = 1.; }
-
-    // Create integrand function
-    auto func = [this, omega_low, omega_hi, R_, E](const double& omega) {
-      const double mu = lab_cosine(R_, omega);
-      return this->angle_dist_.pdf(E, omega) * std::legendre(this->l, mu);
-    };
-
-    // Integrate function
-    GaussKronrodQuadrature<21> gk;
-    auto I = gk.integrate(func, omega_low, omega_hi, 0.001, 100);
-
-    // TODO check error on integral
-
-    return I.first;
-  }
-
-  pndl::AngleDistribution angle_dist_; // Scattering distribution in CM frame for reaction
-  double A, Q;
-  double Eout_low, Eout_hi; // Outgoing energy group bounds
-  unsigned int l; // Legendre order
-};
 
 class PlotLayer : public ImApp::Layer {
   public:

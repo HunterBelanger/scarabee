@@ -1,4 +1,4 @@
-#include <tools/gauss_kronrod.hpp>
+#include <utils/gauss_kronrod.hpp>
 
 //==============================================================================
 // Implementation for Gauss-Legendre 7 Kronrod 15
