@@ -15,8 +15,9 @@ class ScarabeeException : public std::exception {
    * @param mssg Error message.
    * @param file Location where the error occurred;
    */
-  ScarabeeException(const std::string& mssg,
-                std::source_location location = std::source_location::current())
+  ScarabeeException(
+      const std::string& mssg,
+      std::source_location location = std::source_location::current())
       : message("\n") {
     add_to_error_message(mssg, location);
   }
