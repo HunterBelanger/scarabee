@@ -1,0 +1,7 @@
+#ifndef SCARABEE_CONSTANTS_H
+#define SCARABEE_CONSTANTS_H
+
+constexpr double PI{3.14159265358979323846264338327950288};
+constexpr double PI_2{0.5 * PI};
+
+#endif
