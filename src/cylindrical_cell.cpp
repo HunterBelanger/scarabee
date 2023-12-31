@@ -75,7 +75,7 @@ void CylindricalCell::solve() {
 
 void CylindricalCell::calculate_collision_probabilities() {
   // First, ensure we have a matrix of the proper size
-  p_.reshape({ngroups_, vols_.size(), vols_.size()});
+  p_.reallocate({ngroups_, vols_.size(), vols_.size()});
 
   // Create a matrix to temporarily hold the S_ij factors. We do one group at
   // a time, so we don't need a third axis
@@ -179,9 +179,9 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
 
 void CylindricalCell::solve_systems() {
   // First, we allocate the needed memory to hold all of the X and Y terms
-  X_.reshape({ngroups(), nregions(), nregions()});
+  X_.reallocate({ngroups(), nregions(), nregions()});
   X_.fill(0.);
-  Y_.reshape({ngroups(), nregions()});
+  Y_.reallocate({ngroups(), nregions()});
   Y_.fill(0.);
   Gamma_.resize(ngroups(), 0.);
 
