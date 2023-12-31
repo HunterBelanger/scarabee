@@ -5,8 +5,7 @@ project(scarabee CXX)
 include(FetchContent)
 
 #===============================================================================
-# Get YAML-CPP version 0.8.0
-message(STATUS "Downloading yaml-cpp 0.8.0")
+# Get YAML-CPP version 0.8.0 message(STATUS "Downloading yaml-cpp 0.8.0")
 FetchContent_Declare(yaml-cpp
   GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
   GIT_TAG        0.8.0
@@ -74,7 +73,7 @@ FetchContent_Declare(ImApp
 FetchContent_MakeAvailable(ImApp)
 
 #===============================================================================
-add_executable(scarabee src/main.cpp src/material.cpp src/static_solver_1d.cpp src/geometry_1d.cpp src/gauss_kronrod.cpp)
+add_executable(scarabee src/main.cpp src/gauss_kronrod.cpp src/chebyshev.cpp src/bickley.cpp src/mg_cross_sections.cpp src/cylindrical_cell.cpp src/cylindrical_flux_solver.cpp)
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
