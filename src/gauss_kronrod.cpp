@@ -1,6 +1,26 @@
 #include <utils/gauss_kronrod.hpp>
 
 //==============================================================================
+// Implementation for Gauss-Legendre 2 Kronrod 5
+template <>
+const std::vector<double> GaussKronrodQuadrature<5>::glWeights = {
+    1.000000000000000000000000000000000e+00};
+
+template <>
+const std::vector<double> GaussKronrodQuadrature<5>::abscissae = {
+    5.77350269189625764509148780501957456e-01,
+    //-----------------------------------------
+    0.00000000000000000000000000000000000e+00,
+    9.25820099772551461566566776583999523e-01};
+
+template <>
+const std::vector<double> GaussKronrodQuadrature<5>::weights = {
+    4.90909090909090909090909090909090909e-01,
+    //-----------------------------------------
+    6.22222222222222222222222222222222222e-01,
+    1.97979797979797979797979797979797980e-01};
+
+//==============================================================================
 // Implementation for Gauss-Legendre 7 Kronrod 15
 template <>
 const std::vector<double> GaussKronrodQuadrature<15>::glWeights = {
