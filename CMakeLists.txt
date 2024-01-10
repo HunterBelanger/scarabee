@@ -64,20 +64,11 @@ set(NDARRAY_INSTALL OFF CACHE BOOL "Install NDArray")
 FetchContent_MakeAvailable(NDArray)
 
 #===============================================================================
-# Get ImApp
-message(STATUS "Downloading ImApp")
-FetchContent_Declare(ImApp
-  GIT_REPOSITORY https://github.com/HunterBelanger/ImApp.git
-  GIT_TAG        master
-)
-FetchContent_MakeAvailable(ImApp)
-
-#===============================================================================
 add_executable(scarabee src/main.cpp src/gauss_kronrod.cpp src/chebyshev.cpp src/bickley.cpp src/mg_cross_sections.cpp src/cylindrical_cell.cpp src/cylindrical_flux_solver.cpp)
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
-target_link_libraries(scarabee PUBLIC docopt_s yaml-cpp NDArray::NDArray Eigen3::Eigen PapillonNDL::PapillonNDL ImApp::ImApp)
+target_link_libraries(scarabee PUBLIC docopt_s yaml-cpp NDArray::NDArray Eigen3::Eigen PapillonNDL::PapillonNDL)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # Comile options for Windows
   target_compile_options(scarabee PRIVATE /W3)

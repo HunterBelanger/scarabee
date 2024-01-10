@@ -20,6 +20,8 @@ class CylindricalFluxSolver {
   double Q(std::uint32_t g, std::size_t i) const;
 
   double keff() const { return k_; }
+  double keff_tolerance() const { return k_tol_; }
+  void set_keff_tolerance(double ktol);
 
   double albedo() const { return a_; }
   void set_albedo(double a);
@@ -27,14 +29,21 @@ class CylindricalFluxSolver {
   double j_ext(std::uint32_t g) const { return j_ext_[g]; }
   void set_j_ext(std::uint32_t g, double j) { j_ext_[g] = j; }
 
+  void solve();
+  bool solved() const { return solved_; }
+
  private:
   NDArray<double> flux_;
   std::vector<double> j_ext_;
   std::shared_ptr<CylindricalCell> cell_;
   double k_;
   double a_;
+  double k_tol_;
+  bool solved_;
 
   double calc_flux_component(std::uint32_t g, std::size_t i) const;
+
+  double calc_keff(const NDArray<double>& flux) const;
 };
 
 #endif

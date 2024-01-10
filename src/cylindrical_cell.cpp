@@ -75,16 +75,16 @@ void CylindricalCell::solve() {
 
 void CylindricalCell::calculate_collision_probabilities() {
   // First, ensure we have a matrix of the proper size
-  p_.reallocate({ngroups_, vols_.size(), vols_.size()});
+  p_.reallocate({ngroups(), nregions(), nregions()});
 
   // Create a matrix to temporarily hold the S_ij factors. We do one group at
   // a time, so we don't need a third axis
-  NDArray<double> S({ngroups_, ngroups_});
+  NDArray<double> S({nregions(), nregions()});
 
   // Calculate the matrix for each energy group
-  for (std::uint32_t g = 0; g < ngroups_; g++) {
+  for (std::uint32_t g = 0; g < ngroups(); g++) {
     // Load S
-    for (std::size_t j = 0; j < radii_.size(); j++) {
+    for (std::size_t j = 0; j < nregions(); j++) {
       for (std::size_t i = 0; i <= j; i++) {
         S(i, j) = calculate_S_ij(i, j, g);
 
@@ -94,14 +94,16 @@ void CylindricalCell::calculate_collision_probabilities() {
     }
 
     // S has now been filled. We can now load p
-    for (std::size_t j = 0; j < radii_.size(); j++) {
+    for (std::size_t j = 0; j < nregions(); j++) {
       for (std::size_t i = 0; i <= j; i++) {
-        p_(g, i, j) =
-            2. * (S(i - 1, j - 1) - S(i - 1, j) - S(i, j - 1) + S(i, j));
+        p_(g, i, j) = 2. * S(i,j);
+        if (i > 0 && j > 0) p_(g, i, j) += 2. * S(i-1, j-1);
+        if (i > 0) p_(g, i, j) += -2. * S(i-1, j);
+        if (j > 0) p_(g, i, j) += -2. * S(i, j-1);
 
         if (i == j) p_(g, i, j) += vols_[i] * mats_[i]->Etr(g);
 
-        if (i != j) p_(g, j, i) = p_(i, j);
+        if (i != j) p_(g, j, i) = p_(g, i, j);
       }
     }
 
@@ -115,7 +117,7 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
 
   /*
    * We must solve S_{i,j} = int_{0}^{R_i} (Ki3(Tmax(y)) - Ki3(Tmin(y))) dy.
-   * This integral is performed by doing the integral out to each anular ring
+   * This integral is performed by doing the integral out to each annular ring
    * and adding it to a sum.
    * */
 
@@ -143,7 +145,7 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
       // Calculate tau_pls and tau_min by iterating through all segments
       double tau_pls = 0.;
       double tau_min = 0.;
-      for (std::size_t s = 0; s <= x.size(); s++) {
+      for (std::size_t s = 0; s < x.size(); s++) {
         // Get the length of the segment
         double t = (s == 0 ? x[s] : x[s] - x[s - 1]);
 
@@ -216,7 +218,7 @@ void CylindricalCell::solve_systems() {
       Eigen::VectorXd b(nregions());
       const double Etr_k = mats_[static_cast<std::size_t>(k)]->Etr(g);
       for (long i = 0; i < static_cast<long>(nregions()); i++) {
-        b(i) = p_(k, i) / Etr_k;
+        b(i) = p_(g, k, i) / Etr_k;
       }
 
       // Solve for this set of X_ik

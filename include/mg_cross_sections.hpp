@@ -20,7 +20,8 @@ class MGCrossSections {
   }
 
   std::uint32_t ndelayed_families() const {
-    return static_cast<std::uint32_t>(nu_.shape()[0] - 1);
+    if (fissile_) return static_cast<std::uint32_t>(nu_.shape()[0] - 1);
+    return 0;
   }
 
   std::uint32_t max_legendre_order() const {
@@ -125,7 +126,7 @@ class MGCrossSections {
   MGCrossSections& operator+=(const MGCrossSections& R);
   MGCrossSections& operator*=(double N);
 
- private:
+ //private:
   NDArray<double> nu_;       // Fission yields
   NDArray<double> chi_;      // Fission spectrum
   NDArray<double> Es_;       // Scattering matrix
