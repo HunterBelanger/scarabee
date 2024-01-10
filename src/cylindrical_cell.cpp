@@ -70,7 +70,7 @@ CylindricalCell::CylindricalCell(
 
 void CylindricalCell::solve() {
   this->calculate_collision_probabilities();
-  this->solve_systems();
+  //this->solve_systems();
 }
 
 void CylindricalCell::calculate_collision_probabilities() {
@@ -96,10 +96,13 @@ void CylindricalCell::calculate_collision_probabilities() {
     // S has now been filled. We can now load p
     for (std::size_t j = 0; j < nregions(); j++) {
       for (std::size_t i = 0; i <= j; i++) {
-        p_(g, i, j) = 2. * S(i,j);
-        if (i > 0 && j > 0) p_(g, i, j) += 2. * S(i-1, j-1);
-        if (i > 0) p_(g, i, j) += -2. * S(i-1, j);
-        if (j > 0) p_(g, i, j) += -2. * S(i, j-1);
+        if (i == 0 && j == 0) {
+          p_(g, i, j) = 2. * S(i, j);
+        } else if (i == 0) {
+          p_(g, i, j) = 2. * (S(i,j) - S(i, j-1));
+        } else {
+          p_(g, i, j) = 2. * (S(i-1, j-1) - S(i-1, j) - S(i, j-1) + S(i,j));
+        }
 
         if (i == j) p_(g, i, j) += vols_[i] * mats_[i]->Etr(g);
 
@@ -168,7 +171,7 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
     };
 
     // We now integrate from Rmin to Rmax
-    GaussKronrodQuadrature<5> gk;
+    GaussKronrodQuadrature<31> gk;
     auto integral = gk.integrate(integrand, Rmin, Rmax);
 
     // TODO check integral
@@ -256,4 +259,14 @@ void CylindricalCell::solve_systems() {
   }  // For all groups
 
   solved_ = true;
+}
+
+#include <iostream>
+void CylindricalCell::print_p() const {
+  for (std::size_t i = 0; i < nregions(); i++) {
+    for (std::size_t j = 0; j < nregions(); j++) {
+      std::cout << p_(0, i, j) << "  ";
+    }
+    std::cout << "\n";
+  }
 }

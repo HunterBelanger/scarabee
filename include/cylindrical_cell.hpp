@@ -45,6 +45,8 @@ class CylindricalCell {
 
   const MGCrossSections& mat(std::size_t i) const { return *mats_[i]; }
 
+  void print_p() const;
+
  private:
   NDArray<double> p_;
   NDArray<double> X_;

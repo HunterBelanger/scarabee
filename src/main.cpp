@@ -8,6 +8,7 @@
 #include <vector>
 
 int main() {
+  /*
   std::shared_ptr<MGCrossSections> UO2 = std::make_shared<MGCrossSections>();
   UO2->fissile_ = true;
   UO2->Etr_ = {1.77949E-01, 3.29805E-01, 4.80388E-01, 5.54367E-01, 3.11801E-01, 3.95168E-01, 5.64406E-01};
@@ -49,6 +50,31 @@ int main() {
 
   CylindricalFluxSolver cell_flux(cell);
   cell_flux.solve();
+  */
+
+  std::vector<double> radii {0.5, 0.61, 0.8, 4.55};
+
+  auto mat1 = std::make_shared<MGCrossSections>();
+  mat1->Et_ = {2.};
+  mat1->Etr_ = mat1->Et_;
+
+  auto mat2 = std::make_shared<MGCrossSections>();
+  mat2->Et_ = {0.5};
+  mat2->Etr_ = mat2->Et_;
+
+  auto mat3 = std::make_shared<MGCrossSections>();
+  mat3->Et_ = {1.5};
+  mat3->Etr_ = mat3->Et_;
+
+  auto mat4 = std::make_shared<MGCrossSections>();
+  mat4->Et_ = {1.5};
+  mat4->Etr_ = mat4->Et_;
+
+  std::vector<std::shared_ptr<MGCrossSections>> mats {mat1, mat2, mat3, mat4};
+
+  CylindricalCell cell(radii, mats);
+  cell.solve();
+  cell.print_p();
 
   return 0;
 }

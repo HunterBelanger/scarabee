@@ -80,8 +80,8 @@ void CylindricalFluxSolver::solve() {
   // another for the next generation flux.
   NDArray<double> source(flux_.shape());
   NDArray<double> next_flux(flux_.shape());
-  //k_ = calc_keff(flux_);
-  k_ = 1.;
+  k_ = calc_keff(flux_);
+  //k_ = 1.;
   double old_keff = 100.;
   std::size_t Ngenerations = 0;
 
@@ -109,16 +109,16 @@ void CylindricalFluxSolver::solve() {
     }
 
     // Calculate keff
-    double k_num = 0.;
-    double k_denom = 1.;
-    for (std::size_t i = 0; i < flux_.size(); i++) {
-      k_num += next_flux[i] * flux_[i];
-      k_denom += flux_[i] * flux_[i];
-    }
-    old_keff = k_;
-    k_ = std::sqrt(k_num / k_denom);
+    //double k_num = 0.;
+    //double k_denom = 1.;
+    //for (std::size_t i = 0; i < flux_.size(); i++) {
+    //  k_num += next_flux[i] * flux_[i];
+    //  k_denom += flux_[i] * flux_[i];
+    //}
     //old_keff = k_;
-    //k_ = calc_keff(next_flux);
+    //k_ = std::sqrt(k_num / k_denom);
+    old_keff = k_;
+    k_ = calc_keff(next_flux);
 
     // Normalize next flux by keff
     for (std::size_t i = 0; i < next_flux.size(); i++) {
