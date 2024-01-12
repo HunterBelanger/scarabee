@@ -31,16 +31,14 @@ class CylindricalCell {
     const double Yi = Y_(g, i);
     const double Gamma = Gamma_[g];
 
-    return Yi / (1. - a * (1 - Gamma));
+    return Yi / (1. - a * (1. - Gamma));
   }
 
   double X(double a, std::uint32_t g, std::size_t i, std::size_t k) const {
     const double xk = 0.25 * S() * vols_[k] * Y_(g, k);
     const double Xik = X_(g, i, k);
-    const double Yi = Y_(g, i);
-    const double Gamma = Gamma_[g];
 
-    return Xik + (a * xk * (Yi / (1. - a * (1. - Gamma))));
+    return Xik + a * xk * Y(a, g, i);
   }
 
   const MGCrossSections& mat(std::size_t i) const { return *mats_[i]; }

@@ -56,7 +56,7 @@ struct GaussKronrodQuadrature {
     gkIntegral *= 0.5 * (x_hi - x_low);
 
     // Calculate the error
-    const double err = std::abs(glIntegral - gkIntegral) / gkIntegral;
+    const double err = std::abs((glIntegral - gkIntegral) / gkIntegral);
 
     return {gkIntegral, err};
   }
@@ -110,7 +110,7 @@ struct GaussKronrodQuadrature {
     gkIntegral *= 0.5 * (x_hi - x_low);
 
     // Calculate the error
-    double err = std::abs(glIntegral - gkIntegral) / gkIntegral;
+    double err = std::abs((glIntegral - gkIntegral) / gkIntegral);
 
     if (err > max_rel_err && max_splits > 0) {
       // We split into two intervals

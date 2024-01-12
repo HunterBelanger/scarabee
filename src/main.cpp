@@ -1,6 +1,7 @@
 #include <cylindrical_cell.hpp>
 #include <cylindrical_flux_solver.hpp>
 #include <utils/constants.hpp>
+#include <utils/bickley.hpp>
 
 #include <cmath>
 #include <iostream>
@@ -38,20 +39,46 @@ int main() {
                                   0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 2.21570E-03, 6.99913E-01, 5.37320E-01,
                                   0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 1.32440E-01, 2.48070E+00}, {7, 7});
 
+  const double Rfuel = 0.54;
+  const double Rwtr  = 1.26/std::sqrt(PI);
+
   // Vector of all the radii
-  std::vector<double> radii                          {0.1, 0.2, 0.3, 0.4, 0.45, 0.5, 0.54, 0.58, 0.61, 0.65, 1.26/std::sqrt(PI)};
-  std::vector<std::shared_ptr<MGCrossSections>> mats {UO2, UO2, UO2, UO2, UO2,  UO2, UO2,  H2O,  H2O,  H2O,  H2O};
+  std::vector<double> radii;
+  std::vector<std::shared_ptr<MGCrossSections>> mats;
+
+  // Break fuel into 10 equal radii
+  const int Nf = 10;
+  const double dRfuel = Rfuel / static_cast<double>(Nf);
+  double r_outer = 0.;
+  for (int i = 0; i < Nf; i++) {
+    const double dR = dRfuel*(static_cast<double>(i+1));
+    r_outer += dR;
+    radii.push_back(r_outer);
+    mats.push_back(UO2);
+  }
+
+  // Break Water into 10 equal radii
+  const int Nwtr = 5;
+  const double dRwtr = Rwtr / static_cast<double>(Nf);
+  for (int i = 0; i < Nwtr; i++) {
+    const double dR = dRwtr*(static_cast<double>(i+1));
+    r_outer += dR;
+    radii.push_back(r_outer);
+    mats.push_back(H2O);
+  }
 
   std::shared_ptr<CylindricalCell> cell = std::make_shared<CylindricalCell>(radii, mats);
   std::cout << ">>> Solving for collision probabilities...\n";
   cell->solve();
   std::cout << ">>> Collision probabilities determined !\n";
   std::cout << ">>> Solving for the flux...\n";
+  cell->print_p();
 
   CylindricalFluxSolver cell_flux(cell);
   cell_flux.solve();
   */
 
+  /*
   std::vector<double> radii {0.5, 0.61, 0.8, 4.55};
 
   auto mat1 = std::make_shared<MGCrossSections>();
@@ -75,6 +102,7 @@ int main() {
   CylindricalCell cell(radii, mats);
   cell.solve();
   cell.print_p();
+  */
 
   return 0;
 }

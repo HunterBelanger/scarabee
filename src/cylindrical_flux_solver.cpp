@@ -82,6 +82,7 @@ void CylindricalFluxSolver::solve() {
   NDArray<double> next_flux(flux_.shape());
   k_ = calc_keff(flux_);
   //k_ = 1.;
+  std::cout << "Keff = " << k_ << "\n";
   double old_keff = 100.;
   std::size_t Ngenerations = 0;
 
@@ -99,11 +100,12 @@ void CylindricalFluxSolver::solve() {
     for (std::uint32_t g = 0; g < ngroups(); g++) {
       for (std::size_t r = 0; r < nregions(); r++) {
         const double Yr = cell_->Y(a_, g, r);
-        double Xr = 0.;
 
+        double Xr = 0.;
         for (std::size_t k = 0; k < nregions(); k++) {
           Xr += source(g, k) * cell_->X(a_, g, r, k);
         }
+
         next_flux(g, r) = Xr + j_ext_[g] * Yr;
       }
     }

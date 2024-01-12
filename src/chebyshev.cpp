@@ -36,7 +36,7 @@ std::vector<double> chebyshev_fit(const std::function<double(double)>& func,
 }
 
 double chebyshev_eval(double x, double a, double b, std::span<const double> c) {
-  if ((x - a) * (x - b) > 0.) {
+  if (x < a || x > b) {
     throw ScarabeeException("Argument x must be in the interval [a,b].");
   }
 

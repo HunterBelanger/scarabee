@@ -33,6 +33,10 @@ double Ki3(double x) {
       0x1.23fd078dddddep-29,  -0x1.d5366b5333333p-30, 0x1.6c4da9b555555p-30,
       -0x1.0aedcd8333333p-30, 0x1.5e03d44aaaaabp-31,  -0x1.5a86574444444p-32};
 
+  // If we are at x > 10, Ki3(x) is very small, so we just call it zero here.
+  // This should be okay, as Stamm'ler and Abbate set it to 0 for x >= 9.;
+  if (x > b) return 0.;
+
   double val;
   try {
     val = chebyshev_eval(x, a, b, coeffs);

@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <cmath>
 
+
+#include <iostream>
+
 CylindricalCell::CylindricalCell(
     const std::vector<double>& radii,
     const std::vector<std::shared_ptr<MGCrossSections>>& mats)
@@ -71,6 +74,7 @@ CylindricalCell::CylindricalCell(
 void CylindricalCell::solve() {
   this->calculate_collision_probabilities();
   //this->solve_systems();
+  solved_ = true;
 }
 
 void CylindricalCell::calculate_collision_probabilities() {
@@ -84,8 +88,8 @@ void CylindricalCell::calculate_collision_probabilities() {
   // Calculate the matrix for each energy group
   for (std::uint32_t g = 0; g < ngroups(); g++) {
     // Load S
-    for (std::size_t j = 0; j < nregions(); j++) {
-      for (std::size_t i = 0; i <= j; i++) {
+    for (std::size_t i = 0; i < nregions(); i++) {
+      for (std::size_t j = i; j < nregions(); j++) {
         S(i, j) = calculate_S_ij(i, j, g);
 
         // These are symmetric, so we can assign the diagonal term too
@@ -94,17 +98,15 @@ void CylindricalCell::calculate_collision_probabilities() {
     }
 
     // S has now been filled. We can now load p
-    for (std::size_t j = 0; j < nregions(); j++) {
-      for (std::size_t i = 0; i <= j; i++) {
-        if (i == 0 && j == 0) {
-          p_(g, i, j) = 2. * S(i, j);
-        } else if (i == 0) {
-          p_(g, i, j) = 2. * (S(i,j) - S(i, j-1));
-        } else {
-          p_(g, i, j) = 2. * (S(i-1, j-1) - S(i-1, j) - S(i, j-1) + S(i,j));
-        }
-
+    for (std::size_t i = 0; i < nregions(); i++) {
+      for (std::size_t j = i; j < nregions(); j++) {
+        p_(g, i, j) = 0.;
         if (i == j) p_(g, i, j) += vols_[i] * mats_[i]->Etr(g);
+
+        p_(g, i, j) += 2. * S(i,j);
+        if (i > 0 && j > 0) p_(g, i , j) += 2. * S(i-1, j-1);
+        if (i > 0) p_(g, i, j) -= 2. * S(i-1,j);
+        if (j > 0) p_(g, i, j) -= 2. * S(i,j-1);
 
         if (i != j) p_(g, j, i) = p_(g, i, j);
       }
@@ -137,7 +139,7 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
     std::vector<double> x(j + 1 - k, 0.);
 
     // Create a lambda for the integrand
-    auto integrand = [this, &x, k, i, g](double y) {
+    auto integrand = [this, &x, k, i, j, g](double y) {
       const double y2 = y * y;
 
       // Get the x coordinates for the given y
@@ -166,12 +168,13 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
           tau_min += dtau;
         }
       }
+      if (i == j) tau_min = 0.0;
 
       return Ki3(tau_pls) - Ki3(tau_min);
     };
 
     // We now integrate from Rmin to Rmax
-    GaussKronrodQuadrature<31> gk;
+    GaussKronrodQuadrature<61> gk;
     auto integral = gk.integrate(integrand, Rmin, Rmax);
 
     // TODO check integral
@@ -257,16 +260,15 @@ void CylindricalCell::solve_systems() {
       Gamma_[g] += mats_[i]->Er_tr(g) * vols_[i] * Y_(g, i);
     }
   }  // For all groups
-
-  solved_ = true;
 }
 
-#include <iostream>
 void CylindricalCell::print_p() const {
   for (std::size_t i = 0; i < nregions(); i++) {
+    double pi_sum = 0.;
     for (std::size_t j = 0; j < nregions(); j++) {
-      std::cout << p_(0, i, j) << "  ";
+      std::cout << p_(0, i, j)/(vols_[i] * mats_[i]->Etr(0)) << "  ";
+      pi_sum += p_(0, i, j)/(vols_[i] * mats_[i]->Etr(0));
     }
-    std::cout << "\n";
+    std::cout << ": pi = " << pi_sum << "\n";
   }
 }
