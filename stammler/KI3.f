@@ -50,13 +50,13 @@ C
 C
 C INTERVAL: 0.0 - 1.0
       X = ABS(XX)
-      IF(X.GT.1.0) GO TO 10
+      IF(X.GE.1.0) GO TO 10
       I = IFIX(20.0*X)+1
       I = INDEXA(I)
-      KI3 = X*(X*a(I)+A(I-1))+A(I-2)
+      KI3 = X*(X*A(I)+A(I-1))+A(I-2)
       RETURN
 C INTERVAL: 1.0 - 3.4
-   10 I = IFIX(2.5*(x-1.0))+1
+   10 I = IFIX(2.5*(X-1.0))+1
       IF(X.GE.3.4) GO TO 20
       I = INDEXB(I)
       KI3 = X*(X*(X*B(I)+B(I-1))+B(I-2))+B(I-3)
