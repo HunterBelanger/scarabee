@@ -1,15 +1,14 @@
 #include <cylindrical_cell.hpp>
 #include <cylindrical_flux_solver.hpp>
 #include <utils/constants.hpp>
-#include <utils/bickley.hpp>
 
 #include <cmath>
 #include <iostream>
+#include <iomanip>
 #include <memory>
 #include <vector>
 
-int main() {
-  /*
+void test1() {
   std::shared_ptr<MGCrossSections> UO2 = std::make_shared<MGCrossSections>();
   UO2->fissile_ = true;
   UO2->Etr_ = {1.77949E-01, 3.29805E-01, 4.80388E-01, 5.54367E-01, 3.11801E-01, 3.95168E-01, 5.64406E-01};
@@ -46,63 +45,133 @@ int main() {
   std::vector<double> radii;
   std::vector<std::shared_ptr<MGCrossSections>> mats;
 
-  // Break fuel into 10 equal radii
-  const int Nf = 10;
+  // Break fuel into 2 equal radii
+  const int Nf = 2;
   const double dRfuel = Rfuel / static_cast<double>(Nf);
   double r_outer = 0.;
   for (int i = 0; i < Nf; i++) {
-    const double dR = dRfuel*(static_cast<double>(i+1));
-    r_outer += dR;
+    r_outer += dRfuel;
     radii.push_back(r_outer);
     mats.push_back(UO2);
   }
 
-  // Break Water into 10 equal radii
-  const int Nwtr = 5;
-  const double dRwtr = Rwtr / static_cast<double>(Nf);
+  // Break Water into 2 equal radii
+  const int Nwtr = 2;
+  const double dRwtr = (Rwtr - Rfuel) / static_cast<double>(Nf);
   for (int i = 0; i < Nwtr; i++) {
-    const double dR = dRwtr*(static_cast<double>(i+1));
-    r_outer += dR;
+    r_outer += dRwtr;
     radii.push_back(r_outer);
     mats.push_back(H2O);
   }
+
+  for (std::size_t i = 0; i < radii.size(); i++) {
+    std::cout << radii[i];
+    if (i != radii.size()-1) std::cout << ", ";
+  }
+  std::cout << "\n";
+  for (std::size_t i = 0; i < radii.size(); i++) {
+    std::cout << mats[i]->Etr(0);
+    if (i != mats.size()-1) std::cout << ", ";
+  }
+  std::cout << "\n";
 
   std::shared_ptr<CylindricalCell> cell = std::make_shared<CylindricalCell>(radii, mats);
   std::cout << ">>> Solving for collision probabilities...\n";
   cell->solve();
   std::cout << ">>> Collision probabilities determined !\n";
   std::cout << ">>> Solving for the flux...\n";
-  cell->print_p();
+  //cell->print();
 
   CylindricalFluxSolver cell_flux(cell);
+  cell_flux.set_keff_tolerance(1.E-6);
+  cell_flux.set_albedo(1.);
   cell_flux.solve();
-  */
 
-  /*
-  std::vector<double> radii {0.5, 0.61, 0.8, 4.55};
+  for (std::uint32_t g = 0; g < cell_flux.ngroups(); g++) {
+    std::cout << " Group " << g << ": ";
+    for (std::size_t i = 0; i < cell_flux.nregions(); i++) {
+      std::cout << cell_flux.flux(g, i);
+      if (i != cell_flux.nregions()-1) std::cout << ", ";
+    }
+    std::cout << "\n";
+  }
+}
 
-  auto mat1 = std::make_shared<MGCrossSections>();
-  mat1->Et_ = {2.};
-  mat1->Etr_ = mat1->Et_;
+void test2() {
+  std::shared_ptr<MGCrossSections> mat1 = std::make_shared<MGCrossSections>();
+  mat1->Etr_ = {1.};
+  mat1->Et_ = mat1->Etr_;
+  mat1->Es_tr_ = NDArray<double>({0.1}, {1,1});
+  mat1->Es_ = mat1->Es_tr_;
+  mat1->Ea_ = {0.9};
+  mat1->fissile_ = false;
 
-  auto mat2 = std::make_shared<MGCrossSections>();
-  mat2->Et_ = {0.5};
-  mat2->Etr_ = mat2->Et_;
+  std::shared_ptr<MGCrossSections> mat2 = std::make_shared<MGCrossSections>();
+  mat2->Etr_ = {0.5};
+  mat2->Et_ = mat2->Etr_;
+  mat2->Es_tr_ = NDArray<double>({0.4}, {1,1});
+  mat2->Es_ = mat2->Es_tr_;
+  mat2->Ea_ = {0.1};
+  mat2->fissile_ = false;
 
-  auto mat3 = std::make_shared<MGCrossSections>();
-  mat3->Et_ = {1.5};
-  mat3->Etr_ = mat3->Et_;
+  std::shared_ptr<MGCrossSections> mat3 = std::make_shared<MGCrossSections>();
+  mat3->Etr_ = {2.};
+  mat3->Et_ = mat3->Etr_;
+  mat3->Es_tr_ = NDArray<double>({1.9}, {1,1});
+  mat3->Es_ = mat3->Es_tr_;
+  mat3->Ea_ = {0.1};
+  mat3->fissile_ = false;
 
-  auto mat4 = std::make_shared<MGCrossSections>();
-  mat4->Et_ = {1.5};
-  mat4->Etr_ = mat4->Et_;
+  std::vector<double> radii {0.5, 0.6, 1.};
+  std::vector<std::shared_ptr<MGCrossSections>> mats {mat1, mat2, mat3};
+  std::shared_ptr<CylindricalCell> cell = std::make_shared<CylindricalCell>(radii, mats);
+  cell->solve();
 
-  std::vector<std::shared_ptr<MGCrossSections>> mats {mat1, mat2, mat3, mat4};
+  NDArray<double> source({0.1, 0., 1.}, {cell->ngroups(), cell->nregions()});
+  NDArray<double> flux({cell->ngroups(), cell->nregions()});
+  double a = 1.;
+  std::vector<double> j_ext(cell->ngroups(), -1.22514);
+  // From the source, we calculate the new flux values
+  for (std::uint32_t g = 0; g < cell->ngroups(); g++) {
+    for (std::size_t r = 0; r < cell->nregions(); r++) {
+      const double Yr = cell->Y(a, g, r);
 
-  CylindricalCell cell(radii, mats);
-  cell.solve();
-  cell.print_p();
-  */
+      double Xr = 0.;
+      for (std::size_t k = 0; k < cell->nregions(); k++) {
+        Xr += source(g, k) * cell->X(a, g, r, k);
+      }
 
-  return 0;
+      flux(g, r) = Xr + j_ext[g] * Yr;
+    }
+  } 
+
+  // Write flux and current
+  for (std::uint32_t g = 0; g < cell->ngroups(); g++) {
+    // Get currents
+    double x = 0.;
+    for (std::size_t i = 0; i < cell->nregions(); i++) {
+      x += source(0, i) * cell->x(0, i);
+    }
+    double Gamma = cell->Gamma(0);
+    double jpos = (x + (1. - Gamma)*j_ext[0]) / (1. - a*(1. - Gamma));
+    double jmin = (a*x + j_ext[0]) / (1. - a*(1. - Gamma));
+    double j  = ((1. - a)*x - Gamma*j_ext[0]) / (1. - a*(1. - Gamma));
+
+    std::cout << " Group " << g << ": ";
+    for (std::size_t i = 0; i < cell->nregions(); i++) {
+      std::cout << flux(g, i);
+      if (i != cell->nregions()-1) std::cout << ", ";
+    }
+    std::cout << "  j+ = " << jpos << ", j- = " << jmin << ", j = " << j;
+    std::cout << "\n";
+  }
+
+}
+
+int main() {
+
+  //test1();  
+  test2();
+
+  return 0.;
 }

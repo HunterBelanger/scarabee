@@ -19,7 +19,7 @@ class CylindricalCell {
   std::size_t nregions() const { return radii_.size(); }
 
   // Surface area of cell
-  double S() const { return PI * radii_.back() * radii_.back(); }
+  double S() const { return 2. * PI * radii_.back(); }
 
   // Volume of region i
   double V(std::size_t i) const { return vols_[i]; }
@@ -34,16 +34,28 @@ class CylindricalCell {
     return Yi / (1. - a * (1. - Gamma));
   }
 
+  double x(std::uint32_t g, std::size_t i) const {
+    return 0.25 * S() * V(i) * Y_(g, i);
+  }
+
   double X(double a, std::uint32_t g, std::size_t i, std::size_t k) const {
-    const double xk = 0.25 * S() * vols_[k] * Y_(g, k);
+    const double xk = x(g, k);
     const double Xik = X_(g, i, k);
 
     return Xik + a * xk * Y(a, g, i);
   }
 
+  double Gamma(std::uint32_t g) const {
+    return Gamma_[g];
+  }
+
+  double p(std::uint32_t g, std::size_t i, std::size_t j) const {
+    return p_(g, i, j);
+  }
+
   const MGCrossSections& mat(std::size_t i) const { return *mats_[i]; }
 
-  void print_p() const;
+  void print() const;
 
  private:
   NDArray<double> p_;

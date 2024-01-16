@@ -41,8 +41,6 @@ class CylindricalFluxSolver {
   double k_tol_;
   bool solved_;
 
-  double calc_flux_component(std::uint32_t g, std::size_t i) const;
-
   double calc_keff(const NDArray<double>& flux) const;
 };
 

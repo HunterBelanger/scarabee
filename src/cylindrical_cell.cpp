@@ -73,7 +73,7 @@ CylindricalCell::CylindricalCell(
 
 void CylindricalCell::solve() {
   this->calculate_collision_probabilities();
-  //this->solve_systems();
+  this->solve_systems();
   solved_ = true;
 }
 
@@ -174,7 +174,7 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
     };
 
     // We now integrate from Rmin to Rmax
-    GaussKronrodQuadrature<61> gk;
+    GaussKronrodQuadrature<15> gk;
     auto integral = gk.integrate(integrand, Rmin, Rmax);
 
     // TODO check integral
@@ -203,20 +203,20 @@ void CylindricalCell::solve_systems() {
       for (long j = 0; j < static_cast<long>(nregions()); j++) {
         const auto& mat = mats_[static_cast<std::size_t>(j)];
         const double Etr = mat->Etr(g);
-        const double Es_tr = mat->Es_tr(g);
+        const double Es_tr = mat->Es_tr(g, g);
         const double c_j = Es_tr / Etr;
 
         M(i, j) = -c_j * p_(g, j, i);
 
         if (j == i) {
-          M(i, j) += mat->Etr(g) * vols_[static_cast<std::size_t>(i)];
+          M(i, j) += Etr * vols_[static_cast<std::size_t>(i)];
         }
       }
     }
 
     // Now that the matrix has been loaded for this group, we need to
     // initialize a solver for it.
-    auto solver = M.householderQr();
+    const auto solver = M.colPivHouseholderQr();
 
     // There are nregions systems for solve for X
     for (long k = 0; k < static_cast<long>(nregions()); k++) {
@@ -256,19 +256,37 @@ void CylindricalCell::solve_systems() {
     }
 
     // Calculate multicollision blackness for this group
+    Gamma_[g] = 0.;
     for (std::size_t i = 0; i < nregions(); i++) {
       Gamma_[g] += mats_[i]->Er_tr(g) * vols_[i] * Y_(g, i);
     }
   }  // For all groups
 }
 
-void CylindricalCell::print_p() const {
+void CylindricalCell::print() const {
   for (std::size_t i = 0; i < nregions(); i++) {
-    double pi_sum = 0.;
     for (std::size_t j = 0; j < nregions(); j++) {
-      std::cout << p_(0, i, j)/(vols_[i] * mats_[i]->Etr(0)) << "  ";
-      pi_sum += p_(0, i, j)/(vols_[i] * mats_[i]->Etr(0));
+      std::cout << p_(0, i, j);
+      if (j != nregions()-1) std::cout << ", ";
     }
-    std::cout << ": pi = " << pi_sum << "\n";
+    std::cout << "\n";
   }
+  std::cout << "\n";
+
+  /*
+  for (std::size_t i = 0; i < nregions(); i++) {
+    for (std::size_t k = 0; k < nregions(); k++) {
+      std::cout << X_(0, i, k);
+      if (k != nregions()-1) std::cout << ", ";
+    }
+    std::cout << "\n";
+  }
+  std::cout << "\n";
+
+  for (std::size_t k = 0; k < nregions(); k++) {
+    std::cout << Y_(0, k);
+    if (k != nregions()-1) std::cout << ", ";
+  }
+  std::cout << "\n";
+  */
 }

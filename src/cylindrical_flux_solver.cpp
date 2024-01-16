@@ -111,14 +111,6 @@ void CylindricalFluxSolver::solve() {
     }
 
     // Calculate keff
-    //double k_num = 0.;
-    //double k_denom = 1.;
-    //for (std::size_t i = 0; i < flux_.size(); i++) {
-    //  k_num += next_flux[i] * flux_[i];
-    //  k_denom += flux_[i] * flux_[i];
-    //}
-    //old_keff = k_;
-    //k_ = std::sqrt(k_num / k_denom);
     old_keff = k_;
     k_ = calc_keff(next_flux);
 

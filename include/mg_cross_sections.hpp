@@ -41,9 +41,9 @@ class MGCrossSections {
     return 0.;
   }
 
-  double Er(std::uint32_t g) const { return Ea(g) + Es(g); }
+  double Er(std::uint32_t g) const { return Ea(g) + Es(g) - Es(g,g); }
 
-  double Er_tr(std::uint32_t g) const { return Ea(g) + Es_tr(g); }
+  double Er_tr(std::uint32_t g) const { return Ea(g) + Es_tr(g) - Es_tr(g,g); }
 
   double nu_prompt(std::uint32_t g) const {
     if (fissile_) return nu_(0, g);
