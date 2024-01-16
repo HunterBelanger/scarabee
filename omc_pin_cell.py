@@ -66,26 +66,13 @@ materials.cross_sections = 'mgxs.h5'
 
 model.materials = materials
 
-#       0    1    2    3    4     5    6     7     8     9     10
-rads = [0.1, 0.2, 0.3, 0.4, 0.45, 0.5, 0.54, 0.58, 0.61, 0.65, 1.26/np.sqrt(np.pi)]
-surfs = []
-cells = []
+fuel_rad = openmc.ZCylinder(r=0.54)
+UO2 = openmc.Cell(region=-fuel_rad, fill=material_dict['uo2'])
 
-for i in range(len(rads)):
-  surfs.append(openmc.ZCylinder(r=rads[i]))
-  if i == 10:
-    surfs[-1].boundary_type = 'white'
+cell_rad = openmc.ZCylinder(r=1.25/np.sqrt(np.pi), boundary_type='white')
+WTR = openmc.Cell(region=+fuel_rad & -cell_rad, fill=material_dict['h2o'])
 
-  if i == 0:
-    cell = openmc.Cell(region=-surfs[-1], fill=material_dict['uo2']) 
-    cells.append(cell)
-  else:
-    cell = openmc.Cell(region=-surfs[-1] & +surfs[-2]) 
-    if i <= 6:
-      cell.fill = material_dict['uo2']
-    else:
-      cell.fill = material_dict['h2o']
-    cells.append(cell)
+cells = [UO2, WTR]
 
 root_uni = openmc.Universe(cells=cells)
 # Create Geometry and set root Universe
@@ -93,9 +80,9 @@ geometry = openmc.Geometry(root_uni)
 model.geometry = geometry
 
 # OpenMC simulation parameters
-batches = 600
+batches = 6000
 inactive = 100
-particles = 10000
+particles = 100000
 
 # Instantiate a Settings object
 settings = openmc.Settings()
