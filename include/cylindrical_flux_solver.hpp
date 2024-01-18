@@ -16,6 +16,8 @@ class CylindricalFluxSolver {
   std::size_t nregions() const { return cell_->nregions(); }
 
   double flux(std::uint32_t g, std::size_t i) const { return flux_(g, i); }
+  double flux_tolerance() const { return flux_tol_; }
+  void set_flux_tolerance(double ftol);
 
   double Q(std::uint32_t g, std::size_t i) const;
 
@@ -39,9 +41,21 @@ class CylindricalFluxSolver {
   double k_;
   double a_;
   double k_tol_;
+  double flux_tol_;
   bool solved_;
 
   double calc_keff(const NDArray<double>& flux) const;
+  double calc_flux_rel_diff(const NDArray<double>& flux,
+                            const NDArray<double>& next_flux) const;
+  void copy_flux(const NDArray<double>& orig, NDArray<double>& out) const;
+  void fill_fission_source(NDArray<double>& source,
+                           const NDArray<double>& flux) const;
+  void fill_scatter_source(NDArray<double>& source,
+                           const NDArray<double>& flux) const;
+  double Qscat(std::uint32_t g, std::size_t i,
+               const NDArray<double>& flux) const;
+  double Qfiss(std::uint32_t g, std::size_t i,
+               const NDArray<double>& flux) const;
 };
 
 #endif

@@ -45,17 +45,13 @@ class CylindricalCell {
     return Xik + a * xk * Y(a, g, i);
   }
 
-  double Gamma(std::uint32_t g) const {
-    return Gamma_[g];
-  }
+  double Gamma(std::uint32_t g) const { return Gamma_[g]; }
 
   double p(std::uint32_t g, std::size_t i, std::size_t j) const {
     return p_(g, i, j);
   }
 
   const MGCrossSections& mat(std::size_t i) const { return *mats_[i]; }
-
-  void print() const;
 
  private:
   NDArray<double> p_;

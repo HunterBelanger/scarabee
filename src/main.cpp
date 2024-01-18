@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-void test1() {
+void test() {
   std::shared_ptr<MGCrossSections> UO2 = std::make_shared<MGCrossSections>();
   UO2->fissile_ = true;
   UO2->Etr_ = {1.77949E-01, 3.29805E-01, 4.80388E-01, 5.54367E-01, 3.11801E-01, 3.95168E-01, 5.64406E-01};
@@ -45,8 +45,8 @@ void test1() {
   std::vector<double> radii;
   std::vector<std::shared_ptr<MGCrossSections>> mats;
 
-  // Break fuel into 2 equal radii
-  const int Nf = 2;
+  // Break fuel into 5 equal radii
+  const int Nf = 5;
   const double dRfuel = Rfuel / static_cast<double>(Nf);
   double r_outer = 0.;
   for (int i = 0; i < Nf; i++) {
@@ -55,9 +55,9 @@ void test1() {
     mats.push_back(UO2);
   }
 
-  // Break Water into 2 equal radii
-  const int Nwtr = 2;
-  const double dRwtr = (Rwtr - Rfuel) / static_cast<double>(Nf);
+  // Break Water into 3 equal radii
+  const int Nwtr = 3;
+  const double dRwtr = (Rwtr - Rfuel) / static_cast<double>(Nwtr);
   for (int i = 0; i < Nwtr; i++) {
     r_outer += dRwtr;
     radii.push_back(r_outer);
@@ -79,13 +79,14 @@ void test1() {
   std::cout << ">>> Solving for collision probabilities...\n";
   cell->solve();
   std::cout << ">>> Collision probabilities determined !\n";
-  std::cout << ">>> Solving for the flux...\n";
-  //cell->print();
 
   CylindricalFluxSolver cell_flux(cell);
   cell_flux.set_keff_tolerance(1.E-6);
   cell_flux.set_albedo(1.);
+  std::cout << ">>> Solving for the flux...\n";
   cell_flux.solve();
+  std::cout << ">>> Flux determined !\n\n";
+  std::cout << "  keff = " << std::setprecision(6) << cell_flux.keff() << "\n\n";
 
   for (std::uint32_t g = 0; g < cell_flux.ngroups(); g++) {
     std::cout << " Group " << g << ": ";
@@ -97,81 +98,9 @@ void test1() {
   }
 }
 
-void test2() {
-  std::shared_ptr<MGCrossSections> mat1 = std::make_shared<MGCrossSections>();
-  mat1->Etr_ = {1.};
-  mat1->Et_ = mat1->Etr_;
-  mat1->Es_tr_ = NDArray<double>({0.1}, {1,1});
-  mat1->Es_ = mat1->Es_tr_;
-  mat1->Ea_ = {0.9};
-  mat1->fissile_ = false;
-
-  std::shared_ptr<MGCrossSections> mat2 = std::make_shared<MGCrossSections>();
-  mat2->Etr_ = {0.5};
-  mat2->Et_ = mat2->Etr_;
-  mat2->Es_tr_ = NDArray<double>({0.4}, {1,1});
-  mat2->Es_ = mat2->Es_tr_;
-  mat2->Ea_ = {0.1};
-  mat2->fissile_ = false;
-
-  std::shared_ptr<MGCrossSections> mat3 = std::make_shared<MGCrossSections>();
-  mat3->Etr_ = {2.};
-  mat3->Et_ = mat3->Etr_;
-  mat3->Es_tr_ = NDArray<double>({1.9}, {1,1});
-  mat3->Es_ = mat3->Es_tr_;
-  mat3->Ea_ = {0.1};
-  mat3->fissile_ = false;
-
-  std::vector<double> radii {0.5, 0.6, 1.};
-  std::vector<std::shared_ptr<MGCrossSections>> mats {mat1, mat2, mat3};
-  std::shared_ptr<CylindricalCell> cell = std::make_shared<CylindricalCell>(radii, mats);
-  cell->solve();
-
-  NDArray<double> source({0.1, 0., 1.}, {cell->ngroups(), cell->nregions()});
-  NDArray<double> flux({cell->ngroups(), cell->nregions()});
-  double a = 1.;
-  std::vector<double> j_ext(cell->ngroups(), -1.22514);
-  // From the source, we calculate the new flux values
-  for (std::uint32_t g = 0; g < cell->ngroups(); g++) {
-    for (std::size_t r = 0; r < cell->nregions(); r++) {
-      const double Yr = cell->Y(a, g, r);
-
-      double Xr = 0.;
-      for (std::size_t k = 0; k < cell->nregions(); k++) {
-        Xr += source(g, k) * cell->X(a, g, r, k);
-      }
-
-      flux(g, r) = Xr + j_ext[g] * Yr;
-    }
-  } 
-
-  // Write flux and current
-  for (std::uint32_t g = 0; g < cell->ngroups(); g++) {
-    // Get currents
-    double x = 0.;
-    for (std::size_t i = 0; i < cell->nregions(); i++) {
-      x += source(0, i) * cell->x(0, i);
-    }
-    double Gamma = cell->Gamma(0);
-    double jpos = (x + (1. - Gamma)*j_ext[0]) / (1. - a*(1. - Gamma));
-    double jmin = (a*x + j_ext[0]) / (1. - a*(1. - Gamma));
-    double j  = ((1. - a)*x - Gamma*j_ext[0]) / (1. - a*(1. - Gamma));
-
-    std::cout << " Group " << g << ": ";
-    for (std::size_t i = 0; i < cell->nregions(); i++) {
-      std::cout << flux(g, i);
-      if (i != cell->nregions()-1) std::cout << ", ";
-    }
-    std::cout << "  j+ = " << jpos << ", j- = " << jmin << ", j = " << j;
-    std::cout << "\n";
-  }
-
-}
-
 int main() {
 
-  //test1();  
-  test2();
+  test();  
 
   return 0.;
 }

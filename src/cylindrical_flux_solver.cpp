@@ -1,11 +1,16 @@
 #include <cylindrical_flux_solver.hpp>
 #include <utils/scarabee_exception.hpp>
 
-#include <iostream>
-
 CylindricalFluxSolver::CylindricalFluxSolver(
     std::shared_ptr<CylindricalCell> cell)
-    : flux_(), j_ext_(), cell_(cell), k_(1.), a_(1.), k_tol_(1.E-5), solved_(false) {
+    : flux_(),
+      j_ext_(),
+      cell_(cell),
+      k_(1.),
+      a_(1.),
+      k_tol_(1.E-5),
+      flux_tol_(1.E-5),
+      solved_(false) {
   if (cell_ == nullptr) {
     throw ScarabeeException("Provided CylindricalCell was a nullptr.");
   }
@@ -23,19 +28,55 @@ void CylindricalFluxSolver::set_albedo(double a) {
   a_ = a;
 }
 
+void CylindricalFluxSolver::set_flux_tolerance(double ftol) {
+  if (ftol <= 0.) {
+    throw ScarabeeException(
+        "Tolerance for flux must be in the interval (0., 0.1).");
+  }
+
+  if (ftol >= 0.1) {
+    throw ScarabeeException(
+        "Tolerance for flux must be in the interval (0., 0.1).");
+  }
+
+  flux_tol_ = ftol;
+}
+
 void CylindricalFluxSolver::set_keff_tolerance(double ktol) {
   if (ktol <= 0.) {
-    throw ScarabeeException("Tolerance for keff must be in the interval (0., 0.1).");
+    throw ScarabeeException(
+        "Tolerance for keff must be in the interval (0., 0.1).");
   }
 
   if (ktol >= 0.1) {
-    throw ScarabeeException("Tolerance for keff must be in the interval (0., 0.1).");
+    throw ScarabeeException(
+        "Tolerance for keff must be in the interval (0., 0.1).");
   }
 
   k_tol_ = ktol;
 }
 
 double CylindricalFluxSolver::Q(std::uint32_t g, std::size_t i) const {
+  return Qfiss(g, i, flux_) + Qscat(g, i, flux_);
+}
+
+double CylindricalFluxSolver::Qscat(std::uint32_t g, std::size_t i,
+                                    const NDArray<double>& flux) const {
+  double Qout = 0.;
+  const auto& mat = cell_->mat(i);
+
+  for (std::uint32_t gg = 0; gg < ngroups(); gg++) {
+    const double flux_gg_i = flux(gg, i);
+
+    // Scattering into group g, excluding g -> g
+    if (gg != g) Qout += mat.Es_tr(gg, g) * flux_gg_i;
+  }
+
+  return Qout;
+}
+
+double CylindricalFluxSolver::Qfiss(std::uint32_t g, std::size_t i,
+                                    const NDArray<double>& flux) const {
   double Qout = 0.;
   const double inv_k = 1. / k_;
   const auto& mat = cell_->mat(i);
@@ -54,9 +95,6 @@ double CylindricalFluxSolver::Q(std::uint32_t g, std::size_t i) const {
       Qout +=
           inv_k * chi_delayed_g_f * mat.nu_delayed(gg, f) * Ef_gg * flux_gg_i;
     }
-
-    // Scattering into group g, excluding g -> g
-    if (gg != g) Qout += mat.Es_tr(gg, g) * flux_gg_i;
   }
 
   return Qout;
@@ -75,53 +113,104 @@ double CylindricalFluxSolver::calc_keff(const NDArray<double>& flux) const {
   return keff;
 }
 
+double CylindricalFluxSolver::calc_flux_rel_diff(
+    const NDArray<double>& flux, const NDArray<double>& next_flux) const {
+  double max_rel_diff = 0.;
+
+  for (std::uint32_t g = 0; g < ngroups(); g++) {
+    for (std::size_t r = 0; r < nregions(); r++) {
+      const double rel_diff =
+          std::abs(next_flux(g, r) - flux(g, r)) / flux(g, r);
+
+      if (rel_diff > max_rel_diff) max_rel_diff = rel_diff;
+    }
+  }
+
+  return max_rel_diff;
+}
+
+void CylindricalFluxSolver::fill_fission_source(
+    NDArray<double>& source, const NDArray<double>& flux) const {
+  for (std::uint32_t g = 0; g < ngroups(); g++) {
+    for (std::size_t r = 0; r < nregions(); r++) {
+      source(g, r) = Qfiss(g, r, flux);
+    }
+  }
+}
+
+void CylindricalFluxSolver::fill_scatter_source(
+    NDArray<double>& source, const NDArray<double>& flux) const {
+  for (std::uint32_t g = 0; g < ngroups(); g++) {
+    for (std::size_t r = 0; r < nregions(); r++) {
+      source(g, r) = Qscat(g, r, flux);
+    }
+  }
+}
+
+void CylindricalFluxSolver::copy_flux(const NDArray<double>& orig,
+                                      NDArray<double>& out) const {
+  for (std::size_t i = 0; i < orig.size(); i++) {
+    out[i] = orig[i];
+  }
+}
+
 void CylindricalFluxSolver::solve() {
   // Create a new array to hold the source according to the current flux, and
   // another for the next generation flux.
-  NDArray<double> source(flux_.shape());
+  NDArray<double> scat_source(flux_.shape());
+  NDArray<double> fiss_source(flux_.shape());
   NDArray<double> next_flux(flux_.shape());
   k_ = calc_keff(flux_);
-  //k_ = 1.;
-  std::cout << "Keff = " << k_ << "\n";
   double old_keff = 100.;
   std::size_t Ngenerations = 0;
 
+  // Outer Generations
   while (std::abs(old_keff - k_) > k_tol_) {
     Ngenerations++;
 
-    // First, we fill the source
-    for (std::uint32_t g = 0; g < ngroups(); g++) {
-      for (std::size_t r = 0; r < nregions(); r++) {
-        source(g, r) = Q(g, r);
-      }
-    }
+    // At the begining of a generation, we calculate the fission source
+    fill_fission_source(fiss_source, flux_);
 
-    // From the source, we calculate the new flux values
-    for (std::uint32_t g = 0; g < ngroups(); g++) {
-      for (std::size_t r = 0; r < nregions(); r++) {
-        const double Yr = cell_->Y(a_, g, r);
+    // Copy flux into next_flux, so that we can continually use next_flux
+    // in the inner iterations for the scattering source.
+    copy_flux(flux_, next_flux);
 
-        double Xr = 0.;
-        for (std::size_t k = 0; k < nregions(); k++) {
-          Xr += source(g, k) * cell_->X(a_, g, r, k);
+    std::size_t Niterations = 0;
+    double max_flux_diff = 100.;
+    // Inner Iterations
+    while (max_flux_diff > flux_tol_) {
+      Niterations++;
+
+      // At the begining of an inner iteration, we calculate the fission source
+      fill_scatter_source(scat_source, next_flux);
+
+      // From the sources, we calculate the new flux values
+      for (std::uint32_t g = 0; g < ngroups(); g++) {
+        for (std::size_t r = 0; r < nregions(); r++) {
+          const double Yr = cell_->Y(a_, g, r);
+
+          double Xr = 0.;
+          for (std::size_t k = 0; k < nregions(); k++) {
+            Xr +=
+                (fiss_source(g, k) + scat_source(g, k)) * cell_->X(a_, g, r, k);
+          }
+
+          next_flux(g, r) = Xr + j_ext_[g] * Yr;
         }
-
-        next_flux(g, r) = Xr + j_ext_[g] * Yr;
       }
-    }
+
+      // Calculate the max difference in the flux
+      max_flux_diff = calc_flux_rel_diff(flux_, next_flux);
+
+      // Copy next_flux into flux for calculating next relative difference
+      copy_flux(next_flux, flux_);
+    }  // End of Inner Iterations
 
     // Calculate keff
     old_keff = k_;
     k_ = calc_keff(next_flux);
 
-    // Normalize next flux by keff
-    for (std::size_t i = 0; i < next_flux.size(); i++) {
-      next_flux[i] /= k_;
-    }
-
     // Assign next_flux to be the flux
     std::swap(next_flux.data_vector(), flux_.data_vector());
-
-    std::cout << " Gen: " << Ngenerations << "  keff = " << std::fixed << k_ << "\n";
-  }
+  }  // End of Outer Generations
 }

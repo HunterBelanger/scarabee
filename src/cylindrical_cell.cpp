@@ -9,9 +9,6 @@
 #include <algorithm>
 #include <cmath>
 
-
-#include <iostream>
-
 CylindricalCell::CylindricalCell(
     const std::vector<double>& radii,
     const std::vector<std::shared_ptr<MGCrossSections>>& mats)
@@ -103,10 +100,10 @@ void CylindricalCell::calculate_collision_probabilities() {
         p_(g, i, j) = 0.;
         if (i == j) p_(g, i, j) += vols_[i] * mats_[i]->Etr(g);
 
-        p_(g, i, j) += 2. * S(i,j);
-        if (i > 0 && j > 0) p_(g, i , j) += 2. * S(i-1, j-1);
-        if (i > 0) p_(g, i, j) -= 2. * S(i-1,j);
-        if (j > 0) p_(g, i, j) -= 2. * S(i,j-1);
+        p_(g, i, j) += 2. * S(i, j);
+        if (i > 0 && j > 0) p_(g, i, j) += 2. * S(i - 1, j - 1);
+        if (i > 0) p_(g, i, j) -= 2. * S(i - 1, j);
+        if (j > 0) p_(g, i, j) -= 2. * S(i, j - 1);
 
         if (i != j) p_(g, j, i) = p_(g, i, j);
       }
@@ -261,32 +258,4 @@ void CylindricalCell::solve_systems() {
       Gamma_[g] += mats_[i]->Er_tr(g) * vols_[i] * Y_(g, i);
     }
   }  // For all groups
-}
-
-void CylindricalCell::print() const {
-  for (std::size_t i = 0; i < nregions(); i++) {
-    for (std::size_t j = 0; j < nregions(); j++) {
-      std::cout << p_(0, i, j);
-      if (j != nregions()-1) std::cout << ", ";
-    }
-    std::cout << "\n";
-  }
-  std::cout << "\n";
-
-  /*
-  for (std::size_t i = 0; i < nregions(); i++) {
-    for (std::size_t k = 0; k < nregions(); k++) {
-      std::cout << X_(0, i, k);
-      if (k != nregions()-1) std::cout << ", ";
-    }
-    std::cout << "\n";
-  }
-  std::cout << "\n";
-
-  for (std::size_t k = 0; k < nregions(); k++) {
-    std::cout << Y_(0, k);
-    if (k != nregions()-1) std::cout << ", ";
-  }
-  std::cout << "\n";
-  */
 }
