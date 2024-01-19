@@ -5,6 +5,7 @@ CylindricalFluxSolver::CylindricalFluxSolver(
     std::shared_ptr<CylindricalCell> cell)
     : flux_(),
       j_ext_(),
+      x_(),
       cell_(cell),
       k_(1.),
       a_(1.),
@@ -18,6 +19,7 @@ CylindricalFluxSolver::CylindricalFluxSolver(
   flux_.reallocate({ngroups(), nregions()});
   flux_.fill(1.);  // Initialize flux with 1's everywhere
   j_ext_.resize(ngroups(), 0.);
+  x_.resize(ngroups(), 0.);
 }
 
 void CylindricalFluxSolver::set_albedo(double a) {
@@ -26,6 +28,7 @@ void CylindricalFluxSolver::set_albedo(double a) {
   }
 
   a_ = a;
+  solved_ = false;
 }
 
 void CylindricalFluxSolver::set_flux_tolerance(double ftol) {
@@ -40,6 +43,7 @@ void CylindricalFluxSolver::set_flux_tolerance(double ftol) {
   }
 
   flux_tol_ = ftol;
+  solved_ = false;
 }
 
 void CylindricalFluxSolver::set_keff_tolerance(double ktol) {
@@ -54,10 +58,7 @@ void CylindricalFluxSolver::set_keff_tolerance(double ktol) {
   }
 
   k_tol_ = ktol;
-}
-
-double CylindricalFluxSolver::Q(std::uint32_t g, std::size_t i) const {
-  return Qfiss(g, i, flux_) + Qscat(g, i, flux_);
+  solved_ = false;
 }
 
 double CylindricalFluxSolver::Qscat(std::uint32_t g, std::size_t i,
@@ -213,4 +214,15 @@ void CylindricalFluxSolver::solve() {
     // Assign next_flux to be the flux
     std::swap(next_flux.data_vector(), flux_.data_vector());
   }  // End of Outer Generations
+
+  // Now that we have the solution, we need to get the number of source
+  // neutrons reaching the boundary, x, from Stamm'ler and Abbate.
+  // These are used when calculating the currents.
+  for (std::uint32_t g = 0; g < ngroups(); g++) {
+    for (std::size_t r = 0; r < nregions(); r++) {
+      x_[g] += (Qfiss(g, r, flux_) + Qscat(g, r, flux_)) * cell_->x(g, r);
+    }
+  }
+
+  solved_ = true;
 }

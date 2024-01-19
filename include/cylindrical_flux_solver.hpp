@@ -15,11 +15,12 @@ class CylindricalFluxSolver {
   std::uint32_t ngroups() const { return cell_->ngroups(); }
   std::size_t nregions() const { return cell_->nregions(); }
 
+  void solve();
+  bool solved() const { return solved_; }
+
   double flux(std::uint32_t g, std::size_t i) const { return flux_(g, i); }
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
-
-  double Q(std::uint32_t g, std::size_t i) const;
 
   double keff() const { return k_; }
   double keff_tolerance() const { return k_tol_; }
@@ -29,14 +30,29 @@ class CylindricalFluxSolver {
   void set_albedo(double a);
 
   double j_ext(std::uint32_t g) const { return j_ext_[g]; }
-  void set_j_ext(std::uint32_t g, double j) { j_ext_[g] = j; }
+  void set_j_ext(std::uint32_t g, double j) {
+    j_ext_[g] = j;
+    solved_ = false;
+  }
 
-  void solve();
-  bool solved() const { return solved_; }
+  double j_neg(std::uint32_t g) const {
+    return (a_ * x_[g] + j_ext_[g]) / (1. - a_ * (1. - cell_->Gamma(g)));
+  }
+
+  double j_pos(std::uint32_t g) const {
+    return (x_[g] + (1. - cell_->Gamma(g)) * j_ext_[g]) /
+           (1. - a_ * (1. - cell_->Gamma(g)));
+  }
+
+  double j(std::uint32_t g) const {
+    return ((1. - a_) * x_[g] - cell_->Gamma(g) * j_ext_[g]) /
+           (1. - a_ * (1. - cell_->Gamma(g)));
+  }
 
  private:
   NDArray<double> flux_;
   std::vector<double> j_ext_;
+  std::vector<double> x_;
   std::shared_ptr<CylindricalCell> cell_;
   double k_;
   double a_;
