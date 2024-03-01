@@ -1,1 +1,0 @@
-gfortran -std=legacy KI3.f PREPAR.f GAUSCP.f COPRAN.f CALFLU.f COLPROB.f -o colprob
