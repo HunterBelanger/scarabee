@@ -1,17 +1,18 @@
 #ifndef SCARABEE_CYLINDRICAL_CELL_H
 #define SCARABEE_CYLINDRICAL_CELL_H
 
-#include <mg_cross_sections.hpp>
+#include <transport_xs.hpp>
 #include <utils/constants.hpp>
 
 #include <ndarray.hpp>
 
+#include <memory>
 #include <vector>
 
 class CylindricalCell {
  public:
   CylindricalCell(const std::vector<double>& radii,
-                  const std::vector<std::shared_ptr<MGCrossSections>>& mats);
+                  const std::vector<std::shared_ptr<TransportXS>>& mats);
   bool solved() const { return solved_; }
   void solve();
 
@@ -19,7 +20,7 @@ class CylindricalCell {
   std::size_t nregions() const { return radii_.size(); }
 
   // Surface area of cell
-  double S() const { return 2. * PI * radii_.back(); }
+  double Sb() const { return 2. * PI * radii_.back(); }
 
   // Volume of region i
   double V(std::size_t i) const { return vols_[i]; }
@@ -35,7 +36,7 @@ class CylindricalCell {
   }
 
   double x(std::uint32_t g, std::size_t i) const {
-    return 0.25 * S() * V(i) * Y_(g, i);
+    return 0.25 * Sb() * V(i) * Y_(g, i);
   }
 
   double X(double a, std::uint32_t g, std::size_t i, std::size_t k) const {
@@ -51,7 +52,7 @@ class CylindricalCell {
     return p_(g, i, j);
   }
 
-  const MGCrossSections& mat(std::size_t i) const { return *mats_[i]; }
+  const TransportXS& mat(std::size_t i) const { return *mats_[i]; }
 
  private:
   NDArray<double> p_;
@@ -60,7 +61,7 @@ class CylindricalCell {
   std::vector<double> Gamma_;  // Multicollision blackness in each group
   std::vector<double> radii_;
   std::vector<double> vols_;
-  std::vector<std::shared_ptr<MGCrossSections>> mats_;
+  std::vector<std::shared_ptr<TransportXS>> mats_;
   std::uint32_t ngroups_;
   bool solved_;
 

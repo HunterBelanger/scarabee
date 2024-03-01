@@ -70,7 +70,7 @@ double CylindricalFluxSolver::Qscat(std::uint32_t g, std::size_t i,
     const double flux_gg_i = flux(gg, i);
 
     // Scattering into group g, excluding g -> g
-    if (gg != g) Qout += mat.Es_tr(gg, g) * flux_gg_i;
+    if (gg != g) Qout += mat.Es(gg, g) * flux_gg_i;
   }
 
   return Qout;
@@ -81,21 +81,14 @@ double CylindricalFluxSolver::Qfiss(std::uint32_t g, std::size_t i,
   double Qout = 0.;
   const double inv_k = 1. / k_;
   const auto& mat = cell_->mat(i);
-  const double chi_prompt_g = mat.chi_prompt(g);
+  const double chi_g = mat.chi(g);
 
   for (std::uint32_t gg = 0; gg < ngroups(); gg++) {
     const double Ef_gg = mat.Ef(gg);
     const double flux_gg_i = flux(gg, i);
 
     // Prompt Fission
-    Qout += inv_k * chi_prompt_g * mat.nu_prompt(gg) * Ef_gg * flux_gg_i;
-
-    // Delayed Fission
-    for (std::uint32_t f = 0; f < mat.ndelayed_families(); f++) {
-      const double chi_delayed_g_f = mat.chi_delayed(g, f);
-      Qout +=
-          inv_k * chi_delayed_g_f * mat.nu_delayed(gg, f) * Ef_gg * flux_gg_i;
-    }
+    Qout += inv_k * chi_g * mat.nu(gg) * Ef_gg * flux_gg_i;
   }
 
   return Qout;
@@ -163,12 +156,9 @@ void CylindricalFluxSolver::solve() {
   NDArray<double> next_flux(flux_.shape());
   k_ = calc_keff(flux_);
   double old_keff = 100.;
-  std::size_t Ngenerations = 0;
 
   // Outer Generations
   while (std::abs(old_keff - k_) > k_tol_) {
-    Ngenerations++;
-
     // At the begining of a generation, we calculate the fission source
     fill_fission_source(fiss_source, flux_);
 
@@ -176,12 +166,9 @@ void CylindricalFluxSolver::solve() {
     // in the inner iterations for the scattering source.
     copy_flux(flux_, next_flux);
 
-    std::size_t Niterations = 0;
     double max_flux_diff = 100.;
     // Inner Iterations
     while (max_flux_diff > flux_tol_) {
-      Niterations++;
-
       // At the begining of an inner iteration, we calculate the fission source
       fill_scatter_source(scat_source, next_flux);
 

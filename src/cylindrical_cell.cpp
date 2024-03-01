@@ -11,7 +11,7 @@
 
 CylindricalCell::CylindricalCell(
     const std::vector<double>& radii,
-    const std::vector<std::shared_ptr<MGCrossSections>>& mats)
+    const std::vector<std::shared_ptr<TransportXS>>& mats)
     : p_(),
       X_(),
       Y_(),
@@ -98,7 +98,7 @@ void CylindricalCell::calculate_collision_probabilities() {
     for (std::size_t i = 0; i < nregions(); i++) {
       for (std::size_t j = i; j < nregions(); j++) {
         p_(g, i, j) = 0.;
-        if (i == j) p_(g, i, j) += vols_[i] * mats_[i]->Etr(g);
+        if (i == j) p_(g, i, j) += vols_[i] * mats_[i]->Et(g);
 
         p_(g, i, j) += 2. * S(i, j);
         if (i > 0 && j > 0) p_(g, i, j) += 2. * S(i - 1, j - 1);
@@ -155,7 +155,7 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
         const auto& mat = mats_[s + k];
 
         // Get optical depth constribution
-        const double dtau = t * mat->Etr(g);
+        const double dtau = t * mat->Et(g);
 
         // Add to the tau variables
         if (s + k <= i) {
@@ -199,8 +199,8 @@ void CylindricalCell::solve_systems() {
     for (long i = 0; i < static_cast<long>(nregions()); i++) {
       for (long j = 0; j < static_cast<long>(nregions()); j++) {
         const auto& mat = mats_[static_cast<std::size_t>(j)];
-        const double Etr = mat->Etr(g);
-        const double Es_tr = mat->Es_tr(g, g);
+        const double Etr = mat->Et(g);
+        const double Es_tr = mat->Es(g, g);
         const double c_j = Es_tr / Etr;
 
         M(i, j) = -c_j * p_(g, j, i);
@@ -219,7 +219,7 @@ void CylindricalCell::solve_systems() {
     for (long k = 0; k < static_cast<long>(nregions()); k++) {
       // Load the b vector
       Eigen::VectorXd b(nregions());
-      const double Etr_k = mats_[static_cast<std::size_t>(k)]->Etr(g);
+      const double Etr_k = mats_[static_cast<std::size_t>(k)]->Et(g);
       for (long i = 0; i < static_cast<long>(nregions()); i++) {
         b(i) = p_(g, k, i) / Etr_k;
       }
@@ -235,10 +235,10 @@ void CylindricalCell::solve_systems() {
 
     // We can now solve the equation for Y_i
     Eigen::VectorXd b(nregions());
-    const double coeff = 4. / (S());
+    const double coeff = 4. / Sb();
     for (long i = 0; i < static_cast<long>(nregions()); i++) {
       const std::size_t indx = static_cast<std::size_t>(i);
-      const double Etr_i = mats_[indx]->Etr(g);
+      const double Etr_i = mats_[indx]->Et(g);
       const double Vol_i = vols_[indx];
       double sum_p = 0.;
       for (std::size_t j = 0; j < nregions(); j++) {
@@ -255,7 +255,7 @@ void CylindricalCell::solve_systems() {
     // Calculate multicollision blackness for this group
     Gamma_[g] = 0.;
     for (std::size_t i = 0; i < nregions(); i++) {
-      Gamma_[g] += mats_[i]->Er_tr(g) * vols_[i] * Y_(g, i);
+      Gamma_[g] += mats_[i]->Er(g) * vols_[i] * Y_(g, i);
     }
   }  // For all groups
 }
