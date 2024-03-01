@@ -43,7 +43,7 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
 
 TransportXS& TransportXS::operator*=(double N) {
   // Scale Es_
-  for (auto& v : Es_.data_vector()) v *= N;
+  for (auto& v : Es_) v *= N;
 
   // Scale Et_
   for (auto& v : Et_) v *= N;

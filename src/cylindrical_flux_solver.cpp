@@ -1,6 +1,8 @@
 #include <cylindrical_flux_solver.hpp>
 #include <utils/scarabee_exception.hpp>
 
+#include <xtensor/xbuilder.hpp>
+
 CylindricalFluxSolver::CylindricalFluxSolver(
     std::shared_ptr<CylindricalCell> cell)
     : flux_(),
@@ -16,8 +18,9 @@ CylindricalFluxSolver::CylindricalFluxSolver(
     throw ScarabeeException("Provided CylindricalCell was a nullptr.");
   }
 
-  flux_.reallocate({ngroups(), nregions()});
-  flux_.fill(1.);  // Initialize flux with 1's everywhere
+  // Initialize flux with 1's everywhere
+  flux_.resize({ngroups(), nregions()});
+  flux_.fill(1.);
   j_ext_.resize(ngroups(), 0.);
   x_.resize(ngroups(), 0.);
 }
@@ -62,7 +65,7 @@ void CylindricalFluxSolver::set_keff_tolerance(double ktol) {
 }
 
 double CylindricalFluxSolver::Qscat(std::uint32_t g, std::size_t i,
-                                    const NDArray<double>& flux) const {
+                                    const xt::xarray<double>& flux) const {
   double Qout = 0.;
   const auto& mat = cell_->mat(i);
 
@@ -77,7 +80,7 @@ double CylindricalFluxSolver::Qscat(std::uint32_t g, std::size_t i,
 }
 
 double CylindricalFluxSolver::Qfiss(std::uint32_t g, std::size_t i,
-                                    const NDArray<double>& flux) const {
+                                    const xt::xarray<double>& flux) const {
   double Qout = 0.;
   const double inv_k = 1. / k_;
   const auto& mat = cell_->mat(i);
@@ -94,7 +97,7 @@ double CylindricalFluxSolver::Qfiss(std::uint32_t g, std::size_t i,
   return Qout;
 }
 
-double CylindricalFluxSolver::calc_keff(const NDArray<double>& flux) const {
+double CylindricalFluxSolver::calc_keff(const xt::xarray<double>& flux) const {
   double keff = 0.;
   for (std::size_t r = 0; r < nregions(); r++) {
     const double Vr = cell_->V(r);
@@ -108,7 +111,7 @@ double CylindricalFluxSolver::calc_keff(const NDArray<double>& flux) const {
 }
 
 double CylindricalFluxSolver::calc_flux_rel_diff(
-    const NDArray<double>& flux, const NDArray<double>& next_flux) const {
+    const xt::xarray<double>& flux, const xt::xarray<double>& next_flux) const {
   double max_rel_diff = 0.;
 
   for (std::uint32_t g = 0; g < ngroups(); g++) {
@@ -124,7 +127,7 @@ double CylindricalFluxSolver::calc_flux_rel_diff(
 }
 
 void CylindricalFluxSolver::fill_fission_source(
-    NDArray<double>& source, const NDArray<double>& flux) const {
+    xt::xarray<double>& source, const xt::xarray<double>& flux) const {
   for (std::uint32_t g = 0; g < ngroups(); g++) {
     for (std::size_t r = 0; r < nregions(); r++) {
       source(g, r) = Qfiss(g, r, flux);
@@ -133,7 +136,7 @@ void CylindricalFluxSolver::fill_fission_source(
 }
 
 void CylindricalFluxSolver::fill_scatter_source(
-    NDArray<double>& source, const NDArray<double>& flux) const {
+    xt::xarray<double>& source, const xt::xarray<double>& flux) const {
   for (std::uint32_t g = 0; g < ngroups(); g++) {
     for (std::size_t r = 0; r < nregions(); r++) {
       source(g, r) = Qscat(g, r, flux);
@@ -141,8 +144,8 @@ void CylindricalFluxSolver::fill_scatter_source(
   }
 }
 
-void CylindricalFluxSolver::copy_flux(const NDArray<double>& orig,
-                                      NDArray<double>& out) const {
+void CylindricalFluxSolver::copy_flux(const xt::xarray<double>& orig,
+                                      xt::xarray<double>& out) const {
   for (std::size_t i = 0; i < orig.size(); i++) {
     out[i] = orig[i];
   }
@@ -151,9 +154,9 @@ void CylindricalFluxSolver::copy_flux(const NDArray<double>& orig,
 void CylindricalFluxSolver::solve() {
   // Create a new array to hold the source according to the current flux, and
   // another for the next generation flux.
-  NDArray<double> scat_source(flux_.shape());
-  NDArray<double> fiss_source(flux_.shape());
-  NDArray<double> next_flux(flux_.shape());
+  xt::xarray<double> scat_source(flux_.shape());
+  xt::xarray<double> fiss_source(flux_.shape());
+  xt::xarray<double> next_flux(flux_.shape());
   k_ = calc_keff(flux_);
   double old_keff = 100.;
 
@@ -199,7 +202,7 @@ void CylindricalFluxSolver::solve() {
     k_ = calc_keff(next_flux);
 
     // Assign next_flux to be the flux
-    std::swap(next_flux.data_vector(), flux_.data_vector());
+    std::swap(next_flux, flux_);
   }  // End of Outer Generations
 
   // Now that we have the solution, we need to get the number of source

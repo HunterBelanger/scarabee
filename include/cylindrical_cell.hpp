@@ -4,7 +4,7 @@
 #include <transport_xs.hpp>
 #include <utils/constants.hpp>
 
-#include <ndarray.hpp>
+#include <xtensor/xarray.hpp>
 
 #include <memory>
 #include <vector>
@@ -16,7 +16,7 @@ class CylindricalCell {
   bool solved() const { return solved_; }
   void solve();
 
-  std::uint32_t ngroups() const { return ngroups_; }
+  std::size_t ngroups() const { return ngroups_; }
   std::size_t nregions() const { return radii_.size(); }
 
   // Surface area of cell
@@ -55,14 +55,14 @@ class CylindricalCell {
   const TransportXS& mat(std::size_t i) const { return *mats_[i]; }
 
  private:
-  NDArray<double> p_;
-  NDArray<double> X_;
-  NDArray<double> Y_;
+  xt::xarray<double> p_;
+  xt::xarray<double> X_;
+  xt::xarray<double> Y_;
   std::vector<double> Gamma_;  // Multicollision blackness in each group
   std::vector<double> radii_;
   std::vector<double> vols_;
   std::vector<std::shared_ptr<TransportXS>> mats_;
-  std::uint32_t ngroups_;
+  std::size_t ngroups_;
   bool solved_;
 
   void calculate_collision_probabilities();

@@ -17,31 +17,29 @@ set(EIGEN_BUILD_CMAKE_PACKAGE OFF)
 FetchContent_MakeAvailable(eigen)
 
 #===============================================================================
-# Get NDArray
-message(STATUS "Downloading NDArray")
-FetchContent_Declare(NDArray
-  GIT_REPOSITORY https://github.com/HunterBelanger/ndarray.git
-  GIT_TAG        master
+# Get XTL
+message(STATUS "Downloading xtl v0.7.7")
+FetchContent_Declare(xtl
+  GIT_REPOSITORY https://github.com/xtensor-stack/xtl.git
+  GIT_TAG        0.7.7
 )
-set(NDARRAY_INSTALL OFF CACHE BOOL "Install NDArray")
-FetchContent_MakeAvailable(NDArray)
+FetchContent_MakeAvailable(xtl)
+
+#===============================================================================
+# Get XTENSOR
+message(STATUS "Downloading xtensor v0.24.7")
+FetchContent_Declare(xtensor
+  GIT_REPOSITORY https://github.com/xtensor-stack/xtensor.git
+  GIT_TAG        0.24.7
+)
+FetchContent_MakeAvailable(xtensor)
 
 #===============================================================================
 add_executable(scarabee src/main.cpp src/gauss_kronrod.cpp src/chebyshev.cpp src/bickley.cpp src/transport_xs.cpp src/cylindrical_cell.cpp src/cylindrical_flux_solver.cpp)
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
-target_link_libraries(scarabee PUBLIC NDArray::NDArray Eigen3::Eigen)
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # Comile options for Windows
-  target_compile_options(scarabee PRIVATE /W3)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU") # Compile options for GCC
-  target_compile_options(scarabee PRIVATE -W -Wall -Wextra -Wconversion -Wpedantic)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # Compile options for Clang
-  target_compile_options(scarabee PRIVATE -W -Wall -Wextra -Wconversion -Wpedantic)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Intel") # Compile options for Intel
-  target_compile_options(scarabee PRIVATE -W -Wall -Wextra -Wconversion -Wpedantic)
-endif()
+target_link_libraries(scarabee PUBLIC xtl xtensor Eigen3::Eigen)
 
 #===============================================================================
 # Allow for install of executable

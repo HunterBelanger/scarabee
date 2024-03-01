@@ -4,6 +4,8 @@
 #include <utils/gauss_kronrod.hpp>
 #include <utils/scarabee_exception.hpp>
 
+#include <xtensor/xbuilder.hpp>
+
 #include <Eigen/Dense>
 
 #include <algorithm>
@@ -76,11 +78,11 @@ void CylindricalCell::solve() {
 
 void CylindricalCell::calculate_collision_probabilities() {
   // First, ensure we have a matrix of the proper size
-  p_.reallocate({ngroups(), nregions(), nregions()});
+  p_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
 
   // Create a matrix to temporarily hold the S_ij factors. We do one group at
   // a time, so we don't need a third axis
-  NDArray<double> S({nregions(), nregions()});
+  xt::xarray<double> S = xt::zeros<double>({nregions(), nregions()});
 
   // Calculate the matrix for each energy group
   for (std::uint32_t g = 0; g < ngroups(); g++) {
@@ -184,10 +186,8 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
 
 void CylindricalCell::solve_systems() {
   // First, we allocate the needed memory to hold all of the X and Y terms
-  X_.reallocate({ngroups(), nregions(), nregions()});
-  X_.fill(0.);
-  Y_.reallocate({ngroups(), nregions()});
-  Y_.fill(0.);
+  X_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
+  Y_ = xt::zeros<double>({ngroups(), nregions()});
   Gamma_.resize(ngroups(), 0.);
 
   // The Y and X terms all depend on the energy group, and are described by

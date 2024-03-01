@@ -3,7 +3,7 @@
 
 #include <utils/scarabee_exception.hpp>
 
-#include <ndarray.hpp>
+#include <xtensor/xarray.hpp>
 
 #include <cstdint>
 #include <vector>
@@ -12,9 +12,7 @@ class TransportXS {
  public:
   TransportXS();
 
-  std::uint32_t ngroups() const {
-    return static_cast<std::uint32_t>(Et_.size());
-  }
+  std::size_t ngroups() const { return Et_.size(); }
 
   bool fissile() const { return fissile_; }
 
@@ -58,7 +56,7 @@ class TransportXS {
   TransportXS& operator*=(double N);
 
   // private:
-  NDArray<double> Es_;       // Scattering matrix
+  xt::xarray<double> Es_;    // Scattering matrix
   std::vector<double> Et_;   // Total xs
   std::vector<double> Ea_;   // Absorption xs
   std::vector<double> Ef_;   // Fission xs
