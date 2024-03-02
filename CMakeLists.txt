@@ -35,7 +35,7 @@ FetchContent_Declare(xtensor
 FetchContent_MakeAvailable(xtensor)
 
 #===============================================================================
-add_executable(scarabee src/main.cpp src/gauss_kronrod.cpp src/chebyshev.cpp src/bickley.cpp src/transport_xs.cpp src/cylindrical_cell.cpp src/cylindrical_flux_solver.cpp)
+add_executable(scarabee src/main.cpp src/gauss_kronrod.cpp src/chebyshev.cpp src/bickley.cpp src/transport_xs.cpp src/cylindrical_cell.cpp src/cylindrical_flux_solver.cpp src/cell.cpp)
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
