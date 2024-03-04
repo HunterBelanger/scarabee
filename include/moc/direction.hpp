@@ -2,8 +2,7 @@
 #define DIRECTION_H
 
 #include <moc/vector.hpp>
-
-#include <numbers>
+#include <utils/constants.hpp>
 
 //============================================================================
 // Direction Class
@@ -19,8 +18,8 @@ class Direction : public Vector {
   Direction(double phi) : Vector(0., 1.) {
     if (phi < 0.)
       phi = 0.;
-    else if (phi > 2 * std::numbers::pi_v<double>)
-      phi = 2 * std::numbers::pi_v<double>;
+    else if (phi > 2 * PI)
+      phi = 2 * PI;
 
     this->x_ = std::cos(phi);
     this->y_ = std::sin(phi);

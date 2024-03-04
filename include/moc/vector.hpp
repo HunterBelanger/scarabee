@@ -9,15 +9,13 @@
 //----------------------------------------------------------------------------
 class Vector {
  public:
-  Vector(double i_x, double i_y) : x_(i_x), y_(i_y) {};
+  Vector(double i_x, double i_y) : x_(i_x), y_(i_y){};
   ~Vector() = default;
 
   double x() const { return x_; }
   double y() const { return y_; }
 
-  double dot(const Vector& v) const {
-    return x_ * v.x() + y_ * v.y();
-  }
+  double dot(const Vector& v) const { return x_ * v.x() + y_ * v.y(); }
 
   double norm() const { return std::sqrt(x_ * x_ + y_ * y_); }
 

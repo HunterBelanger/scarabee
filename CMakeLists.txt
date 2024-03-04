@@ -17,6 +17,15 @@ set(EIGEN_BUILD_CMAKE_PACKAGE OFF)
 FetchContent_MakeAvailable(eigen)
 
 #===============================================================================
+# Get HTL
+message(STATUS "Downloading HTL")
+FetchContent_Declare(htl
+  GIT_REPOSITORY https://github.com/HunterBelanger/htl.git
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(htl)
+
+#===============================================================================
 # Get XTL
 message(STATUS "Downloading xtl v0.7.7")
 FetchContent_Declare(xtl
@@ -35,11 +44,19 @@ FetchContent_Declare(xtensor
 FetchContent_MakeAvailable(xtensor)
 
 #===============================================================================
-add_executable(scarabee src/main.cpp src/gauss_kronrod.cpp src/chebyshev.cpp src/bickley.cpp src/transport_xs.cpp src/cylindrical_cell.cpp src/cylindrical_flux_solver.cpp src/cell.cpp)
+add_executable(scarabee src/main.cpp
+                        src/gauss_kronrod.cpp
+                        src/chebyshev.cpp
+                        src/bickley.cpp
+                        src/transport_xs.cpp
+                        src/cylindrical_cell.cpp
+                        src/cylindrical_flux_solver.cpp
+                        src/surface.cpp
+                        src/cell.cpp)
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
-target_link_libraries(scarabee PUBLIC xtl xtensor Eigen3::Eigen)
+target_link_libraries(scarabee PUBLIC xtl xtensor htl Eigen3::Eigen)
 
 #===============================================================================
 # Allow for install of executable
