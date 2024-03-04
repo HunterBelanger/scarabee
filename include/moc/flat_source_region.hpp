@@ -47,7 +47,9 @@ class FlatSourceRegion {
   const std::shared_ptr<TransportXS>& xs() const { return xs_; }
 
   htl::static_vector<RegionToken, MAX_SURFS>& tokens() { return tokens_; }
-  const htl::static_vector<RegionToken, MAX_SURFS>& tokens() const { return tokens_; }
+  const htl::static_vector<RegionToken, MAX_SURFS>& tokens() const {
+    return tokens_;
+  }
 
   double& volume() { return volume_; }
   const double& volume() const { return volume_; }

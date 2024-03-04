@@ -16,7 +16,7 @@ class Surface {
   Side side(const Vector& r, const Direction& u) const;
   double distance(const Vector& r, const Direction& u) const;
 
-  Type type() { return type_; }
+  Type& type() { return type_; }
   const Type& type() const { return type_; }
 
   // Parameters for XPlane, YPlane, and Cylinder

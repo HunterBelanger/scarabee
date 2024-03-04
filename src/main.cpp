@@ -2,6 +2,8 @@
 #include <cylindrical_flux_solver.hpp>
 #include <utils/constants.hpp>
 
+#include <moc/pin_cell.hpp>
+
 #include <cmath>
 #include <iostream>
 #include <iomanip>
@@ -108,6 +110,32 @@ void test() {
       if (i != cell_flux.nregions() - 1) std::cout << ", ";
     }
     std::cout << "   jnet = " << cell_flux.j(g) << "\n";
+  }
+
+  //==============================================
+  // MOC
+  radii = {0.54};
+  mats = {UO2, H2O};
+  std::shared_ptr<Surface> xmin = std::make_shared<Surface>();
+  xmin->type() = Surface::Type::XPlane;
+  xmin->x0() = -0.63;
+  std::shared_ptr<Surface> xmax = std::make_shared<Surface>();
+  xmax->type() = Surface::Type::XPlane;
+  xmax->x0() = 0.63;
+  std::shared_ptr<Surface> ymin = std::make_shared<Surface>();
+  ymin->type() = Surface::Type::YPlane;
+  ymin->y0() = -0.63;
+  std::shared_ptr<Surface> ymax = std::make_shared<Surface>();
+  ymax->type() = Surface::Type::YPlane;
+  ymax->y0() = 0.63;
+
+  PinCell pincell(radii, mats, xmin, xmax, ymin, ymax);
+  Vector r(-0.63, 0.000000001);
+  Direction u(1., 0.);
+  auto segs = pincell.trace_segments(r, u);
+  std::cout << "\n";
+  for (const auto& seg : segs) {
+    std::cout << " Segment length = " << seg.length() << "\n";
   }
 }
 
