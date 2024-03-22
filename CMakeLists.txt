@@ -53,7 +53,8 @@ add_executable(scarabee src/main.cpp
                         src/cylindrical_flux_solver.cpp
                         src/surface.cpp
                         src/cell.cpp
-                        src/pin_cell.cpp)
+                        src/pin_cell.cpp
+                        src/cartesian_2d.cpp)
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)

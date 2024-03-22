@@ -3,22 +3,24 @@
 
 #include <moc/cell.hpp>
 #include <moc/surface.hpp>
+#include <moc/pin_cell.hpp>
 #include <transport_xs.hpp>
 
-#include "cell.hpp"
-#include "surface.hpp"
-#include "vector.hpp"
-
 #include <memory>
+#include <optional>
+#include <variant>
 #include <vector>
 
+// Must pre-declare class so that we can have a pointer to it in the tile
 class Cartesian2D;
+
+using CellType = std::variant<PinCell>;
 
 class Cartesian2D {
  public:
   struct Tile {
     std::shared_ptr<Cartesian2D> c2d;
-    std::shared_ptr<Cell> cell;
+    std::optional<CellType> cell;
   };
 
   Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
@@ -26,13 +28,11 @@ class Cartesian2D {
 
   std::size_t nx() const { return nx_; }
   std::size_t ny() const { return ny_; }
-
+  
+  Tile& tile(std::size_t i, std::size_t j);
   const Tile& tile(std::size_t i, std::size_t j) const;
 
-  void set_tile_PinCell(std::size_t i, std::size_t j,
-                        const Vector& pin_origin,
-                        const std::vector<double>& rads,
-                        const std::vector<std::shared_ptr<TransportXS>>& mats);
+  bool tiles_valid() const;
 
  private:
   std::vector<std::shared_ptr<Surface>> x_bounds_;
