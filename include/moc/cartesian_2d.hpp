@@ -31,7 +31,8 @@ class Cartesian2D {
       return c2d || cell;
     }
 
-    void trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments);
+    void trace_segments(Vector& r, const Direction& u,
+                        std::vector<Segment>& segments);
   };
 
   struct TileIndex {
@@ -46,18 +47,20 @@ class Cartesian2D {
 
   double x_min() const { return x_bounds_.front()->x0(); }
   double x_max() const { return x_bounds_.back()->x0(); }
-  
+
   double y_min() const { return y_bounds_.front()->y0(); }
   double y_max() const { return y_bounds_.back()->y0(); }
 
-  std::optional<TileIndex> get_tile_index(const Vector& r, const Direction& u) const;
+  std::optional<TileIndex> get_tile_index(const Vector& r,
+                                          const Direction& u) const;
 
   Tile& tile(const TileIndex& ti);
   const Tile& tile(const TileIndex& ti) const;
 
   bool tiles_valid() const;
 
-  void trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments);
+  void trace_segments(Vector& r, const Direction& u,
+                      std::vector<Segment>& segments);
 
  private:
   std::vector<std::shared_ptr<Surface>> x_bounds_;

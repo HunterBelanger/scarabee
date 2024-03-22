@@ -30,8 +30,8 @@ Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
   }
 
   // Get sizes and allocate tiles array
-  nx_ = x_bounds_.size();
-  ny_ = y_bounds_.size();
+  nx_ = x_bounds_.size() - 1;
+  ny_ = y_bounds_.size() - 1;
 
   // All tiles start as uninitialized
   tiles_.resize({nx_, ny_});
@@ -63,16 +63,18 @@ std::optional<Cartesian2D::TileIndex> Cartesian2D::get_tile_index(
   return std::nullopt;
 }
 
-void Cartesian2D::trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments) {
+void Cartesian2D::trace_segments(Vector& r, const Direction& u,
+                                 std::vector<Segment>& segments) {
   if (this->tiles_valid() == false) {
-    throw ScarabeeException("Cannot trace segments on a Cartesian2D geometry with invalid tiles.");
+    throw ScarabeeException(
+        "Cannot trace segments on a Cartesian2D geometry with invalid tiles.");
   }
 
   // Get our current tile index
   auto ti = this->get_tile_index(r, u);
 
   // While we have a tile index
-  while(ti) {
+  while (ti) {
     // Get reference to the tile
     auto& tile = this->tile(*ti);
 
@@ -111,14 +113,14 @@ const Cartesian2D::Tile& Cartesian2D::tile(
 
 bool Cartesian2D::tiles_valid() const {
   for (const auto& t : tiles_) {
-    if (t.valid() == false)
-      return false;
+    if (t.valid() == false) return false;
   }
 
   return true;
 }
 
-void Cartesian2D::Tile::trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments) {
+void Cartesian2D::Tile::trace_segments(Vector& r, const Direction& u,
+                                       std::vector<Segment>& segments) {
   if (this->valid() == false) {
     throw ScarabeeException("Cannot trace a Tile which is empty.");
   }
@@ -126,7 +128,9 @@ void Cartesian2D::Tile::trace_segments(Vector& r, const Direction& u, std::vecto
   if (c2d) {
     c2d->trace_segments(r, u, segments);
   } else {
-    auto trace_lmbda = [&r, &u, &segments](auto& cell){ cell.trace_segments(r, u, segments); };
+    auto trace_lmbda = [&r, &u, &segments](auto& cell) {
+      cell.trace_segments(r, u, segments);
+    };
     std::visit(trace_lmbda, *cell);
   }
 }
