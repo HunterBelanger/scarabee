@@ -38,7 +38,7 @@ Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
   tiles_.fill(Tile{nullptr, std::nullopt});
 }
 
-std::optional<Cartesian2D::TileIndex> Cartesian2D::get_tile(
+std::optional<Cartesian2D::TileIndex> Cartesian2D::get_tile_index(
     const Vector& r, const Direction& u) const {
   for (std::size_t i = 0; i < nx(); i++) {
     for (std::size_t j = 0; j < ny(); j++) {
@@ -61,6 +61,27 @@ std::optional<Cartesian2D::TileIndex> Cartesian2D::get_tile(
   // If we get here, we weren't in any tile.
   // Return nullopt
   return std::nullopt;
+}
+
+void Cartesian2D::trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments) {
+  if (this->tiles_valid() == false) {
+    throw ScarabeeException("Cannot trace segments on a Cartesian2D geometry with invalid tiles.");
+  }
+
+  // Get our current tile index
+  auto ti = this->get_tile_index(r, u);
+
+  // While we have a tile index
+  while(ti) {
+    // Get reference to the tile
+    auto& tile = this->tile(*ti);
+
+    // Trace segments on tile
+    tile.trace_segments(r, u, segments);
+
+    // Get new tile index
+    ti = this->get_tile_index(r, u);
+  }
 }
 
 Cartesian2D::Tile& Cartesian2D::tile(const Cartesian2D::TileIndex& ti) {
@@ -90,16 +111,22 @@ const Cartesian2D::Tile& Cartesian2D::tile(
 
 bool Cartesian2D::tiles_valid() const {
   for (const auto& t : tiles_) {
-    if (t.c2d && t.cell) {
+    if (t.valid() == false)
       return false;
-    } else if (!t.c2d & !t.cell) {
-      return false;
-    } else if (t.c2d) {
-      if (t.c2d->tiles_valid() == false) return false;
-    } else {
-      if (!t.cell) return false;
-    }
   }
 
   return true;
+}
+
+void Cartesian2D::Tile::trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments) {
+  if (this->valid() == false) {
+    throw ScarabeeException("Cannot trace a Tile which is empty.");
+  }
+
+  if (c2d) {
+    c2d->trace_segments(r, u, segments);
+  } else {
+    auto trace_lmbda = [&r, &u, &segments](auto& cell){ cell.trace_segments(r, u, segments); };
+    std::visit(trace_lmbda, *cell);
+  }
 }
