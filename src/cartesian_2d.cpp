@@ -119,6 +119,67 @@ bool Cartesian2D::tiles_valid() const {
   return true;
 }
 
+FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r, const Direction& u) {
+  auto ti = this->get_tile_index(r, u);
+
+  if (ti.has_value() == false) {
+    // We apparently are not in a tile
+    std::stringstream mssg;
+    mssg << "Position r = " << r << ", and Direction u = " << u
+         << ", are not in Cartesian2D geometry.";
+    throw ScarabeeException(mssg.str());
+  }
+
+  auto& t = this->tile(*ti);
+
+  if (t.valid() == false) {
+    std::stringstream mssg;
+    mssg << "Tile for Position r = " << r << ", and Direction u = " << u
+         << " is empty.";
+    throw ScarabeeException(mssg.str());
+  }
+
+  if (t.c2d) {
+    return t.c2d->get_fsr(r, u);
+  } else {
+    auto cell_get_fsr = [&r, &u ](auto& cell) -> auto& {
+      return cell.get_fsr(r, u);
+    };
+    return std::visit(cell_get_fsr, t.cell.value());
+  }
+}
+
+const FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r,
+                                             const Direction& u) const {
+  auto ti = this->get_tile_index(r, u);
+
+  if (ti.has_value() == false) {
+    // We apparently are not in a tile
+    std::stringstream mssg;
+    mssg << "Position r = " << r << ", and Direction u = " << u
+         << ", are not in Cartesian2D geometry.";
+    throw ScarabeeException(mssg.str());
+  }
+
+  const auto& t = this->tile(*ti);
+
+  if (t.valid() == false) {
+    std::stringstream mssg;
+    mssg << "Tile for Position r = " << r << ", and Direction u = " << u
+         << " is empty.";
+    throw ScarabeeException(mssg.str());
+  }
+
+  if (t.c2d) {
+    return t.c2d->get_fsr(r, u);
+  } else {
+    auto cell_get_fsr = [&r, &u ](const auto& cell) -> const auto& {
+      return cell.get_fsr(r, u);
+    };
+    return std::visit(cell_get_fsr, t.cell.value());
+  }
+}
+
 void Cartesian2D::Tile::trace_segments(Vector& r, const Direction& u,
                                        std::vector<Segment>& segments) {
   if (this->valid() == false) {

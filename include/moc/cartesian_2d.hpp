@@ -2,6 +2,7 @@
 #define CARTESIAN_2D_H
 
 #include <moc/cell.hpp>
+#include <moc/flat_source_region.hpp>
 #include <moc/surface.hpp>
 #include <moc/pin_cell.hpp>
 #include <moc/direction.hpp>
@@ -58,6 +59,9 @@ class Cartesian2D {
   const Tile& tile(const TileIndex& ti) const;
 
   bool tiles_valid() const;
+
+  FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
+  const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
 
   void trace_segments(Vector& r, const Direction& u,
                       std::vector<Segment>& segments);
