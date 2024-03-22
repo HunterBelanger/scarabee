@@ -16,7 +16,7 @@ void Cell::check_surfaces() const {
     throw ScarabeeException("No x_min surface provided to Cell.");
   } else if (!x_max_) {
     throw ScarabeeException("No x_max surface provided to Cell.");
-  }else if (!y_min_) {
+  } else if (!y_min_) {
     throw ScarabeeException("No y_min surface provided to Cell.");
   } else if (!y_max_) {
     throw ScarabeeException("No y_max surface provided to Cell.");
@@ -52,7 +52,12 @@ void Cell::set_y_max(const std::shared_ptr<Surface>& ym) {
 
 std::vector<Segment> Cell::trace_segments(Vector& r, const Direction& u) {
   std::vector<Segment> segments;
+  this->trace_segments(r, u, segments);
+  return segments;
+}
 
+void Cell::trace_segments(Vector& r, const Direction& u,
+                          std::vector<Segment>& segments) {
   while (this->inside(r, u)) {
     // Get current FSR
     auto& fsr = this->get_fsr(r, u);
@@ -66,8 +71,6 @@ std::vector<Segment> Cell::trace_segments(Vector& r, const Direction& u) {
     // Increment distance
     r = r + distance * u;
   }
-
-  return segments;
 }
 
 bool Cell::inside(const Vector& r, const Direction& u) const {

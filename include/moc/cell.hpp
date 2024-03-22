@@ -18,6 +18,8 @@ class Cell {
        std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax);
 
   std::vector<Segment> trace_segments(Vector& r, const Direction& u);
+  void trace_segments(Vector& r, const Direction& u,
+                      std::vector<Segment>& segments);
 
   bool inside(const Vector& r, const Direction& u) const;
 

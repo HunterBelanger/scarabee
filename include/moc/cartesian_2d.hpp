@@ -4,7 +4,11 @@
 #include <moc/cell.hpp>
 #include <moc/surface.hpp>
 #include <moc/pin_cell.hpp>
+#include <moc/direction.hpp>
+#include <moc/vector.hpp>
 #include <transport_xs.hpp>
+
+#include <xtensor/xarray.hpp>
 
 #include <memory>
 #include <optional>
@@ -23,21 +27,27 @@ class Cartesian2D {
     std::optional<CellType> cell;
   };
 
+  struct TileIndex {
+    std::size_t i, j;
+  };
+
   Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
               const std::vector<std::shared_ptr<Surface>>& y_bounds);
 
   std::size_t nx() const { return nx_; }
   std::size_t ny() const { return ny_; }
-  
-  Tile& tile(std::size_t i, std::size_t j);
-  const Tile& tile(std::size_t i, std::size_t j) const;
+
+  std::optional<TileIndex> get_tile(const Vector& r, const Direction& u) const;
+
+  Tile& tile(const TileIndex& ti);
+  const Tile& tile(const TileIndex& ti) const;
 
   bool tiles_valid() const;
 
  private:
   std::vector<std::shared_ptr<Surface>> x_bounds_;
   std::vector<std::shared_ptr<Surface>> y_bounds_;
-  std::vector<Tile> tiles_;
+  xt::xarray<Tile> tiles_;
   std::size_t nx_, ny_;
 };
 

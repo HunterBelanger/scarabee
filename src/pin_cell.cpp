@@ -208,7 +208,7 @@ void PinCell::build() {
   const double vol_ang = (PI * mat_radii_.back() * mat_radii_.back()) / 8.;
   const double d = 0.5 * std::min(dx, dy);
   const double dd = 0.5 * std::max(dx, dy);
-  const double vol_min = (0.5 * d  * d) - vol_ang;
+  const double vol_min = (0.5 * d * d) - vol_ang;
   const double vol_max = vol_min + (d * (dd - d)) - vol_ang;
 
   // NNE
