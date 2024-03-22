@@ -16,18 +16,21 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
       pd_(),
       ym_(),
       nd_(),
-      x_orig_(),
-      y_orig_(),
       x0_(),
       y0_() {
-  x_orig_ = 0.5 * (x_min_->x0() + x_max_->x0());
-  y_orig_ = 0.5 * (y_min_->y0() + y_max_->y0());
+  this->build();
+}
+
+void PinCell::build() {
+  // Clear vectors
+  radii_.clear();
+  fsrs_.clear();
+
+  // Get variables
+  x0_ = 0.5 * (x_min_->x0() + x_max_->x0());
+  y0_ = 0.5 * (y_min_->y0() + y_max_->y0());
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
-
-  // For now, we center rings at the cell origin
-  x0_ = x_orig_;
-  y0_ = y_orig_;
 
   // Create the 4 surfaces which give us our 8 angular sections
   xm_ = std::make_shared<Surface>();
@@ -55,11 +58,9 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
     throw ScarabeeException("Must have one more material than material radii.");
   }
 
-  // Make sure radii all > 0
-  for (auto r : mat_radii_) {
-    if (r <= 0.) {
-      throw ScarabeeException("All radii must be > 0.");
-    }
+  // Make sure we have at least 2 mats and one radii
+  if (mat_radii_.size() == 0) {
+    throw ScarabeeException("Must have at least one radiius.");
   }
 
   // Make sure radii are sorted
@@ -67,21 +68,28 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
     throw ScarabeeException("All radii must be sorted.");
   }
 
-  // Make sure we have at least 2 mats and one radii
-  if (mat_radii_.size() == 0) {
-    throw ScarabeeException("Must have at least one radiius.");
+  // Make sure radii all > 0
+  if (mat_radii_[0] <= 0.) {
+    throw ScarabeeException("All radii must be > 0.");
   }
 
-  // Make sure largest radiius doesn't intersect the cell walls
+  // Make sure mats aren't nullptr
+  for (const auto& mat : mats_) {
+    if (!mat) {
+      throw ScarabeeException("Found TransportXS which was nullptr.");
+    }
+  }
+
+  // Make sure largest radius doesn't intersect the cell walls
   if (x0_ - mat_radii_.back() <= x_min_->x0() ||
       x0_ + mat_radii_.back() >= x_max_->x0() ||
       y0_ - mat_radii_.back() <= y_min_->y0() ||
       y0_ + mat_radii_.back() >= y_max_->y0()) {
     throw ScarabeeException(
-        "Outer material radiius may not intersect cell wall.");
+        "Outer material radius may not intersect cell wall.");
   }
 
-  // First, make all anular regions
+  // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
     radii_.push_back(std::make_shared<Surface>());
@@ -93,8 +101,10 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
     // Make 8 FSRs
     double vol = PI * r * r;
     if (i > 0) {
+      // Calculate volume of a ring.
       vol -= PI * mat_radii_[i - 1] * mat_radii_[i - 1];
     }
+    // Get 1/8th the volume of the full ring, for each angular segment.
     vol /= 8.;
 
     // NNE
@@ -186,13 +196,25 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
     }
   }
 
-  // Must now make the 8 outer regions
-  double vol = ((dx * dy) - (PI * mat_radii_.back() * mat_radii_.back())) / 8.;
+  // Must now make the 8 outer regions. We start by calculating their volumes.
+  // If dx != dy, then the bits can have different volumes. Here is a diagram
+  // for the case of dx > dy, on just the upper right corner.
+  // y     dd
+  // ^   _______
+  // |   |  /: |
+  // | d | / : |
+  // |   |/__:_|
+  // ------------> x
+  const double vol_ang = (PI * mat_radii_.back() * mat_radii_.back()) / 8.;
+  const double d = 0.5 * std::min(dx, dy);
+  const double dd = 0.5 * std::max(dx, dy);
+  const double vol_min = (0.5 * d  * d) - vol_ang;
+  const double vol_max = vol_min + (d * (dd - d)) - vol_ang;
 
   // NNE
   fsrs_.emplace_back();
-  fsrs_.back().volume() = vol;
-  fsrs_.back().xs() = mats.back();
+  fsrs_.back().volume() = dx > dy ? vol_min : vol_max;
+  fsrs_.back().xs() = mats_.back();
   fsrs_.back().tokens().push_back({radii_.back(), Surface::Side::Positive});
   fsrs_.back().tokens().push_back({xm_, Surface::Side::Positive});
   fsrs_.back().tokens().push_back({pd_, Surface::Side::Positive});
@@ -200,8 +222,8 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
 
   // NEE
   fsrs_.emplace_back();
-  fsrs_.back().volume() = vol;
-  fsrs_.back().xs() = mats.back();
+  fsrs_.back().volume() = dx > dy ? vol_max : vol_min;
+  fsrs_.back().xs() = mats_.back();
   fsrs_.back().tokens().push_back({radii_.back(), Surface::Side::Positive});
   fsrs_.back().tokens().push_back({ym_, Surface::Side::Positive});
   fsrs_.back().tokens().push_back({pd_, Surface::Side::Negative});
@@ -209,8 +231,8 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
 
   // SEE
   fsrs_.emplace_back();
-  fsrs_.back().volume() = vol;
-  fsrs_.back().xs() = mats.back();
+  fsrs_.back().volume() = dx > dy ? vol_max : vol_min;
+  fsrs_.back().xs() = mats_.back();
   fsrs_.back().tokens().push_back({radii_.back(), Surface::Side::Positive});
   fsrs_.back().tokens().push_back({ym_, Surface::Side::Negative});
   fsrs_.back().tokens().push_back({nd_, Surface::Side::Positive});
@@ -218,8 +240,8 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
 
   // SSE
   fsrs_.emplace_back();
-  fsrs_.back().volume() = vol;
-  fsrs_.back().xs() = mats.back();
+  fsrs_.back().volume() = dx > dy ? vol_min : vol_max;
+  fsrs_.back().xs() = mats_.back();
   fsrs_.back().tokens().push_back({radii_.back(), Surface::Side::Positive});
   fsrs_.back().tokens().push_back({xm_, Surface::Side::Positive});
   fsrs_.back().tokens().push_back({nd_, Surface::Side::Negative});
@@ -227,8 +249,8 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
 
   // SSW
   fsrs_.emplace_back();
-  fsrs_.back().volume() = vol;
-  fsrs_.back().xs() = mats.back();
+  fsrs_.back().volume() = dx > dy ? vol_min : vol_max;
+  fsrs_.back().xs() = mats_.back();
   fsrs_.back().tokens().push_back({radii_.back(), Surface::Side::Positive});
   fsrs_.back().tokens().push_back({xm_, Surface::Side::Negative});
   fsrs_.back().tokens().push_back({pd_, Surface::Side::Negative});
@@ -236,8 +258,8 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
 
   // SWW
   fsrs_.emplace_back();
-  fsrs_.back().volume() = vol;
-  fsrs_.back().xs() = mats.back();
+  fsrs_.back().volume() = dx > dy ? vol_max : vol_min;
+  fsrs_.back().xs() = mats_.back();
   fsrs_.back().tokens().push_back({radii_.back(), Surface::Side::Positive});
   fsrs_.back().tokens().push_back({ym_, Surface::Side::Negative});
   fsrs_.back().tokens().push_back({pd_, Surface::Side::Positive});
@@ -245,8 +267,8 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
 
   // NWW
   fsrs_.emplace_back();
-  fsrs_.back().volume() = vol;
-  fsrs_.back().xs() = mats.back();
+  fsrs_.back().volume() = dx > dy ? vol_max : vol_min;
+  fsrs_.back().xs() = mats_.back();
   fsrs_.back().tokens().push_back({radii_.back(), Surface::Side::Positive});
   fsrs_.back().tokens().push_back({ym_, Surface::Side::Positive});
   fsrs_.back().tokens().push_back({nd_, Surface::Side::Negative});
@@ -254,8 +276,8 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
 
   // NNW
   fsrs_.emplace_back();
-  fsrs_.back().volume() = vol;
-  fsrs_.back().xs() = mats.back();
+  fsrs_.back().volume() = dx > dy ? vol_min : vol_max;
+  fsrs_.back().xs() = mats_.back();
   fsrs_.back().tokens().push_back({radii_.back(), Surface::Side::Positive});
   fsrs_.back().tokens().push_back({xm_, Surface::Side::Negative});
   fsrs_.back().tokens().push_back({nd_, Surface::Side::Positive});

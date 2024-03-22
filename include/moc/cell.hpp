@@ -20,14 +20,27 @@ class Cell {
   std::vector<Segment> trace_segments(Vector& r, const Direction& u);
 
   bool inside(const Vector& r, const Direction& u) const;
+
   double distance(const Vector& r, const Direction& u) const;
 
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
 
+  const std::shared_ptr<Surface>& x_min() const { return x_min_; }
+  const std::shared_ptr<Surface>& x_max() const { return x_max_; }
+  const std::shared_ptr<Surface>& y_min() const { return y_min_; }
+  const std::shared_ptr<Surface>& y_max() const { return y_max_; }
+
+  void set_x_min(const std::shared_ptr<Surface>& xm);
+  void set_x_max(const std::shared_ptr<Surface>& xm);
+  void set_y_min(const std::shared_ptr<Surface>& ym);
+  void set_y_max(const std::shared_ptr<Surface>& ym);
+
  protected:
   std::vector<FlatSourceRegion> fsrs_;
   std::shared_ptr<Surface> x_min_, y_min_, x_max_, y_max_;
+
+  void check_surfaces() const;
 };
 
 #endif

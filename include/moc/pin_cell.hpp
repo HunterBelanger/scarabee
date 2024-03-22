@@ -14,13 +14,14 @@ class PinCell : public Cell {
           std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
           std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax);
 
+  void build();
+
  private:
   std::vector<double> mat_radii_;
   std::vector<std::shared_ptr<TransportXS>> mats_;
   std::vector<std::shared_ptr<Surface>> radii_;
   std::shared_ptr<Surface> xm_, pd_, ym_, nd_;
-  double x_orig_, y_orig_;  // Origin of Cell
-  double x0_, y0_;          // Origin of rings
+  double x0_, y0_; // Origin of cell and rings
 };
 
 #endif

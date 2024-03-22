@@ -6,7 +6,49 @@
 
 Cell::Cell(std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
            std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax)
-    : fsrs_(), x_min_(xmin), x_max_(xmax), y_min_(ymin), y_max_(ymax) {}
+    : fsrs_(), x_min_(xmin), x_max_(xmax), y_min_(ymin), y_max_(ymax) {
+  this->check_surfaces();
+}
+
+void Cell::check_surfaces() const {
+  // Make sure we don't have a nullptr surface
+  if (!x_min_) {
+    throw ScarabeeException("No x_min surface provided to Cell.");
+  } else if (!x_max_) {
+    throw ScarabeeException("No x_max surface provided to Cell.");
+  }else if (!y_min_) {
+    throw ScarabeeException("No y_min surface provided to Cell.");
+  } else if (!y_max_) {
+    throw ScarabeeException("No y_max surface provided to Cell.");
+  }
+
+  // Make sure the surfaces are ordered
+  if (x_min_->x0() >= x_max_->x0()) {
+    throw ScarabeeException("Cell surface x_min must be < x_max.");
+  } else if (y_min_->y0() >= y_max_->y0()) {
+    throw ScarabeeException("Cell surface y_min must be < y_max.");
+  }
+}
+
+void Cell::set_x_min(const std::shared_ptr<Surface>& xm) {
+  x_min_ = xm;
+  this->check_surfaces();
+}
+
+void Cell::set_x_max(const std::shared_ptr<Surface>& xm) {
+  x_max_ = xm;
+  this->check_surfaces();
+}
+
+void Cell::set_y_min(const std::shared_ptr<Surface>& ym) {
+  y_min_ = ym;
+  this->check_surfaces();
+}
+
+void Cell::set_y_max(const std::shared_ptr<Surface>& ym) {
+  y_max_ = ym;
+  this->check_surfaces();
+}
 
 std::vector<Segment> Cell::trace_segments(Vector& r, const Direction& u) {
   std::vector<Segment> segments;
@@ -46,15 +88,17 @@ double Cell::distance(const Vector& r, const Direction& u) const {
 }
 
 FlatSourceRegion& Cell::get_fsr(const Vector& r, const Direction& u) {
+  std::stringstream mssg;
   if (this->inside(r, u) == false) {
-    throw ScarabeeException("Must be inside Cell to request FSR.");
+    mssg << "Could not find FSR at r = " << r << ", u = " << u << ".\n";
+    mssg << "Position r and direction u are not inside the cell.";
+    throw ScarabeeException(mssg.str());
   }
 
   for (auto& fsr : fsrs_) {
     if (fsr.inside(r, u)) return fsr;
   }
 
-  std::stringstream mssg;
   mssg << "Could not find FSR at r = " << r << ", u = " << u << ".";
   throw ScarabeeException(mssg.str());
 
@@ -64,15 +108,17 @@ FlatSourceRegion& Cell::get_fsr(const Vector& r, const Direction& u) {
 
 const FlatSourceRegion& Cell::get_fsr(const Vector& r,
                                       const Direction& u) const {
+  std::stringstream mssg;
   if (this->inside(r, u) == false) {
-    throw ScarabeeException("Must be inside Cell to request FSR.");
+    mssg << "Could not find FSR at r = " << r << ", u = " << u << ".\n";
+    mssg << "Position r and direction u are not inside the cell.";
+    throw ScarabeeException(mssg.str());
   }
 
   for (const auto& fsr : fsrs_) {
     if (fsr.inside(r, u)) return fsr;
   }
 
-  std::stringstream mssg;
   mssg << "Could not find FSR at r = " << r << ", u = " << u << ".";
   throw ScarabeeException(mssg.str());
 
