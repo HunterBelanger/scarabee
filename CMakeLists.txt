@@ -52,6 +52,7 @@ add_executable(scarabee src/main.cpp
                         src/cylindrical_cell.cpp
                         src/cylindrical_flux_solver.cpp
                         src/surface.cpp
+                        src/flat_source_region.cpp
                         src/cell.cpp
                         src/pin_cell.cpp
                         src/cartesian_2d.cpp)

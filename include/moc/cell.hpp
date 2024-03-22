@@ -14,9 +14,6 @@
 
 class Cell {
  public:
-  Cell(std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
-       std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax);
-
   std::vector<Segment> trace_segments(Vector& r, const Direction& u);
   void trace_segments(Vector& r, const Direction& u,
                       std::vector<Segment>& segments);
@@ -41,7 +38,9 @@ class Cell {
  protected:
   std::vector<FlatSourceRegion> fsrs_;
   std::shared_ptr<Surface> x_min_, y_min_, x_max_, y_max_;
-
+     
+  Cell(std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
+       std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax);
   void check_surfaces() const;
 };
 

@@ -282,4 +282,9 @@ void PinCell::build() {
   fsrs_.back().tokens().push_back({xm_, Surface::Side::Negative});
   fsrs_.back().tokens().push_back({nd_, Surface::Side::Positive});
   fsrs_.back().tokens().push_back({y_max_, Surface::Side::Negative});
+
+  // Initialize all FSRs
+  for (auto& fsr : fsrs_) {
+    fsr.initialize();
+  }
 }

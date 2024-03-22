@@ -4,7 +4,7 @@
 #include <transport_xs.hpp>
 #include <moc/flat_source_region.hpp>
 
-#include <xtensor/xarray.hpp>
+#include <vector>
 
 class Segment {
  public:
@@ -14,11 +14,11 @@ class Segment {
 
   const TransportXS& xs() const { return *fsr_->xs(); }
 
-  xt::xarray<double>& flux() { return fsr_->flux(); }
-  const xt::xarray<double>& flux() const { return fsr_->flux(); }
+  std::vector<double>& flux() { return fsr_->flux(); }
+  const std::vector<double>& flux() const { return fsr_->flux(); }
 
-  xt::xarray<double>& source() { return fsr_->source(); }
-  const xt::xarray<double>& source() const { return fsr_->source(); }
+  std::vector<double>& source() { return fsr_->source(); }
+  const std::vector<double>& source() const { return fsr_->source(); }
 
  private:
   FlatSourceRegion* fsr_;
