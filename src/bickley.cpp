@@ -107,7 +107,7 @@ double Ki3(double x) {
         0x1.1333333333333p-65};
 
     return chebyshev_eval(x, a, b, c);
-  } else if (x < 13) {
+  } else if (x < 13.) {
     constexpr double a{0x1.6p+3};  // a = 11.000000
     constexpr double b{0x1.ap+3};  // b = 13.000000
     constexpr std::array<double, 25> c{
