@@ -12,7 +12,7 @@ class CylindricalFluxSolver {
  public:
   CylindricalFluxSolver(std::shared_ptr<CylindricalCell> cell);
 
-  std::uint32_t ngroups() const { return cell_->ngroups(); }
+  std::size_t ngroups() const { return cell_->ngroups(); }
   std::size_t nregions() const { return cell_->nregions(); }
 
   void solve();

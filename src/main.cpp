@@ -142,5 +142,5 @@ void test() {
 int main() {
   test();
 
-  return 0.;
+  return 0;
 }
