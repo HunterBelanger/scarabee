@@ -55,7 +55,9 @@ add_executable(scarabee src/main.cpp
                         src/flat_source_region.cpp
                         src/cell.cpp
                         src/pin_cell.cpp
-                        src/cartesian_2d.cpp)
+                        src/cartesian_2d.cpp
+                        src/track.cpp
+                        src/moc_driver.cpp)
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
