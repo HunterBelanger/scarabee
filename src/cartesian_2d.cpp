@@ -180,6 +180,18 @@ const FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r,
   }
 }
 
+std::size_t Cartesian2D::num_fsrs() const {
+  std::size_t n = 0;
+
+  for (const auto& tile : tiles_) n += tile.num_fsrs();
+
+  return n;
+}
+
+void Cartesian2D::append_fsrs(std::vector<FlatSourceRegion*>& fsrs) {
+  for (auto& tile : tiles_) tile.append_fsrs(fsrs);
+}
+
 void Cartesian2D::Tile::trace_segments(Vector& r, const Direction& u,
                                        std::vector<Segment>& segments) {
   if (this->valid() == false) {
@@ -193,5 +205,31 @@ void Cartesian2D::Tile::trace_segments(Vector& r, const Direction& u,
       cell.trace_segments(r, u, segments);
     };
     std::visit(trace_lmbda, *cell);
+  }
+}
+
+std::size_t Cartesian2D::Tile::num_fsrs() const {
+  if (this->valid() == false) {
+    return 0;
+  }
+
+  if (c2d) {
+    return c2d->num_fsrs();
+  } else {
+    auto num_fsrs = [](auto& cell) { return cell.num_fsrs(); };
+    return std::visit(num_fsrs, *cell);
+  }
+}
+
+void Cartesian2D::Tile::append_fsrs(std::vector<FlatSourceRegion*>& fsrs) {
+  if (this->valid() == false) {
+    return;
+  }
+
+  if (c2d) {
+    c2d->append_fsrs(fsrs);
+  } else {
+    auto append_fsrs = [&fsrs](auto& cell) { cell.append_fsrs(fsrs); };
+    std::visit(append_fsrs, *cell);
   }
 }

@@ -4,6 +4,7 @@
 
 #include <moc/pin_cell.hpp>
 #include <moc/cartesian_2d.hpp>
+#include <moc/moc_driver.hpp>
 
 #include <cmath>
 #include <iostream>
@@ -120,12 +121,9 @@ void test() {
   std::shared_ptr<Surface> xmin = std::make_shared<Surface>();
   xmin->type() = Surface::Type::XPlane;
   xmin->x0() = -0.63;
-  std::shared_ptr<Surface> xmid = std::make_shared<Surface>();
-  xmid->type() = Surface::Type::XPlane;
-  xmid->x0() = 0.63;
   std::shared_ptr<Surface> xmax = std::make_shared<Surface>();
   xmax->type() = Surface::Type::XPlane;
-  xmax->x0() = 0.63+ 2.*0.63;
+  xmax->x0() = 0.63;
   std::shared_ptr<Surface> ymin = std::make_shared<Surface>();
   ymin->type() = Surface::Type::YPlane;
   ymin->y0() = -0.63;
@@ -133,28 +131,30 @@ void test() {
   ymax->type() = Surface::Type::YPlane;
   ymax->y0() = 0.63;
 
-  std::vector<std::shared_ptr<Surface>> x_bounds {xmin, xmid, xmax};
-  std::vector<std::shared_ptr<Surface>> y_bounds {ymin, ymax};
+  std::vector<std::shared_ptr<Surface>> x_bounds{xmin, xmax};
+  std::vector<std::shared_ptr<Surface>> y_bounds{ymin, ymax};
 
-  PinCell pincell1(radii, mats, xmin, xmid, ymin, ymax);
-  PinCell pincell2(radii, mats, xmid, xmax, ymin, ymax);
+  PinCell pincell1(radii, mats, xmin, xmax, ymin, ymax);
 
+  std::shared_ptr<Cartesian2D> c2d =
+      std::make_shared<Cartesian2D>(x_bounds, y_bounds);
+  c2d->tile({0, 0}).cell = pincell1;
 
-  Cartesian2D c2d(x_bounds, y_bounds);
-  c2d.tile({0, 0}).cell = pincell1;
-  c2d.tile({1, 0}).cell = pincell2;
-
-  Vector r(-0.63, 0.);//000000001);
+  Vector r(-0.63, 0.);  // 000000001);
   Direction u(1., 0.);
 
-  //auto segs = pincell.trace_segments(r, u);
+  // auto segs = pincell.trace_segments(r, u);
   std::vector<Segment> segs;
-  c2d.trace_segments(r, u, segs);
+  c2d->trace_segments(r, u, segs);
 
   std::cout << "\n";
   for (const auto& seg : segs) {
     std::cout << " Segment length = " << seg.length() << "\n";
   }
+  std::cout << "\n";
+
+  MOCDriver moc(c2d);
+  moc.draw_tracks(128, 0.01);
 }
 
 int main() {

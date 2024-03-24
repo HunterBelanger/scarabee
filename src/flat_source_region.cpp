@@ -3,7 +3,8 @@
 
 void FlatSourceRegion::initialize() {
   if (xs_ == nullptr) {
-    throw ScarabeeException("Cannot initialize FlatSourceRegion with no cross sections.");
+    throw ScarabeeException(
+        "Cannot initialize FlatSourceRegion with no cross sections.");
   }
 
   flux_.resize(xs_->ngroups(), 0.);

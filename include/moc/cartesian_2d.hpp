@@ -32,6 +32,10 @@ class Cartesian2D {
       return c2d || cell;
     }
 
+    std::size_t num_fsrs() const;
+
+    void append_fsrs(std::vector<FlatSourceRegion*>& fsrs);
+
     void trace_segments(Vector& r, const Direction& u,
                         std::vector<Segment>& segments);
   };
@@ -62,6 +66,10 @@ class Cartesian2D {
 
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
+
+  std::size_t num_fsrs() const;
+
+  void append_fsrs(std::vector<FlatSourceRegion*>& fsrs);
 
   void trace_segments(Vector& r, const Direction& u,
                       std::vector<Segment>& segments);

@@ -25,6 +25,12 @@ class Cell {
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
 
+  std::size_t num_fsrs() const { return fsrs_.size(); }
+
+  void append_fsrs(std::vector<FlatSourceRegion*>& fsrs) {
+    for (auto& fsr : fsrs_) fsrs.push_back(&fsr);
+  }
+
   const std::shared_ptr<Surface>& x_min() const { return x_min_; }
   const std::shared_ptr<Surface>& x_max() const { return x_max_; }
   const std::shared_ptr<Surface>& y_min() const { return y_min_; }
@@ -38,7 +44,7 @@ class Cell {
  protected:
   std::vector<FlatSourceRegion> fsrs_;
   std::shared_ptr<Surface> x_min_, y_min_, x_max_, y_max_;
-     
+
   Cell(std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
        std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax);
   void check_surfaces() const;
