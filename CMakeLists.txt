@@ -36,10 +36,10 @@ FetchContent_MakeAvailable(xtl)
 
 #===============================================================================
 # Get XTENSOR
-message(STATUS "Downloading xtensor v0.24.7")
+message(STATUS "Downloading xtensor v0.25.0")
 FetchContent_Declare(xtensor
   GIT_REPOSITORY https://github.com/xtensor-stack/xtensor.git
-  GIT_TAG        0.24.7
+  GIT_TAG        0.25.0
 )
 FetchContent_MakeAvailable(xtensor)
 

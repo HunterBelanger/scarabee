@@ -9,7 +9,7 @@
 
 #include <htl/static_vector.hpp>
 
-#include <xtensor/xarray.hpp>
+#include <xtensor/xtensor.hpp>
 
 #include <memory>
 #include <vector>
@@ -57,16 +57,16 @@ class FlatSourceRegion {
   double& volume() { return volume_; }
   const double& volume() const { return volume_; }
 
-  xt::xarray<double>& flux() { return flux_; }
-  const xt::xarray<double>& flux() const { return flux_; }
+  xt::xtensor<double, 1>& flux() { return flux_; }
+  const xt::xtensor<double, 1>& flux() const { return flux_; }
 
-  xt::xarray<double>& source() { return source_; }
-  const xt::xarray<double>& source() const { return source_; }
+  xt::xtensor<double, 1>& source() { return source_; }
+  const xt::xtensor<double, 1>& source() const { return source_; }
 
  private:
   htl::static_vector<RegionToken, MAX_SURFS> tokens_;
-  xt::xarray<double> flux_;
-  xt::xarray<double> source_;
+  xt::xtensor<double, 1> flux_;
+  xt::xtensor<double, 1> source_;
   std::shared_ptr<TransportXS> xs_;
   double volume_;
 };

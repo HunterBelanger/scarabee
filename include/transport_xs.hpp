@@ -3,7 +3,10 @@
 
 #include <utils/scarabee_exception.hpp>
 
-#include <xtensor/xarray.hpp>
+#include <xtensor/xtensor.hpp>
+#include <xtensor/xview.hpp>
+#include <xtensor/xio.hpp>
+#include <iostream>
 
 #include <cstdint>
 #include <vector>
@@ -16,24 +19,24 @@ class TransportXS {
 
   bool fissile() const { return fissile_; }
 
-  double Et(std::uint32_t g) const { return Et_[g]; }
+  double Et(std::uint32_t g) const { return Et_(g); }
 
-  double Ea(std::uint32_t g) const { return Ea_[g]; }
+  double Ea(std::uint32_t g) const { return Ea_(g); }
 
   double Ef(std::uint32_t g) const {
-    if (fissile_) return Ef_[g];
+    if (fissile_) return Ef_(g);
     return 0.;
   }
 
   double Er(std::uint32_t g) const { return Ea(g) + Es(g) - Es(g, g); }
 
   double nu(std::uint32_t g) const {
-    if (fissile_) return nu_[g];
+    if (fissile_) return nu_(g);
     return 0.;
   }
 
   double chi(std::uint32_t g) const {
-    if (fissile_) return chi_[g];
+    if (fissile_) return chi_(g);
     return 0.;
   }
 
@@ -42,11 +45,7 @@ class TransportXS {
   }
 
   double Es(std::uint32_t gin) const {
-    double Es_ret = 0.;
-    for (std::uint32_t gout = 0; gout < this->ngroups(); gout++) {
-      Es_ret += Es_(gin, gout);
-    }
-    return Es_ret;
+    return xt::sum(xt::view(Es_, gin, xt::all()))();
   }
 
   // Operators for constructing compound cross sections
@@ -56,13 +55,13 @@ class TransportXS {
   TransportXS& operator*=(double N);
 
   // private:
-  xt::xarray<double> Es_;    // Scattering matrix
-  std::vector<double> Et_;   // Total xs
-  std::vector<double> Ea_;   // Absorption xs
-  std::vector<double> Ef_;   // Fission xs
-  std::vector<double> nu_;   // Fission yields
-  std::vector<double> chi_;  // Fission spectrum
-  bool fissile_;             // Fissile indicator
+  xt::xtensor<double, 2> Es_;  // Scattering matrix
+  xt::xtensor<double, 1> Et_;  // Total xs
+  xt::xtensor<double, 1> Ea_;  // Absorption xs
+  xt::xtensor<double, 1> Ef_;  // Fission xs
+  xt::xtensor<double, 1> nu_;  // Fission yields
+  xt::xtensor<double, 1> chi_; // Fission spectrum
+  bool fissile_;               // Fissile indicator
 };
 
 #endif

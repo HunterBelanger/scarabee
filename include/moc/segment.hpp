@@ -16,11 +16,11 @@ class Segment {
 
   const TransportXS& xs() const { return *fsr_->xs(); }
 
-  xt::xarray<double>& flux() { return fsr_->flux(); }
-  const xt::xarray<double>& flux() const { return fsr_->flux(); }
+  xt::xtensor<double, 1>& flux() { return fsr_->flux(); }
+  const xt::xtensor<double, 1>& flux() const { return fsr_->flux(); }
 
-  xt::xarray<double>& source() { return fsr_->source(); }
-  const xt::xarray<double>& source() const { return fsr_->source(); }
+  xt::xtensor<double, 1>& source() { return fsr_->source(); }
+  const xt::xtensor<double, 1>& source() const { return fsr_->source(); }
 
  private:
   FlatSourceRegion* fsr_;

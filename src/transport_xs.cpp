@@ -19,9 +19,9 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
                      (nu_p_g * Ef_g);
 
     // Assign new prompt data
-    nu_[g] = nu_p_g;
-    chi_[g] = chi_p_g;
-    Ef_[g] = Ef_g;
+    nu_(g) = nu_p_g;
+    chi_(g) = chi_p_g;
+    Ef_(g) = Ef_g;
   }
 
   // Make sure that we are fissile if the other was also fissile
@@ -33,9 +33,9 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
       Es_(g, gout) += R.Es(g, gout);
     }
 
-    Et_[g] += R.Et(g);
-    Ea_[g] += R.Ea(g);
-    Ef_[g] += R.Ef(g);
+    Et_(g) += R.Et(g);
+    Ea_(g) += R.Ea(g);
+    Ef_(g) += R.Ef(g);
   }
 
   return *this;
@@ -43,16 +43,16 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
 
 TransportXS& TransportXS::operator*=(double N) {
   // Scale Es_
-  for (auto& v : Es_) v *= N;
+  Es_ *= N;
 
   // Scale Et_
-  for (auto& v : Et_) v *= N;
+  Et_ *= N;
 
   // Scale Ea_
-  for (auto& v : Ea_) v *= N;
+  Ea_ *= N;
 
   // Scale Ef_
-  for (auto& v : Ef_) v *= N;
+  Ef_ *= N;
 
   return *this;
 }
