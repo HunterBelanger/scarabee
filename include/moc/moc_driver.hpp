@@ -21,6 +21,9 @@ class MOCDriver {
   bool drawn() const { return !angle_info_.empty(); }
 
   void draw_tracks(std::uint32_t n_angles, double d);
+  
+  FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
+  const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
 
   BoundaryCondition& x_min_bc() { return x_min_bc_; }
   const BoundaryCondition& x_min_bc() const { return x_min_bc_; }

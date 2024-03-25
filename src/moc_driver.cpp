@@ -161,3 +161,21 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
 
   // TODO setup boundary conditions
 }
+
+FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) {
+  try {
+    return geometry_->get_fsr(r, u);
+  } catch (ScarabeeException& err) {
+    err.add_to_exception("Could not find FSR in Cartesian2D.");
+    throw err;
+  }
+}
+
+const FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) const {
+  try {
+    return geometry_->get_fsr(r, u);
+  } catch (ScarabeeException& err) {
+    err.add_to_exception("Could not find FSR in Cartesian2D.");
+    throw err;
+  }
+}
