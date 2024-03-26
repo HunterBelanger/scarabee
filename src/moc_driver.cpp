@@ -13,6 +13,7 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
       fsrs_(),
       geometry_(geometry),
       polar_quad_(polar_quad),
+      ngroups_(0),
       x_min_bc_(xmin),
       x_max_bc_(xmax),
       y_min_bc_(ymin),
@@ -30,6 +31,12 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
   auto nfsr = geometry_->num_fsrs();
   fsrs_.reserve(nfsr);
   geometry_->append_fsrs(fsrs_);
+
+  if (fsrs_.empty()) {
+    throw ScarabeeException("No flat source regions found.");
+  }
+
+  ngroups_ = fsrs_.front()->xs()->ngroups();
 }
 
 void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
@@ -50,6 +57,15 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
   angle_info_.clear();
   tracks_.clear();
 
+  generate_azimuthal_quadrature(n_angles, d) ;
+  generate_tracks();
+  set_track_ends_bcs();
+  allocate_track_fluxes();
+  allocate_fsr_flux_source();
+  calculate_segment_exps();
+}
+
+void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles, double d) {
   // Determine the angles and spacings for the tracks
   double delta_phi = 2. * PI / static_cast<double>(n_angles);
 
@@ -98,8 +114,13 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
       angle_info_[i].wgt = (2. / (4. * PI)) * (phi_ip1 - phi_im1);
     }
   }
+}
 
-  // Now that we have all of the angle information, we can create tracks.
+void MOCDriver::generate_tracks() {
+  std::uint32_t n_track_angles_ = static_cast<std::uint32_t>(angle_info_.size());
+  const double Dx = geometry_->x_max() - geometry_->x_min();
+  const double Dy = geometry_->y_max() - geometry_->y_min();
+
   tracks_.resize(n_track_angles_);
   for (std::uint32_t i = 0; i < n_track_angles_; i++) {
     const auto& ai = angle_info_[i];
@@ -165,7 +186,9 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
       }
     }
   }
+}
 
+void MOCDriver::set_track_ends_bcs() {
   // We only go through the first half of the tracks, where phi < pi / 2.
   for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
     const auto& ai = angle_info_[a];
@@ -207,6 +230,53 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
       tracks.at(ai.nx + i).exit_bc() = this->x_max_bc_;
       comp_tracks.at(i).entry_bc() = this->x_max_bc_;
     }
+  }
+}
+
+void MOCDriver::allocate_track_fluxes() {
+  // Get the number of groups, and number of polar angles
+  std::size_t n_pol_angles = polar_quad_.abscissae().size();
+
+  for (auto& tracks : tracks_) {
+    for (auto& track : tracks) {
+      track.entry_flux().reshape({ngroups_, n_pol_angles});
+      track.exit_flux().reshape({ngroups_, n_pol_angles});
+    }
+  }
+}
+
+void MOCDriver::calculate_segment_exps() {
+  // Get the number of groups, and number of polar angles
+  const std::size_t n_pol_angles = polar_quad_.abscissae().size();
+  xt::xtensor<double, 1> pd;
+  pd.resize({n_pol_angles});
+  for (std::size_t pi = 0; pi < n_pol_angles; pi++) {
+    pd(pi) = 1. / polar_quad_.abscissae()[pi];
+  }
+
+  for (auto& tracks : tracks_) {
+    for (auto& track : tracks) {
+      for (auto& seg : track) {
+        const auto& Et = seg.xs().Et();
+        // We unfortunately can't use xtensor-blas, as we don't have BLAS or
+        // LAPACK on Windows. We instead construct the matrix ourselves.
+        seg.exp().resize({ngroups_, n_pol_angles});
+
+        for (std::size_t g = 0; g < ngroups_; g++) {
+          for (std::size_t p = 0; p < n_pol_angles; p++) {
+            seg.exp()(g,p) = std::exp(-Et(g) * seg.length() * pd(p));
+          }
+        }
+
+      } // For all Segments
+    } // For all Tracks
+  } // For all angles
+}
+
+void MOCDriver::allocate_fsr_flux_source() {
+  for (auto fsr : fsrs_) {
+    fsr->flux().reshape({ngroups_});
+    fsr->source().reshape({ngroups_});
   }
 }
 

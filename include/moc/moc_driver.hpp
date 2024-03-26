@@ -5,7 +5,7 @@
 #include <moc/boundary_condition.hpp>
 #include <moc/flat_source_region.hpp>
 #include <moc/track.hpp>
-#include <moc/polar_quadrature.hpp>
+#include <moc/quadrature/polar_quadrature.hpp>
 
 #include <memory>
 #include <vector>
@@ -27,6 +27,8 @@ class MOCDriver {
 
   PolarQuadrature& polar_quadrature() { return polar_quad_; }
   const PolarQuadrature& polar_quadrature() const { return polar_quad_; }
+
+  std::size_t ngroups() { return ngroups_; }
 
   BoundaryCondition& x_min_bc() { return x_min_bc_; }
   const BoundaryCondition& x_min_bc() const { return x_min_bc_; }
@@ -54,7 +56,15 @@ class MOCDriver {
   std::vector<FlatSourceRegion*> fsrs_;     // All FSRs in the geometry
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
   PolarQuadrature polar_quad_;
+  std::size_t ngroups_;
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
+
+  void generate_azimuthal_quadrature(std::uint32_t n_angles, double d);
+  void generate_tracks();
+  void set_track_ends_bcs();
+  void allocate_track_fluxes();
+  void allocate_fsr_flux_source();
+  void calculate_segment_exps();
 };
 
 #endif

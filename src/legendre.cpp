@@ -1,4 +1,4 @@
-#include <moc/legendre.hpp>
+#include <moc/quadrature/legendre.hpp>
 
 // N = 2
 template <>

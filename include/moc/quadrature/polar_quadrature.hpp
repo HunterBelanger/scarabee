@@ -1,9 +1,10 @@
 #ifndef POLAR_QUADRATURE_H
 #define POLAR_QUADRATURE_H
 
-#include <moc/legendre.hpp>
-#include <moc/yamamoto_tabuchi.hpp>
+#include <moc/quadrature/legendre.hpp>
+#include <moc/quadrature/yamamoto_tabuchi.hpp>
 
+#include <span>
 #include <variant>
 
 using PolarQuadratureType =
