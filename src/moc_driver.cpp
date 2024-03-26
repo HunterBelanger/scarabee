@@ -258,13 +258,14 @@ void MOCDriver::calculate_segment_exps() {
     for (auto& track : tracks) {
       for (auto& seg : track) {
         const auto& Et = seg.xs().Et();
+        const double l = -seg.length();
         // We unfortunately can't use xtensor-blas, as we don't have BLAS or
         // LAPACK on Windows. We instead construct the matrix ourselves.
         seg.exp().resize({ngroups_, n_pol_angles});
 
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles; p++) {
-            seg.exp()(g,p) = std::exp(-Et(g) * seg.length() * pd(p));
+            seg.exp()(g,p) = std::exp(l * Et(g) * pd(p));
           }
         }
 
