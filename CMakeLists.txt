@@ -57,6 +57,8 @@ add_executable(scarabee src/main.cpp
                         src/pin_cell.cpp
                         src/cartesian_2d.cpp
                         src/track.cpp
+                        src/legendre.cpp
+                        src/yamamoto_tabuchi.cpp
                         src/moc_driver.cpp)
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 target_include_directories(scarabee PRIVATE include)

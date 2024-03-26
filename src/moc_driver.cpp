@@ -5,12 +5,14 @@
 #include <cmath>
 
 MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
-                     BoundaryCondition xmin, BoundaryCondition xmax,
-                     BoundaryCondition ymin, BoundaryCondition ymax)
+                     PolarQuadrature polar_quad, BoundaryCondition xmin,
+                     BoundaryCondition xmax, BoundaryCondition ymin,
+                     BoundaryCondition ymax)
     : angle_info_(),
       tracks_(),
       fsrs_(),
       geometry_(geometry),
+      polar_quad_(polar_quad),
       x_min_bc_(xmin),
       x_max_bc_(xmax),
       y_min_bc_(ymin),
@@ -171,7 +173,8 @@ FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) {
   }
 }
 
-const FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) const {
+const FlatSourceRegion& MOCDriver::get_fsr(const Vector& r,
+                                           const Direction& u) const {
   try {
     return geometry_->get_fsr(r, u);
   } catch (ScarabeeException& err) {

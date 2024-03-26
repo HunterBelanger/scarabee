@@ -4,6 +4,7 @@
 #include <moc/segment.hpp>
 #include <moc/vector.hpp>
 #include <moc/direction.hpp>
+#include <moc/boundary_condition.hpp>
 #include <utils/constants.hpp>
 
 #include <xtensor/xtensor.hpp>
@@ -23,11 +24,17 @@ class Track {
   const Vector& end_pos() const { return end_; }
   const Direction& dir() const { return dir_; } 
 
-  xt::xtensor<double, 1>& entry_flux() { return entry_flux_; }
-  const xt::xtensor<double, 1>& entry_flux() const { return entry_flux_; }
+  BoundaryCondition& start_bc() { return start_bc_; }
+  const BoundaryCondition& start_bc() const { return start_bc_; }
 
-  xt::xtensor<double, 1>& exit_flux() { return exit_flux_; }
-  const xt::xtensor<double, 1>& exit_flux() const { return exit_flux_; }
+  BoundaryCondition& end_bc() { return end_bc_; }
+  const BoundaryCondition& end_bc() const { return end_bc_; }
+
+  xt::xtensor<double, 2>& entry_flux() { return entry_flux_; }
+  const xt::xtensor<double, 2>& entry_flux() const { return entry_flux_; }
+
+  xt::xtensor<double, 2>& exit_flux() { return exit_flux_; }
+  const xt::xtensor<double, 2>& exit_flux() const { return exit_flux_; }
 
   Track* entry_track() { return entry_track_; }
   void set_entry_track(Track* t) { entry_track_ = t; }
@@ -41,11 +48,11 @@ class Track {
   Direction rdir() const { return -dir_; }
   double rphi() const { return PI + phi_; } 
 
-  xt::xtensor<double, 1>& rentry_flux() { return exit_flux_; }
-  const xt::xtensor<double, 1>& rentry_flux() const { return exit_flux_; }
+  xt::xtensor<double, 2>& rentry_flux() { return exit_flux_; }
+  const xt::xtensor<double, 2>& rentry_flux() const { return exit_flux_; }
 
-  xt::xtensor<double, 1>& rexit_flux() { return entry_flux_; }
-  const xt::xtensor<double, 1>& rexit_flux() const { return entry_flux_; }
+  xt::xtensor<double, 2>& rexit_flux() { return entry_flux_; }
+  const xt::xtensor<double, 2>& rexit_flux() const { return entry_flux_; }
 
   Track* rentry_track() { return exit_track_; }
   void set_rentry_track(Track* t) { exit_track_ = t; }
@@ -86,8 +93,8 @@ class Track {
   const_reverse_iterator crend() const { return segments_.crend(); }
 
  private:
-  xt::xtensor<double, 1> entry_flux_;
-  xt::xtensor<double, 1> exit_flux_;
+  xt::xtensor<double, 2> entry_flux_; // Indexed on group and polar angle
+  xt::xtensor<double, 2> exit_flux_;
   std::vector<Segment> segments_;
   Vector start_;
   Vector end_;
@@ -96,6 +103,8 @@ class Track {
   Track* exit_track_;
   double weight_;  // Track weight
   double phi_;     // Azimuthal angle of Track
+  BoundaryCondition start_bc_;
+  BoundaryCondition end_bc_;
 };
 
 #endif
