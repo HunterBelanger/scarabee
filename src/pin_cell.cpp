@@ -80,6 +80,14 @@ void PinCell::build() {
     }
   }
 
+  // Make sure mats all have same ngroups
+  std::size_t ngroups = mats_.front()->ngroups();
+  for (std::size_t mi = 0; mi < mats_.size(); mi++) {
+    if (mats_[mi]->ngroups() != ngroups) {
+      throw ScarabeeException("Materials have different numbers of groups.");
+    }
+  }
+
   // Make sure largest radius doesn't intersect the cell walls
   if (x0_ - mat_radii_.back() <= x_min_->x0() ||
       x0_ + mat_radii_.back() >= x_max_->x0() ||

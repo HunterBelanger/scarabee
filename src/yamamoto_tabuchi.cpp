@@ -1,4 +1,4 @@
-#include <moc/yamamoto_tabuchi.hpp>
+#include <moc/quadrature/yamamoto_tabuchi.hpp>
 
 // A. YAMAMOTO, M. TABUCHI, N. SUGIMURA, T. USHIO, and M. MORI, “Derivation of
 // Optimum Polar Angle Quadrature Set for the Method of Characteristics Based on

@@ -4,7 +4,7 @@
 #include <moc/flat_source_region.hpp>
 #include <transport_xs.hpp>
 
-#include <xtensor/xarray.hpp>
+#include <xtensor/xtensor.hpp>
 
 #include <vector>
 
@@ -22,7 +22,11 @@ class Segment {
   xt::xtensor<double, 1>& source() { return fsr_->source(); }
   const xt::xtensor<double, 1>& source() const { return fsr_->source(); }
 
+  xt::xtensor<double, 2>& exp() { return exp_; }
+  const xt::xtensor<double, 2>& exp() const { return exp_; }
+
  private:
+  xt::xtensor<double, 2> exp_; // exp (- Etg * l / sin(theta))
   FlatSourceRegion* fsr_;
   double length_;
 };

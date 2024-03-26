@@ -5,8 +5,6 @@
 
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xview.hpp>
-#include <xtensor/xio.hpp>
-#include <iostream>
 
 #include <cstdint>
 #include <vector>
@@ -18,6 +16,8 @@ class TransportXS {
   std::size_t ngroups() const { return Et_.size(); }
 
   bool fissile() const { return fissile_; }
+
+  const xt::xtensor<double, 1>& Et() const { return Et_; }
 
   double Et(std::uint32_t g) const { return Et_(g); }
 
