@@ -19,6 +19,8 @@ class Vector {
 
   double norm() const { return std::sqrt(x_ * x_ + y_ * y_); }
 
+  Vector operator-() const { return Vector(-this->x_, -this->y_); }
+
  protected:
   double x_, y_;
 };

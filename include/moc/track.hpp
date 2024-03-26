@@ -4,20 +4,30 @@
 #include <moc/segment.hpp>
 #include <moc/vector.hpp>
 #include <moc/direction.hpp>
+#include <utils/constants.hpp>
+
+#include <xtensor/xtensor.hpp>
 
 #include <vector>
 
 class Track {
  public:
-  Track(const Vector& r_start, const Vector& r_end, const Direction& u,
+  Track(const Vector& start, const Vector& end, const Direction& dir,
         double phi, double wgt, const std::vector<Segment>& segments);
 
   double weight() const { return weight_; }
   double phi() const { return phi_; }
   const std::vector<Segment>& segments() const { return segments_; }
-  const Vector& r_start() const { return r_start_; }
-  const Vector& r_end() const { return r_end_; }
-  const Direction& u() const { return u_; }
+
+  const Vector& start_pos() const { return start_; }
+  const Vector& end_pos() const { return end_; }
+  const Direction& dir() const { return dir_; } 
+
+  xt::xtensor<double, 1>& entry_flux() { return entry_flux_; }
+  const xt::xtensor<double, 1>& entry_flux() const { return entry_flux_; }
+
+  xt::xtensor<double, 1>& exit_flux() { return exit_flux_; }
+  const xt::xtensor<double, 1>& exit_flux() const { return exit_flux_; }
 
   Track* entry_track() { return entry_track_; }
   void set_entry_track(Track* t) { entry_track_ = t; }
@@ -25,6 +35,25 @@ class Track {
   Track* exit_track() { return exit_track_; }
   void set_exit_track(Track* t) { exit_track_ = t; }
 
+  // Values and methods for the reverse direction
+  const Vector& rstart_pos() const { return end_; }
+  const Vector& rend_pos() const { return start_; }
+  Direction rdir() const { return -dir_; }
+  double rphi() const { return PI + phi_; } 
+
+  xt::xtensor<double, 1>& rentry_flux() { return exit_flux_; }
+  const xt::xtensor<double, 1>& rentry_flux() const { return exit_flux_; }
+
+  xt::xtensor<double, 1>& rexit_flux() { return entry_flux_; }
+  const xt::xtensor<double, 1>& rexit_flux() const { return entry_flux_; }
+
+  Track* rentry_track() { return exit_track_; }
+  void set_rentry_track(Track* t) { exit_track_ = t; }
+
+  Track* rexit_track() { return entry_track_; }
+  void set_rexit_track(Track* t) { entry_track_ = t; }
+
+  // Indexing is only done in forward direction
   std::size_t size() const { return segments_.size(); }
 
   Segment& operator[](std::size_t i) { return segments_[i]; }
@@ -57,10 +86,12 @@ class Track {
   const_reverse_iterator crend() const { return segments_.crend(); }
 
  private:
+  xt::xtensor<double, 1> entry_flux_;
+  xt::xtensor<double, 1> exit_flux_;
   std::vector<Segment> segments_;
-  Vector r_start_;
-  Vector r_end_;
-  Direction u_;
+  Vector start_;
+  Vector end_;
+  Direction dir_;
   Track* entry_track_;
   Track* exit_track_;
   double weight_;  // Track weight

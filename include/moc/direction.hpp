@@ -26,6 +26,13 @@ class Direction : public Vector {
   }
   ~Direction() = default;
 
+  Direction operator-() const {
+    Direction d;
+    d.x_ = -this->x_;
+    d.y_ = -this->y_;
+    return d;
+  }
+
 };  // Direction
 
 //============================================================================

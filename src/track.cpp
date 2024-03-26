@@ -1,12 +1,12 @@
 #include <moc/track.hpp>
 #include <utils/scarabee_exception.hpp>
 
-Track::Track(const Vector& r_start, const Vector& r_end, const Direction& u,
+Track::Track(const Vector& start, const Vector& end, const Direction& dir,
              double phi, double wgt, const std::vector<Segment>& segments)
     : segments_(segments),
-      r_start_(r_start),
-      r_end_(r_end),
-      u_(u),
+      start_(start),
+      end_(end),
+      dir_(dir),
       entry_track_(nullptr),
       exit_track_(nullptr),
       weight_(wgt),
