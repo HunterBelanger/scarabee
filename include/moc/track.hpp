@@ -13,22 +13,22 @@
 
 class Track {
  public:
-  Track(const Vector& start, const Vector& end, const Direction& dir,
+  Track(const Vector& entry, const Vector& exit, const Direction& dir,
         double phi, double wgt, const std::vector<Segment>& segments);
 
   double weight() const { return weight_; }
   double phi() const { return phi_; }
   const std::vector<Segment>& segments() const { return segments_; }
 
-  const Vector& start_pos() const { return start_; }
-  const Vector& end_pos() const { return end_; }
+  const Vector& entry_pos() const { return entry_; }
+  const Vector& exit_pos() const { return exit_; }
   const Direction& dir() const { return dir_; } 
 
-  BoundaryCondition& start_bc() { return start_bc_; }
-  const BoundaryCondition& start_bc() const { return start_bc_; }
+  BoundaryCondition& entry_bc() { return entry_bc_; }
+  const BoundaryCondition& entry_bc() const { return entry_bc_; }
 
-  BoundaryCondition& end_bc() { return end_bc_; }
-  const BoundaryCondition& end_bc() const { return end_bc_; }
+  BoundaryCondition& exit_bc() { return exit_bc_; }
+  const BoundaryCondition& exit_bc() const { return exit_bc_; }
 
   xt::xtensor<double, 2>& entry_flux() { return entry_flux_; }
   const xt::xtensor<double, 2>& entry_flux() const { return entry_flux_; }
@@ -43,8 +43,8 @@ class Track {
   void set_exit_track(Track* t) { exit_track_ = t; }
 
   // Values and methods for the reverse direction
-  const Vector& rstart_pos() const { return end_; }
-  const Vector& rend_pos() const { return start_; }
+  const Vector& rentry_pos() const { return exit_; }
+  const Vector& rexit_pos() const { return entry_; }
   Direction rdir() const { return -dir_; }
   double rphi() const { return PI + phi_; } 
 
@@ -96,15 +96,15 @@ class Track {
   xt::xtensor<double, 2> entry_flux_; // Indexed on group and polar angle
   xt::xtensor<double, 2> exit_flux_;
   std::vector<Segment> segments_;
-  Vector start_;
-  Vector end_;
+  Vector entry_;
+  Vector exit_;
   Direction dir_;
   Track* entry_track_;
   Track* exit_track_;
   double weight_;  // Track weight
   double phi_;     // Azimuthal angle of Track
-  BoundaryCondition start_bc_;
-  BoundaryCondition end_bc_;
+  BoundaryCondition entry_bc_;
+  BoundaryCondition exit_bc_;
 };
 
 #endif

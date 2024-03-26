@@ -33,6 +33,11 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
 }
 
 void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
+  if (n_angles % 2 != 0) {
+    // If the number of angles is odd, an angle will be lost
+    throw ScarabeeException("MOCDriver must have an even number of angles.");
+  }
+
   if (n_angles < 4) {
     throw ScarabeeException("MOCDriver must have at least 4 angles.");
   }
@@ -161,7 +166,48 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
     }
   }
 
-  // TODO setup boundary conditions
+  // We only go through the first half of the tracks, where phi < pi / 2.
+  for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
+    const auto& ai = angle_info_[a];
+    const std::uint32_t nt = ai.nx + ai.ny;
+    auto& tracks = tracks_[a];
+    auto& comp_tracks = tracks_[angle_info_.size() - 1 - a];
+
+    // Go through intersections on top side
+    for (std::uint32_t i = 0; i < ai.nx; i++) {
+      tracks.at(i).set_exit_track(&comp_tracks.at(ai.nx - 1 - i));
+      comp_tracks.at(ai.nx - 1 - i).set_exit_track(&tracks.at(i));
+
+      tracks.at(i).exit_bc() = this->y_max_bc_;
+      comp_tracks.at(ai.nx - 1 - i).exit_bc() = this->y_max_bc_;
+    }
+
+    // Go through intersections on bottom side
+    for (std::uint32_t i = 0; i < ai.nx; i++) {
+      tracks.at(ai.ny + i).set_entry_track(&comp_tracks.at(nt - 1 - i));
+      comp_tracks.at(nt - 1 - i).set_entry_track(&tracks.at(ai.ny + i));
+
+      tracks.at(ai.ny + i).entry_bc() = this->y_min_bc_;
+      comp_tracks.at(nt - 1 - i).entry_bc() = this->y_min_bc_;
+    }
+
+    // Go down left/right sides
+    for (std::uint32_t i = 0; i < ai.ny; i++) {
+      // Left
+      tracks.at(i).set_entry_track(&comp_tracks.at(ai.nx + i));
+      comp_tracks.at(ai.nx + i).set_exit_track(&tracks.at(i));
+
+      tracks.at(i).entry_bc() = this->x_min_bc_;
+      comp_tracks.at(ai.nx + i).exit_bc() = this->x_min_bc_;
+
+      // Right
+      tracks.at(ai.nx + i).set_exit_track(&comp_tracks.at(i));
+      comp_tracks.at(i).set_entry_track(&tracks.at(ai.nx + i));
+
+      tracks.at(ai.nx + i).exit_bc() = this->x_max_bc_;
+      comp_tracks.at(i).entry_bc() = this->x_max_bc_;
+    }
+  }
 }
 
 FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) {

@@ -1,20 +1,20 @@
 #include <moc/track.hpp>
 #include <utils/scarabee_exception.hpp>
 
-Track::Track(const Vector& start, const Vector& end, const Direction& dir,
+Track::Track(const Vector& entry, const Vector& exit, const Direction& dir,
              double phi, double wgt, const std::vector<Segment>& segments)
     : entry_flux_(),
       exit_flux_(),
       segments_(segments),
-      start_(start),
-      end_(end),
+      entry_(entry),
+      exit_(exit),
       dir_(dir),
       entry_track_(nullptr),
       exit_track_(nullptr),
       weight_(wgt),
       phi_(phi),
-      start_bc_(BoundaryCondition::Reflective),
-      end_bc_(BoundaryCondition::Reflective) {}
+      entry_bc_(BoundaryCondition::Reflective),
+      exit_bc_(BoundaryCondition::Reflective) {}
 
 Segment& Track::at(std::size_t i) {
   if (i >= this->size()) {

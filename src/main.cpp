@@ -146,7 +146,8 @@ void test() {
   std::cout << "\n";
 
   MOCDriver moc(c2d, YamamotoTabuchi<6>());
-  moc.draw_tracks(128, 0.01);
+  moc.draw_tracks(8, 0.5);
+  //moc.draw_tracks(128, 0.01);
 }
 
 int main() {
