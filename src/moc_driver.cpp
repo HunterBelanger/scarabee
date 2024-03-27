@@ -146,9 +146,7 @@ void MOCDriver::solve_keff() {
       max_flux_diff = 0.;
       for (std::size_t i = 0; i < fsrs_.size(); i++) {
         for (std::uint32_t g = 0; g < ngroups_; g++) {
-          const double rel_diff =
-              std::abs(next_flux(i, g) - flux_(i, g)) / flux_(i, g);
-
+          const double rel_diff = std::abs(next_flux(i, g) - flux_(i, g)) / flux_(i, g);
           if (rel_diff > max_flux_diff) max_flux_diff = rel_diff;
         }
       }
@@ -372,12 +370,11 @@ void MOCDriver::generate_tracks() {
     // spacing between starts in y
     const double dy = Dy / static_cast<double>(ai.ny);
 
-    // Depending on angle, we either start on the -x bound, or the +y bound
+    // Depending on angle, we either start on the -x bound, or the +x bound
     if (ai.phi < 0.5 * PI) {
-      // Start on -x boundary in upper right corner and move down
+      // Start on -x boundary in upper left corner and move down
       double x = geometry_->x_min();
-      double y =
-          dy * (static_cast<double>(ai.ny - 1) + 0.5) + geometry_->y_min();
+      double y = dy * (static_cast<double>(ai.ny - 1) + 0.5) + geometry_->y_min();
       for (std::uint32_t t = 0; t < (ai.nx + ai.ny); t++) {
         if (t == ai.ny) {
           // Next, we move across the -y boundary
@@ -399,7 +396,7 @@ void MOCDriver::generate_tracks() {
         }
       }
     } else {
-      // Start on -y boundary in lower right corner and move across
+      // Start on -y boundary in lower left corner and move across and up
       double x = 0.5 * dx + geometry_->x_min();
       double y = geometry_->y_min();
       for (std::uint32_t t = 0; t < (ai.nx + ai.ny); t++) {
@@ -432,14 +429,12 @@ void MOCDriver::set_track_ends_bcs() {
     const auto& ai = angle_info_[a];
     const std::uint32_t nt = ai.nx + ai.ny;
     auto& tracks = tracks_[a];
-    auto& comp_tracks = tracks_[angle_info_.size() - 1 - a];
+    auto& comp_tracks = *(tracks_.rbegin() + a);
 
     // Go through intersections on top side
     for (std::uint32_t i = 0; i < ai.nx; i++) {
-      tracks.at(i).set_exit_track_flux(
-          &comp_tracks.at(ai.nx - 1 - i).exit_flux());
-      comp_tracks.at(ai.nx - 1 - i)
-          .set_exit_track_flux(&tracks.at(i).exit_flux());
+      tracks.at(i).set_exit_track_flux(&comp_tracks.at(ai.ny + i).exit_flux());
+      comp_tracks.at(ai.ny + i).set_exit_track_flux(&tracks.at(i).exit_flux());
 
       tracks.at(i).exit_bc() = this->y_max_bc_;
       comp_tracks.at(ai.nx - 1 - i).exit_bc() = this->y_max_bc_;
@@ -447,10 +442,8 @@ void MOCDriver::set_track_ends_bcs() {
 
     // Go through intersections on bottom side
     for (std::uint32_t i = 0; i < ai.nx; i++) {
-      tracks.at(ai.ny + i).set_entry_track_flux(
-          &comp_tracks.at(nt - 1 - i).entry_flux());
-      comp_tracks.at(nt - 1 - i)
-          .set_entry_track_flux(&tracks.at(ai.ny + i).entry_flux());
+      tracks.at(ai.ny + i).set_entry_track_flux(&comp_tracks.at(i).entry_flux());
+      comp_tracks.at(i).set_entry_track_flux(&tracks.at(ai.ny + i).entry_flux());
 
       tracks.at(ai.ny + i).entry_bc() = this->y_min_bc_;
       comp_tracks.at(nt - 1 - i).entry_bc() = this->y_min_bc_;
@@ -459,15 +452,15 @@ void MOCDriver::set_track_ends_bcs() {
     // Go down left/right sides
     for (std::uint32_t i = 0; i < ai.ny; i++) {
       // Left
-      tracks.at(i).set_entry_track_flux(&comp_tracks.at(ai.nx + i).exit_flux());
-      comp_tracks.at(ai.nx + i).set_exit_track_flux(&tracks.at(i).entry_flux());
+      tracks.at(i).set_entry_track_flux(&comp_tracks.at(ai.ny - 1 - i).exit_flux());
+      comp_tracks.at(ai.ny - 1 - i).set_exit_track_flux(&tracks.at(i).entry_flux());
 
       tracks.at(i).entry_bc() = this->x_min_bc_;
       comp_tracks.at(ai.nx + i).exit_bc() = this->x_min_bc_;
 
       // Right
-      tracks.at(ai.nx + i).set_exit_track_flux(&comp_tracks.at(i).entry_flux());
-      comp_tracks.at(i).set_entry_track_flux(&tracks.at(ai.nx + i).exit_flux());
+      tracks.at(ai.nx + i).set_exit_track_flux(&comp_tracks.at(nt - 1 - i).entry_flux());
+      comp_tracks.at(nt - 1 - i).set_entry_track_flux(&tracks.at(ai.nx + i).exit_flux());
 
       tracks.at(ai.nx + i).exit_bc() = this->x_max_bc_;
       comp_tracks.at(i).entry_bc() = this->x_max_bc_;
