@@ -22,6 +22,9 @@ class MOCDriver {
 
   void draw_tracks(std::uint32_t n_angles, double d);
 
+  void solve();
+  void solve_keff();
+
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
 
@@ -56,15 +59,21 @@ class MOCDriver {
   std::vector<FlatSourceRegion*> fsrs_;     // All FSRs in the geometry
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
   PolarQuadrature polar_quad_;
+  xt::xtensor<double, 2> flux_, old_flux_;  // Indexed by FSR then group
+  xt::xtensor<double, 2> src_, old_src_;    // Indexed by FSR then group
   std::size_t ngroups_;
+  double flux_tol_ = 1.E-5;
+  double src_tol_ = 1.E-5;
+  double keff_ = 1.;
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
 
   void generate_azimuthal_quadrature(std::uint32_t n_angles, double d);
   void generate_tracks();
   void set_track_ends_bcs();
   void allocate_track_fluxes();
-  void allocate_fsr_flux_source();
   void calculate_segment_exps();
+
+  void calculate_source();
 };
 
 #endif

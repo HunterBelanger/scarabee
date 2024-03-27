@@ -8,7 +8,4 @@ void FlatSourceRegion::initialize() {
     throw ScarabeeException(
         "Cannot initialize FlatSourceRegion with no cross sections.");
   }
-
-  flux_ = xt::zeros<double>({xs_->ngroups()});
-  source_ = xt::zeros<double>({xs_->ngroups()});
 }

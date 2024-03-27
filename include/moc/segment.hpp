@@ -14,19 +14,17 @@ class Segment {
 
   double length() const { return length_; }
 
+  double volume() const { return fsr_->volume(); }
+
   const TransportXS& xs() const { return *fsr_->xs(); }
 
-  xt::xtensor<double, 1>& flux() { return fsr_->flux(); }
-  const xt::xtensor<double, 1>& flux() const { return fsr_->flux(); }
-
-  xt::xtensor<double, 1>& source() { return fsr_->source(); }
-  const xt::xtensor<double, 1>& source() const { return fsr_->source(); }
+  std::size_t fsr_indx() const { return fsr_->indx(); }
 
   xt::xtensor<double, 2>& exp() { return exp_; }
   const xt::xtensor<double, 2>& exp() const { return exp_; }
 
  private:
-  xt::xtensor<double, 2> exp_; // exp (- Etg * l / sin(theta))
+  xt::xtensor<double, 2> exp_;  // exp (- Etg * l / sin(theta))
   FlatSourceRegion* fsr_;
   double length_;
 };

@@ -26,7 +26,7 @@ struct RegionToken {
 
 class FlatSourceRegion {
  public:
-  FlatSourceRegion() : tokens_(), flux_(), source_(), xs_(), volume_() {}
+  FlatSourceRegion() : tokens_(), xs_(), volume_(), indx_(0) {}
 
   bool inside(const Vector& r, const Direction& u) const {
     for (const auto& t : tokens_) {
@@ -46,6 +46,9 @@ class FlatSourceRegion {
     return min_dist;
   }
 
+  std::size_t indx() const { return indx_; }
+  void set_indx(std::size_t i) { indx_ = i; }
+
   std::shared_ptr<TransportXS>& xs() { return xs_; }
   const std::shared_ptr<TransportXS>& xs() const { return xs_; }
 
@@ -57,18 +60,11 @@ class FlatSourceRegion {
   double& volume() { return volume_; }
   const double& volume() const { return volume_; }
 
-  xt::xtensor<double, 1>& flux() { return flux_; }
-  const xt::xtensor<double, 1>& flux() const { return flux_; }
-
-  xt::xtensor<double, 1>& source() { return source_; }
-  const xt::xtensor<double, 1>& source() const { return source_; }
-
  private:
   htl::static_vector<RegionToken, MAX_SURFS> tokens_;
-  xt::xtensor<double, 1> flux_;
-  xt::xtensor<double, 1> source_;
   std::shared_ptr<TransportXS> xs_;
   double volume_;
+  std::size_t indx_;
 };
 
 #endif
