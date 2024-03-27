@@ -4,7 +4,7 @@
 #include <transport_xs.hpp>
 #include <utils/constants.hpp>
 
-#include <xtensor/xarray.hpp>
+#include <xtensor/xtensor.hpp>
 
 #include <memory>
 #include <vector>
@@ -30,7 +30,7 @@ class CylindricalCell {
 
   double Y(double a, std::uint32_t g, std::size_t i) const {
     const double Yi = Y_(g, i);
-    const double Gamma = Gamma_[g];
+    const double Gamma = Gamma_(g);
 
     return Yi / (1. - a * (1. - Gamma));
   }
@@ -46,7 +46,7 @@ class CylindricalCell {
     return Xik + a * xk * Y(a, g, i);
   }
 
-  double Gamma(std::uint32_t g) const { return Gamma_[g]; }
+  double Gamma(std::uint32_t g) const { return Gamma_(g); }
 
   double p(std::uint32_t g, std::size_t i, std::size_t j) const {
     return p_(g, i, j);
@@ -55,10 +55,10 @@ class CylindricalCell {
   const TransportXS& mat(std::size_t i) const { return *mats_[i]; }
 
  private:
-  xt::xarray<double> p_;
-  xt::xarray<double> X_;
-  xt::xarray<double> Y_;
-  std::vector<double> Gamma_;  // Multicollision blackness in each group
+  xt::xtensor<double, 3> p_;
+  xt::xtensor<double, 3> X_;
+  xt::xtensor<double, 2> Y_;
+  xt::xtensor<double, 1> Gamma_;  // Multicollision blackness in each group
   std::vector<double> radii_;
   std::vector<double> vols_;
   std::vector<std::shared_ptr<TransportXS>> mats_;

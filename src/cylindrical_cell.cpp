@@ -82,7 +82,7 @@ void CylindricalCell::calculate_collision_probabilities() {
 
   // Create a matrix to temporarily hold the S_ij factors. We do one group at
   // a time, so we don't need a third axis
-  xt::xarray<double> S = xt::zeros<double>({nregions(), nregions()});
+  xt::xtensor<double, 2> S = xt::zeros<double>({nregions(), nregions()});
 
   // Calculate the matrix for each energy group
   for (std::uint32_t g = 0; g < ngroups(); g++) {
@@ -188,7 +188,7 @@ void CylindricalCell::solve_systems() {
   // First, we allocate the needed memory to hold all of the X and Y terms
   X_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
   Y_ = xt::zeros<double>({ngroups(), nregions()});
-  Gamma_.resize(ngroups(), 0.);
+  Gamma_ = xt::zeros<double>({ngroups()});
 
   // The Y and X terms all depend on the energy group, and are described by
   // the same matrix. We therefore load the matrix once, and solve it for
@@ -253,9 +253,9 @@ void CylindricalCell::solve_systems() {
     }
 
     // Calculate multicollision blackness for this group
-    Gamma_[g] = 0.;
+    Gamma_(g) = 0.;
     for (std::size_t i = 0; i < nregions(); i++) {
-      Gamma_[g] += mats_[i]->Er(g) * vols_[i] * Y_(g, i);
+      Gamma_(g) += mats_[i]->Er(g) * vols_[i] * Y_(g, i);
     }
   }  // For all groups
 }

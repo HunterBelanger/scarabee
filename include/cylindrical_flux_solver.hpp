@@ -3,7 +3,7 @@
 
 #include <cylindrical_cell.hpp>
 
-#include <xtensor/xarray.hpp>
+#include <xtensor/xtensor.hpp>
 
 #include <memory>
 #include <vector>
@@ -50,9 +50,9 @@ class CylindricalFluxSolver {
   }
 
  private:
-  xt::xarray<double> flux_;
-  std::vector<double> j_ext_;
-  std::vector<double> x_;
+  xt::xtensor<double, 2> flux_;
+  xt::xtensor<double, 1> j_ext_;
+  xt::xtensor<double, 1> x_;
   std::shared_ptr<CylindricalCell> cell_;
   double k_;
   double a_;
@@ -60,18 +60,17 @@ class CylindricalFluxSolver {
   double flux_tol_;
   bool solved_;
 
-  double calc_keff(const xt::xarray<double>& flux) const;
-  double calc_flux_rel_diff(const xt::xarray<double>& flux,
-                            const xt::xarray<double>& next_flux) const;
-  void copy_flux(const xt::xarray<double>& orig, xt::xarray<double>& out) const;
-  void fill_fission_source(xt::xarray<double>& source,
-                           const xt::xarray<double>& flux) const;
-  void fill_scatter_source(xt::xarray<double>& source,
-                           const xt::xarray<double>& flux) const;
+  double calc_keff(const xt::xtensor<double, 2>& flux) const;
+  double calc_flux_rel_diff(const xt::xtensor<double, 2>& flux,
+                            const xt::xtensor<double, 2>& next_flux) const;
+  void fill_fission_source(xt::xtensor<double, 2>& source,
+                           const xt::xtensor<double, 2>& flux) const;
+  void fill_scatter_source(xt::xtensor<double, 2>& source,
+                           const xt::xtensor<double, 2>& flux) const;
   double Qscat(std::uint32_t g, std::size_t i,
-               const xt::xarray<double>& flux) const;
+               const xt::xtensor<double, 2>& flux) const;
   double Qfiss(std::uint32_t g, std::size_t i,
-               const xt::xarray<double>& flux) const;
+               const xt::xtensor<double, 2>& flux) const;
 };
 
 #endif

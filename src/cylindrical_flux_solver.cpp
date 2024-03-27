@@ -5,8 +5,7 @@
 
 CylindricalFluxSolver::CylindricalFluxSolver(
     std::shared_ptr<CylindricalCell> cell)
-    : flux_(),
-      j_ext_(),
+    : flux_(), j_ext_(),
       x_(),
       cell_(cell),
       k_(1.),
@@ -21,8 +20,10 @@ CylindricalFluxSolver::CylindricalFluxSolver(
   // Initialize flux with 1's everywhere
   flux_.resize({ngroups(), nregions()});
   flux_.fill(1.);
-  j_ext_.resize(ngroups(), 0.);
-  x_.resize(ngroups(), 0.);
+  j_ext_.resize({ngroups()});
+  j_ext_.fill(0.);
+  x_.resize({ngroups()});
+  x_.fill(0.);
 }
 
 void CylindricalFluxSolver::set_albedo(double a) {
@@ -65,7 +66,7 @@ void CylindricalFluxSolver::set_keff_tolerance(double ktol) {
 }
 
 double CylindricalFluxSolver::Qscat(std::uint32_t g, std::size_t i,
-                                    const xt::xarray<double>& flux) const {
+                                    const xt::xtensor<double, 2>& flux) const {
   double Qout = 0.;
   const auto& mat = cell_->mat(i);
 
@@ -80,7 +81,7 @@ double CylindricalFluxSolver::Qscat(std::uint32_t g, std::size_t i,
 }
 
 double CylindricalFluxSolver::Qfiss(std::uint32_t g, std::size_t i,
-                                    const xt::xarray<double>& flux) const {
+                                    const xt::xtensor<double, 2>& flux) const {
   double Qout = 0.;
   const double inv_k = 1. / k_;
   const auto& mat = cell_->mat(i);
@@ -97,7 +98,7 @@ double CylindricalFluxSolver::Qfiss(std::uint32_t g, std::size_t i,
   return Qout;
 }
 
-double CylindricalFluxSolver::calc_keff(const xt::xarray<double>& flux) const {
+double CylindricalFluxSolver::calc_keff(const xt::xtensor<double, 2>& flux) const {
   double keff = 0.;
   for (std::size_t r = 0; r < nregions(); r++) {
     const double Vr = cell_->V(r);
@@ -111,7 +112,7 @@ double CylindricalFluxSolver::calc_keff(const xt::xarray<double>& flux) const {
 }
 
 double CylindricalFluxSolver::calc_flux_rel_diff(
-    const xt::xarray<double>& flux, const xt::xarray<double>& next_flux) const {
+    const xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& next_flux) const {
   double max_rel_diff = 0.;
 
   for (std::uint32_t g = 0; g < ngroups(); g++) {
@@ -127,7 +128,7 @@ double CylindricalFluxSolver::calc_flux_rel_diff(
 }
 
 void CylindricalFluxSolver::fill_fission_source(
-    xt::xarray<double>& source, const xt::xarray<double>& flux) const {
+    xt::xtensor<double, 2>& source, const xt::xtensor<double, 2>& flux) const {
   for (std::uint32_t g = 0; g < ngroups(); g++) {
     for (std::size_t r = 0; r < nregions(); r++) {
       source(g, r) = Qfiss(g, r, flux);
@@ -136,7 +137,7 @@ void CylindricalFluxSolver::fill_fission_source(
 }
 
 void CylindricalFluxSolver::fill_scatter_source(
-    xt::xarray<double>& source, const xt::xarray<double>& flux) const {
+    xt::xtensor<double, 2>& source, const xt::xtensor<double, 2>& flux) const {
   for (std::uint32_t g = 0; g < ngroups(); g++) {
     for (std::size_t r = 0; r < nregions(); r++) {
       source(g, r) = Qscat(g, r, flux);
@@ -144,19 +145,12 @@ void CylindricalFluxSolver::fill_scatter_source(
   }
 }
 
-void CylindricalFluxSolver::copy_flux(const xt::xarray<double>& orig,
-                                      xt::xarray<double>& out) const {
-  for (std::size_t i = 0; i < orig.size(); i++) {
-    out[i] = orig[i];
-  }
-}
-
 void CylindricalFluxSolver::solve() {
   // Create a new array to hold the source according to the current flux, and
   // another for the next generation flux.
-  xt::xarray<double> scat_source(flux_.shape());
-  xt::xarray<double> fiss_source(flux_.shape());
-  xt::xarray<double> next_flux(flux_.shape());
+  xt::xtensor<double, 2> scat_source(flux_.shape());
+  xt::xtensor<double, 2> fiss_source(flux_.shape());
+  xt::xtensor<double, 2> next_flux(flux_.shape());
   k_ = calc_keff(flux_);
   double old_keff = 100.;
 
@@ -167,7 +161,7 @@ void CylindricalFluxSolver::solve() {
 
     // Copy flux into next_flux, so that we can continually use next_flux
     // in the inner iterations for the scattering source.
-    copy_flux(flux_, next_flux);
+    next_flux = flux_;
 
     double max_flux_diff = 100.;
     // Inner Iterations
@@ -194,7 +188,7 @@ void CylindricalFluxSolver::solve() {
       max_flux_diff = calc_flux_rel_diff(flux_, next_flux);
 
       // Copy next_flux into flux for calculating next relative difference
-      copy_flux(next_flux, flux_);
+      flux_ = next_flux;
     }  // End of Inner Iterations
 
     // Calculate keff
