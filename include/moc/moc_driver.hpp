@@ -21,9 +21,15 @@ class MOCDriver {
   bool drawn() const { return !angle_info_.empty(); }
 
   void draw_tracks(std::uint32_t n_angles, double d);
-
-  void solve();
   void solve_keff();
+
+  double keff() const { return keff_; }
+
+  double keff_tolerance() const { return keff_tol_; }
+  void set_keff_tolerance(double ktol);
+
+  double flux_tolerance() const { return flux_tol_; }
+  void set_flux_tolerance(double ftol);
 
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
@@ -59,11 +65,12 @@ class MOCDriver {
   std::vector<FlatSourceRegion*> fsrs_;     // All FSRs in the geometry
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
   PolarQuadrature polar_quad_;
-  xt::xtensor<double, 2> flux_, old_flux_;  // Indexed by FSR then group
-  xt::xtensor<double, 2> src_, old_src_;    // Indexed by FSR then group
+  xt::xtensor<double, 2> flux_;  // Indexed by FSR then group
+  xt::xtensor<double, 2> src_;   // Indexed by FSR then group
   std::size_t ngroups_;
+  std::size_t n_pol_angles_;
   double flux_tol_ = 1.E-5;
-  double src_tol_ = 1.E-5;
+  double keff_tol_ = 1.E-5;
   double keff_ = 1.;
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
 
@@ -73,7 +80,16 @@ class MOCDriver {
   void allocate_track_fluxes();
   void calculate_segment_exps();
 
-  void calculate_source();
+  void sweep();
+  
+  double calc_keff(const xt::xtensor<double, 2>& flux) const;
+  void fill_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const;
+  void fill_fission_source(xt::xtensor<double, 2>& fiss_src, const xt::xtensor<double, 2>& flux) const;
+
+  double Qscat(std::uint32_t g, std::size_t i,
+               const xt::xtensor<double, 2>& flux) const;
+  double Qfiss(std::uint32_t g, std::size_t i,
+               const xt::xtensor<double, 2>& flux) const;
 };
 
 #endif

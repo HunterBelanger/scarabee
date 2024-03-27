@@ -16,10 +16,9 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
       geometry_(geometry),
       polar_quad_(polar_quad),
       flux_(),
-      old_flux_(),
       src_(),
-      old_src_(),
       ngroups_(0),
+      n_pol_angles_(polar_quad_.abscissae().size()),
       x_min_bc_(xmin),
       x_max_bc_(xmax),
       y_min_bc_(ymin),
@@ -50,9 +49,35 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
   }
 
   flux_.resize({fsrs_.size(), ngroups_});
-  old_flux_.resize({fsrs_.size(), ngroups_});
   src_.resize({fsrs_.size(), ngroups_});
-  old_src_.resize({fsrs_.size(), ngroups_});
+}
+
+void MOCDriver::set_flux_tolerance(double ftol) {
+  if (ftol <= 0.) {
+    throw ScarabeeException(
+        "Tolerance for flux must be in the interval (0., 0.1).");
+  }
+
+  if (ftol >= 0.1) {
+    throw ScarabeeException(
+        "Tolerance for flux must be in the interval (0., 0.1).");
+  }
+
+  flux_tol_ = ftol;
+}
+
+void MOCDriver::set_keff_tolerance(double ktol) {
+  if (ktol <= 0.) {
+    throw ScarabeeException(
+        "Tolerance for keff must be in the interval (0., 0.1).");
+  }
+
+  if (ktol >= 0.1) {
+    throw ScarabeeException(
+        "Tolerance for keff must be in the interval (0., 0.1).");
+  }
+
+  keff_tol_ = ktol;
 }
 
 void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
@@ -80,94 +105,196 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
   calculate_segment_exps();
 }
 
-void MOCDriver::solve() {
-  // Now we can begin iterations while the flux has not yet converged
-  double max_flux_diff = 1.;
-  while (max_flux_diff > flux_tol_) {
-    for (auto& tracks : tracks_) {
-      for (auto& track : tracks) {
-        auto angflux = track.entry_flux();
-        const double tw = track.weight();
+void MOCDriver::solve_keff() {
+  // Create a new array to hold the source according to the current flux, and
+  // another for the next generation flux.
+  xt::xtensor<double, 2> scat_source(flux_.shape());
+  xt::xtensor<double, 2> fiss_source(flux_.shape());
+  xt::xtensor<double, 2> next_flux(flux_.shape());
+  flux_.fill(1.);
+  next_flux.fill(1.);
+  keff_ = calc_keff(flux_);
+  double old_keff = 100.;
+  std::size_t outer_iter = 0;
 
-        for (auto& seg : track) {
-          const std::size_t i = seg.fsr_indx();
-          const double seg_const = (4. * PI * seg.length() / seg.volume());
-          for (std::size_t g = 0; g < ngroups_; g++) {
-            for (std::size_t p = 0; p < 10; p++) {
-              const double delta_flx =
-                  (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) *
-                  (1. - seg.exp()(g, p));
-              flux_(i, g) += seg_const * tw * polar_quad_.weights()[p] *
-                             polar_quad_.abscissae()[p] * delta_flx;
-              angflux(g, p) -= delta_flx;
-            }  // For all polar angles
-          }    // For all groups
-        }      // For all segments along forward direction of track
+  // Outer Generations
+  while (std::abs(old_keff - keff_) > keff_tol_) {
+    outer_iter++;
 
-        // Set incoming flux for next track
-        if (track.exit_bc() == BoundaryCondition::Reflective) {
-          track.exit_track_flux() = angflux;
-        } else {
-          // Vacuum
-          track.exit_track_flux().fill(0.);
+    // At the begining of a generation, we calculate the fission source
+    fill_fission_source(fiss_source, flux_);
+
+    // Copy flux into next_flux, so that we can continually use next_flux
+    // in the inner iterations for the scattering source.
+    next_flux = flux_;
+
+    double max_flux_diff = 100.;
+    std::size_t inner_iter = 0;
+    // Inner Iterations
+    while (max_flux_diff > flux_tol_) {
+      inner_iter++;
+
+      // At the begining of an inner iteration, we calculate the fission source
+      fill_scatter_source(scat_source, next_flux);
+      
+      // Calculate the new source
+      src_ = fiss_source + scat_source;
+
+      sweep(); 
+
+      // Calculate the max difference in the flux
+      max_flux_diff = 0.;
+      for (std::size_t i = 0; i < fsrs_.size(); i++) {
+        for (std::uint32_t g = 0; g < ngroups_; g++) {
+          const double rel_diff =
+              std::abs(next_flux(i, g) - flux_(i, g)) / flux_(i, g);
+
+          if (rel_diff > max_flux_diff) max_flux_diff = rel_diff;
         }
+      }
 
-        // Do same track but in reverse
-        angflux = track.exit_flux();
-        for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
-          auto& seg = *seg_it;
-          const std::size_t i = seg.fsr_indx();
-          const double seg_const = (4. * PI * seg.length() / seg.volume());
-          for (std::size_t g = 0; g < ngroups_; g++) {
-            for (std::size_t p = 0; p < 10; p++) {
-              const double delta_flx =
-                  (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) *
-                  (1. - seg.exp()(g, p));
-              flux_(i, g) += seg_const * tw * polar_quad_.weights()[p] *
-                             polar_quad_.abscissae()[p] * delta_flx;
-              angflux(g, p) -= delta_flx;
-            }  // For all polar angles
-          }    // For all groups
-        }      // For all segments along forward direction of track
+      // Copy next_flux into flux for calculating next relative difference
+      flux_ = next_flux;
 
-        // Set incoming flux for next track
-        if (track.entry_bc() == BoundaryCondition::Reflective) {
-          track.entry_track_flux() = angflux;
-        } else {
-          // Vacuum
-          track.entry_track_flux().fill(0.);
-        }
+      std::cout << "     Finished inner iteration " << inner_iter << ", max_flux_diff = " << max_flux_diff << "\n";
+      
+      if (inner_iter > 200)
+        break;
+    } // End of Inner Iterations
 
-      }  // For all tracks
-    }    // For all azimuthal angles
+    // Calculate keff
+    old_keff = keff_;
+    keff_ = calc_keff(next_flux);
 
-    // Calculate max flux difference
-    max_flux_diff = xt::amax(xt::abs((flux_ - old_flux_ / flux_)))();
-    old_flux_ = flux_;
-    flux_.fill(0.);
-  }  // While flux not converged
+    std::cout << " >> Iter " << outer_iter << " keff: " << keff_ << ", old_keff: " << old_keff << "\n";
 
-  flux_ = old_flux_;
+    // Assign next_flux to be the flux
+    std::swap(next_flux, flux_);
+  }  // End of Outer Generations
 }
 
-void MOCDriver::solve_keff() {}
+void MOCDriver::sweep() {
+  for (auto& tracks : tracks_) {
+    for (auto& track : tracks) {
+      auto angflux = track.entry_flux();
+      const double tw = track.weight();
 
-void MOCDriver::calculate_source() {
-  const double iso = 1. / (4. * PI);
-  const double invs_keff = 1. / keff_;
+      for (auto& seg : track) {
+        const std::size_t i = seg.fsr_indx();
+        const double seg_const = (4. * PI * seg.length() / seg.volume());
 
-  for (auto fsr : fsrs_) {
-    const std::size_t i = fsr->indx();
-    for (std::size_t g = 0; g < ngroups_; g++) {
-      src_(i, g) = 0.;
+        for (std::size_t g = 0; g < ngroups_; g++) {
+          for (std::size_t p = 0; p < n_pol_angles_; p++) {
+            const double delta_flx =
+                (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) *
+                (1. - seg.exp()(g, p));
+            flux_(i, g) += seg_const * tw * polar_quad_.weights()[p] *
+                           polar_quad_.abscissae()[p] * delta_flx;
+            angflux(g, p) -= delta_flx;
+          }  // For all polar angles
+        }    // For all groups
 
-      const double fiss_factor = fsr->xs()->chi(g) * invs_keff;
-      for (std::size_t gin = 0.; gin < ngroups_; gin++) {
-        const double flx = flux_(i, gin);
-        src_(i, g) += fsr->xs()->Es(gin, g) * flx;
-        src_(i, g) +=
-            fiss_factor * fsr->xs()->nu(gin) * fsr->xs()->Ef(gin) * flx;
+      }      // For all segments along forward direction of track
+
+      // Set incoming flux for next track
+      if (track.exit_bc() == BoundaryCondition::Reflective) {
+        track.exit_track_flux() = angflux;
+      } else {
+        // Vacuum
+        track.exit_track_flux().fill(0.);
       }
+
+      // Do same track but in reverse
+      angflux = track.exit_flux();
+      for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
+        auto& seg = *seg_it;
+        const std::size_t i = seg.fsr_indx();
+        const double seg_const = (4. * PI * seg.length() / seg.volume());
+        for (std::size_t g = 0; g < ngroups_; g++) {
+          for (std::size_t p = 0; p < n_pol_angles_; p++) {
+            const double delta_flx =
+                (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) *
+                (1. - seg.exp()(g, p));
+            flux_(i, g) += seg_const * tw * polar_quad_.weights()[p] *
+                           polar_quad_.abscissae()[p] * delta_flx;
+            angflux(g, p) -= delta_flx;
+          }  // For all polar angles
+        }    // For all groups
+      }      // For all segments along forward direction of track
+
+      // Set incoming flux for next track
+      if (track.entry_bc() == BoundaryCondition::Reflective) {
+        track.entry_track_flux() = angflux;
+      } else {
+        // Vacuum
+        track.entry_track_flux().fill(0.);
+      }
+
+    }  // For all tracks
+  }    // For all azimuthal angles
+}
+
+double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux) const {
+  double keff = 0.;
+  
+  for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    const double Vr = fsrs_[i]->volume();
+    const auto& mat = *fsrs_[i]->xs();
+    for (std::uint32_t g = 0; g < ngroups_; g++) {
+      const double nu = mat.nu(g);
+      const double Ef = mat.Ef(g);
+      const double flx = flux(i, g);
+
+      keff += Vr * nu * Ef * flx;
+    }
+  }
+
+  return keff;
+}
+
+double MOCDriver::Qscat(std::uint32_t g, std::size_t i, const xt::xtensor<double, 2>& flux) const {
+  double Qout = 0.;
+  const auto& mat = *fsrs_[i]->xs();
+
+  for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
+    const double flux_gg_i = flux(gg, i);
+
+    // Scattering into group g, excluding g -> g
+    if (gg != g) Qout += mat.Es(gg, g) * flux_gg_i;
+  }
+
+  return Qout;
+}
+
+double MOCDriver::Qfiss(std::uint32_t g, std::size_t i, const xt::xtensor<double, 2>& flux) const {
+  double Qout = 0.;
+  const double inv_k = 1. / keff_;
+  const auto& mat = *fsrs_[i]->xs();
+  const double chi_g = mat.chi(g);
+
+  for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
+    const double Ef_gg = mat.Ef(gg);
+    const double flux_gg_i = flux(gg, i);
+
+    // Prompt Fission
+    Qout += inv_k * chi_g * mat.nu(gg) * Ef_gg * flux_gg_i;
+  }
+
+  return Qout;
+}
+
+void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const {
+  for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    for (std::uint32_t g = 0; g < ngroups_; g++) {
+      scat_src(i, g) = Qscat(g, i, flux);
+    }
+  }
+}
+
+void MOCDriver::fill_fission_source(xt::xtensor<double, 2>& fiss_src, const xt::xtensor<double, 2>& flux) const {
+  for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    for (std::uint32_t g = 0; g < ngroups_; g++) {
+      fiss_src(i, g) = Qfiss(g, i, flux);
     }
   }
 }
@@ -349,13 +476,10 @@ void MOCDriver::set_track_ends_bcs() {
 }
 
 void MOCDriver::allocate_track_fluxes() {
-  // Get the number of groups, and number of polar angles
-  std::size_t n_pol_angles = polar_quad_.abscissae().size();
-
   for (auto& tracks : tracks_) {
     for (auto& track : tracks) {
-      track.entry_flux().resize({ngroups_, n_pol_angles});
-      track.exit_flux().resize({ngroups_, n_pol_angles});
+      track.entry_flux().resize({ngroups_, n_pol_angles_});
+      track.exit_flux().resize({ngroups_, n_pol_angles_});
     }
   }
 }
