@@ -117,11 +117,23 @@ void MOCDriver::solve_keff() {
   double old_keff = 100.;
   std::size_t outer_iter = 0;
 
+  // Initialize angular flux
+  fill_fission_source(fiss_source, flux_);
+  fill_scatter_source(scat_source, next_flux);
+  src_ = fiss_source + scat_source;
+  const double init_ang_flx = std::sqrt(xt::sum(src_*src_)());
+  for (auto& tracks : tracks_) {
+    for (auto& track : tracks) {
+      track.entry_flux().fill(init_ang_flx);
+      track.exit_flux().fill(init_ang_flx);
+    }
+  }
+
   // Outer Generations
   while (std::abs(old_keff - keff_) > keff_tol_) {
     outer_iter++;
 
-    // At the begining of a generation, we calculate the fission source
+    // At the beginning of a generation, we calculate the fission source
     fill_fission_source(fiss_source, flux_);
 
     // Copy flux into next_flux, so that we can continually use next_flux
@@ -134,13 +146,14 @@ void MOCDriver::solve_keff() {
     while (max_flux_diff > flux_tol_) {
       inner_iter++;
 
-      // At the begining of an inner iteration, we calculate the fission source
+      // At the beginning of an inner iteration, we calculate the fission source
       fill_scatter_source(scat_source, next_flux);
       
       // Calculate the new source
       src_ = fiss_source + scat_source;
 
-      sweep(); 
+      next_flux.fill(0.);
+      sweep(next_flux); 
 
       // Calculate the max difference in the flux
       max_flux_diff = 0.;
@@ -156,7 +169,7 @@ void MOCDriver::solve_keff() {
 
       std::cout << "     Finished inner iteration " << inner_iter << ", max_flux_diff = " << max_flux_diff << "\n";
       
-      if (inner_iter > 200)
+      if (inner_iter > 100)
         break;
     } // End of Inner Iterations
 
@@ -171,7 +184,7 @@ void MOCDriver::solve_keff() {
   }  // End of Outer Generations
 }
 
-void MOCDriver::sweep() {
+void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
   for (auto& tracks : tracks_) {
     for (auto& track : tracks) {
       auto angflux = track.entry_flux();
@@ -183,11 +196,23 @@ void MOCDriver::sweep() {
 
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double delta_flx =
-                (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) *
-                (1. - seg.exp()(g, p));
-            flux_(i, g) += seg_const * tw * polar_quad_.weights()[p] *
-                           polar_quad_.abscissae()[p] * delta_flx;
+            const double delta_flx = (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) * (1. - seg.exp()(g, p));
+
+            if (delta_flx < 0.) {
+              throw ScarabeeException("Neg delta_flux");
+            } else if (seg_const < 0.) {
+              std::cout.precision(16);
+              std::cout << "Bad seg " << seg.length() << ", " << seg.volume() << "\n";
+              throw ScarabeeException("Neg seg_const");
+            } else if (tw < 0.) {
+              throw ScarabeeException("Neg tw");
+            } else if (polar_quad_.weights()[p] < 0.) {
+              throw ScarabeeException("Neg pol weight");
+            } else if (polar_quad_.abscissae()[p] < 0.) {
+              throw ScarabeeException("Neg pol abs");
+            }
+
+            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
             angflux(g, p) -= delta_flx;
           }  // For all polar angles
         }    // For all groups
@@ -210,11 +235,20 @@ void MOCDriver::sweep() {
         const double seg_const = (4. * PI * seg.length() / seg.volume());
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double delta_flx =
-                (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) *
-                (1. - seg.exp()(g, p));
-            flux_(i, g) += seg_const * tw * polar_quad_.weights()[p] *
-                           polar_quad_.abscissae()[p] * delta_flx;
+            const double delta_flx = (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) * (1. - seg.exp()(g, p));
+
+            if (delta_flx < 0.) {
+              throw ScarabeeException("Neg delta_flux");
+            } else if (seg_const < 0.) {
+              throw ScarabeeException("Neg seg_const");
+            } else if (tw < 0.) {
+              throw ScarabeeException("Neg tw");
+            } else if (polar_quad_.weights()[p] < 0.) {
+              throw ScarabeeException("Neg pol weight");
+            } else if (polar_quad_.abscissae()[p] < 0.) {
+              throw ScarabeeException("Neg pol abs");
+            }
+            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
             angflux(g, p) -= delta_flx;
           }  // For all polar angles
         }    // For all groups
@@ -335,16 +369,16 @@ void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
     if (i == 0) {
       const double phi_0 = angle_info_[0].phi;
       const double phi_1 = angle_info_[1].phi;
-      angle_info_[i].wgt = (2. / (2. * PI)) * (0.5 * (phi_1 - phi_0) + phi_0);
+      angle_info_[i].wgt = (1. / (2. * PI)) * (0.5 * (phi_1 - phi_0) + phi_0);
     } else if (i == (n_track_angles_ - 1)) {
       const double phi_im1 = angle_info_[i - 1].phi;
       const double phi_i = angle_info_[i].phi;
       angle_info_[i].wgt =
-          (2. / (2. * PI)) * (PI - phi_i + 0.5 * (phi_i - phi_im1));
+          (1. / (2. * PI)) * (PI - phi_i + 0.5 * (phi_i - phi_im1));
     } else {
       const double phi_im1 = angle_info_[i - 1].phi;
       const double phi_ip1 = angle_info_[i + 1].phi;
-      angle_info_[i].wgt = (2. / (4. * PI)) * (phi_ip1 - phi_im1);
+      angle_info_[i].wgt = (1. / (4. * PI)) * (phi_ip1 - phi_im1);
     }
   }
 }

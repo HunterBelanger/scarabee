@@ -80,7 +80,7 @@ class MOCDriver {
   void allocate_track_fluxes();
   void calculate_segment_exps();
 
-  void sweep();
+  void sweep(xt::xtensor<double, 2>& flux);
   
   double calc_keff(const xt::xtensor<double, 2>& flux) const;
   void fill_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const;

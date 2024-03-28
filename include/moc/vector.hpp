@@ -1,6 +1,8 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
+#include <utils/constants.hpp>
+
 #include <cmath>
 #include <iostream>
 
@@ -20,6 +22,14 @@ class Vector {
   double norm() const { return std::sqrt(x_ * x_ + y_ * y_); }
 
   Vector operator-() const { return Vector(-this->x_, -this->y_); }
+
+  bool operator==(const Vector& v) const {
+    return (std::abs(x_ - v.x()) < FP_TOL) && (std::abs(y_ - v.y()) < FP_TOL);
+  }
+
+  bool operator!=(const Vector& v) const {
+    return !this->operator==(v);
+  }
 
  protected:
   double x_, y_;
