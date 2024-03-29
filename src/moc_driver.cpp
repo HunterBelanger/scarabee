@@ -189,34 +189,18 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
     for (auto& track : tracks) {
       auto angflux = track.entry_flux();
       const double tw = track.weight();
-
+      
+      // Follow track in forward direction
       for (auto& seg : track) {
         const std::size_t i = seg.fsr_indx();
         const double seg_const = (4. * PI * seg.length() / seg.volume());
-
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             const double delta_flx = (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) * (1. - seg.exp()(g, p));
-
-            if (delta_flx < 0.) {
-              throw ScarabeeException("Neg delta_flux");
-            } else if (seg_const < 0.) {
-              std::cout.precision(16);
-              std::cout << "Bad seg " << seg.length() << ", " << seg.volume() << "\n";
-              throw ScarabeeException("Neg seg_const");
-            } else if (tw < 0.) {
-              throw ScarabeeException("Neg tw");
-            } else if (polar_quad_.weights()[p] < 0.) {
-              throw ScarabeeException("Neg pol weight");
-            } else if (polar_quad_.abscissae()[p] < 0.) {
-              throw ScarabeeException("Neg pol abs");
-            }
-
             sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
             angflux(g, p) -= delta_flx;
           }  // For all polar angles
         }    // For all groups
-
       }      // For all segments along forward direction of track
 
       // Set incoming flux for next track
@@ -227,7 +211,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
         track.exit_track_flux().fill(0.);
       }
 
-      // Do same track but in reverse
+      // Follow track in backwards direction
       angflux = track.exit_flux();
       for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
         auto& seg = *seg_it;
@@ -236,18 +220,6 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             const double delta_flx = (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) * (1. - seg.exp()(g, p));
-
-            if (delta_flx < 0.) {
-              throw ScarabeeException("Neg delta_flux");
-            } else if (seg_const < 0.) {
-              throw ScarabeeException("Neg seg_const");
-            } else if (tw < 0.) {
-              throw ScarabeeException("Neg tw");
-            } else if (polar_quad_.weights()[p] < 0.) {
-              throw ScarabeeException("Neg pol weight");
-            } else if (polar_quad_.abscissae()[p] < 0.) {
-              throw ScarabeeException("Neg pol abs");
-            }
             sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
             angflux(g, p) -= delta_flx;
           }  // For all polar angles

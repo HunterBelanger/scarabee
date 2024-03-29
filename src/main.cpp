@@ -122,20 +122,34 @@ void test() {
 
   //==============================================
   // MOC
-  radii = {0.54};
-  mats = {UO2, H2O};
+  radii = {0.4};
+
+  std::shared_ptr<TransportXS> fuel = std::make_shared<TransportXS>();
+  fuel->Et_ = {4.52648699E-01};
+  fuel->Es_ = {{3.83259177E-01}};
+  fuel->Ef_ = {9.94076580E-02 / 2.5};
+  fuel->nu_ = {2.5};
+
+  std::shared_ptr<TransportXS> water = std::make_shared<TransportXS>();
+  water->Et_ = {8.41545641E-01};
+  water->Es_ = {{8.37794542E-01}};
+  water->Ef_ = {0.};
+  water->nu_ = {0.};
+
+  mats = {fuel, water};
+
   std::shared_ptr<Surface> xmin = std::make_shared<Surface>();
   xmin->type() = Surface::Type::XPlane;
-  xmin->x0() = -0.63;
+  xmin->x0() = -1.27 / 2.0;
   std::shared_ptr<Surface> xmax = std::make_shared<Surface>();
   xmax->type() = Surface::Type::XPlane;
-  xmax->x0() = 0.63;
+  xmax->x0() = 1.27 / 2.0;
   std::shared_ptr<Surface> ymin = std::make_shared<Surface>();
   ymin->type() = Surface::Type::YPlane;
-  ymin->y0() = -0.63;
+  ymin->y0() = -1.27 / 2.0;
   std::shared_ptr<Surface> ymax = std::make_shared<Surface>();
   ymax->type() = Surface::Type::YPlane;
-  ymax->y0() = 0.63;
+  ymax->y0() = 1.27 / 2.0;
 
   std::vector<std::shared_ptr<Surface>> x_bounds{xmin, xmax};
   std::vector<std::shared_ptr<Surface>> y_bounds{ymin, ymax};
@@ -146,22 +160,8 @@ void test() {
       std::make_shared<Cartesian2D>(x_bounds, y_bounds);
   c2d->tile({0, 0}).cell = pincell1;
 
-  Vector r(-0.63, 0.);  // 000000001);
-  Direction u(1., 0.);
-
-  // auto segs = pincell.trace_segments(r, u);
-  std::vector<Segment> segs;
-  c2d->trace_segments(r, u, segs);
-
-  std::cout << "\n";
-  for (const auto& seg : segs) {
-    std::cout << " Segment length = " << seg.length() << "\n";
-  }
-  std::cout << "\n";
-
   MOCDriver moc(c2d, YamamotoTabuchi<6>());
-  moc.draw_tracks(128, 0.01);
-  //moc.draw_tracks(128, 0.01);
+  moc.draw_tracks(8, 0.5);
   moc.solve_keff();
   std::cout << "keff = " << moc.keff() << "\n";
 }
