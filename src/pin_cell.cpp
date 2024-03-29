@@ -217,7 +217,7 @@ void PinCell::build() {
   const double d = 0.5 * std::min(dx, dy);
   const double dd = 0.5 * std::max(dx, dy);
   const double vol_min = (0.5 * d * d) - vol_ang;
-  const double vol_max = vol_min + (d * (dd - d)) - vol_ang;
+  const double vol_max = vol_min + (d * (dd - d));
 
   // NNE
   fsrs_.emplace_back();
@@ -290,9 +290,4 @@ void PinCell::build() {
   fsrs_.back().tokens().push_back({xm_, Surface::Side::Negative});
   fsrs_.back().tokens().push_back({nd_, Surface::Side::Positive});
   fsrs_.back().tokens().push_back({y_max_, Surface::Side::Negative});
-
-  // Initialize all FSRs
-  for (auto& fsr : fsrs_) {
-    fsr.initialize();
-  }
 }

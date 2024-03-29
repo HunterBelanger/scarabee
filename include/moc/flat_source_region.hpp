@@ -35,8 +35,6 @@ class FlatSourceRegion {
     return true;
   }
 
-  void initialize();
-
   double distance(const Vector& r, const Direction& u) const {
     double min_dist = INF;
     for (const auto& t : tokens_) {
