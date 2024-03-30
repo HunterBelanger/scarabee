@@ -106,89 +106,15 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
 }
 
 void MOCDriver::solve_keff() {
-  // Create a new array to hold the source according to the current flux, and
-  // another for the next generation flux.
-  xt::xtensor<double, 2> scat_source(flux_.shape());
-  xt::xtensor<double, 2> fiss_source(flux_.shape());
-  xt::xtensor<double, 2> next_flux(flux_.shape());
-  flux_.fill(1.);
-  next_flux.fill(1.);
-  keff_ = calc_keff(flux_);
-  double old_keff = 100.;
-  std::size_t outer_iter = 0;
-
-  // Initialize angular flux
-  fill_fission_source(fiss_source, flux_);
-  fill_scatter_source(scat_source, next_flux);
-  src_ = fiss_source + scat_source;
-  const double init_ang_flx = std::sqrt(xt::sum(src_*src_)());
-  for (auto& tracks : tracks_) {
-    for (auto& track : tracks) {
-      track.entry_flux().fill(init_ang_flx);
-      track.exit_flux().fill(init_ang_flx);
-    }
-  }
-
-  // Outer Generations
-  while (std::abs(old_keff - keff_) > keff_tol_) {
-    outer_iter++;
-
-    // At the beginning of a generation, we calculate the fission source
-    fill_fission_source(fiss_source, flux_);
-
-    // Copy flux into next_flux, so that we can continually use next_flux
-    // in the inner iterations for the scattering source.
-    next_flux = flux_;
-
-    double max_flux_diff = 100.;
-    std::size_t inner_iter = 0;
-    // Inner Iterations
-    while (max_flux_diff > flux_tol_) {
-      inner_iter++;
-
-      // At the beginning of an inner iteration, we calculate the fission source
-      fill_scatter_source(scat_source, next_flux);
-      
-      // Calculate the new source
-      src_ = fiss_source + scat_source;
-
-      next_flux.fill(0.);
-      sweep(next_flux); 
-
-      // Calculate the max difference in the flux
-      max_flux_diff = 0.;
-      for (std::size_t i = 0; i < fsrs_.size(); i++) {
-        for (std::uint32_t g = 0; g < ngroups_; g++) {
-          const double rel_diff = std::abs(next_flux(i, g) - flux_(i, g)) / flux_(i, g);
-          if (rel_diff > max_flux_diff) max_flux_diff = rel_diff;
-        }
-      }
-
-      // Copy next_flux into flux for calculating next relative difference
-      flux_ = next_flux;
-
-      std::cout << "     Finished inner iteration " << inner_iter << ", max_flux_diff = " << max_flux_diff << "\n";
-      
-      if (inner_iter > 100)
-        break;
-    } // End of Inner Iterations
-
-    // Calculate keff
-    old_keff = keff_;
-    keff_ = calc_keff(next_flux);
-
-    std::cout << " >> Iter " << outer_iter << " keff: " << keff_ << ", old_keff: " << old_keff << "\n";
-
-    // Assign next_flux to be the flux
-    std::swap(next_flux, flux_);
-  }  // End of Outer Generations
+  
 }
 
 void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
   for (auto& tracks : tracks_) {
-    for (auto& track : tracks) {
+    for (std::size_t t = 0; t < tracks.size(); t++) {
+      auto& track = tracks[t];
       auto angflux = track.entry_flux();
-      const double tw = track.weight();
+      const double tw = track.weight(); // Azimuthal weight * track width
       
       // Follow track in forward direction
       for (auto& seg : track) {
@@ -256,55 +182,46 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux) const {
   return keff;
 }
 
-double MOCDriver::Qscat(std::uint32_t g, std::size_t i, const xt::xtensor<double, 2>& flux) const {
-  double Qout = 0.;
-  const auto& mat = *fsrs_[i]->xs();
-
-  for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
-    const double flux_gg_i = flux(gg, i);
-
-    // Scattering into group g, excluding g -> g
-    if (gg != g) Qout += mat.Es(gg, g) * flux_gg_i;
-  }
-
-  return Qout;
-}
-
-double MOCDriver::Qfiss(std::uint32_t g, std::size_t i, const xt::xtensor<double, 2>& flux) const {
-  double Qout = 0.;
-  const double inv_k = 1. / keff_;
-  const auto& mat = *fsrs_[i]->xs();
-  const double chi_g = mat.chi(g);
-
-  for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
-    const double Ef_gg = mat.Ef(gg);
-    const double flux_gg_i = flux(gg, i);
-
-    // Prompt Fission
-    Qout += inv_k * chi_g * mat.nu(gg) * Ef_gg * flux_gg_i;
-  }
-
-  return Qout;
-}
-
 void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const {
+  const double isotropic = 1. / (4. * PI);
   for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    const auto& mat = *fsrs_[i]->xs();
     for (std::uint32_t g = 0; g < ngroups_; g++) {
-      scat_src(i, g) = Qscat(g, i, flux);
+      double Qout = 0.;
+
+      for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
+        const double flux_gg_i = flux(gg, i);
+        const double Es_gg_to_g = mat.Es(gg, g);
+        Qout += Es_gg_to_g * flux_gg_i;
+      }
+
+      scat_src(i, g) = isotropic * Qout;
     }
   }
 }
 
 void MOCDriver::fill_fission_source(xt::xtensor<double, 2>& fiss_src, const xt::xtensor<double, 2>& flux) const {
+  const double inv_k = 1. / keff_;
+  const double isotropic = 1. / (4. * PI);
   for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    const auto& mat = *fsrs_[i]->xs();
+
+    double fiss_rate_i = 0;
+    for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
+      const double nu_gg = mat.nu(gg);
+      const double Ef_gg = mat.Ef(gg);
+      const double flux_gg_i = flux(gg, i);
+      fiss_rate_i += nu_gg * Ef_gg * flux_gg_i;
+    }
+
     for (std::uint32_t g = 0; g < ngroups_; g++) {
-      fiss_src(i, g) = Qfiss(g, i, flux);
+      const double chi_g = mat.chi(g);
+      fiss_src(i, g) = isotropic * inv_k * chi_g * fiss_rate_i;
     }
   }
 }
 
-void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
-                                              double d) {
+void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles, double d) {
   // Determine the angles and spacings for the tracks
   double delta_phi = 2. * PI / static_cast<double>(n_angles);
 
@@ -392,8 +309,7 @@ void MOCDriver::generate_tracks() {
         Vector r_end = r_start;
         std::vector<Segment> segments;
         geometry_->trace_segments(r_end, u, segments);
-        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt * ai.d,
-                                segments);
+        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt * ai.d, segments);
 
         if (t < ai.ny) {
           y -= dy;
@@ -484,11 +400,9 @@ void MOCDriver::allocate_track_fluxes() {
 }
 
 void MOCDriver::calculate_segment_exps() {
-  // Get the number of groups, and number of polar angles
-  const std::size_t n_pol_angles = polar_quad_.abscissae().size();
-  xt::xtensor<double, 1> pd;
-  pd.resize({n_pol_angles});
-  for (std::size_t pi = 0; pi < n_pol_angles; pi++) {
+  xt::xtensor<double, 1> pd; // Temp array to hold polar angle distance factors
+  pd.resize({n_pol_angles_});
+  for (std::size_t pi = 0; pi < n_pol_angles_; pi++) {
     pd(pi) = 1. / polar_quad_.abscissae()[pi];
   }
 
@@ -500,17 +414,16 @@ void MOCDriver::calculate_segment_exps() {
         // We unfortunately can't use xtensor-blas, as we don't have BLAS or
         // LAPACK on Windows. We instead construct the matrix ourselves.
         auto& exp = seg.exp();
-        exp.resize({ngroups_, n_pol_angles});
+        exp.resize({ngroups_, n_pol_angles_});
 
         for (std::size_t g = 0; g < ngroups_; g++) {
-          for (std::size_t p = 0; p < n_pol_angles; p++) {
+          for (std::size_t p = 0; p < n_pol_angles_; p++) {
             exp(g, p) = std::exp(l * Et(g) * pd(p));
-          }
-        }
-
-      }  // For all Segments
-    }    // For all Tracks
-  }      // For all angles
+          } // For all polar angles
+        }   // For all groups
+      }     // For all Segments
+    }       // For all Tracks
+  }         // For all angles
 }
 
 FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) {
