@@ -27,9 +27,7 @@ class Vector {
     return (std::abs(x_ - v.x()) < FP_TOL) && (std::abs(y_ - v.y()) < FP_TOL);
   }
 
-  bool operator!=(const Vector& v) const {
-    return !this->operator==(v);
-  }
+  bool operator!=(const Vector& v) const { return !this->operator==(v); }
 
  protected:
   double x_, y_;

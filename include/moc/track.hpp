@@ -47,26 +47,26 @@ class Track {
   }
 
   // Values and methods for the reverse direction
-  //const Vector& rentry_pos() const { return exit_; }
-  //const Vector& rexit_pos() const { return entry_; }
-  //Direction rdir() const { return -dir_; }
-  //double rphi() const { return PI + phi_; }
+  // const Vector& rentry_pos() const { return exit_; }
+  // const Vector& rexit_pos() const { return entry_; }
+  // Direction rdir() const { return -dir_; }
+  // double rphi() const { return PI + phi_; }
 
-  //xt::xtensor<double, 2>& rentry_flux() { return exit_flux_; }
-  //const xt::xtensor<double, 2>& rentry_flux() const { return exit_flux_; }
+  // xt::xtensor<double, 2>& rentry_flux() { return exit_flux_; }
+  // const xt::xtensor<double, 2>& rentry_flux() const { return exit_flux_; }
 
-  //xt::xtensor<double, 2>& rexit_flux() { return entry_flux_; }
-  //const xt::xtensor<double, 2>& rexit_flux() const { return entry_flux_; }
+  // xt::xtensor<double, 2>& rexit_flux() { return entry_flux_; }
+  // const xt::xtensor<double, 2>& rexit_flux() const { return entry_flux_; }
 
-  //xt::xtensor<double, 2>& rentry_track_flux() { return *exit_track_flux_; }
-  //void set_rentry_track_flux(xt::xtensor<double, 2>* etf) {
-  //  exit_track_flux_ = etf;
-  //}
+  // xt::xtensor<double, 2>& rentry_track_flux() { return *exit_track_flux_; }
+  // void set_rentry_track_flux(xt::xtensor<double, 2>* etf) {
+  //   exit_track_flux_ = etf;
+  // }
 
-  //xt::xtensor<double, 2>& rexit_track_flux() { return *entry_track_flux_; }
-  //void set_rexit_track_flux(xt::xtensor<double, 2>* etf) {
-  //  entry_track_flux_ = etf;
-  //}
+  // xt::xtensor<double, 2>& rexit_track_flux() { return *entry_track_flux_; }
+  // void set_rexit_track_flux(xt::xtensor<double, 2>* etf) {
+  //   entry_track_flux_ = etf;
+  // }
 
   // Indexing is only done in forward direction
   std::size_t size() const { return segments_.size(); }

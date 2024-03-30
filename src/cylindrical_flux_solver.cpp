@@ -5,7 +5,8 @@
 
 CylindricalFluxSolver::CylindricalFluxSolver(
     std::shared_ptr<CylindricalCell> cell)
-    : flux_(), j_ext_(),
+    : flux_(),
+      j_ext_(),
       x_(),
       cell_(cell),
       k_(1.),
@@ -98,7 +99,8 @@ double CylindricalFluxSolver::Qfiss(std::uint32_t g, std::size_t i,
   return Qout;
 }
 
-double CylindricalFluxSolver::calc_keff(const xt::xtensor<double, 2>& flux) const {
+double CylindricalFluxSolver::calc_keff(
+    const xt::xtensor<double, 2>& flux) const {
   double keff = 0.;
   for (std::size_t r = 0; r < nregions(); r++) {
     const double Vr = cell_->V(r);
@@ -112,7 +114,8 @@ double CylindricalFluxSolver::calc_keff(const xt::xtensor<double, 2>& flux) cons
 }
 
 double CylindricalFluxSolver::calc_flux_rel_diff(
-    const xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& next_flux) const {
+    const xt::xtensor<double, 2>& flux,
+    const xt::xtensor<double, 2>& next_flux) const {
   double max_rel_diff = 0.;
 
   for (std::uint32_t g = 0; g < ngroups(); g++) {

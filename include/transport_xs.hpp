@@ -55,13 +55,13 @@ class TransportXS {
   TransportXS& operator*=(double N);
 
   // private:
-  xt::xtensor<double, 2> Es_;  // Scattering matrix
-  xt::xtensor<double, 1> Et_;  // Total xs
-  xt::xtensor<double, 1> Ea_;  // Absorption xs
-  xt::xtensor<double, 1> Ef_;  // Fission xs
-  xt::xtensor<double, 1> nu_;  // Fission yields
-  xt::xtensor<double, 1> chi_; // Fission spectrum
-  bool fissile_;               // Fissile indicator
+  xt::xtensor<double, 2> Es_;   // Scattering matrix
+  xt::xtensor<double, 1> Et_;   // Total xs
+  xt::xtensor<double, 1> Ea_;   // Absorption xs
+  xt::xtensor<double, 1> Ef_;   // Fission xs
+  xt::xtensor<double, 1> nu_;   // Fission yields
+  xt::xtensor<double, 1> chi_;  // Fission spectrum
+  bool fissile_;                // Fissile indicator
 };
 
 #endif

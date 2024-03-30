@@ -105,25 +105,26 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
   calculate_segment_exps();
 }
 
-void MOCDriver::solve_keff() {
-  
-}
+void MOCDriver::solve_keff() {}
 
 void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
   for (auto& tracks : tracks_) {
     for (std::size_t t = 0; t < tracks.size(); t++) {
       auto& track = tracks[t];
       auto angflux = track.entry_flux();
-      const double tw = track.weight(); // Azimuthal weight * track width
-      
+      const double tw = track.weight();  // Azimuthal weight * track width
+
       // Follow track in forward direction
       for (auto& seg : track) {
         const std::size_t i = seg.fsr_indx();
         const double seg_const = (4. * PI * seg.length() / seg.volume());
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double delta_flx = (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) * (1. - seg.exp()(g, p));
-            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
+            const double delta_flx =
+                (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) *
+                (1. - seg.exp()(g, p));
+            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] *
+                           polar_quad_.abscissae()[p] * delta_flx;
             angflux(g, p) -= delta_flx;
           }  // For all polar angles
         }    // For all groups
@@ -145,8 +146,11 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
         const double seg_const = (4. * PI * seg.length() / seg.volume());
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double delta_flx = (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) * (1. - seg.exp()(g, p));
-            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
+            const double delta_flx =
+                (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) *
+                (1. - seg.exp()(g, p));
+            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] *
+                           polar_quad_.abscissae()[p] * delta_flx;
             angflux(g, p) -= delta_flx;
           }  // For all polar angles
         }    // For all groups
@@ -166,7 +170,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
 
 double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux) const {
   double keff = 0.;
-  
+
   for (std::size_t i = 0; i < fsrs_.size(); i++) {
     const double Vr = fsrs_[i]->volume();
     const auto& mat = *fsrs_[i]->xs();
@@ -182,7 +186,8 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux) const {
   return keff;
 }
 
-void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const {
+void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src,
+                                    const xt::xtensor<double, 2>& flux) const {
   const double isotropic = 1. / (4. * PI);
   for (std::size_t i = 0; i < fsrs_.size(); i++) {
     const auto& mat = *fsrs_[i]->xs();
@@ -200,7 +205,8 @@ void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::
   }
 }
 
-void MOCDriver::fill_fission_source(xt::xtensor<double, 2>& fiss_src, const xt::xtensor<double, 2>& flux) const {
+void MOCDriver::fill_fission_source(xt::xtensor<double, 2>& fiss_src,
+                                    const xt::xtensor<double, 2>& flux) const {
   const double inv_k = 1. / keff_;
   const double isotropic = 1. / (4. * PI);
   for (std::size_t i = 0; i < fsrs_.size(); i++) {
@@ -221,7 +227,8 @@ void MOCDriver::fill_fission_source(xt::xtensor<double, 2>& fiss_src, const xt::
   }
 }
 
-void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles, double d) {
+void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
+                                              double d) {
   // Determine the angles and spacings for the tracks
   double delta_phi = 2. * PI / static_cast<double>(n_angles);
 
@@ -297,7 +304,8 @@ void MOCDriver::generate_tracks() {
     if (ai.phi < 0.5 * PI) {
       // Start on -x boundary in upper left corner and move down
       double x = geometry_->x_min();
-      double y = dy * (static_cast<double>(ai.ny - 1) + 0.5) + geometry_->y_min();
+      double y =
+          dy * (static_cast<double>(ai.ny - 1) + 0.5) + geometry_->y_min();
       for (std::uint32_t t = 0; t < (ai.nx + ai.ny); t++) {
         if (t == ai.ny) {
           // Next, we move across the -y boundary
@@ -309,7 +317,8 @@ void MOCDriver::generate_tracks() {
         Vector r_end = r_start;
         std::vector<Segment> segments;
         geometry_->trace_segments(r_end, u, segments);
-        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt * ai.d, segments);
+        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt * ai.d,
+                                segments);
 
         if (t < ai.ny) {
           y -= dy;
@@ -364,8 +373,10 @@ void MOCDriver::set_track_ends_bcs() {
 
     // Go through intersections on bottom side
     for (std::uint32_t i = 0; i < ai.nx; i++) {
-      tracks.at(ai.ny + i).set_entry_track_flux(&comp_tracks.at(i).entry_flux());
-      comp_tracks.at(i).set_entry_track_flux(&tracks.at(ai.ny + i).entry_flux());
+      tracks.at(ai.ny + i).set_entry_track_flux(
+          &comp_tracks.at(i).entry_flux());
+      comp_tracks.at(i).set_entry_track_flux(
+          &tracks.at(ai.ny + i).entry_flux());
 
       tracks.at(ai.ny + i).entry_bc() = this->y_min_bc_;
       comp_tracks.at(nt - 1 - i).entry_bc() = this->y_min_bc_;
@@ -374,15 +385,19 @@ void MOCDriver::set_track_ends_bcs() {
     // Go down left/right sides
     for (std::uint32_t i = 0; i < ai.ny; i++) {
       // Left
-      tracks.at(i).set_entry_track_flux(&comp_tracks.at(ai.ny - 1 - i).exit_flux());
-      comp_tracks.at(ai.ny - 1 - i).set_exit_track_flux(&tracks.at(i).entry_flux());
+      tracks.at(i).set_entry_track_flux(
+          &comp_tracks.at(ai.ny - 1 - i).exit_flux());
+      comp_tracks.at(ai.ny - 1 - i)
+          .set_exit_track_flux(&tracks.at(i).entry_flux());
 
       tracks.at(i).entry_bc() = this->x_min_bc_;
       comp_tracks.at(ai.nx + i).exit_bc() = this->x_min_bc_;
 
       // Right
-      tracks.at(ai.nx + i).set_exit_track_flux(&comp_tracks.at(nt - 1 - i).entry_flux());
-      comp_tracks.at(nt - 1 - i).set_entry_track_flux(&tracks.at(ai.nx + i).exit_flux());
+      tracks.at(ai.nx + i).set_exit_track_flux(
+          &comp_tracks.at(nt - 1 - i).entry_flux());
+      comp_tracks.at(nt - 1 - i)
+          .set_entry_track_flux(&tracks.at(ai.nx + i).exit_flux());
 
       tracks.at(ai.nx + i).exit_bc() = this->x_max_bc_;
       comp_tracks.at(i).entry_bc() = this->x_max_bc_;
@@ -400,7 +415,7 @@ void MOCDriver::allocate_track_fluxes() {
 }
 
 void MOCDriver::calculate_segment_exps() {
-  xt::xtensor<double, 1> pd; // Temp array to hold polar angle distance factors
+  xt::xtensor<double, 1> pd;  // Temp array to hold polar angle distance factors
   pd.resize({n_pol_angles_});
   for (std::size_t pi = 0; pi < n_pol_angles_; pi++) {
     pd(pi) = 1. / polar_quad_.abscissae()[pi];
@@ -419,11 +434,11 @@ void MOCDriver::calculate_segment_exps() {
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             exp(g, p) = std::exp(l * Et(g) * pd(p));
-          } // For all polar angles
-        }   // For all groups
-      }     // For all Segments
-    }       // For all Tracks
-  }         // For all angles
+          }  // For all polar angles
+        }    // For all groups
+      }      // For all Segments
+    }        // For all Tracks
+  }          // For all angles
 }
 
 FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) {
