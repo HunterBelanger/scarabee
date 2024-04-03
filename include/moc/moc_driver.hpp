@@ -83,10 +83,9 @@ class MOCDriver {
   void sweep(xt::xtensor<double, 2>& flux);
 
   double calc_keff(const xt::xtensor<double, 2>& flux) const;
-  void fill_scatter_source(xt::xtensor<double, 2>& scat_src,
-                           const xt::xtensor<double, 2>& flux) const;
-  void fill_fission_source(xt::xtensor<double, 2>& fiss_src,
-                           const xt::xtensor<double, 2>& flux) const;
+  double calc_abs(const xt::xtensor<double, 2>& flux) const;
+  void fill_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const;
+  void fill_fission_source(xt::xtensor<double, 2>& fiss_src, const xt::xtensor<double, 2>& flux) const;
 };
 
 #endif

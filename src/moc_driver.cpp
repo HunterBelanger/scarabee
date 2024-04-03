@@ -105,10 +105,82 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
   calculate_segment_exps();
 }
 
-void MOCDriver::solve_keff() {}
+void MOCDriver::solve_keff() {
+  flux_.resize({fsrs_.size(), ngroups_});
+  src_.resize({fsrs_.size(), ngroups_});
+  src_.fill(0.);
+  auto fiss_src = src_;
+  auto scat_src = src_;
+
+  // Initialize flux so that there is 1 absorption in entire system
+  flux_.fill(1.);
+  double abs = calc_abs(flux_);
+  flux_ *= 1. / abs;
+  keff_ = calc_keff(flux_);
+
+  auto next_flux = flux_;
+  double prev_keff = keff_;
+  std::cout << " Initial keff = " << keff_ << "\n";
+
+  // Initialize angular flux
+  for (auto& tracks : tracks_) {
+    for (auto& track : tracks) {
+      track.entry_flux().fill(1./(4.*PI));
+      track.exit_flux().fill(1./(4.*PI));
+    }
+  }
+
+  double rel_diff_keff = 100.;
+  std::size_t outer_iter = 0;
+  while (rel_diff_keff > keff_tol_ && outer_iter < 100) {
+    outer_iter++;
+
+    abs = calc_abs(next_flux);
+    next_flux *= 1. / abs;
+    
+    fill_fission_source(fiss_src, next_flux);
+
+    double max_flux_diff = 100;
+    std::size_t inner_iter = 0;
+    while (max_flux_diff > flux_tol_ && inner_iter < 100) {
+      inner_iter++;
+
+      fill_scatter_source(fiss_src, next_flux);
+      src_ = fiss_src + scat_src;
+
+      sweep(next_flux);
+
+      // Get difference 
+      max_flux_diff = 0.;
+      for (std::size_t i = 0; i < fsrs_.size(); i++) {
+        for (std::size_t g = 0; g < ngroups_; g++) {
+          double flx_diff = std::abs(next_flux(i,g) - flux_(i, g)) / next_flux(i,g);
+          if (flx_diff > max_flux_diff)
+            max_flux_diff = flx_diff;
+          else if (flx_diff < 0.)
+            throw ScarabeeException("Negative flux after inner iteration.");
+        }
+      }
+
+      flux_ = next_flux;
+
+      std::cout << ">>> Inner Iteration " << inner_iter << " max flux diff = " << max_flux_diff << "\n";
+    }
+
+    prev_keff = keff_;
+    keff_ = calc_keff(next_flux);
+    rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+
+    flux_ = next_flux;
+    std::cout << "> Outer Iteration " << outer_iter << " keff = " << keff_ << "\n";
+  }
+}
 
 void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
   for (auto& tracks : tracks_) {
+#ifdef SCARABEE_USE_OMP
+#pragma omp parallel for
+#endif
     for (std::size_t t = 0; t < tracks.size(); t++) {
       auto& track = tracks[t];
       auto angflux = track.entry_flux();
@@ -120,11 +192,11 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
         const double seg_const = (4. * PI * seg.length() / seg.volume());
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double delta_flx =
-                (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) *
-                (1. - seg.exp()(g, p));
-            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] *
-                           polar_quad_.abscissae()[p] * delta_flx;
+            const double delta_flx = (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) * (1. - seg.exp()(g, p));
+#ifdef SCARABEE_USE_OMP
+#pragma omp atomic
+#endif
+            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
             angflux(g, p) -= delta_flx;
           }  // For all polar angles
         }    // For all groups
@@ -146,11 +218,11 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
         const double seg_const = (4. * PI * seg.length() / seg.volume());
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double delta_flx =
-                (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) *
-                (1. - seg.exp()(g, p));
-            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] *
-                           polar_quad_.abscissae()[p] * delta_flx;
+            const double delta_flx = (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) * (1. - seg.exp()(g, p));
+#ifdef SCARABEE_USE_OMP
+#pragma omp atomic
+#endif
+            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
             angflux(g, p) -= delta_flx;
           }  // For all polar angles
         }    // For all groups
@@ -186,6 +258,22 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux) const {
   return keff;
 }
 
+double MOCDriver::calc_abs(const xt::xtensor<double, 2>& flux) const {
+  double abs = 0.;
+
+  for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    const double Vr = fsrs_[i]->volume();
+    const auto& mat = *fsrs_[i]->xs();
+    for (std::uint32_t g = 0; g < ngroups_; g++) {
+      const double Ea = mat.Ea(g);
+      const double flx = flux(i, g);
+      abs += Vr * Ea * flx;
+    }
+  }
+
+  return abs;
+}
+
 void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src,
                                     const xt::xtensor<double, 2>& flux) const {
   const double isotropic = 1. / (4. * PI);
@@ -195,7 +283,7 @@ void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src,
       double Qout = 0.;
 
       for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
-        const double flux_gg_i = flux(gg, i);
+        const double flux_gg_i = flux(i, gg);
         const double Es_gg_to_g = mat.Es(gg, g);
         Qout += Es_gg_to_g * flux_gg_i;
       }
@@ -216,7 +304,7 @@ void MOCDriver::fill_fission_source(xt::xtensor<double, 2>& fiss_src,
     for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
       const double nu_gg = mat.nu(gg);
       const double Ef_gg = mat.Ef(gg);
-      const double flux_gg_i = flux(gg, i);
+      const double flux_gg_i = flux(i, gg);
       fiss_rate_i += nu_gg * Ef_gg * flux_gg_i;
     }
 
@@ -367,6 +455,12 @@ void MOCDriver::set_track_ends_bcs() {
       tracks.at(i).set_exit_track_flux(&comp_tracks.at(ai.ny + i).exit_flux());
       comp_tracks.at(ai.ny + i).set_exit_track_flux(&tracks.at(i).exit_flux());
 
+      if (tracks.at(i).exit_pos() != comp_tracks.at(ai.ny+i).exit_pos()) {
+        std::stringstream mssg;
+        mssg << "Disagreement in track end alignments: " << tracks.at(i).exit_pos() << " and " << comp_tracks.at(ai.ny+i).exit_pos() << ".";
+        throw ScarabeeException(mssg.str());
+      }
+
       tracks.at(i).exit_bc() = this->y_max_bc_;
       comp_tracks.at(ai.nx - 1 - i).exit_bc() = this->y_max_bc_;
     }
@@ -377,6 +471,12 @@ void MOCDriver::set_track_ends_bcs() {
           &comp_tracks.at(i).entry_flux());
       comp_tracks.at(i).set_entry_track_flux(
           &tracks.at(ai.ny + i).entry_flux());
+
+      if (tracks.at(ai.ny+i).entry_pos() != comp_tracks.at(i).entry_pos()) {
+        std::stringstream mssg;
+        mssg << "Disagreement in track end alignments: " << tracks.at(ai.ny+i).entry_pos() << " and " << comp_tracks.at(i).entry_pos() << ".";
+        throw ScarabeeException(mssg.str());
+      }
 
       tracks.at(ai.ny + i).entry_bc() = this->y_min_bc_;
       comp_tracks.at(nt - 1 - i).entry_bc() = this->y_min_bc_;
@@ -389,6 +489,12 @@ void MOCDriver::set_track_ends_bcs() {
           &comp_tracks.at(ai.ny - 1 - i).exit_flux());
       comp_tracks.at(ai.ny - 1 - i)
           .set_exit_track_flux(&tracks.at(i).entry_flux());
+      
+      if (tracks.at(i).entry_pos() != comp_tracks.at(ai.ny-1-i).exit_pos()) {
+        std::stringstream mssg;
+        mssg << "Disagreement in track end alignments: " << tracks.at(i).entry_pos() << " and " << comp_tracks.at(ai.ny-1-i).exit_pos() << ".";
+        throw ScarabeeException(mssg.str());
+      }
 
       tracks.at(i).entry_bc() = this->x_min_bc_;
       comp_tracks.at(ai.nx + i).exit_bc() = this->x_min_bc_;
@@ -398,6 +504,12 @@ void MOCDriver::set_track_ends_bcs() {
           &comp_tracks.at(nt - 1 - i).entry_flux());
       comp_tracks.at(nt - 1 - i)
           .set_entry_track_flux(&tracks.at(ai.nx + i).exit_flux());
+
+      if (tracks.at(ai.nx+i).exit_pos() != comp_tracks.at(nt-1-i).entry_pos()) {
+        std::stringstream mssg;
+        mssg << "Disagreement in track end alignments: " << tracks.at(ai.nx+i).exit_pos() << " and " << comp_tracks.at(nt-1-i).entry_pos() << ".";
+        throw ScarabeeException(mssg.str());
+      }
 
       tracks.at(ai.nx + i).exit_bc() = this->x_max_bc_;
       comp_tracks.at(i).entry_bc() = this->x_max_bc_;
