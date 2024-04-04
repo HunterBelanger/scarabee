@@ -1,6 +1,7 @@
 #include <utils/chebyshev.hpp>
 #include <utils/constants.hpp>
 #include <utils/scarabee_exception.hpp>
+#include <utils/logging.hpp>
 
 #include <cmath>
 
@@ -37,7 +38,9 @@ std::vector<double> chebyshev_fit(const std::function<double(double)>& func,
 
 double chebyshev_eval(double x, double a, double b, std::span<const double> c) {
   if (x < a || x > b) {
-    throw ScarabeeException("Argument x must be in the interval [a,b].");
+    auto mssg = "Argument x must be in the interval [a,b].";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   const double y = (2. * x - a - b) / (b - a);

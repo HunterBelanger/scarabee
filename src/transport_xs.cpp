@@ -1,11 +1,14 @@
 #include <transport_xs.hpp>
+#include <utils/logging.hpp>
 
 TransportXS::TransportXS() {}
 
 TransportXS& TransportXS::operator+=(const TransportXS& R) {
   // Perform dimensionality checks
   if (ngroups() != R.ngroups()) {
-    throw ScarabeeException("Disagreement in number of groups.");
+    auto mssg = "Disagreement in number of groups.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // First, calculate/update fission quantities which must be averaged

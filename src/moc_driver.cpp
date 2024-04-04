@@ -1,6 +1,7 @@
 #include <moc/moc_driver.hpp>
 #include <utils/constants.hpp>
 #include <utils/scarabee_exception.hpp>
+#include <utils/logging.hpp>
 
 #include <xtensor/xmath.hpp>
 
@@ -24,12 +25,15 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
       y_min_bc_(ymin),
       y_max_bc_(ymax) {
   if (geometry_ == nullptr) {
-    throw ScarabeeException("MOCDriver provided with nullptr geometry.");
+    auto mssg = "MOCDriver provided with nullptr geometry.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (geometry_->tiles_valid() == false) {
-    throw ScarabeeException(
-        "Cannot run MOC on a Cartesian2D geometry with invalid tiles.");
+    auto mssg = "Cannot run MOC on a Cartesian2D geometry with invalid tiles.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Get all FSRs
@@ -38,7 +42,9 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
   geometry_->append_fsrs(fsrs_);
 
   if (fsrs_.empty()) {
-    throw ScarabeeException("No flat source regions found.");
+    auto mssg = "No flat source regions found.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   ngroups_ = fsrs_.front()->xs()->ngroups();
@@ -54,13 +60,15 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
 
 void MOCDriver::set_flux_tolerance(double ftol) {
   if (ftol <= 0.) {
-    throw ScarabeeException(
-        "Tolerance for flux must be in the interval (0., 0.1).");
+    auto mssg = "Tolerance for flux must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (ftol >= 0.1) {
-    throw ScarabeeException(
-        "Tolerance for flux must be in the interval (0., 0.1).");
+    auto mssg = "Tolerance for flux must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   flux_tol_ = ftol;
@@ -68,13 +76,15 @@ void MOCDriver::set_flux_tolerance(double ftol) {
 
 void MOCDriver::set_keff_tolerance(double ktol) {
   if (ktol <= 0.) {
-    throw ScarabeeException(
-        "Tolerance for keff must be in the interval (0., 0.1).");
+    auto mssg = "Tolerance for keff must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (ktol >= 0.1) {
-    throw ScarabeeException(
-        "Tolerance for keff must be in the interval (0., 0.1).");
+    auto mssg = "Tolerance for keff must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   keff_tol_ = ktol;
@@ -83,15 +93,21 @@ void MOCDriver::set_keff_tolerance(double ktol) {
 void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
   if (n_angles % 2 != 0) {
     // If the number of angles is odd, an angle will be lost
-    throw ScarabeeException("MOCDriver must have an even number of angles.");
+    auto mssg = "MOCDriver must have an even number of angles.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (n_angles < 4) {
-    throw ScarabeeException("MOCDriver must have at least 4 angles.");
+    auto mssg = "MOCDriver must have at least 4 angles.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (d <= 0.) {
-    throw ScarabeeException("MOCDriver track spacing must be > 0.");
+    auto mssg = "MOCDriver track spacing must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Clear any previous data
@@ -121,7 +137,7 @@ void MOCDriver::solve_keff() {
 
   auto next_flux = flux_;
   double prev_keff = keff_;
-  std::cout << " Initial keff = " << keff_ << "\n";
+  spdlog::info("Initial keff {:.5f}", keff_);
 
   // Initialize angular flux
   for (auto& tracks : tracks_) {
@@ -158,14 +174,17 @@ void MOCDriver::solve_keff() {
           double flx_diff = std::abs(next_flux(i,g) - flux_(i, g)) / next_flux(i,g);
           if (flx_diff > max_flux_diff)
             max_flux_diff = flx_diff;
-          else if (flx_diff < 0.)
-            throw ScarabeeException("Negative flux after inner iteration.");
+          else if (flx_diff < 0.) {
+            auto mssg = "Negative flux after inner iteration.";
+            spdlog::error(mssg); 
+            throw ScarabeeException(mssg);
+          }
         }
       }
 
       flux_ = next_flux;
-
-      std::cout << ">>> Inner Iteration " << inner_iter << " max flux diff = " << max_flux_diff << "\n";
+      
+      spdlog::debug("Inner iteration {} max flux difference {:.5f}", inner_iter, max_flux_diff);
     }
 
     prev_keff = keff_;
@@ -173,7 +192,7 @@ void MOCDriver::solve_keff() {
     rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
 
     flux_ = next_flux;
-    std::cout << "> Outer Iteration " << outer_iter << " keff = " << keff_ << "\n";
+    spdlog::info("Iteration {} keff {:.5f}", outer_iter, keff_);
   }
 }
 
@@ -318,6 +337,8 @@ void MOCDriver::fill_fission_source(xt::xtensor<double, 2>& fiss_src,
 
 void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
                                               double d) {
+  spdlog::info("Creating quadrature");
+
   // Determine the angles and spacings for the tracks
   double delta_phi = 2. * PI / static_cast<double>(n_angles);
 
@@ -365,10 +386,15 @@ void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
       const double phi_ip1 = angle_info_[i + 1].phi;
       angle_info_[i].wgt = (1. / (4. * PI)) * (phi_ip1 - phi_im1);
     }
+
+    const auto& ai = angle_info_[i];
+    spdlog::debug("Angle {}: weight {}, width {}, nx {}, ny {}", ai.phi, ai.wgt, ai.d, ai.nx, ai.ny);
   }
 }
 
 void MOCDriver::generate_tracks() {
+  spdlog::info("Tracing tracks");
+
   std::uint32_t n_track_angles_ =
       static_cast<std::uint32_t>(angle_info_.size());
   const double Dx = geometry_->x_max() - geometry_->x_min();
@@ -444,6 +470,8 @@ void MOCDriver::generate_tracks() {
 }
 
 void MOCDriver::set_track_ends_bcs() {
+  spdlog::info("Determining track connections");
+  
   // We only go through the first half of the tracks, where phi < pi / 2.
   for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
     const auto& ai = angle_info_[a];
@@ -459,6 +487,7 @@ void MOCDriver::set_track_ends_bcs() {
       if (tracks.at(i).exit_pos() != comp_tracks.at(ai.ny+i).exit_pos()) {
         std::stringstream mssg;
         mssg << "Disagreement in track end alignments: " << tracks.at(i).exit_pos() << " and " << comp_tracks.at(ai.ny+i).exit_pos() << ".";
+        spdlog::error(mssg.str());
         throw ScarabeeException(mssg.str());
       }
 
@@ -476,6 +505,7 @@ void MOCDriver::set_track_ends_bcs() {
       if (tracks.at(ai.ny+i).entry_pos() != comp_tracks.at(i).entry_pos()) {
         std::stringstream mssg;
         mssg << "Disagreement in track end alignments: " << tracks.at(ai.ny+i).entry_pos() << " and " << comp_tracks.at(i).entry_pos() << ".";
+        spdlog::error(mssg.str());
         throw ScarabeeException(mssg.str());
       }
 
@@ -494,6 +524,7 @@ void MOCDriver::set_track_ends_bcs() {
       if (tracks.at(i).entry_pos() != comp_tracks.at(ai.ny-1-i).exit_pos()) {
         std::stringstream mssg;
         mssg << "Disagreement in track end alignments: " << tracks.at(i).entry_pos() << " and " << comp_tracks.at(ai.ny-1-i).exit_pos() << ".";
+        spdlog::error(mssg.str());
         throw ScarabeeException(mssg.str());
       }
 
@@ -509,6 +540,7 @@ void MOCDriver::set_track_ends_bcs() {
       if (tracks.at(ai.nx+i).exit_pos() != comp_tracks.at(nt-1-i).entry_pos()) {
         std::stringstream mssg;
         mssg << "Disagreement in track end alignments: " << tracks.at(ai.nx+i).exit_pos() << " and " << comp_tracks.at(nt-1-i).entry_pos() << ".";
+        spdlog::error(mssg.str());
         throw ScarabeeException(mssg.str());
       }
 
@@ -528,6 +560,8 @@ void MOCDriver::allocate_track_fluxes() {
 }
 
 void MOCDriver::bias_track_lengths() {
+  spdlog::info("Biasing segment lengths");
+
   // We now bias the traced segment lengths, so that we better predict the
   // volume of our flat source regions. We must do this for each angle.
 
@@ -561,6 +595,8 @@ void MOCDriver::bias_track_lengths() {
 }
 
 void MOCDriver::calculate_segment_exps() {
+  spdlog::info("Calculating segment exponentials");
+
   xt::xtensor<double, 1> pd;  // Temp array to hold polar angle distance factors
   pd.resize({n_pol_angles_});
   for (std::size_t pi = 0; pi < n_pol_angles_; pi++) {

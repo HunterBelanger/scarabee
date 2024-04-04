@@ -1,5 +1,6 @@
 #include <moc/cartesian_2d.hpp>
 #include <utils/scarabee_exception.hpp>
+#include <utils/logging.hpp>
 
 #include <algorithm>
 #include <optional>
@@ -9,9 +10,13 @@ Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
     : x_bounds_(x_bounds), y_bounds_(y_bounds), tiles_(), nx_(), ny_() {
   // First, make sure we have at least 2 bounds in each direction
   if (x_bounds_.size() < 2) {
-    throw ScarabeeException("Must provide at least 2 x-bounds");
+    auto mssg = "Must provide at least 2 x-bounds";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   } else if (y_bounds_.size() < 2) {
-    throw ScarabeeException("Must provide at least 2 y-bounds");
+    auto mssg = "Must provide at least 2 y-bounds";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Make sure bounds are sorted
@@ -19,14 +24,18 @@ Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
                      [](const auto& a, const auto& b) {
                        return a->x0() < b->x0();
                      }) == false) {
-    throw ScarabeeException("Provided x-bounds are not sorted.");
+    auto mssg = "Provided x-bounds are not sorted.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (std::is_sorted(y_bounds_.begin(), y_bounds_.end(),
                      [](const auto& a, const auto& b) {
                        return a->y0() < b->y0();
                      }) == false) {
-    throw ScarabeeException("Provided y-bounds are not sorted.");
+    auto mssg = "Provided y-bounds are not sorted.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Get sizes and allocate tiles array
@@ -66,8 +75,9 @@ std::optional<Cartesian2D::TileIndex> Cartesian2D::get_tile_index(
 void Cartesian2D::trace_segments(Vector& r, const Direction& u,
                                  std::vector<Segment>& segments) {
   if (this->tiles_valid() == false) {
-    throw ScarabeeException(
-        "Cannot trace segments on a Cartesian2D geometry with invalid tiles.");
+    auto mssg = "Cannot trace segments on a Cartesian2D geometry with invalid tiles.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Get our current tile index
@@ -88,11 +98,15 @@ void Cartesian2D::trace_segments(Vector& r, const Direction& u,
 
 Cartesian2D::Tile& Cartesian2D::tile(const Cartesian2D::TileIndex& ti) {
   if (ti.i >= nx_) {
-    throw ScarabeeException("TileIndex i out of range.");
+    auto mssg = "TileIndex i out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (ti.j >= ny_) {
-    throw ScarabeeException("TileIndex j out of range.");
+    auto mssg = "TileIndex j out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   return tiles_(ti.i, ti.j);
@@ -101,11 +115,15 @@ Cartesian2D::Tile& Cartesian2D::tile(const Cartesian2D::TileIndex& ti) {
 const Cartesian2D::Tile& Cartesian2D::tile(
     const Cartesian2D::TileIndex& ti) const {
   if (ti.i >= nx_) {
-    throw ScarabeeException("TileIndex i out of range.");
+    auto mssg = "TileIndex i out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (ti.j >= ny_) {
-    throw ScarabeeException("TileIndex j out of range.");
+    auto mssg = "TileIndex j out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   return tiles_(ti.i, ti.j);
@@ -127,6 +145,7 @@ FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r, const Direction& u) {
     std::stringstream mssg;
     mssg << "Position r = " << r << ", and Direction u = " << u
          << ", are not in Cartesian2D geometry.";
+    spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
@@ -136,6 +155,7 @@ FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r, const Direction& u) {
     std::stringstream mssg;
     mssg << "Tile for Position r = " << r << ", and Direction u = " << u
          << " is empty.";
+    spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
@@ -158,6 +178,7 @@ const FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r,
     std::stringstream mssg;
     mssg << "Position r = " << r << ", and Direction u = " << u
          << ", are not in Cartesian2D geometry.";
+    spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
@@ -167,6 +188,7 @@ const FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r,
     std::stringstream mssg;
     mssg << "Tile for Position r = " << r << ", and Direction u = " << u
          << " is empty.";
+    spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
@@ -195,7 +217,9 @@ void Cartesian2D::append_fsrs(std::vector<FlatSourceRegion*>& fsrs) {
 void Cartesian2D::Tile::trace_segments(Vector& r, const Direction& u,
                                        std::vector<Segment>& segments) {
   if (this->valid() == false) {
-    throw ScarabeeException("Cannot trace a Tile which is empty.");
+    auto mssg = "Cannot trace a Tile which is empty.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (c2d) {

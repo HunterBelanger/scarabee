@@ -19,6 +19,15 @@ set(EIGEN_BUILD_CMAKE_PACKAGE OFF)
 FetchContent_MakeAvailable(eigen)
 
 #===============================================================================
+# Get SPDLOG
+message(STATUS "Downloading spdlog v1.13.0")
+FetchContent_Declare(spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG        v1.13.0
+)
+FetchContent_MakeAvailable(spdlog)
+
+#===============================================================================
 # Get HTL
 message(STATUS "Downloading HTL")
 FetchContent_Declare(htl
@@ -47,6 +56,7 @@ FetchContent_MakeAvailable(xtensor)
 
 #===============================================================================
 add_executable(scarabee src/main.cpp
+                        src/logging.cpp
                         src/gauss_kronrod.cpp
                         src/chebyshev.cpp
                         src/bickley.cpp
@@ -64,7 +74,7 @@ add_executable(scarabee src/main.cpp
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
-target_link_libraries(scarabee PUBLIC xtl xtensor htl Eigen3::Eigen)
+target_link_libraries(scarabee PUBLIC xtl xtensor htl Eigen3::Eigen spdlog::spdlog)
 
 # Find OpenMP if desired
 if(SCARABEE_USE_OMP)

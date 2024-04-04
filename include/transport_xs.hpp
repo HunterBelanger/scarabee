@@ -7,7 +7,6 @@
 #include <xtensor/xview.hpp>
 
 #include <cstdint>
-#include <vector>
 
 class TransportXS {
  public:

@@ -1,5 +1,6 @@
 #include <cylindrical_flux_solver.hpp>
 #include <utils/scarabee_exception.hpp>
+#include <utils/logging.hpp>
 
 #include <xtensor/xbuilder.hpp>
 
@@ -15,7 +16,9 @@ CylindricalFluxSolver::CylindricalFluxSolver(
       flux_tol_(1.E-5),
       solved_(false) {
   if (cell_ == nullptr) {
-    throw ScarabeeException("Provided CylindricalCell was a nullptr.");
+    auto mssg = "Provided CylindricalCell was a nullptr.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Initialize flux with 1's everywhere
@@ -29,7 +32,9 @@ CylindricalFluxSolver::CylindricalFluxSolver(
 
 void CylindricalFluxSolver::set_albedo(double a) {
   if (a < 0. || a > 1.) {
-    throw ScarabeeException("Albedo must be in the interval [0,1].");
+    auto mssg = "Albedo must be in the interval [0,1].";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   a_ = a;
@@ -38,13 +43,15 @@ void CylindricalFluxSolver::set_albedo(double a) {
 
 void CylindricalFluxSolver::set_flux_tolerance(double ftol) {
   if (ftol <= 0.) {
-    throw ScarabeeException(
-        "Tolerance for flux must be in the interval (0., 0.1).");
+    auto mssg = "Tolerance for flux must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (ftol >= 0.1) {
-    throw ScarabeeException(
-        "Tolerance for flux must be in the interval (0., 0.1).");
+    auto mssg = "Tolerance for flux must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   flux_tol_ = ftol;
@@ -53,13 +60,15 @@ void CylindricalFluxSolver::set_flux_tolerance(double ftol) {
 
 void CylindricalFluxSolver::set_keff_tolerance(double ktol) {
   if (ktol <= 0.) {
-    throw ScarabeeException(
-        "Tolerance for keff must be in the interval (0., 0.1).");
+    auto mssg = "Tolerance for keff must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (ktol >= 0.1) {
-    throw ScarabeeException(
-        "Tolerance for keff must be in the interval (0., 0.1).");
+    auto mssg = "Tolerance for keff must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   k_tol_ = ktol;
@@ -149,6 +158,12 @@ void CylindricalFluxSolver::fill_scatter_source(
 }
 
 void CylindricalFluxSolver::solve() {
+  // Make sure the cell is solved
+  if (cell_->solved() == false) {
+    auto mssg = "Cannot solve for flux if cell is not solved."; 
+    throw ScarabeeException(mssg);
+  }
+
   // Create a new array to hold the source according to the current flux, and
   // another for the next generation flux.
   xt::xtensor<double, 2> scat_source(flux_.shape());
@@ -157,8 +172,11 @@ void CylindricalFluxSolver::solve() {
   k_ = calc_keff(flux_);
   double old_keff = 100.;
 
+  std::size_t outer_iter = 0;
   // Outer Generations
   while (std::abs(old_keff - k_) > k_tol_) {
+    outer_iter++;
+
     // At the begining of a generation, we calculate the fission source
     fill_fission_source(fiss_source, flux_);
 
@@ -167,8 +185,11 @@ void CylindricalFluxSolver::solve() {
     next_flux = flux_;
 
     double max_flux_diff = 100.;
+    std::size_t inner_iter = 0;
     // Inner Iterations
     while (max_flux_diff > flux_tol_) {
+      inner_iter++;
+
       // At the begining of an inner iteration, we calculate the fission source
       fill_scatter_source(scat_source, next_flux);
 
@@ -189,6 +210,7 @@ void CylindricalFluxSolver::solve() {
 
       // Calculate the max difference in the flux
       max_flux_diff = calc_flux_rel_diff(flux_, next_flux);
+      spdlog::debug("Inner iteration {} max flux difference {:.5f}", inner_iter, max_flux_diff);
 
       // Copy next_flux into flux for calculating next relative difference
       flux_ = next_flux;
@@ -197,6 +219,7 @@ void CylindricalFluxSolver::solve() {
     // Calculate keff
     old_keff = k_;
     k_ = calc_keff(next_flux);
+    spdlog::info("Iteration {} keff {:.5f}", outer_iter, k_);
 
     // Assign next_flux to be the flux
     std::swap(next_flux, flux_);

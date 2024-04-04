@@ -1,6 +1,7 @@
 #include <moc/pin_cell.hpp>
 #include <utils/constants.hpp>
 #include <utils/scarabee_exception.hpp>
+#include <utils/logging.hpp>
 
 #include <algorithm>
 
@@ -55,28 +56,38 @@ void PinCell::build() {
 
   // Make sure the numbers for mats and rads is coherent
   if (mat_radii_.size() + 1 != mats_.size()) {
-    throw ScarabeeException("Must have one more material than material radii.");
+    auto mssg = "Must have one more material than material radii.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Make sure we have at least 2 mats and one radii
   if (mat_radii_.size() == 0) {
-    throw ScarabeeException("Must have at least one radiius.");
+    auto mssg = "Must have at least one radiius.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Make sure radii are sorted
   if (std::is_sorted(mat_radii_.begin(), mat_radii_.end()) == false) {
-    throw ScarabeeException("All radii must be sorted.");
+    auto mssg = "All radii must be sorted.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Make sure radii all > 0
   if (mat_radii_[0] <= 0.) {
-    throw ScarabeeException("All radii must be > 0.");
+    auto mssg = "All radii must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Make sure mats aren't nullptr
   for (const auto& mat : mats_) {
     if (!mat) {
-      throw ScarabeeException("Found TransportXS which was nullptr.");
+      auto mssg = "Found TransportXS which was nullptr.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
     }
   }
 
@@ -84,7 +95,9 @@ void PinCell::build() {
   std::size_t ngroups = mats_.front()->ngroups();
   for (std::size_t mi = 0; mi < mats_.size(); mi++) {
     if (mats_[mi]->ngroups() != ngroups) {
-      throw ScarabeeException("Materials have different numbers of groups.");
+      auto mssg = "Materials have different numbers of groups.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
     }
   }
 
@@ -93,8 +106,9 @@ void PinCell::build() {
       x0_ + mat_radii_.back() >= x_max_->x0() ||
       y0_ - mat_radii_.back() <= y_min_->y0() ||
       y0_ + mat_radii_.back() >= y_max_->y0()) {
-    throw ScarabeeException(
-        "Outer material radius may not intersect cell wall.");
+    auto mssg = "Outer material radius may not intersect cell wall.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // First, make all annular regions

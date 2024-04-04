@@ -3,6 +3,7 @@
 #include <utils/constants.hpp>
 #include <utils/gauss_kronrod.hpp>
 #include <utils/scarabee_exception.hpp>
+#include <utils/logging.hpp>
 
 #include <xtensor/xbuilder.hpp>
 
@@ -25,37 +26,49 @@ CylindricalCell::CylindricalCell(
       solved_(false) {
   // Perform all sanity checks
   if (radii_.size() != mats_.size()) {
-    throw ScarabeeException(
-        "Number of radii does not match the number of materials.");
+    auto mssg = "Number of radii does not match the number of materials.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (radii_.size() < 2) {
-    throw ScarabeeException("Must have at least 2 regions.");
+    auto mssg = "Must have at least 2 regions.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (std::is_sorted(radii_.begin(), radii_.end()) == false) {
-    throw ScarabeeException("Radii are not sorted.");
+    auto mssg = "Radii are not sorted.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (radii_.front() <= 0.) {
-    throw ScarabeeException("All radii must be > 0.");
+    auto mssg = "All radii must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   for (const auto& mat : mats_) {
     if (mat == nullptr) {
-      throw ScarabeeException("Nullptr found in materials.");
+      auto mssg = "Nullptr found in materials.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
     }
   }
 
   ngroups_ = mats_[0]->ngroups();
   if (ngroups_ == 0) {
-    throw ScarabeeException("Must have at least 1 energy group.");
+    auto mssg = "Must have at least 1 energy group.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   for (const auto& mat : mats_) {
     if (mat->ngroups() != ngroups_) {
-      throw ScarabeeException(
-          "Not all materials have the same number of energy groups.");
+      auto mssg = "Not all materials have the same number of energy groups.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
     }
   }
 

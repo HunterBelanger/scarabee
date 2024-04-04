@@ -1,6 +1,7 @@
 #include <cylindrical_cell.hpp>
 #include <cylindrical_flux_solver.hpp>
 #include <utils/constants.hpp>
+#include <utils/logging.hpp>
 
 #include <moc/pin_cell.hpp>
 #include <moc/cartesian_2d.hpp>
@@ -170,9 +171,27 @@ void test() {
   moc.draw_tracks(128, 0.01);
   moc.solve_keff();
   std::cout << "keff = " << moc.keff() << "\n";
+
+  std::cout << "\n";
+  
+  radii = {0.1,  0.2,  0.3,  0.4,  0.5,   0.6,   std::sqrt(1.27*1.27 / PI)};
+  mats  = {fuel, fuel, fuel, fuel, water, water, water};
+  std::shared_ptr<CylindricalCell> cell2 = std::make_shared<CylindricalCell>(radii, mats);
+  std::cout << ">>> Solving for collision probabilities...\n";
+  cell2->solve();
+  std::cout << ">>> Collision probabilities determined !\n";
+  CylindricalFluxSolver cell_flux2(cell2);
+  cell_flux2.set_keff_tolerance(1.E-6);
+  cell_flux2.set_albedo(1.);
+  std::cout << ">>> Solving for the flux...\n";
+  cell_flux2.solve();
+  std::cout << ">>> Flux determined !\n\n";
+  std::cout << "  keff = " << std::setprecision(6) << cell_flux2.keff()
+            << "\n\n";
 }
 
 int main() {
+  set_logging_level(LogLevel::debug);
   test();
 
   return 0;
