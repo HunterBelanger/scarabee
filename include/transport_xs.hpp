@@ -18,32 +18,32 @@ class TransportXS {
 
   const xt::xtensor<double, 1>& Et() const { return Et_; }
 
-  double Et(std::uint32_t g) const { return Et_(g); }
+  double Et(std::size_t g) const { return Et_(g); }
 
-  double Ea(std::uint32_t g) const { return Ea_(g); }
+  double Ea(std::size_t g) const { return Ea_(g); }
 
-  double Ef(std::uint32_t g) const {
+  double Ef(std::size_t g) const {
     if (fissile_) return Ef_(g);
     return 0.;
   }
 
-  double Er(std::uint32_t g) const { return Ea(g) + Es(g) - Es(g, g); }
+  double Er(std::size_t g) const { return Ea(g) + Es(g) - Es(g, g); }
 
-  double nu(std::uint32_t g) const {
+  double nu(std::size_t g) const {
     if (fissile_) return nu_(g);
     return 0.;
   }
 
-  double chi(std::uint32_t g) const {
+  double chi(std::size_t g) const {
     if (fissile_) return chi_(g);
     return 0.;
   }
 
-  double Es(std::uint32_t gin, std::uint32_t gout) const {
+  double Es(std::size_t gin, std::size_t gout) const {
     return Es_(gin, gout);
   }
 
-  double Es(std::uint32_t gin) const {
+  double Es(std::size_t gin) const {
     return xt::sum(xt::view(Es_, gin, xt::all()))();
   }
 
