@@ -116,7 +116,7 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
 
   generate_azimuthal_quadrature(n_angles, d);
   generate_tracks();
-  bias_track_lengths();
+  segment_renormalization();
   calculate_segment_exps();
   set_track_ends_bcs();
   allocate_track_fluxes();
@@ -131,16 +131,17 @@ void MOCDriver::solve_keff() {
   src_.resize({fsrs_.size(), ngroups_});
   src_.fill(0.);
   auto fiss_src = src_;
-  auto scat_src = src_;
+  auto self_scat_src = src_;
+  auto prev_self_scat_src = src_;
+  auto extern_scat_src = src_;
+  auto extern_src = src_;
 
-  // Initialize flux so that there is 1 absorption in entire system
+  // Initialize flux and keff
   flux_.fill(1.);
-  double abs = calc_abs(flux_);
-  flux_ *= 1. / abs;
-  keff_ = calc_keff(flux_);
-
+  keff_ = 1.;
   auto next_flux = flux_;
   double prev_keff = keff_;
+
   spdlog::info("Initial keff {:.5f}", keff_);
 
   // Initialize angular flux
@@ -152,51 +153,44 @@ void MOCDriver::solve_keff() {
   }
 
   double rel_diff_keff = 100.;
+  double max_flx_diff = 100;
   std::size_t outer_iter = 0;
-  while (rel_diff_keff > keff_tol_ && outer_iter < 100) {
+  while (rel_diff_keff > keff_tol_ || max_flx_diff > flux_tol_) {
     outer_iter++;
 
-    abs = calc_abs(next_flux);
-    next_flux *= 1. / abs;
-    
     fill_fission_source(fiss_src, next_flux);
+    fill_external_scatter_source(extern_scat_src, next_flux);
+    fill_self_scatter_source(self_scat_src, next_flux);
+    extern_src = fiss_src + extern_scat_src;
 
-    double max_flux_diff = 100;
+    double max_src_diff = 100.;
     std::size_t inner_iter = 0;
-    while (max_flux_diff > flux_tol_ && inner_iter < 100) {
+    while (max_src_diff > flux_tol_) {
       inner_iter++;
 
-      fill_scatter_source(fiss_src, next_flux);
-      src_ = fiss_src + scat_src;
+      src_ = extern_src + self_scat_src;
 
       sweep(next_flux);
 
-      // Get difference 
-      max_flux_diff = 0.;
-      for (std::size_t i = 0; i < fsrs_.size(); i++) {
-        for (std::size_t g = 0; g < ngroups_; g++) {
-          double flx_diff = std::abs(next_flux(i,g) - flux_(i, g)) / next_flux(i,g);
-          if (flx_diff > max_flux_diff)
-            max_flux_diff = flx_diff;
-          else if (flx_diff < 0.) {
-            auto mssg = "Negative flux after inner iteration.";
-            spdlog::error(mssg); 
-            throw ScarabeeException(mssg);
-          }
-        }
-      }
+      // Calculate new self source for next inner iteration
+      prev_self_scat_src = self_scat_src;
+      fill_self_scatter_source(self_scat_src, next_flux);
 
-      flux_ = next_flux;
-      
-      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter, max_flux_diff);
+      // Get difference 
+      max_src_diff = xt::amax(xt::abs(self_scat_src - prev_self_scat_src) / self_scat_src)();
+
+      spdlog::debug("Inner iteration {} source diff {:.5E}", inner_iter, max_src_diff);
     }
 
     prev_keff = keff_;
-    keff_ = calc_keff(next_flux);
+    keff_ = calc_keff(next_flux, flux_);
     rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
 
+    // Get difference 
+    max_flx_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
+
     flux_ = next_flux;
-    spdlog::info("Iteration {} keff {:.5f}", outer_iter, keff_);
+    spdlog::info("Iteration {} keff {:.5f} flux difference {:.5E}", outer_iter, keff_, max_flx_diff);
   }
 }
 
@@ -264,6 +258,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
   }    // For all azimuthal angles
 }
 
+/*
 double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux) const {
   double keff = 0.;
 
@@ -281,7 +276,35 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux) const {
 
   return keff;
 }
+*/
 
+double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& old_flux) const {
+  double num = 0.;
+  double denom = 0.;
+
+  for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    const double Vr = fsrs_[i]->volume();
+    const auto& mat = *fsrs_[i]->xs();
+    for (std::uint32_t g = 0; g < ngroups_; g++) {
+      const double nu = mat.nu(g);
+      const double Ef = mat.Ef(g);
+      const double VvEf = Vr * nu * Ef;
+      const double flx = flux(i, g);
+      const double oflx = old_flux(i, g);
+
+      if (flx == oflx) {
+        spdlog::error("New and old flux is equal");
+      }
+
+      num += VvEf * flx;
+      denom += VvEf * oflx;
+    }
+  }
+
+  return keff_ * num / denom;
+}
+
+/*
 double MOCDriver::calc_abs(const xt::xtensor<double, 2>& flux) const {
   double abs = 0.;
 
@@ -297,7 +320,9 @@ double MOCDriver::calc_abs(const xt::xtensor<double, 2>& flux) const {
 
   return abs;
 }
+*/
 
+/*
 void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src,
                                     const xt::xtensor<double, 2>& flux) const {
   const double isotropic = 1. / (4. * PI);
@@ -313,6 +338,36 @@ void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src,
       }
 
       scat_src(i, g) = isotropic * Qout;
+    }
+  }
+}
+*/
+
+void MOCDriver::fill_external_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const {
+  const double isotropic = 1. / (4. * PI);
+  for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    const auto& mat = *fsrs_[i]->xs();
+    for (std::uint32_t g = 0; g < ngroups_; g++) {
+      double Qout = 0.;
+
+      for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
+        if (gg == g) continue; // Don't include self scattering
+        const double flux_gg_i = flux(i, gg);
+        const double Es_gg_to_g = mat.Es(gg, g);
+        Qout += Es_gg_to_g * flux_gg_i;
+      }
+
+      scat_src(i, g) = isotropic * Qout;
+    }
+  }
+}
+
+void MOCDriver::fill_self_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const {
+  const double isotropic = 1. / (4. * PI);
+  for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    const auto& mat = *fsrs_[i]->xs();
+    for (std::uint32_t g = 0; g < ngroups_; g++) {
+      scat_src(i, g) = isotropic * mat.Es(g, g) * flux(i, g);
     }
   }
 }
@@ -563,11 +618,13 @@ void MOCDriver::allocate_track_fluxes() {
   }
 }
 
-void MOCDriver::bias_track_lengths() {
-  spdlog::info("Biasing segment lengths");
+void MOCDriver::segment_renormalization() {
+  spdlog::info("Renormalizing segment lengths");
 
   // We now bias the traced segment lengths, so that we better predict the
-  // volume of our flat source regions. We must do this for each angle.
+  // volume of our flat source regions. We do this for each angle, but it
+  // could be done for all angles together. A great explanation of this is
+  // found in the MPACT theory manual ORNL/SPR-2021/2330 end of 5.4.
 
   // This holds the approximations for the FSR areas
   std::vector<double> approx_vols(fsrs_.size(), 0.);

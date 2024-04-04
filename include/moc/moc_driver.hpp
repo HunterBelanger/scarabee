@@ -78,15 +78,19 @@ class MOCDriver {
   void generate_tracks();
   void set_track_ends_bcs();
   void allocate_track_fluxes();
-  void bias_track_lengths();
+  void segment_renormalization();
   void calculate_segment_exps();
 
   void sweep(xt::xtensor<double, 2>& flux);
 
-  double calc_keff(const xt::xtensor<double, 2>& flux) const;
-  double calc_abs(const xt::xtensor<double, 2>& flux) const;
-  void fill_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const;
+  //double calc_keff(const xt::xtensor<double, 2>& flux) const;
+  double calc_keff(const xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& old_flux) const;
+  //double calc_abs(const xt::xtensor<double, 2>& flux) const;
+  //void fill_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const;
   void fill_fission_source(xt::xtensor<double, 2>& fiss_src, const xt::xtensor<double, 2>& flux) const;
+
+  void fill_self_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const;
+  void fill_external_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const;
 };
 
 #endif

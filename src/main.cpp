@@ -100,20 +100,20 @@ void test() {
   // MOC
   std::shared_ptr<TransportXS> fuel = std::make_shared<TransportXS>();
   fuel->Et_ = {4.52648699E-01};
-  fuel->Es_ = {{3.83259177E-01}};
   fuel->Ea_ = {6.9389522E-02};
   fuel->Ef_ = {3.97630632E-2};
   fuel->nu_ = {2.5};
   fuel->chi_ = {1.};
+  fuel->Es_ = {{3.83259177E-01}};
   fuel->fissile_ = true;
 
   std::shared_ptr<TransportXS> water = std::make_shared<TransportXS>();
   water->Et_ = {8.41545641E-01};
   water->Ea_ = {3.751099E-3};
-  water->Es_ = {{8.37794542E-01}};
   water->Ef_ = {0.};
   water->nu_ = {0.};
   water->chi_ = {0.};
+  water->Es_ = {{8.37794542E-01}};
 
   radii = {0.1,  0.2,  0.3,  0.4,  0.5,   0.6};
   mats  = {fuel, fuel, fuel, fuel, water, water, water};
@@ -140,10 +140,12 @@ void test() {
       std::make_shared<Cartesian2D>(x_bounds, y_bounds);
   c2d->tile({0, 0}).cell = pincell1;
 
-  MOCDriver moc(c2d, YamamotoTabuchi<6>());
+  //MOCDriver moc(c2d, YamamotoTabuchi<6>());
+  MOCDriver moc(c2d, Legendre<4>());
   //MOCDriver moc(c2d, Legendre<12>());
   //moc.draw_tracks(8, 0.5);
   moc.draw_tracks(128, 0.01);
+  //moc.draw_tracks(512, 0.001);
   moc.solve_keff();
   std::cout << "\n";
   
@@ -157,8 +159,8 @@ void test() {
 }
 
 int main() {
-  //set_logging_level(LogLevel::debug);
-  set_logging_level(LogLevel::info);
+  set_logging_level(LogLevel::debug);
+  //set_logging_level(LogLevel::info);
   test();
 
   return 0;

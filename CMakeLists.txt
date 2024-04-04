@@ -46,12 +46,22 @@ FetchContent_Declare(xtl
 FetchContent_MakeAvailable(xtl)
 
 #===============================================================================
+# Get XSIMD
+message(STATUS "Downloading xsimd v12.1.1")
+FetchContent_Declare(xsimd
+  GIT_REPOSITORY https://github.com/xtensor-stack/xsimd.git
+  GIT_TAG        12.1.1
+)
+FetchContent_MakeAvailable(xsimd)
+
+#===============================================================================
 # Get XTENSOR
 message(STATUS "Downloading xtensor v0.25.0")
 FetchContent_Declare(xtensor
   GIT_REPOSITORY https://github.com/xtensor-stack/xtensor.git
   GIT_TAG        0.25.0
 )
+set(XTENSOR_USE_XSIMD ON CACHE BOOL "Enable SIMD acceleration.")
 FetchContent_MakeAvailable(xtensor)
 
 #===============================================================================
