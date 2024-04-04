@@ -86,40 +86,15 @@ void test() {
     mats.push_back(H2O);
   }
 
-  for (std::size_t i = 0; i < radii.size(); i++) {
-    std::cout << radii[i];
-    if (i != radii.size() - 1) std::cout << ", ";
-  }
-  std::cout << "\n";
-  for (std::size_t i = 0; i < radii.size(); i++) {
-    std::cout << mats[i]->Et(0);
-    if (i != mats.size() - 1) std::cout << ", ";
-  }
-  std::cout << "\n";
-
   std::shared_ptr<CylindricalCell> cell =
       std::make_shared<CylindricalCell>(radii, mats);
-  std::cout << ">>> Solving for collision probabilities...\n";
   cell->solve();
-  std::cout << ">>> Collision probabilities determined !\n";
 
   CylindricalFluxSolver cell_flux(cell);
-  cell_flux.set_keff_tolerance(1.E-6);
   cell_flux.set_albedo(1.);
-  std::cout << ">>> Solving for the flux...\n";
   cell_flux.solve();
-  std::cout << ">>> Flux determined !\n\n";
-  std::cout << "  keff = " << std::setprecision(6) << cell_flux.keff()
-            << "\n\n";
+  std::cout << "\n";
 
-  for (std::uint32_t g = 0; g < cell_flux.ngroups(); g++) {
-    std::cout << " Group " << g << ": ";
-    for (std::size_t i = 0; i < cell_flux.nregions(); i++) {
-      std::cout << cell_flux.flux(g, i);
-      if (i != cell_flux.nregions() - 1) std::cout << ", ";
-    }
-    std::cout << "   jnet = " << cell_flux.j(g) << "\n";
-  }
 
   //==============================================
   // MOC
@@ -170,28 +145,20 @@ void test() {
   //moc.draw_tracks(8, 0.5);
   moc.draw_tracks(128, 0.01);
   moc.solve_keff();
-  std::cout << "keff = " << moc.keff() << "\n";
-
   std::cout << "\n";
   
   radii = {0.1,  0.2,  0.3,  0.4,  0.5,   0.6,   std::sqrt(1.27*1.27 / PI)};
   mats  = {fuel, fuel, fuel, fuel, water, water, water};
   std::shared_ptr<CylindricalCell> cell2 = std::make_shared<CylindricalCell>(radii, mats);
-  std::cout << ">>> Solving for collision probabilities...\n";
   cell2->solve();
-  std::cout << ">>> Collision probabilities determined !\n";
   CylindricalFluxSolver cell_flux2(cell2);
-  cell_flux2.set_keff_tolerance(1.E-6);
   cell_flux2.set_albedo(1.);
-  std::cout << ">>> Solving for the flux...\n";
   cell_flux2.solve();
-  std::cout << ">>> Flux determined !\n\n";
-  std::cout << "  keff = " << std::setprecision(6) << cell_flux2.keff()
-            << "\n\n";
 }
 
 int main() {
-  set_logging_level(LogLevel::debug);
+  //set_logging_level(LogLevel::debug);
+  set_logging_level(LogLevel::info);
   test();
 
   return 0;

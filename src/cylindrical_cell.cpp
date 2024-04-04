@@ -84,12 +84,15 @@ CylindricalCell::CylindricalCell(
 }
 
 void CylindricalCell::solve() {
+  spdlog::info("Solving cylindrical cell.");
   this->calculate_collision_probabilities();
   this->solve_systems();
   solved_ = true;
 }
 
 void CylindricalCell::calculate_collision_probabilities() {
+  spdlog::debug("Calculating collision probabilities.");
+
   // First, ensure we have a matrix of the proper size
   p_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
 
@@ -198,6 +201,8 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
 }
 
 void CylindricalCell::solve_systems() {
+  spdlog::debug("Solving system of equations for cylindrical cell.");
+
   // First, we allocate the needed memory to hold all of the X and Y terms
   X_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
   Y_ = xt::zeros<double>({ngroups(), nregions()});

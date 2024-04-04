@@ -123,6 +123,10 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
 }
 
 void MOCDriver::solve_keff() {
+  spdlog::info("Solving for keff.");
+  spdlog::info("keff tolerance: {:.5E}", keff_tol_);
+  spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
+
   flux_.resize({fsrs_.size(), ngroups_});
   src_.resize({fsrs_.size(), ngroups_});
   src_.fill(0.);
@@ -184,7 +188,7 @@ void MOCDriver::solve_keff() {
 
       flux_ = next_flux;
       
-      spdlog::debug("Inner iteration {} max flux difference {:.5f}", inner_iter, max_flux_diff);
+      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter, max_flux_diff);
     }
 
     prev_keff = keff_;
@@ -388,7 +392,7 @@ void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
     }
 
     const auto& ai = angle_info_[i];
-    spdlog::debug("Angle {}: weight {}, width {}, nx {}, ny {}", ai.phi, ai.wgt, ai.d, ai.nx, ai.ny);
+    spdlog::debug("Angle {:.5E} pi: weight {:.5E}, width {:.5E}, nx {}, ny {}", ai.phi/PI, ai.wgt, ai.d, ai.nx, ai.ny);
   }
 }
 

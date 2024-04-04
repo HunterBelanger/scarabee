@@ -158,6 +158,10 @@ void CylindricalFluxSolver::fill_scatter_source(
 }
 
 void CylindricalFluxSolver::solve() {
+  spdlog::info("Solving for keff.");
+  spdlog::info("keff tolerance: {:.5E}", k_tol_);
+  spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
+
   // Make sure the cell is solved
   if (cell_->solved() == false) {
     auto mssg = "Cannot solve for flux if cell is not solved."; 
@@ -171,6 +175,7 @@ void CylindricalFluxSolver::solve() {
   xt::xtensor<double, 2> next_flux(flux_.shape());
   k_ = calc_keff(flux_);
   double old_keff = 100.;
+  spdlog::info("Initial keff {:.5f}", k_);
 
   std::size_t outer_iter = 0;
   // Outer Generations
@@ -210,7 +215,7 @@ void CylindricalFluxSolver::solve() {
 
       // Calculate the max difference in the flux
       max_flux_diff = calc_flux_rel_diff(flux_, next_flux);
-      spdlog::debug("Inner iteration {} max flux difference {:.5f}", inner_iter, max_flux_diff);
+      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter, max_flux_diff);
 
       // Copy next_flux into flux for calculating next relative difference
       flux_ = next_flux;
