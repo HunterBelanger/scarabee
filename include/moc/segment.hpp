@@ -14,6 +14,8 @@ class Segment {
 
   double length() const { return length_; }
 
+  void set_length(double l) { length_ = l; }
+
   double volume() const { return fsr_->volume(); }
 
   const TransportXS& xs() const { return *fsr_->xs(); }

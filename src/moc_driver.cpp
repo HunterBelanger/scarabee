@@ -100,9 +100,10 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
 
   generate_azimuthal_quadrature(n_angles, d);
   generate_tracks();
+  bias_track_lengths();
+  calculate_segment_exps();
   set_track_ends_bcs();
   allocate_track_fluxes();
-  calculate_segment_exps();
 }
 
 void MOCDriver::solve_keff() {
@@ -522,6 +523,39 @@ void MOCDriver::allocate_track_fluxes() {
     for (auto& track : tracks) {
       track.entry_flux().resize({ngroups_, n_pol_angles_});
       track.exit_flux().resize({ngroups_, n_pol_angles_});
+    }
+  }
+}
+
+void MOCDriver::bias_track_lengths() {
+  // We now bias the traced segment lengths, so that we better predict the
+  // volume of our flat source regions. We must do this for each angle.
+
+  // This holds the approximations for the FSR areas
+  std::vector<double> approx_vols(fsrs_.size(), 0.);
+
+  // Go through all angles
+  for (std::size_t a = 0; a < angle_info_.size(); a++) {
+    const double d = angle_info_[a].d; // Track width
+    auto& tracks = tracks_[a]; // Vector of tracks
+
+    // Zero approximate volumes
+    for (auto& av : approx_vols) av = 0.;
+
+    // Iterate through tracks and segments, adding contributions to volumes
+    for (auto& track : tracks) {
+      for (auto& seg : track) {
+        const std::size_t i = seg.fsr_indx();
+        approx_vols[i] += seg.length() * d;
+      }
+    }
+
+    // Now we apply the corrections to the segment lengths 
+    for (auto& track : tracks) {
+      for (auto& seg : track) {
+        const std::size_t i = seg.fsr_indx();
+        seg.set_length(seg.length() * seg.volume() / approx_vols[i]);
+      }
     }
   }
 }

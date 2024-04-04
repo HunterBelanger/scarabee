@@ -164,10 +164,10 @@ void test() {
       std::make_shared<Cartesian2D>(x_bounds, y_bounds);
   c2d->tile({0, 0}).cell = pincell1;
 
-  //MOCDriver moc(c2d, YamamotoTabuchi<6>());
-  MOCDriver moc(c2d, Legendre<12>());
+  MOCDriver moc(c2d, YamamotoTabuchi<6>());
+  //MOCDriver moc(c2d, Legendre<12>());
   //moc.draw_tracks(8, 0.5);
-  moc.draw_tracks(128, 0.001);
+  moc.draw_tracks(128, 0.01);
   moc.solve_keff();
   std::cout << "keff = " << moc.keff() << "\n";
 }

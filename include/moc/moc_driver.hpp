@@ -78,6 +78,7 @@ class MOCDriver {
   void generate_tracks();
   void set_track_ends_bcs();
   void allocate_track_fluxes();
+  void bias_track_lengths();
   void calculate_segment_exps();
 
   void sweep(xt::xtensor<double, 2>& flux);
