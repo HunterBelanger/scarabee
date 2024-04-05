@@ -123,6 +123,13 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
 }
 
 void MOCDriver::solve_keff() {
+  // Make sure the geometry has been drawn
+  if (angle_info_.empty()) {
+    auto mssg = "Cannot solve MOC problem. Geometry has not been traced.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  
   spdlog::info("Solving for keff.");
   spdlog::info("keff tolerance: {:.5E}", keff_tol_);
   spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
@@ -139,6 +146,8 @@ void MOCDriver::solve_keff() {
   // Initialize flux and keff
   flux_.fill(1.);
   keff_ = 1.;
+  double abs = calc_abs(flux_);
+  flux_ /= abs;
   auto next_flux = flux_;
   double prev_keff = keff_;
 
@@ -158,36 +167,41 @@ void MOCDriver::solve_keff() {
   while (rel_diff_keff > keff_tol_ || max_flx_diff > flux_tol_) {
     outer_iter++;
 
-    fill_fission_source(fiss_src, next_flux);
-    fill_external_scatter_source(extern_scat_src, next_flux);
-    fill_self_scatter_source(self_scat_src, next_flux);
+    fill_fission_source(fiss_src, flux_);
+    fill_external_scatter_source(extern_scat_src, flux_);
+    fill_self_scatter_source(self_scat_src, flux_);
     extern_src = fiss_src + extern_scat_src;
 
     double max_src_diff = 100.;
     std::size_t inner_iter = 0;
-    while (max_src_diff > flux_tol_) {
-      inner_iter++;
+    //while (max_src_diff > flux_tol_) {
+    //  inner_iter++;
 
       src_ = extern_src + self_scat_src;
 
+      next_flux.fill(0.);
       sweep(next_flux);
 
       // Calculate new self source for next inner iteration
-      prev_self_scat_src = self_scat_src;
-      fill_self_scatter_source(self_scat_src, next_flux);
+    //  prev_self_scat_src = self_scat_src;
+    //  fill_self_scatter_source(self_scat_src, next_flux);
 
       // Get difference 
-      max_src_diff = xt::amax(xt::abs(self_scat_src - prev_self_scat_src) / self_scat_src)();
+    //  max_src_diff = xt::amax(xt::abs(self_scat_src - prev_self_scat_src) / self_scat_src)();
 
-      spdlog::debug("Inner iteration {} source diff {:.5E}", inner_iter, max_src_diff);
-    }
+    //  spdlog::debug("Inner iteration {} source diff {:.5E}", inner_iter, max_src_diff);
+    //} 
 
     prev_keff = keff_;
-    keff_ = calc_keff(next_flux, flux_);
+    //keff_ = calc_keff(next_flux, flux_);
+    keff_ = calc_keff(next_flux);
     rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
 
     // Get difference 
     max_flx_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
+
+    abs = calc_abs(next_flux);
+    next_flux /= abs;
 
     flux_ = next_flux;
     spdlog::info("Iteration {} keff {:.5f} flux difference {:.5E}", outer_iter, keff_, max_flx_diff);
@@ -207,14 +221,15 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
       // Follow track in forward direction
       for (auto& seg : track) {
         const std::size_t i = seg.fsr_indx();
-        const double seg_const = (4. * PI * seg.length() / seg.volume());
         for (std::size_t g = 0; g < ngroups_; g++) {
+          const double Et = seg.xs().Et(g);
+          const double Q = src_(i, g);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double delta_flx = (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) * (1. - seg.exp()(g, p));
+            const double delta_flx = (angflux(g, p) - (Q / Et)) * (1. - seg.exp()(g, p));
 #ifdef SCARABEE_USE_OMP
 #pragma omp atomic
 #endif
-            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
+            sflux(i, g) += 4. * PI * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
             angflux(g, p) -= delta_flx;
           }  // For all polar angles
         }    // For all groups
@@ -233,14 +248,15 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
       for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
         auto& seg = *seg_it;
         const std::size_t i = seg.fsr_indx();
-        const double seg_const = (4. * PI * seg.length() / seg.volume());
         for (std::size_t g = 0; g < ngroups_; g++) {
+          const double Et = seg.xs().Et(g);
+          const double Q = src_(i, g);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double delta_flx = (angflux(g, p) - src_(i, g) / seg.xs().Et(g)) * (1. - seg.exp()(g, p));
+            const double delta_flx = (angflux(g, p) - (Q / Et)) * (1. - seg.exp()(g, p));
 #ifdef SCARABEE_USE_OMP
 #pragma omp atomic
 #endif
-            sflux(i, g) += seg_const * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
+            sflux(i, g) += 4. * PI * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
             angflux(g, p) -= delta_flx;
           }  // For all polar angles
         }    // For all groups
@@ -256,9 +272,18 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
 
     }  // For all tracks
   }    // For all azimuthal angles
+
+  for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    const auto& mat = *fsrs_[i]->xs();
+    const double Vi = fsrs_[i]->volume();
+    for (std::size_t g = 0; g < ngroups_; g++) {
+      const double Et = mat.Et(g);
+      sflux(i, g) *= 1. / (Vi*Et);
+      sflux(i, g) += 4.*PI*src_(i,g) / Et;
+    }
+  }
 }
 
-/*
 double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux) const {
   double keff = 0.;
 
@@ -276,7 +301,6 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux) const {
 
   return keff;
 }
-*/
 
 double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& old_flux) const {
   double num = 0.;
@@ -304,7 +328,6 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux, const xt::xtenso
   return keff_ * num / denom;
 }
 
-/*
 double MOCDriver::calc_abs(const xt::xtensor<double, 2>& flux) const {
   double abs = 0.;
 
@@ -320,7 +343,6 @@ double MOCDriver::calc_abs(const xt::xtensor<double, 2>& flux) const {
 
   return abs;
 }
-*/
 
 /*
 void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src,

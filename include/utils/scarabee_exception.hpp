@@ -2,6 +2,7 @@
 #define SCARABEE_EXCEPTION_H
 
 #include <exception>
+#include <filesystem>
 #include <source_location>
 #include <string>
 
@@ -64,11 +65,25 @@ class ScarabeeException : public std::exception {
       }
     }
 
+    std::filesystem::path src_file(location.file_name());
+    std::string fname;
+    fname.reserve(src_file.string().size());
+    bool save = false;
+    for (const auto& comp : src_file) {
+      if (save) {
+        fname += "/" + comp.string();
+      } else if (comp.string() == "src" || comp.string() == "include") {
+        save = true;
+        fname += comp.string();
+      }
+    }
+
     std::string tmp = "\n";
     tmp +=
         " #--------------------------------------------------------------------"
         "-------------\n";
-    tmp += " # File: " + std::string(location.file_name()) + "\n";
+    //tmp += " # File: " + std::string(location.file_name()) + "\n";
+    tmp += " # File: " + fname + "\n";
     tmp += " # Function: " + std::string(location.function_name()) + "\n";
     tmp += " # Line: " + std::to_string(location.line()) + "\n";
     tmp += " # \n";

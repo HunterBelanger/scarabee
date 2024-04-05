@@ -141,11 +141,12 @@ void test() {
   c2d->tile({0, 0}).cell = pincell1;
 
   //MOCDriver moc(c2d, YamamotoTabuchi<6>());
-  MOCDriver moc(c2d, Legendre<4>());
-  //MOCDriver moc(c2d, Legendre<12>());
+  //MOCDriver moc(c2d, Legendre<4>());
+  MOCDriver moc(c2d, Legendre<12>());
   //moc.draw_tracks(8, 0.5);
+  //moc.draw_tracks(32, 0.01);
   moc.draw_tracks(128, 0.01);
-  //moc.draw_tracks(512, 0.001);
+  //moc.draw_tracks(1024, 0.001);
   moc.solve_keff();
   std::cout << "\n";
   
@@ -159,8 +160,8 @@ void test() {
 }
 
 int main() {
-  set_logging_level(LogLevel::debug);
-  //set_logging_level(LogLevel::info);
+  //set_logging_level(LogLevel::debug);
+  set_logging_level(LogLevel::info);
   test();
 
   return 0;
