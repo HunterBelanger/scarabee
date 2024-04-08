@@ -159,12 +159,12 @@ void test() {
   // MOCDriver moc(c2d, Legendre<2>());
   // MOCDriver moc(c2d, Legendre<4>());
   MOCDriver moc(c2d, Legendre<12>());
-  // moc.draw_tracks(4, 0.1);
-  // moc.draw_tracks(8, 0.1);
-  // moc.draw_tracks(32, 0.01);
-  moc.draw_tracks(512, 0.01);
-  // moc.draw_tracks(1024, 0.001);
-  // moc.draw_tracks(2048, 0.001);
+  // moc.generate_tracks(4, 0.1);
+  // moc.generate_tracks(8, 0.1);
+  // moc.generate_tracks(32, 0.01);
+  moc.generate_tracks(512, 0.01);
+  // moc.generate_tracks(1024, 0.001);
+  // moc.generate_tracks(2048, 0.001);
   moc.set_keff_tolerance(1.E-7);
   moc.set_flux_tolerance(1.E-7);
   moc.solve_keff();

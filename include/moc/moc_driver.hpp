@@ -22,7 +22,7 @@ class MOCDriver {
 
   bool drawn() const { return !angle_info_.empty(); }
 
-  void draw_tracks(std::uint32_t n_angles, double d, bool precalc_exps = true);
+  void generate_tracks(std::uint32_t n_angles, double d, bool precalc_exps = true);
   void solve_keff();
 
   double keff() const { return keff_; }

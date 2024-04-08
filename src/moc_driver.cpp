@@ -95,8 +95,7 @@ void MOCDriver::set_keff_tolerance(double ktol) {
   keff_tol_ = ktol;
 }
 
-void MOCDriver::draw_tracks(std::uint32_t n_angles, double d,
-                            bool precalc_exps) {
+void MOCDriver::generate_tracks(std::uint32_t n_angles, double d, bool precalc_exps) {
   // Timer for method
   Timer draw_timer;
   draw_timer.start();
