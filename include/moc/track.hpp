@@ -11,6 +11,8 @@
 
 #include <vector>
 
+namespace scarabee {
+
 class Track {
  public:
   Track(const Vector& entry, const Vector& exit, const Direction& dir,
@@ -114,5 +116,7 @@ class Track {
   BoundaryCondition entry_bc_;
   BoundaryCondition exit_bc_;
 };
+
+}  // namespace scarabee
 
 #endif

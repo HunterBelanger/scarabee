@@ -6,6 +6,8 @@
 #include <source_location>
 #include <string>
 
+namespace scarabee {
+
 /**
  * @brief Class used for exceptions by the library.
  */
@@ -82,7 +84,7 @@ class ScarabeeException : public std::exception {
     tmp +=
         " #--------------------------------------------------------------------"
         "-------------\n";
-    //tmp += " # File: " + std::string(location.file_name()) + "\n";
+    // tmp += " # File: " + std::string(location.file_name()) + "\n";
     tmp += " # File: " + fname + "\n";
     tmp += " # Function: " + std::string(location.function_name()) + "\n";
     tmp += " # Line: " + std::to_string(location.line()) + "\n";
@@ -104,5 +106,7 @@ class ScarabeeException : public std::exception {
     message = tmp + message;
   }
 };
+
+}  // namespace scarabee
 
 #endif

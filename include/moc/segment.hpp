@@ -6,7 +6,7 @@
 
 #include <xtensor/xtensor.hpp>
 
-#include <vector>
+namespace scarabee {
 
 class Segment {
  public:
@@ -30,5 +30,7 @@ class Segment {
   FlatSourceRegion* fsr_;
   double length_;
 };
+
+}  // namespace scarabee
 
 #endif

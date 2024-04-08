@@ -7,6 +7,8 @@
 
 #include <memory>
 
+namespace scarabee {
+
 class PinCell : public Cell {
  public:
   PinCell(const std::vector<double>& rads,
@@ -23,5 +25,7 @@ class PinCell : public Cell {
   std::shared_ptr<Surface> xm_, pd_, ym_, nd_;
   double x0_, y0_;  // Origin of cell and rings
 };
+
+}  // namespace scarabee
 
 #endif

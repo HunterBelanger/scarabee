@@ -3,6 +3,8 @@
 
 #include <cmath>
 
+namespace scarabee {
+
 Surface::Side xplane_side(const Surface& surf, const Vector& r,
                           const Direction& u) {
   if (r.x() - surf.x0() > SURFACE_COINCIDENT)
@@ -175,3 +177,5 @@ double Surface::distance(const Vector& r, const Direction& u) const {
       break;
   }
 }
+
+}  // namespace scarabee

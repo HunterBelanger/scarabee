@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <optional>
 
+namespace scarabee {
+
 Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
                          const std::vector<std::shared_ptr<Surface>>& y_bounds)
     : x_bounds_(x_bounds), y_bounds_(y_bounds), tiles_(), nx_(), ny_() {
@@ -75,7 +77,8 @@ std::optional<Cartesian2D::TileIndex> Cartesian2D::get_tile_index(
 void Cartesian2D::trace_segments(Vector& r, const Direction& u,
                                  std::vector<Segment>& segments) {
   if (this->tiles_valid() == false) {
-    auto mssg = "Cannot trace segments on a Cartesian2D geometry with invalid tiles.";
+    auto mssg =
+        "Cannot trace segments on a Cartesian2D geometry with invalid tiles.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -162,7 +165,7 @@ FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r, const Direction& u) {
   if (t.c2d) {
     return t.c2d->get_fsr(r, u);
   } else {
-    auto cell_get_fsr = [&r, &u ](auto& cell) -> auto& {
+    auto cell_get_fsr = [&r, &u](auto& cell) -> auto& {
       return cell.get_fsr(r, u);
     };
     return std::visit(cell_get_fsr, t.cell.value());
@@ -195,7 +198,7 @@ const FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r,
   if (t.c2d) {
     return t.c2d->get_fsr(r, u);
   } else {
-    auto cell_get_fsr = [&r, &u ](const auto& cell) -> const auto& {
+    auto cell_get_fsr = [&r, &u](const auto& cell) -> const auto& {
       return cell.get_fsr(r, u);
     };
     return std::visit(cell_get_fsr, t.cell.value());
@@ -257,3 +260,5 @@ void Cartesian2D::Tile::append_fsrs(std::vector<FlatSourceRegion*>& fsrs) {
     std::visit(append_fsrs, *cell);
   }
 }
+
+}  // namespace scarabee

@@ -2,6 +2,8 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/logging.hpp>
 
+namespace scarabee {
+
 Track::Track(const Vector& entry, const Vector& exit, const Direction& dir,
              double phi, double wgt, const std::vector<Segment>& segments)
     : entry_flux_(),
@@ -36,3 +38,5 @@ const Segment& Track::at(std::size_t i) const {
 
   return (*this)[i];
 }
+
+}  // namespace scarabee

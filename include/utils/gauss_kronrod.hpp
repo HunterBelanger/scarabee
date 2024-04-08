@@ -6,6 +6,8 @@
 #include <functional>
 #include <vector>
 
+namespace scarabee {
+
 template <std::size_t NK>
 struct GaussKronrodQuadrature {
   static std::pair<double, double> integrate(
@@ -134,5 +136,7 @@ struct GaussKronrodQuadrature {
   static const std::vector<double> weights;
   static const std::vector<double> glWeights;
 };
+
+}  // namespace scarabee
 
 #endif

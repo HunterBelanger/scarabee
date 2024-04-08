@@ -9,6 +9,8 @@
 #include <memory>
 #include <vector>
 
+namespace scarabee {
+
 class CylindricalCell {
  public:
   CylindricalCell(const std::vector<double>& radii,
@@ -69,5 +71,7 @@ class CylindricalCell {
   double calculate_S_ij(std::size_t i, std::size_t j, std::uint32_t g) const;
   void solve_systems();
 };
+
+}  // namespace scarabee
 
 #endif

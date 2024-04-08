@@ -6,6 +6,8 @@
 
 #include <array>
 
+namespace scarabee {
+
 class Surface {
  public:
   enum class Type : char { None, XPlane, YPlane, Plane, Cylinder };
@@ -43,5 +45,7 @@ class Surface {
   std::array<double, 3> params_;
   Type type_;
 };
+
+}  // namespace scarabee
 
 #endif

@@ -3,6 +3,10 @@
 
 #include <cstdint>
 
+namespace scarabee {
+
 enum class BoundaryCondition : std::uint8_t { Reflective, Vacuum };
+
+}
 
 #endif

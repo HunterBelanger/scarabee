@@ -4,6 +4,8 @@
 
 #include <xtensor/xbuilder.hpp>
 
+namespace scarabee {
+
 CylindricalFluxSolver::CylindricalFluxSolver(
     std::shared_ptr<CylindricalCell> cell)
     : flux_(),
@@ -164,7 +166,7 @@ void CylindricalFluxSolver::solve() {
 
   // Make sure the cell is solved
   if (cell_->solved() == false) {
-    auto mssg = "Cannot solve for flux if cell is not solved."; 
+    auto mssg = "Cannot solve for flux if cell is not solved.";
     throw ScarabeeException(mssg);
   }
 
@@ -215,7 +217,8 @@ void CylindricalFluxSolver::solve() {
 
       // Calculate the max difference in the flux
       max_flux_diff = calc_flux_rel_diff(flux_, next_flux);
-      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter, max_flux_diff);
+      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter,
+                    max_flux_diff);
 
       // Copy next_flux into flux for calculating next relative difference
       flux_ = next_flux;
@@ -241,3 +244,5 @@ void CylindricalFluxSolver::solve() {
 
   solved_ = true;
 }
+
+}  // namespace scarabee

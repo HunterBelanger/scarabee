@@ -5,6 +5,8 @@
 
 #include <cmath>
 
+namespace scarabee {
+
 std::vector<double> chebyshev_fit(const std::function<double(double)>& func,
                                   double a, double b, std::size_t n) {
   const double bma = 0.5 * (b - a);
@@ -57,3 +59,5 @@ double chebyshev_eval(double x, double a, double b, std::span<const double> c) {
 
   return y * d - dd + 0.5 * c[0];
 }
+
+}  // namespace scarabee

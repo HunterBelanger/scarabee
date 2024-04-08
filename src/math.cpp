@@ -1,4 +1,4 @@
-#include <utils/bickley.hpp>
+#include <utils/math.hpp>
 #include <utils/chebyshev.hpp>
 #include <utils/constants.hpp>
 #include <utils/gauss_kronrod.hpp>
@@ -6,7 +6,13 @@
 
 #include <array>
 #include <cmath>
-#include <sstream>
+
+namespace scarabee {
+
+double exp(double x) {
+  // Will eventually be replaced with faster approximate function
+  return std::exp(x);
+}
 
 double Ki3(double x) {
   if (x < 1.) {
@@ -155,3 +161,5 @@ double Ki3_quad(double x) {
 
   return integral.first;
 }
+
+}  // namespace scarabee

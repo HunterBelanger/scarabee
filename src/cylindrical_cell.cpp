@@ -1,5 +1,5 @@
 #include <cylindrical_cell.hpp>
-#include <utils/bickley.hpp>
+#include <utils/math.hpp>
 #include <utils/constants.hpp>
 #include <utils/gauss_kronrod.hpp>
 #include <utils/scarabee_exception.hpp>
@@ -11,6 +11,8 @@
 
 #include <algorithm>
 #include <cmath>
+
+namespace scarabee {
 
 CylindricalCell::CylindricalCell(
     const std::vector<double>& radii,
@@ -277,3 +279,5 @@ void CylindricalCell::solve_systems() {
     }
   }  // For all groups
 }
+
+}  // namespace scarabee

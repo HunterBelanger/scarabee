@@ -4,6 +4,8 @@
 #include <moc/vector.hpp>
 #include <utils/constants.hpp>
 
+namespace scarabee {
+
 //============================================================================
 // Direction Class
 //----------------------------------------------------------------------------
@@ -95,5 +97,7 @@ inline std::ostream& operator<<(std::ostream& output, const Direction& d) {
   output << "<<" << d.x() << "," << d.y() << ">>";
   return output;
 }
+
+}  // namespace scarabee
 
 #endif

@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+namespace scarabee {
+
 class CylindricalFluxSolver {
  public:
   CylindricalFluxSolver(std::shared_ptr<CylindricalCell> cell);
@@ -72,5 +74,7 @@ class CylindricalFluxSolver {
   double Qfiss(std::uint32_t g, std::size_t i,
                const xt::xtensor<double, 2>& flux) const;
 };
+
+}  // namespace scarabee
 
 #endif

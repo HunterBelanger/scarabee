@@ -9,9 +9,10 @@
 
 #include <cmath>
 #include <iostream>
-#include <iomanip>
 #include <memory>
 #include <vector>
+
+using namespace scarabee;
 
 void test() {
   std::shared_ptr<TransportXS> UO2 = std::make_shared<TransportXS>();
@@ -95,72 +96,91 @@ void test() {
   cell_flux.solve();
   std::cout << "\n";
 
-
   //==============================================
   // MOC
-  std::shared_ptr<TransportXS> fuel = std::make_shared<TransportXS>();
-  fuel->Et_ = {4.52648699E-01};
-  fuel->Ea_ = {6.9389522E-02};
-  fuel->Ef_ = {3.97630632E-2};
-  fuel->nu_ = {2.5};
-  fuel->chi_ = {1.};
-  fuel->Es_ = {{3.83259177E-01}};
-  fuel->fissile_ = true;
+  // std::shared_ptr<TransportXS> fuel = std::make_shared<TransportXS>();
+  // fuel->Et_ = {4.52648699E-01};
+  // fuel->Ea_ = {6.9389522E-02};
+  // fuel->Ef_ = {3.97630632E-2};
+  // fuel->nu_ = {2.5};
+  // fuel->chi_ = {1.};
+  // fuel->Es_ = {{3.83259177E-01}};
+  // fuel->fissile_ = true;
 
-  std::shared_ptr<TransportXS> water = std::make_shared<TransportXS>();
-  water->Et_ = {8.41545641E-01};
-  water->Ea_ = {3.751099E-3};
-  water->Ef_ = {0.};
-  water->nu_ = {0.};
-  water->chi_ = {0.};
-  water->Es_ = {{8.37794542E-01}};
+  // std::shared_ptr<TransportXS> water = std::make_shared<TransportXS>();
+  // water->Et_ = {8.41545641E-01};
+  // water->Ea_ = {3.751099E-3};
+  // water->Ef_ = {0.};
+  // water->nu_ = {0.};
+  // water->chi_ = {0.};
+  // water->Es_ = {{8.37794542E-01}};
 
-  radii = {0.1,  0.2,  0.3,  0.4,  0.5,   0.6};
-  mats  = {fuel, fuel, fuel, fuel, water, water, water};
+  // radii = {0.1,  0.2,  0.3,  0.4,  0.5,   0.6};
+  // mats  = {fuel, fuel, fuel, fuel, water, water, water};
+
+  // std::shared_ptr<Surface> xmin = std::make_shared<Surface>();
+  // xmin->type() = Surface::Type::XPlane;
+  // xmin->x0() = -1.27 / 2.0;
+  // std::shared_ptr<Surface> xmax = std::make_shared<Surface>();
+  // xmax->type() = Surface::Type::XPlane;
+  // xmax->x0() = 1.27 / 2.0;
+  // std::shared_ptr<Surface> ymin = std::make_shared<Surface>();
+  // ymin->type() = Surface::Type::YPlane;
+  // ymin->y0() = -1.27 / 2.0;
+  // std::shared_ptr<Surface> ymax = std::make_shared<Surface>();
+  // ymax->type() = Surface::Type::YPlane;
+  // ymax->y0() = 1.27 / 2.0;
 
   std::shared_ptr<Surface> xmin = std::make_shared<Surface>();
   xmin->type() = Surface::Type::XPlane;
-  xmin->x0() = -1.27 / 2.0;
+  xmin->x0() = -1.26 / 2.0;
   std::shared_ptr<Surface> xmax = std::make_shared<Surface>();
   xmax->type() = Surface::Type::XPlane;
-  xmax->x0() = 1.27 / 2.0;
+  xmax->x0() = 1.26 / 2.0;
   std::shared_ptr<Surface> ymin = std::make_shared<Surface>();
   ymin->type() = Surface::Type::YPlane;
-  ymin->y0() = -1.27 / 2.0;
+  ymin->y0() = -1.26 / 2.0;
   std::shared_ptr<Surface> ymax = std::make_shared<Surface>();
   ymax->type() = Surface::Type::YPlane;
-  ymax->y0() = 1.27 / 2.0;
+  ymax->y0() = 1.26 / 2.0;
 
   std::vector<std::shared_ptr<Surface>> x_bounds{xmin, xmax};
   std::vector<std::shared_ptr<Surface>> y_bounds{ymin, ymax};
 
+  radii = {0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.54, 0.57, 0.6};
+  mats = {UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, H2O, H2O, H2O};
   PinCell pincell1(radii, mats, xmin, xmax, ymin, ymax);
 
   std::shared_ptr<Cartesian2D> c2d =
       std::make_shared<Cartesian2D>(x_bounds, y_bounds);
   c2d->tile({0, 0}).cell = pincell1;
 
-  //MOCDriver moc(c2d, YamamotoTabuchi<6>());
-  //MOCDriver moc(c2d, Legendre<4>());
+  // MOCDriver moc(c2d, YamamotoTabuchi<6>());
+  // MOCDriver moc(c2d, Legendre<2>());
+  // MOCDriver moc(c2d, Legendre<4>());
   MOCDriver moc(c2d, Legendre<12>());
-  //moc.draw_tracks(8, 0.5);
-  //moc.draw_tracks(32, 0.01);
-  moc.draw_tracks(128, 0.01);
-  //moc.draw_tracks(1024, 0.001);
+  // moc.draw_tracks(4, 0.1);
+  // moc.draw_tracks(8, 0.1);
+  // moc.draw_tracks(32, 0.01);
+  moc.draw_tracks(512, 0.01);
+  // moc.draw_tracks(1024, 0.001);
+  // moc.draw_tracks(2048, 0.001);
+  moc.set_keff_tolerance(1.E-7);
+  moc.set_flux_tolerance(1.E-7);
   moc.solve_keff();
   std::cout << "\n";
-  
-  radii = {0.1,  0.2,  0.3,  0.4,  0.5,   0.6,   std::sqrt(1.27*1.27 / PI)};
-  mats  = {fuel, fuel, fuel, fuel, water, water, water};
-  std::shared_ptr<CylindricalCell> cell2 = std::make_shared<CylindricalCell>(radii, mats);
-  cell2->solve();
-  CylindricalFluxSolver cell_flux2(cell2);
-  cell_flux2.set_albedo(1.);
-  cell_flux2.solve();
+
+  // radii = {0.1,  0.2,  0.3,  0.4,  0.5,   0.6,   std::sqrt(1.27*1.27 / PI)};
+  // mats  = {fuel, fuel, fuel, fuel, water, water, water};
+  // std::shared_ptr<CylindricalCell> cell2 =
+  // std::make_shared<CylindricalCell>(radii, mats); cell2->solve();
+  // CylindricalFluxSolver cell_flux2(cell2);
+  // cell_flux2.set_albedo(1.);
+  // cell_flux2.solve();
 }
 
 int main() {
-  //set_logging_level(LogLevel::debug);
+  // set_logging_level(LogLevel::debug);
   set_logging_level(LogLevel::info);
   test();
 

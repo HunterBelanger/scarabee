@@ -14,6 +14,8 @@
 #include <memory>
 #include <vector>
 
+namespace scarabee {
+
 struct RegionToken {
   std::shared_ptr<Surface> surface;
   Surface::Side side;
@@ -64,5 +66,7 @@ class FlatSourceRegion {
   double volume_;
   std::size_t indx_;
 };
+
+}  // namespace scarabee
 
 #endif

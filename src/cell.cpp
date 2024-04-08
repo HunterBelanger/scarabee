@@ -2,8 +2,9 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/logging.hpp>
 
-#include <cmath>
 #include <sstream>
+
+namespace scarabee {
 
 Cell::Cell(std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
            std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax)
@@ -145,3 +146,5 @@ const FlatSourceRegion& Cell::get_fsr(const Vector& r,
   // NEVER GETS HERE
   return fsrs_.front();
 }
+
+}  // namespace scarabee

@@ -8,6 +8,8 @@
 
 #include <cstdint>
 
+namespace scarabee {
+
 class TransportXS {
  public:
   TransportXS();
@@ -39,9 +41,7 @@ class TransportXS {
     return 0.;
   }
 
-  double Es(std::size_t gin, std::size_t gout) const {
-    return Es_(gin, gout);
-  }
+  double Es(std::size_t gin, std::size_t gout) const { return Es_(gin, gout); }
 
   double Es(std::size_t gin) const {
     return xt::sum(xt::view(Es_, gin, xt::all()))();
@@ -62,5 +62,7 @@ class TransportXS {
   xt::xtensor<double, 1> chi_;  // Fission spectrum
   bool fissile_;                // Fissile indicator
 };
+
+}  // namespace scarabee
 
 #endif

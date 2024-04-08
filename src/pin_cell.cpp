@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+namespace scarabee {
+
 PinCell::PinCell(const std::vector<double>& mat_rads,
                  const std::vector<std::shared_ptr<TransportXS>>& mats,
                  std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
@@ -305,3 +307,5 @@ void PinCell::build() {
   fsrs_.back().tokens().push_back({nd_, Surface::Side::Positive});
   fsrs_.back().tokens().push_back({y_max_, Surface::Side::Negative});
 }
+
+}  // namespace scarabee

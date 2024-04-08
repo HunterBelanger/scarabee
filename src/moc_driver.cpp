@@ -2,10 +2,15 @@
 #include <utils/constants.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/logging.hpp>
+#include <utils/timer.hpp>
+#include <utils/math.hpp>
 
 #include <xtensor/xmath.hpp>
+#include <xtensor/xview.hpp>
 
 #include <cmath>
+
+namespace scarabee {
 
 MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
                      PolarQuadrature polar_quad, BoundaryCondition xmin,
@@ -19,7 +24,7 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
       flux_(),
       src_(),
       ngroups_(0),
-      n_pol_angles_(polar_quad_.abscissae().size()),
+      n_pol_angles_(polar_quad_.sin().size()),
       x_min_bc_(xmin),
       x_max_bc_(xmax),
       y_min_bc_(ymin),
@@ -54,8 +59,8 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
     fsrs_[i]->set_indx(i);
   }
 
-  flux_.resize({fsrs_.size(), ngroups_});
-  src_.resize({fsrs_.size(), ngroups_});
+  flux_.resize({ngroups_, fsrs_.size()});
+  src_.resize({ngroups_, fsrs_.size()});
 }
 
 void MOCDriver::set_flux_tolerance(double ftol) {
@@ -90,7 +95,12 @@ void MOCDriver::set_keff_tolerance(double ktol) {
   keff_tol_ = ktol;
 }
 
-void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
+void MOCDriver::draw_tracks(std::uint32_t n_angles, double d,
+                            bool precalc_exps) {
+  // Timer for method
+  Timer draw_timer;
+  draw_timer.start();
+
   if (n_angles % 2 != 0) {
     // If the number of angles is odd, an angle will be lost
     auto mssg = "MOCDriver must have an even number of angles.";
@@ -117,192 +127,163 @@ void MOCDriver::draw_tracks(std::uint32_t n_angles, double d) {
   generate_azimuthal_quadrature(n_angles, d);
   generate_tracks();
   segment_renormalization();
-  calculate_segment_exps();
+  if (precalc_exps) calculate_segment_exps();
   set_track_ends_bcs();
   allocate_track_fluxes();
+
+  draw_timer.stop();
+  spdlog::info("Time spent dawing tracks: {:.5} s.", draw_timer.elapsed_time());
 }
 
 void MOCDriver::solve_keff() {
+  Timer keff_timer;
+  keff_timer.start();
+
   // Make sure the geometry has been drawn
   if (angle_info_.empty()) {
     auto mssg = "Cannot solve MOC problem. Geometry has not been traced.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
-  
+
   spdlog::info("Solving for keff.");
   spdlog::info("keff tolerance: {:.5E}", keff_tol_);
   spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
 
-  flux_.resize({fsrs_.size(), ngroups_});
-  src_.resize({fsrs_.size(), ngroups_});
+  flux_.resize({ngroups_, fsrs_.size()});
+  src_.resize({ngroups_, fsrs_.size()});
   src_.fill(0.);
-  auto fiss_src = src_;
-  auto self_scat_src = src_;
-  auto prev_self_scat_src = src_;
-  auto extern_scat_src = src_;
-  auto extern_src = src_;
 
   // Initialize flux and keff
   flux_.fill(1.);
   keff_ = 1.;
-  double abs = calc_abs(flux_);
-  flux_ /= abs;
   auto next_flux = flux_;
   double prev_keff = keff_;
-
-  spdlog::info("Initial keff {:.5f}", keff_);
 
   // Initialize angular flux
   for (auto& tracks : tracks_) {
     for (auto& track : tracks) {
-      track.entry_flux().fill(1./(4.*PI));
-      track.exit_flux().fill(1./(4.*PI));
+      track.entry_flux().fill(1. / (4. * PI));
+      track.exit_flux().fill(1. / (4. * PI));
     }
   }
 
   double rel_diff_keff = 100.;
   double max_flx_diff = 100;
-  std::size_t outer_iter = 0;
+  std::size_t iteration = 0;
+  Timer iteration_timer;
   while (rel_diff_keff > keff_tol_ || max_flx_diff > flux_tol_) {
-    outer_iter++;
+    iteration_timer.reset();
+    iteration_timer.start();
+    iteration++;
 
-    fill_fission_source(fiss_src, flux_);
-    fill_external_scatter_source(extern_scat_src, flux_);
-    fill_self_scatter_source(self_scat_src, flux_);
-    extern_src = fiss_src + extern_scat_src;
+    fill_source(src_, flux_);
 
-    double max_src_diff = 100.;
-    std::size_t inner_iter = 0;
-    //while (max_src_diff > flux_tol_) {
-    //  inner_iter++;
-
-      src_ = extern_src + self_scat_src;
-
-      next_flux.fill(0.);
-      sweep(next_flux);
-
-      // Calculate new self source for next inner iteration
-    //  prev_self_scat_src = self_scat_src;
-    //  fill_self_scatter_source(self_scat_src, next_flux);
-
-      // Get difference 
-    //  max_src_diff = xt::amax(xt::abs(self_scat_src - prev_self_scat_src) / self_scat_src)();
-
-    //  spdlog::debug("Inner iteration {} source diff {:.5E}", inner_iter, max_src_diff);
-    //} 
+    next_flux.fill(0.);
+    sweep(next_flux);
 
     prev_keff = keff_;
-    //keff_ = calc_keff(next_flux, flux_);
-    keff_ = calc_keff(next_flux);
+    keff_ = calc_keff(next_flux, flux_);
     rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
 
-    // Get difference 
+    // Get difference
     max_flx_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
 
-    abs = calc_abs(next_flux);
-    next_flux /= abs;
-
     flux_ = next_flux;
-    spdlog::info("Iteration {} keff {:.5f} flux difference {:.5E}", outer_iter, keff_, max_flx_diff);
+
+    iteration_timer.stop();
+    spdlog::info("-------------------------------------");
+    spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff_);
+    spdlog::info("     keff difference:     {:.5E}", rel_diff_keff);
+    spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
+    spdlog::info("     Iteration time: {:.5E} s",
+                 iteration_timer.elapsed_time());
   }
+
+  keff_timer.stop();
+  spdlog::info("");
+  spdlog::info("Time to calculate keff: {:.5E} s", keff_timer.elapsed_time());
 }
 
 void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
-  for (auto& tracks : tracks_) {
-#ifdef SCARABEE_USE_OMP
 #pragma omp parallel for
-#endif
-    for (std::size_t t = 0; t < tracks.size(); t++) {
-      auto& track = tracks[t];
-      auto angflux = track.entry_flux();
-      const double tw = track.weight();  // Azimuthal weight * track width
+  for (std::size_t g = 0; g < ngroups_; g++) {
+    for (auto& tracks : tracks_) {
+      for (std::size_t t = 0; t < tracks.size(); t++) {
+        auto& track = tracks[t];
+        auto angflux = xt::view(track.entry_flux(), g, xt::all());
+        const double tw = track.weight();  // Azimuthal weight * track width
 
-      // Follow track in forward direction
-      for (auto& seg : track) {
-        const std::size_t i = seg.fsr_indx();
-        for (std::size_t g = 0; g < ngroups_; g++) {
+        // Follow track in forward direction
+        for (auto& seg : track) {
+          const std::size_t i = seg.fsr_indx();
           const double Et = seg.xs().Et(g);
-          const double Q = src_(i, g);
+          const double Q = src_(g, i);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double delta_flx = (angflux(g, p) - (Q / Et)) * (1. - seg.exp()(g, p));
-#ifdef SCARABEE_USE_OMP
-#pragma omp atomic
-#endif
-            sflux(i, g) += 4. * PI * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
-            angflux(g, p) -= delta_flx;
+            double exp_m1;
+            if (precalculated_exps_) {
+              exp_m1 = (1. - seg.exp()(g, p));
+            } else {
+              exp_m1 = 1. - exp(-Et * seg.length() * polar_quad_.invs_sin()[p]);
+            }
+            const double delta_flx = (angflux(p) - (Q / Et)) * exp_m1;
+            sflux(g, i) += 4. * PI * tw * polar_quad_.wgt()[p] *
+                           polar_quad_.sin()[p] * delta_flx;
+            angflux(p) -= delta_flx;
           }  // For all polar angles
-        }    // For all groups
-      }      // For all segments along forward direction of track
+        }    // For all segments along forward direction of track
 
-      // Set incoming flux for next track
-      if (track.exit_bc() == BoundaryCondition::Reflective) {
-        track.exit_track_flux() = angflux;
-      } else {
-        // Vacuum
-        track.exit_track_flux().fill(0.);
-      }
+        // Set incoming flux for next track
+        if (track.exit_bc() == BoundaryCondition::Reflective) {
+          xt::view(track.exit_track_flux(), g, xt::all()) = angflux;
+        } else {
+          // Vacuum
+          xt::view(track.exit_track_flux(), g, xt::all()).fill(0.);
+        }
 
-      // Follow track in backwards direction
-      angflux = track.exit_flux();
-      for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
-        auto& seg = *seg_it;
-        const std::size_t i = seg.fsr_indx();
-        for (std::size_t g = 0; g < ngroups_; g++) {
+        // Follow track in backwards direction
+        angflux = xt::view(track.exit_flux(), g, xt::all());
+        for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
+          auto& seg = *seg_it;
+          const std::size_t i = seg.fsr_indx();
           const double Et = seg.xs().Et(g);
-          const double Q = src_(i, g);
+          const double Q = src_(g, i);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double delta_flx = (angflux(g, p) - (Q / Et)) * (1. - seg.exp()(g, p));
-#ifdef SCARABEE_USE_OMP
-#pragma omp atomic
-#endif
-            sflux(i, g) += 4. * PI * tw * polar_quad_.weights()[p] * polar_quad_.abscissae()[p] * delta_flx;
-            angflux(g, p) -= delta_flx;
+            double exp_m1;
+            if (precalculated_exps_) {
+              exp_m1 = (1. - seg.exp()(g, p));
+            } else {
+              exp_m1 = 1. - exp(-Et * seg.length() * polar_quad_.invs_sin()[p]);
+            }
+            const double delta_flx = (angflux(p) - (Q / Et)) * exp_m1;
+            sflux(g, i) += 4. * PI * tw * polar_quad_.wgt()[p] *
+                           polar_quad_.sin()[p] * delta_flx;
+            angflux(p) -= delta_flx;
           }  // For all polar angles
-        }    // For all groups
-      }      // For all segments along forward direction of track
+        }    // For all segments along forward direction of track
 
-      // Set incoming flux for next track
-      if (track.entry_bc() == BoundaryCondition::Reflective) {
-        track.entry_track_flux() = angflux;
-      } else {
-        // Vacuum
-        track.entry_track_flux().fill(0.);
-      }
+        // Set incoming flux for next track
+        if (track.entry_bc() == BoundaryCondition::Reflective) {
+          xt::view(track.entry_track_flux(), g, xt::all()) = angflux;
+        } else {
+          // Vacuum
+          xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
+        }
+      }  // For all tracks
+    }    // For all azimuthal angles
 
-    }  // For all tracks
-  }    // For all azimuthal angles
-
-  for (std::size_t i = 0; i < fsrs_.size(); i++) {
-    const auto& mat = *fsrs_[i]->xs();
-    const double Vi = fsrs_[i]->volume();
-    for (std::size_t g = 0; g < ngroups_; g++) {
+    for (std::size_t i = 0; i < fsrs_.size(); i++) {
+      const auto& mat = *fsrs_[i]->xs();
+      const double Vi = fsrs_[i]->volume();
       const double Et = mat.Et(g);
-      sflux(i, g) *= 1. / (Vi*Et);
-      sflux(i, g) += 4.*PI*src_(i,g) / Et;
+      sflux(g, i) *= 1. / (Vi * Et);
+      sflux(g, i) += 4. * PI * src_(g, i) / Et;
     }
-  }
+  }  // For all groups
 }
 
-double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux) const {
-  double keff = 0.;
-
-  for (std::size_t i = 0; i < fsrs_.size(); i++) {
-    const double Vr = fsrs_[i]->volume();
-    const auto& mat = *fsrs_[i]->xs();
-    for (std::uint32_t g = 0; g < ngroups_; g++) {
-      const double nu = mat.nu(g);
-      const double Ef = mat.Ef(g);
-      const double flx = flux(i, g);
-
-      keff += Vr * nu * Ef * flx;
-    }
-  }
-
-  return keff;
-}
-
-double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& old_flux) const {
+double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
+                            const xt::xtensor<double, 2>& old_flux) const {
   double num = 0.;
   double denom = 0.;
 
@@ -313,8 +294,8 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux, const xt::xtenso
       const double nu = mat.nu(g);
       const double Ef = mat.Ef(g);
       const double VvEf = Vr * nu * Ef;
-      const double flx = flux(i, g);
-      const double oflx = old_flux(i, g);
+      const double flx = flux(g, i);
+      const double oflx = old_flux(g, i);
 
       if (flx == oflx) {
         spdlog::error("New and old flux is equal");
@@ -328,90 +309,30 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux, const xt::xtenso
   return keff_ * num / denom;
 }
 
-double MOCDriver::calc_abs(const xt::xtensor<double, 2>& flux) const {
-  double abs = 0.;
-
-  for (std::size_t i = 0; i < fsrs_.size(); i++) {
-    const double Vr = fsrs_[i]->volume();
-    const auto& mat = *fsrs_[i]->xs();
-    for (std::uint32_t g = 0; g < ngroups_; g++) {
-      const double Ea = mat.Ea(g);
-      const double flx = flux(i, g);
-      abs += Vr * Ea * flx;
-    }
-  }
-
-  return abs;
-}
-
-/*
-void MOCDriver::fill_scatter_source(xt::xtensor<double, 2>& scat_src,
-                                    const xt::xtensor<double, 2>& flux) const {
-  const double isotropic = 1. / (4. * PI);
-  for (std::size_t i = 0; i < fsrs_.size(); i++) {
-    const auto& mat = *fsrs_[i]->xs();
-    for (std::uint32_t g = 0; g < ngroups_; g++) {
-      double Qout = 0.;
-
-      for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
-        const double flux_gg_i = flux(i, gg);
-        const double Es_gg_to_g = mat.Es(gg, g);
-        Qout += Es_gg_to_g * flux_gg_i;
-      }
-
-      scat_src(i, g) = isotropic * Qout;
-    }
-  }
-}
-*/
-
-void MOCDriver::fill_external_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const {
-  const double isotropic = 1. / (4. * PI);
-  for (std::size_t i = 0; i < fsrs_.size(); i++) {
-    const auto& mat = *fsrs_[i]->xs();
-    for (std::uint32_t g = 0; g < ngroups_; g++) {
-      double Qout = 0.;
-
-      for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
-        if (gg == g) continue; // Don't include self scattering
-        const double flux_gg_i = flux(i, gg);
-        const double Es_gg_to_g = mat.Es(gg, g);
-        Qout += Es_gg_to_g * flux_gg_i;
-      }
-
-      scat_src(i, g) = isotropic * Qout;
-    }
-  }
-}
-
-void MOCDriver::fill_self_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const {
-  const double isotropic = 1. / (4. * PI);
-  for (std::size_t i = 0; i < fsrs_.size(); i++) {
-    const auto& mat = *fsrs_[i]->xs();
-    for (std::uint32_t g = 0; g < ngroups_; g++) {
-      scat_src(i, g) = isotropic * mat.Es(g, g) * flux(i, g);
-    }
-  }
-}
-
-void MOCDriver::fill_fission_source(xt::xtensor<double, 2>& fiss_src,
-                                    const xt::xtensor<double, 2>& flux) const {
+void MOCDriver::fill_source(xt::xtensor<double, 2>& scat_src,
+                            const xt::xtensor<double, 2>& flux) const {
   const double inv_k = 1. / keff_;
   const double isotropic = 1. / (4. * PI);
-  for (std::size_t i = 0; i < fsrs_.size(); i++) {
-    const auto& mat = *fsrs_[i]->xs();
-
-    double fiss_rate_i = 0;
-    for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
-      const double nu_gg = mat.nu(gg);
-      const double Ef_gg = mat.Ef(gg);
-      const double flux_gg_i = flux(i, gg);
-      fiss_rate_i += nu_gg * Ef_gg * flux_gg_i;
-    }
-
-    for (std::uint32_t g = 0; g < ngroups_; g++) {
+  for (std::uint32_t g = 0; g < ngroups_; g++) {
+    for (std::size_t i = 0; i < fsrs_.size(); i++) {
+      const auto& mat = *fsrs_[i]->xs();
       const double chi_g = mat.chi(g);
-      fiss_src(i, g) = isotropic * inv_k * chi_g * fiss_rate_i;
+      double Qout = 0.;
+      double fiss_rate_i = 0;
+
+      for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
+        // Sccatter source
+        const double flux_gg_i = flux(gg, i);
+        const double Es_gg_to_g = mat.Es(gg, g);
+        Qout += Es_gg_to_g * flux_gg_i;
+
+        // Fission source
+        const double nu_gg = mat.nu(gg);
+        const double Ef_gg = mat.Ef(gg);
+        Qout += inv_k * chi_g * nu_gg * Ef_gg * flux_gg_i;
+      }
+
+      scat_src(g, i) = isotropic * Qout;
     }
   }
 }
@@ -419,6 +340,8 @@ void MOCDriver::fill_fission_source(xt::xtensor<double, 2>& fiss_src,
 void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
                                               double d) {
   spdlog::info("Creating quadrature");
+  spdlog::info("Number of azimuthal angles: {}", n_angles);
+  spdlog::info("Maximum track spacing: {} cm", d);
 
   // Determine the angles and spacings for the tracks
   double delta_phi = 2. * PI / static_cast<double>(n_angles);
@@ -469,7 +392,8 @@ void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
     }
 
     const auto& ai = angle_info_[i];
-    spdlog::debug("Angle {:.5E} pi: weight {:.5E}, width {:.5E}, nx {}, ny {}", ai.phi/PI, ai.wgt, ai.d, ai.nx, ai.ny);
+    spdlog::debug("Angle {:.5E} pi: weight {:.5E}, width {:.5E}, nx {}, ny {}",
+                  ai.phi / PI, ai.wgt, ai.d, ai.nx, ai.ny);
   }
 }
 
@@ -552,7 +476,7 @@ void MOCDriver::generate_tracks() {
 
 void MOCDriver::set_track_ends_bcs() {
   spdlog::info("Determining track connections");
-  
+
   // We only go through the first half of the tracks, where phi < pi / 2.
   for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
     const auto& ai = angle_info_[a];
@@ -565,9 +489,11 @@ void MOCDriver::set_track_ends_bcs() {
       tracks.at(i).set_exit_track_flux(&comp_tracks.at(ai.ny + i).exit_flux());
       comp_tracks.at(ai.ny + i).set_exit_track_flux(&tracks.at(i).exit_flux());
 
-      if (tracks.at(i).exit_pos() != comp_tracks.at(ai.ny+i).exit_pos()) {
+      if (tracks.at(i).exit_pos() != comp_tracks.at(ai.ny + i).exit_pos()) {
         std::stringstream mssg;
-        mssg << "Disagreement in track end alignments: " << tracks.at(i).exit_pos() << " and " << comp_tracks.at(ai.ny+i).exit_pos() << ".";
+        mssg << "Disagreement in track end alignments: "
+             << tracks.at(i).exit_pos() << " and "
+             << comp_tracks.at(ai.ny + i).exit_pos() << ".";
         spdlog::error(mssg.str());
         throw ScarabeeException(mssg.str());
       }
@@ -583,9 +509,11 @@ void MOCDriver::set_track_ends_bcs() {
       comp_tracks.at(i).set_entry_track_flux(
           &tracks.at(ai.ny + i).entry_flux());
 
-      if (tracks.at(ai.ny+i).entry_pos() != comp_tracks.at(i).entry_pos()) {
+      if (tracks.at(ai.ny + i).entry_pos() != comp_tracks.at(i).entry_pos()) {
         std::stringstream mssg;
-        mssg << "Disagreement in track end alignments: " << tracks.at(ai.ny+i).entry_pos() << " and " << comp_tracks.at(i).entry_pos() << ".";
+        mssg << "Disagreement in track end alignments: "
+             << tracks.at(ai.ny + i).entry_pos() << " and "
+             << comp_tracks.at(i).entry_pos() << ".";
         spdlog::error(mssg.str());
         throw ScarabeeException(mssg.str());
       }
@@ -601,10 +529,13 @@ void MOCDriver::set_track_ends_bcs() {
           &comp_tracks.at(ai.ny - 1 - i).exit_flux());
       comp_tracks.at(ai.ny - 1 - i)
           .set_exit_track_flux(&tracks.at(i).entry_flux());
-      
-      if (tracks.at(i).entry_pos() != comp_tracks.at(ai.ny-1-i).exit_pos()) {
+
+      if (tracks.at(i).entry_pos() !=
+          comp_tracks.at(ai.ny - 1 - i).exit_pos()) {
         std::stringstream mssg;
-        mssg << "Disagreement in track end alignments: " << tracks.at(i).entry_pos() << " and " << comp_tracks.at(ai.ny-1-i).exit_pos() << ".";
+        mssg << "Disagreement in track end alignments: "
+             << tracks.at(i).entry_pos() << " and "
+             << comp_tracks.at(ai.ny - 1 - i).exit_pos() << ".";
         spdlog::error(mssg.str());
         throw ScarabeeException(mssg.str());
       }
@@ -618,9 +549,12 @@ void MOCDriver::set_track_ends_bcs() {
       comp_tracks.at(nt - 1 - i)
           .set_entry_track_flux(&tracks.at(ai.nx + i).exit_flux());
 
-      if (tracks.at(ai.nx+i).exit_pos() != comp_tracks.at(nt-1-i).entry_pos()) {
+      if (tracks.at(ai.nx + i).exit_pos() !=
+          comp_tracks.at(nt - 1 - i).entry_pos()) {
         std::stringstream mssg;
-        mssg << "Disagreement in track end alignments: " << tracks.at(ai.nx+i).exit_pos() << " and " << comp_tracks.at(nt-1-i).entry_pos() << ".";
+        mssg << "Disagreement in track end alignments: "
+             << tracks.at(ai.nx + i).exit_pos() << " and "
+             << comp_tracks.at(nt - 1 - i).entry_pos() << ".";
         spdlog::error(mssg.str());
         throw ScarabeeException(mssg.str());
       }
@@ -653,8 +587,8 @@ void MOCDriver::segment_renormalization() {
 
   // Go through all angles
   for (std::size_t a = 0; a < angle_info_.size(); a++) {
-    const double d = angle_info_[a].d; // Track width
-    auto& tracks = tracks_[a]; // Vector of tracks
+    const double d = angle_info_[a].d;  // Track width
+    auto& tracks = tracks_[a];          // Vector of tracks
 
     // Zero approximate volumes
     for (auto& av : approx_vols) av = 0.;
@@ -667,7 +601,7 @@ void MOCDriver::segment_renormalization() {
       }
     }
 
-    // Now we apply the corrections to the segment lengths 
+    // Now we apply the corrections to the segment lengths
     for (auto& track : tracks) {
       for (auto& seg : track) {
         const std::size_t i = seg.fsr_indx();
@@ -683,7 +617,7 @@ void MOCDriver::calculate_segment_exps() {
   xt::xtensor<double, 1> pd;  // Temp array to hold polar angle distance factors
   pd.resize({n_pol_angles_});
   for (std::size_t pi = 0; pi < n_pol_angles_; pi++) {
-    pd(pi) = 1. / polar_quad_.abscissae()[pi];
+    pd(pi) = 1. / polar_quad_.sin()[pi];
   }
 
   for (auto& tracks : tracks_) {
@@ -693,17 +627,18 @@ void MOCDriver::calculate_segment_exps() {
         const double l = -seg.length();
         // We unfortunately can't use xtensor-blas, as we don't have BLAS or
         // LAPACK on Windows. We instead construct the matrix ourselves.
-        auto& exp = seg.exp();
-        exp.resize({ngroups_, n_pol_angles_});
+        seg.exp().resize({ngroups_, n_pol_angles_});
 
         for (std::size_t g = 0; g < ngroups_; g++) {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            exp(g, p) = std::exp(l * Et(g) * pd(p));
+            seg.exp()(g, p) = std::exp(l * Et(g) * pd(p));
           }  // For all polar angles
         }    // For all groups
       }      // For all Segments
     }        // For all Tracks
   }          // For all angles
+
+  precalculated_exps_ = true;
 }
 
 FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) {
@@ -724,3 +659,5 @@ const FlatSourceRegion& MOCDriver::get_fsr(const Vector& r,
     throw err;
   }
 }
+
+}  // namespace scarabee

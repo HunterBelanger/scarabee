@@ -1,5 +1,7 @@
 #include <moc/quadrature/yamamoto_tabuchi.hpp>
 
+namespace scarabee {
+
 // A. YAMAMOTO, M. TABUCHI, N. SUGIMURA, T. USHIO, and M. MORI, “Derivation of
 // Optimum Polar Angle Quadrature Set for the Method of Characteristics Based on
 // Approximation Error for the Bickley Function,” J. Nucl. Sci. Technol., vol.
@@ -7,21 +9,30 @@
 
 // N = 2
 template <>
-const std::array<double, 1> YamamotoTabuchi<2>::abscissae_ = {0.798184};
+const std::array<double, 1> YamamotoTabuchi<2>::sin_ = {0.798184};
 template <>
-const std::array<double, 1> YamamotoTabuchi<2>::weights_ = {1.000000};
+const std::array<double, 1> YamamotoTabuchi<2>::invs_sin_ = {1. / sin_[0]};
+template <>
+const std::array<double, 1> YamamotoTabuchi<2>::wgt_ = {1.000000};
 
 // N = 4
 template <>
-const std::array<double, 2> YamamotoTabuchi<4>::abscissae_ = {0.363900,
-                                                              0.899900};
+const std::array<double, 2> YamamotoTabuchi<4>::sin_ = {0.363900, 0.899900};
 template <>
-const std::array<double, 2> YamamotoTabuchi<4>::weights_ = {0.212854, 0.787146};
+const std::array<double, 2> YamamotoTabuchi<4>::invs_sin_ = {1. / sin_[0],
+                                                             1. / sin_[1]};
+template <>
+const std::array<double, 2> YamamotoTabuchi<4>::wgt_ = {0.212854, 0.787146};
 
 // N = 6
 template <>
-const std::array<double, 3> YamamotoTabuchi<6>::abscissae_ = {
-    0.166648, 0.537707, 0.932954};
+const std::array<double, 3> YamamotoTabuchi<6>::sin_ = {0.166648, 0.537707,
+                                                        0.932954};
 template <>
-const std::array<double, 3> YamamotoTabuchi<6>::weights_ = {0.046233, 0.283619,
-                                                            0.670148};
+const std::array<double, 3> YamamotoTabuchi<6>::invs_sin_ = {
+    1. / sin_[0], 1. / sin_[1], 1. / sin_[2]};
+template <>
+const std::array<double, 3> YamamotoTabuchi<6>::wgt_ = {0.046233, 0.283619,
+                                                        0.670148};
+
+}  // namespace scarabee

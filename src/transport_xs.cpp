@@ -1,6 +1,8 @@
 #include <transport_xs.hpp>
 #include <utils/logging.hpp>
 
+namespace scarabee {
+
 TransportXS::TransportXS() {}
 
 TransportXS& TransportXS::operator+=(const TransportXS& R) {
@@ -71,3 +73,5 @@ TransportXS TransportXS::operator*(double N) const {
   out *= N;
   return out;
 }
+
+}  // namespace scarabee

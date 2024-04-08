@@ -10,6 +10,8 @@
 #include <memory>
 #include <vector>
 
+namespace scarabee {
+
 class MOCDriver {
  public:
   MOCDriver(std::shared_ptr<Cartesian2D> geometry, PolarQuadrature polar_quad,
@@ -20,7 +22,7 @@ class MOCDriver {
 
   bool drawn() const { return !angle_info_.empty(); }
 
-  void draw_tracks(std::uint32_t n_angles, double d);
+  void draw_tracks(std::uint32_t n_angles, double d, bool precalc_exps = true);
   void solve_keff();
 
   double keff() const { return keff_; }
@@ -73,6 +75,7 @@ class MOCDriver {
   double keff_tol_ = 1.E-5;
   double keff_ = 1.;
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
+  bool precalculated_exps_{false};
 
   void generate_azimuthal_quadrature(std::uint32_t n_angles, double d);
   void generate_tracks();
@@ -83,14 +86,12 @@ class MOCDriver {
 
   void sweep(xt::xtensor<double, 2>& flux);
 
-  double calc_keff(const xt::xtensor<double, 2>& flux) const;
-  double calc_keff(const xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& old_flux) const;
-  double calc_abs(const xt::xtensor<double, 2>& flux) const;
-  //void fill_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const;
-  void fill_fission_source(xt::xtensor<double, 2>& fiss_src, const xt::xtensor<double, 2>& flux) const;
-
-  void fill_self_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const;
-  void fill_external_scatter_source(xt::xtensor<double, 2>& scat_src, const xt::xtensor<double, 2>& flux) const;
+  double calc_keff(const xt::xtensor<double, 2>& flux,
+                   const xt::xtensor<double, 2>& old_flux) const;
+  void fill_source(xt::xtensor<double, 2>& src,
+                   const xt::xtensor<double, 2>& flux) const;
 };
+
+}  // namespace scarabee
 
 #endif

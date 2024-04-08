@@ -69,7 +69,7 @@ add_executable(scarabee src/main.cpp
                         src/logging.cpp
                         src/gauss_kronrod.cpp
                         src/chebyshev.cpp
-                        src/bickley.cpp
+                        src/math.cpp
                         src/transport_xs.cpp
                         src/cylindrical_cell.cpp
                         src/cylindrical_flux_solver.cpp

@@ -12,6 +12,8 @@
 #include <memory>
 #include <vector>
 
+namespace scarabee {
+
 class Cell {
  public:
   std::vector<Segment> trace_segments(Vector& r, const Direction& u);
@@ -49,5 +51,7 @@ class Cell {
        std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax);
   void check_surfaces() const;
 };
+
+}  // namespace scarabee
 
 #endif

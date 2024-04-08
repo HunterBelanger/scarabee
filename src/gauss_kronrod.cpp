@@ -1,5 +1,7 @@
 #include <utils/gauss_kronrod.hpp>
 
+namespace scarabee {
+
 //==============================================================================
 // Implementation for Gauss-Legendre 2 Kronrod 5
 template <>
@@ -378,3 +380,5 @@ const std::vector<double> GaussKronrodQuadrature<61>::weights = {
     1.182301525349634174223289885325059e-02,
     6.630703915931292173319826369750168e-03,
     1.389013698677007624551591226759700e-03};
+
+}  // namespace scarabee

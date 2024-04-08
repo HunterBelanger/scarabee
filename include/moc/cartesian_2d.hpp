@@ -16,6 +16,8 @@
 #include <variant>
 #include <vector>
 
+namespace scarabee {
+
 // Must pre-declare class so that we can have a pointer to it in the tile
 class Cartesian2D;
 
@@ -80,5 +82,7 @@ class Cartesian2D {
   xt::xarray<Tile> tiles_;
   std::size_t nx_, ny_;
 };
+
+}  // namespace scarabee
 
 #endif
