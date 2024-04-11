@@ -45,10 +45,8 @@ class Cartesian2D {
     std::size_t i, j;
   };
   
-  /*
   Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
               const std::vector<std::shared_ptr<Surface>>& y_bounds);
-  */
   
   Cartesian2D(const std::vector<double>& dx, const std::vector<double>& dy);
 

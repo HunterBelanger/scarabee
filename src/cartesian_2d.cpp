@@ -8,7 +8,6 @@
 
 namespace scarabee {
 
-/*
 Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
                          const std::vector<std::shared_ptr<Surface>>& y_bounds)
     : x_bounds_(x_bounds), y_bounds_(y_bounds), tiles_(), nx_(), ny_() {
@@ -50,7 +49,6 @@ Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
   tiles_.resize({nx_, ny_});
   tiles_.fill(Tile{nullptr, nullptr});
 }
-*/
 
 Cartesian2D::Cartesian2D(const std::vector<double>& dx, const std::vector<double>& dy): x_bounds_(), y_bounds_(), tiles_(), nx_(), ny_() {
   // Make sure we have at least 1 bin in each direction
