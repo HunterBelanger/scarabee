@@ -9,18 +9,15 @@ namespace scarabee {
 
 PinCell::PinCell(const std::vector<double>& mat_rads,
                  const std::vector<std::shared_ptr<TransportXS>>& mats,
-                 std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
-                 std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax)
-    : Cell(xmin, xmax, ymin, ymax),
+                 double dx, double dy)
+    : Cell(dx, dy),
       mat_radii_(mat_rads),
       mats_(mats),
       radii_(),
       xm_(),
       pd_(),
       ym_(),
-      nd_(),
-      x0_(),
-      y0_() {
+      nd_() {
   this->build();
 }
 
@@ -30,8 +27,8 @@ void PinCell::build() {
   fsrs_.clear();
 
   // Get variables
-  x0_ = 0.5 * (x_min_->x0() + x_max_->x0());
-  y0_ = 0.5 * (y_min_->y0() + y_max_->y0());
+  const double x0_ = 0.;
+  const double y0_ = 0.;
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
 

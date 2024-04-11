@@ -25,6 +25,7 @@ FetchContent_Declare(spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
   GIT_TAG        v1.13.0
 )
+set(SPDLOG_BUILD_PIC ON CACHE BOOL "Build position independent code (-fPIC)")
 FetchContent_MakeAvailable(spdlog)
 
 #===============================================================================
@@ -65,26 +66,51 @@ set(XTENSOR_USE_XSIMD ON CACHE BOOL "Enable SIMD acceleration.")
 FetchContent_MakeAvailable(xtensor)
 
 #===============================================================================
-add_executable(scarabee src/main.cpp
-                        src/logging.cpp
-                        src/gauss_kronrod.cpp
-                        src/chebyshev.cpp
-                        src/math.cpp
-                        src/transport_xs.cpp
-                        src/cylindrical_cell.cpp
-                        src/cylindrical_flux_solver.cpp
-                        src/surface.cpp
-                        src/cell.cpp
-                        src/pin_cell.cpp
-                        src/cartesian_2d.cpp
-                        src/track.cpp
-                        src/legendre.cpp
-                        src/yamamoto_tabuchi.cpp
-                        src/moc_driver.cpp)
+# Get Pybind11
+set(PYBIND11_FINDPYTHON ON)
+message(STATUS "Downloading pybind11 v2.12.0")
+FetchContent_Declare(pybind11
+  GIT_REPOSITORY https://github.com/pybind/pybind11
+  GIT_TAG        v2.12.0
+)
+FetchContent_MakeAvailable(pybind11)
+
+#===============================================================================
+# Get XTENSOR-PYTHON
+message(STATUS "Downloading xtensor-python v0.27.0")
+FetchContent_Declare(xtensor-python
+  GIT_REPOSITORY https://github.com/xtensor-stack/xtensor-python.git
+  GIT_TAG        0.27.0
+)
+FetchContent_MakeAvailable(xtensor-python)
+
+#===============================================================================
+add_library(scarabee STATIC src/logging.cpp
+                            src/gauss_kronrod.cpp
+                            src/chebyshev.cpp
+                            src/math.cpp
+                            src/transport_xs.cpp
+                            src/cylindrical_cell.cpp
+                            src/cylindrical_flux_solver.cpp
+                            src/surface.cpp
+                            src/cell.cpp
+                            src/pin_cell.cpp
+                            src/cartesian_2d.cpp
+                            src/track.cpp
+                            src/legendre.cpp
+                            src/yamamoto_tabuchi.cpp
+                            src/moc_driver.cpp)
 set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
+# Must make position independent on linux so that it can be linked with the
+# python shared library. This unfortunately adds an indirection.
+set_target_properties(scarabee PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
-target_link_libraries(scarabee PUBLIC xtl xtensor htl Eigen3::Eigen spdlog::spdlog)
+target_link_libraries(scarabee PUBLIC xtl xtensor xtensor-python htl Eigen3::Eigen spdlog::spdlog)
+target_include_directories(scarabee PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
 
 # Find OpenMP if desired
 if(SCARABEE_USE_OMP)
@@ -99,7 +125,16 @@ if(SCARABEE_USE_OMP)
 endif()
 
 #===============================================================================
-# Allow for install of executable
-install(TARGETS scarabee
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
+# Make python library
+pybind11_add_module(pyScarabee src/python/pyScarabee.cpp
+                               src/python/logging.cpp
+                               src/python/transport_xs.cpp
+                               src/python/cylindrical_cell.cpp
+                               src/python/cylindrical_flux_solver.cpp)
+
+target_link_libraries(pyScarabee PRIVATE scarabee)
+
+#===============================================================================
+# Make test executable
+add_executable(mscarabee src/main.cpp)
+target_link_libraries(mscarabee PUBLIC scarabee)

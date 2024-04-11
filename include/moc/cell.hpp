@@ -16,9 +16,10 @@ namespace scarabee {
 
 class Cell {
  public:
+  virtual ~Cell() = default;
+
   std::vector<Segment> trace_segments(Vector& r, const Direction& u);
-  void trace_segments(Vector& r, const Direction& u,
-                      std::vector<Segment>& segments);
+  double trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments);
 
   bool inside(const Vector& r, const Direction& u) const;
 
@@ -33,22 +34,14 @@ class Cell {
     for (auto& fsr : fsrs_) fsrs.push_back(&fsr);
   }
 
-  const std::shared_ptr<Surface>& x_min() const { return x_min_; }
-  const std::shared_ptr<Surface>& x_max() const { return x_max_; }
-  const std::shared_ptr<Surface>& y_min() const { return y_min_; }
-  const std::shared_ptr<Surface>& y_max() const { return y_max_; }
-
-  void set_x_min(const std::shared_ptr<Surface>& xm);
-  void set_x_max(const std::shared_ptr<Surface>& xm);
-  void set_y_min(const std::shared_ptr<Surface>& ym);
-  void set_y_max(const std::shared_ptr<Surface>& ym);
+  double dx() const { return x_max_->x0() - x_min_->x0(); }
+  double dy() const { return y_max_->y0() - y_min_->y0(); }
 
  protected:
   std::vector<FlatSourceRegion> fsrs_;
   std::shared_ptr<Surface> x_min_, y_min_, x_max_, y_max_;
 
-  Cell(std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
-       std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax);
+  Cell(double dx, double dy);
   void check_surfaces() const;
 };
 

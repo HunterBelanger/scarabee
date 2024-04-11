@@ -14,7 +14,7 @@ namespace scarabee {
 
 class MOCDriver {
  public:
-  MOCDriver(std::shared_ptr<Cartesian2D> geometry, PolarQuadrature polar_quad,
+  MOCDriver(std::shared_ptr<Cartesian2D> geometry,
             BoundaryCondition xmin = BoundaryCondition::Reflective,
             BoundaryCondition xmax = BoundaryCondition::Reflective,
             BoundaryCondition ymin = BoundaryCondition::Reflective,
@@ -22,7 +22,7 @@ class MOCDriver {
 
   bool drawn() const { return !angle_info_.empty(); }
 
-  void generate_tracks(std::uint32_t n_angles, double d, bool precalc_exps = true);
+  void generate_tracks(std::uint32_t n_angles, double d, PolarQuadrature polar_quad, bool precalc_exps = true);
   void solve_keff();
 
   double keff() const { return keff_; }
@@ -66,9 +66,9 @@ class MOCDriver {
   std::vector<std::vector<Track>> tracks_;  // All tracks, indexed by angle
   std::vector<FlatSourceRegion*> fsrs_;     // All FSRs in the geometry
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
-  PolarQuadrature polar_quad_;
-  xt::xtensor<double, 2> flux_;  // Indexed by FSR then group
-  xt::xtensor<double, 2> src_;   // Indexed by FSR then group
+  PolarQuadrature polar_quad_;   // Polar quadrature
+  xt::xtensor<double, 2> flux_;  // Indexed by group then FSR
+  xt::xtensor<double, 2> src_;   // Indexed by group then FSR
   std::size_t ngroups_;
   std::size_t n_pol_angles_;
   double flux_tol_ = 1.E-5;

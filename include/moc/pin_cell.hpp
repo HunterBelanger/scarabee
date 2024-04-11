@@ -13,8 +13,7 @@ class PinCell : public Cell {
  public:
   PinCell(const std::vector<double>& rads,
           const std::vector<std::shared_ptr<TransportXS>>& mats,
-          std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
-          std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax);
+          double dx, double dy);
 
   void build();
 
@@ -23,7 +22,6 @@ class PinCell : public Cell {
   std::vector<std::shared_ptr<TransportXS>> mats_;
   std::vector<std::shared_ptr<Surface>> radii_;
   std::shared_ptr<Surface> xm_, pd_, ym_, nd_;
-  double x0_, y0_;  // Origin of cell and rings
 };
 
 }  // namespace scarabee

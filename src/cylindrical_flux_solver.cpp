@@ -86,7 +86,7 @@ double CylindricalFluxSolver::Qscat(std::uint32_t g, std::size_t i,
     const double flux_gg_i = flux(gg, i);
 
     // Scattering into group g, excluding g -> g
-    if (gg != g) Qout += mat.Es(gg, g) * flux_gg_i;
+    if (gg != g) Qout += mat->Es(gg, g) * flux_gg_i;
   }
 
   return Qout;
@@ -97,15 +97,13 @@ double CylindricalFluxSolver::Qfiss(std::uint32_t g, std::size_t i,
   double Qout = 0.;
   const double inv_k = 1. / k_;
   const auto& mat = cell_->mat(i);
-  const double chi_g = mat.chi(g);
+  const double chi_g = mat->chi(g);
 
   for (std::uint32_t gg = 0; gg < ngroups(); gg++) {
-    const double Ef_gg = mat.Ef(gg);
-    const double flux_gg_i = flux(gg, i);
-
-    // Prompt Fission
-    Qout += inv_k * chi_g * mat.nu(gg) * Ef_gg * flux_gg_i;
+    Qout += mat->vEf(gg) * flux(gg, i);
   }
+
+  Qout *= inv_k * chi_g;
 
   return Qout;
 }
@@ -117,7 +115,7 @@ double CylindricalFluxSolver::calc_keff(
     const double Vr = cell_->V(r);
     const auto& mat = cell_->mat(r);
     for (std::uint32_t g = 0; g < ngroups(); g++) {
-      keff += Vr * mat.nu(g) * mat.Ef(g) * flux(g, r);
+      keff += Vr * mat->vEf(g) * flux(g, r);
     }
   }
 

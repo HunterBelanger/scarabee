@@ -13,14 +13,13 @@
 namespace scarabee {
 
 MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
-                     PolarQuadrature polar_quad, BoundaryCondition xmin,
-                     BoundaryCondition xmax, BoundaryCondition ymin,
-                     BoundaryCondition ymax)
+                     BoundaryCondition xmin, BoundaryCondition xmax,
+                     BoundaryCondition ymin, BoundaryCondition ymax)
     : angle_info_(),
       tracks_(),
       fsrs_(),
       geometry_(geometry),
-      polar_quad_(polar_quad),
+      polar_quad_(YamamotoTabuchi<6>()),
       flux_(),
       src_(),
       ngroups_(0),
@@ -95,10 +94,14 @@ void MOCDriver::set_keff_tolerance(double ktol) {
   keff_tol_ = ktol;
 }
 
-void MOCDriver::generate_tracks(std::uint32_t n_angles, double d, bool precalc_exps) {
+void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
+                                PolarQuadrature polar_quad, bool precalc_exps) {
   // Timer for method
   Timer draw_timer;
   draw_timer.start();
+
+  polar_quad_ = polar_quad;
+  n_pol_angles_ = polar_quad_.sin().size();
 
   if (n_angles % 2 != 0) {
     // If the number of angles is odd, an angle will be lost
@@ -290,9 +293,7 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
     const double Vr = fsrs_[i]->volume();
     const auto& mat = *fsrs_[i]->xs();
     for (std::uint32_t g = 0; g < ngroups_; g++) {
-      const double nu = mat.nu(g);
-      const double Ef = mat.Ef(g);
-      const double VvEf = Vr * nu * Ef;
+      const double VvEf = Vr * mat.vEf(g);
       const double flx = flux(g, i);
       const double oflx = old_flux(g, i);
 
@@ -326,9 +327,8 @@ void MOCDriver::fill_source(xt::xtensor<double, 2>& scat_src,
         Qout += Es_gg_to_g * flux_gg_i;
 
         // Fission source
-        const double nu_gg = mat.nu(gg);
-        const double Ef_gg = mat.Ef(gg);
-        Qout += inv_k * chi_g * nu_gg * Ef_gg * flux_gg_i;
+        const double vEf_gg = mat.vEf(gg);
+        Qout += inv_k * chi_g * vEf_gg * flux_gg_i;
       }
 
       scat_src(g, i) = isotropic * Qout;

@@ -6,9 +6,38 @@
 
 namespace scarabee {
 
-Cell::Cell(std::shared_ptr<Surface>& xmin, std::shared_ptr<Surface>& xmax,
-           std::shared_ptr<Surface>& ymin, std::shared_ptr<Surface>& ymax)
-    : fsrs_(), x_min_(xmin), x_max_(xmax), y_min_(ymin), y_max_(ymax) {
+Cell::Cell(double dx, double dy)
+    : fsrs_(), x_min_(nullptr), x_max_(nullptr), y_min_(nullptr), y_max_(nullptr) {
+  // Check delta's
+  if (dx <= 0.) {
+    auto mssg = "Cell dx must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (dy <= 0.) {
+    auto mssg = "Cell dy must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Build surfaces
+  x_min_ = std::make_shared<Surface>();
+  x_min_->type() = Surface::Type::XPlane;
+  x_min_->x0() = -0.5*dx;
+
+  x_max_ = std::make_shared<Surface>();
+  x_max_->type() = Surface::Type::XPlane;
+  x_max_->x0() = 0.5*dx;
+
+  y_min_ = std::make_shared<Surface>();
+  y_min_->type() = Surface::Type::YPlane;
+  y_min_->y0() = -0.5*dy;
+
+  y_max_ = std::make_shared<Surface>();
+  y_max_->type() = Surface::Type::YPlane;
+  y_max_->y0() = 0.5*dy;
+
   this->check_surfaces();
 }
 
@@ -44,34 +73,15 @@ void Cell::check_surfaces() const {
   }
 }
 
-void Cell::set_x_min(const std::shared_ptr<Surface>& xm) {
-  x_min_ = xm;
-  this->check_surfaces();
-}
-
-void Cell::set_x_max(const std::shared_ptr<Surface>& xm) {
-  x_max_ = xm;
-  this->check_surfaces();
-}
-
-void Cell::set_y_min(const std::shared_ptr<Surface>& ym) {
-  y_min_ = ym;
-  this->check_surfaces();
-}
-
-void Cell::set_y_max(const std::shared_ptr<Surface>& ym) {
-  y_max_ = ym;
-  this->check_surfaces();
-}
-
 std::vector<Segment> Cell::trace_segments(Vector& r, const Direction& u) {
   std::vector<Segment> segments;
   this->trace_segments(r, u, segments);
   return segments;
 }
 
-void Cell::trace_segments(Vector& r, const Direction& u,
-                          std::vector<Segment>& segments) {
+double Cell::trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments) {
+  double dist = 0.;
+
   while (this->inside(r, u)) {
     // Get current FSR
     auto& fsr = this->get_fsr(r, u);
@@ -84,7 +94,10 @@ void Cell::trace_segments(Vector& r, const Direction& u,
 
     // Increment distance
     r = r + distance * u;
+    dist += distance;
   }
+
+  return dist;
 }
 
 bool Cell::inside(const Vector& r, const Direction& u) const {
