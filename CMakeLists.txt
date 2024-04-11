@@ -127,6 +127,7 @@ endif()
 #===============================================================================
 # Make python library
 pybind11_add_module(pyScarabee src/python/pyScarabee.cpp
+                               src/python/vector.cpp
                                src/python/logging.cpp
                                src/python/transport_xs.cpp
                                src/python/cylindrical_cell.cpp

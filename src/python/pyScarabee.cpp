@@ -8,9 +8,11 @@ extern void init_TransportXS(py::module&);
 extern void init_CylindricalCell(py::module&);
 extern void init_CylindricalFluxSolver(py::module&);
 extern void init_Logging(py::module&);
+extern void init_Vector(py::module&);
 
 PYBIND11_MODULE(pyScarabee, m) {
   init_Logging(m);
+  init_Vector(m);
   init_TransportXS(m);
   init_CylindricalCell(m);
   init_CylindricalFluxSolver(m);
