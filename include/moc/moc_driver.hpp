@@ -23,6 +23,7 @@ class MOCDriver {
   bool drawn() const { return !angle_info_.empty(); }
 
   void generate_tracks(std::uint32_t n_angles, double d, PolarQuadrature polar_quad, bool precalc_exps = true);
+
   void solve_keff();
 
   double keff() const { return keff_; }
@@ -36,7 +37,6 @@ class MOCDriver {
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
 
-  PolarQuadrature& polar_quadrature() { return polar_quad_; }
   const PolarQuadrature& polar_quadrature() const { return polar_quad_; }
 
   std::size_t ngroups() { return ngroups_; }

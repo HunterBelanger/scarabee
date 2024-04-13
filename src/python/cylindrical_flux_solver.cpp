@@ -89,5 +89,11 @@ void init_CylindricalFluxSolver(py::module& m) {
            "Net current out of cell.\n\n"
            "Arguments:\n"
            "    g  group index",
-           py::arg("g"));
+           py::arg("g"))
+      
+      .def("solve", &CylindricalFluxSolver::solve,
+      "Solves the system for the flux and eigenvalue.")
+      
+      .def("solved", &CylindricalFluxSolver::solved,
+      "Returns true if the system has been solved.");
 }

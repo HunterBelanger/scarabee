@@ -128,10 +128,19 @@ endif()
 # Make python library
 pybind11_add_module(pyScarabee src/python/pyScarabee.cpp
                                src/python/vector.cpp
+                               src/python/direction.cpp
                                src/python/logging.cpp
                                src/python/transport_xs.cpp
                                src/python/cylindrical_cell.cpp
-                               src/python/cylindrical_flux_solver.cpp)
+                               src/python/cylindrical_flux_solver.cpp
+                               src/python/polar_quadrature.cpp
+                               src/python/boundary_condition.cpp
+                               src/python/track.cpp 
+                               src/python/cell.cpp
+                               src/python/pin_cell.cpp
+                               src/python/cartesian_2d.cpp
+                               src/python/moc_driver.cpp
+                             )
 
 target_link_libraries(pyScarabee PRIVATE scarabee)
 

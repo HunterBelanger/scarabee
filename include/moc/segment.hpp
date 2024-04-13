@@ -6,6 +6,8 @@
 
 #include <xtensor/xtensor.hpp>
 
+#include <memory>
+
 namespace scarabee {
 
 class Segment {
@@ -18,7 +20,7 @@ class Segment {
 
   double volume() const { return fsr_->volume(); }
 
-  const TransportXS& xs() const { return *fsr_->xs(); }
+  const std::shared_ptr<TransportXS>& xs() const { return fsr_->xs(); }
 
   std::size_t fsr_indx() const { return fsr_->indx(); }
 

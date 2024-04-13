@@ -15,13 +15,14 @@ class PinCell : public Cell {
           const std::vector<std::shared_ptr<TransportXS>>& mats,
           double dx, double dy);
 
-  void build();
-
  private:
   std::vector<double> mat_radii_;
   std::vector<std::shared_ptr<TransportXS>> mats_;
   std::vector<std::shared_ptr<Surface>> radii_;
   std::shared_ptr<Surface> xm_, pd_, ym_, nd_;
+
+
+  void build();
 };
 
 }  // namespace scarabee

@@ -219,7 +219,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
         // Follow track in forward direction
         for (auto& seg : track) {
           const std::size_t i = seg.fsr_indx();
-          const double Et = seg.xs().Et(g);
+          const double Et = seg.xs()->Et(g);
           const double Q = src_(g, i);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             double exp_m1;
@@ -248,7 +248,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
         for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
           auto& seg = *seg_it;
           const std::size_t i = seg.fsr_indx();
-          const double Et = seg.xs().Et(g);
+          const double Et = seg.xs()->Et(g);
           const double Q = src_(g, i);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             double exp_m1;
@@ -622,7 +622,7 @@ void MOCDriver::calculate_segment_exps() {
   for (auto& tracks : tracks_) {
     for (auto& track : tracks) {
       for (auto& seg : track) {
-        const auto& Et = seg.xs().Et();
+        const auto& Et = seg.xs()->Et();
         const double l = -seg.length();
         // We unfortunately can't use xtensor-blas, as we don't have BLAS or
         // LAPACK on Windows. We instead construct the matrix ourselves.
