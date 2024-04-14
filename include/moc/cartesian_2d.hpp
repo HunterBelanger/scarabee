@@ -68,6 +68,8 @@ class Cartesian2D {
 
   bool tiles_valid() const;
 
+  std::shared_ptr<TransportXS> get_xs(const Vector& r, const Direction& u) const;
+
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
 

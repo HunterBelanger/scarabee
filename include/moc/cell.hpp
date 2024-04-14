@@ -16,7 +16,9 @@ namespace scarabee {
 
 class Cell {
  public:
-  ~Cell() = default;
+  virtual ~Cell() = default;
+
+  virtual std::shared_ptr<Cell> clone() const = 0;
 
   std::vector<Segment> trace_segments(Vector& r, const Direction& u);
   double trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments);

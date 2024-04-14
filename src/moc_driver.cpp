@@ -640,6 +640,50 @@ void MOCDriver::calculate_segment_exps() {
   precalculated_exps_ = true;
 }
 
+double MOCDriver::get_flux(std::size_t g, const Vector& r, const Direction& u) const {
+  if (g >= ngroups()) {
+    std::stringstream mssg;
+    mssg << "Group index g = " << g << " is out of range.";
+    spdlog::error(mssg.str()); 
+    throw ScarabeeException(mssg.str());
+  }
+  
+  try {
+    const auto& fsr = this->get_fsr(r, u);
+    return flux_(g, fsr.indx());
+  } catch (ScarabeeException& err) {
+    std::stringstream mssg;
+    mssg << "Could not find flat source region at r = " << r << " u = " << u << "n";
+    err.add_to_exception(mssg.str()); 
+    throw err;
+  }
+  
+  // SHOULD NEVER GET HERE
+  auto mssg = "How did I get here ?";
+  spdlog::error(mssg);
+  throw ScarabeeException(mssg);
+  return 0.;
+}
+
+std::shared_ptr<TransportXS> MOCDriver::get_xs(const Vector& r, const Direction& u) const {
+  try {
+    const auto& fsr = this->get_fsr(r, u);
+    return fsr.xs();
+  } catch (ScarabeeException& err) {
+    std::stringstream mssg;
+    mssg << "Could not find flat source region at r = " << r << " u = " << u << "n";
+    err.add_to_exception(mssg.str()); 
+    throw err;
+  }
+  
+  // SHOULD NEVER GET HERE
+  auto mssg = "How did I get here ?";
+  spdlog::error(mssg);
+  throw ScarabeeException(mssg);
+
+  return nullptr;
+}
+
 FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) {
   try {
     return geometry_->get_fsr(r, u);

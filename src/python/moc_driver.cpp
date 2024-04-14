@@ -37,12 +37,25 @@ void init_MOCDriver(py::module& m) {
   .def_property("keff_tolerance", &MOCDriver::keff_tolerance, &MOCDriver::set_keff_tolerance)
   
   .def_property("flux_tolerance", &MOCDriver::flux_tolerance, &MOCDriver::set_flux_tolerance)
-  
-  .def("keff", &MOCDriver::keff)
-  
-  .def("ngroups", &MOCDriver::ngroups)
 
-  .def("polar_quadrature", &MOCDriver::polar_quadrature)
+  .def("get_flux", &MOCDriver::get_flux,
+  "Returns the scalar flux in group g at position r.\n\n"
+  "Arguments:\n"
+  "    g  group index\n"
+  "    r  position\n"
+  "    u  direction", py::arg("g"), py::arg("r"), py::arg("u"))
+
+  .def("get_xs", &MOCDriver::get_xs,
+  "Returns the TransportXS at position r.\n\n"
+  "Arguments:\n"
+  "    r  position\n"
+  "    u  direction", py::arg("r"), py::arg("u"))
+  
+  .def_property_readonly("keff", &MOCDriver::keff)
+  
+  .def_property_readonly("ngroups", &MOCDriver::ngroups)
+
+  .def_property_readonly("polar_quadrature", &MOCDriver::polar_quadrature)
   
   .def("solve_keff", &MOCDriver::solve_keff)
   

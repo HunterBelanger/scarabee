@@ -43,8 +43,10 @@ void test() {
        2.65802E-01, 1.68090E-02},
       {0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
        8.54580E-03, 2.73080E-01}};
-  std::shared_ptr<TransportXS> UO2 =
-      std::make_shared<TransportXS>(Et, Ea, Es, nu * Ef, chi);
+  std::shared_ptr<TransportXS> UO2_1 =
+      std::make_shared<TransportXS>(Et, Ea, Es, nu * Ef, chi, "UO2_1");
+  std::shared_ptr<TransportXS> UO2_2 =
+      std::make_shared<TransportXS>(Et, Ea, Es, nu * Ef, chi, "UO2_2");
 
   Et = {1.59206E-01, 4.12970E-01, 5.90310E-01, 5.84350E-01,
         7.18000E-01, 1.25445E+00, 2.65038E+00};
@@ -64,7 +66,8 @@ void test() {
          6.99913E-01, 5.37320E-01},
         {0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
          1.32440E-01, 2.48070E+00}};
-  std::shared_ptr<TransportXS> H2O = std::make_shared<TransportXS>(Et, Ea, Es);
+  std::shared_ptr<TransportXS> H2O_1 = std::make_shared<TransportXS>(Et, Ea, Es, "H2O_1");
+  std::shared_ptr<TransportXS> H2O_2 = std::make_shared<TransportXS>(Et, Ea, Es, "H2O_2");
 
   const double Rfuel = 0.54;
   const double Rwtr = 1.26 / std::sqrt(PI);
@@ -80,7 +83,7 @@ void test() {
   for (int i = 0; i < Nf; i++) {
     r_outer += dRfuel;
     radii.push_back(r_outer);
-    mats.push_back(UO2);
+    mats.push_back(UO2_1);
   }
 
   // Break Water into 3 equal radii
@@ -89,7 +92,7 @@ void test() {
   for (int i = 0; i < Nwtr; i++) {
     r_outer += dRwtr;
     radii.push_back(r_outer);
-    mats.push_back(H2O);
+    mats.push_back(H2O_1);
   }
 
   std::shared_ptr<CylindricalCell> cell =
@@ -103,15 +106,36 @@ void test() {
 
   //==============================================
   // MOC
-  radii = {0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.54, 0.57, 0.6};
-  mats = {UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, H2O, H2O, H2O};
+  //radii = {0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.54, 0.57, 0.6};
+  //mats = {UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, H2O, H2O, H2O};
+  radii = {0.54};
+  mats = {UO2_1, H2O_1};
   std::shared_ptr<PinCell> pincell1 = std::make_shared<PinCell>(radii, mats, 1.26, 1.26);
+  mats = {UO2_2, H2O_2};
+  std::shared_ptr<PinCell> pincell2 = std::make_shared<PinCell>(radii, mats, 1.26, 1.26);
   
-  std::vector<double> dx {1.26};
+  std::vector<double> dx {1.26, 1.26};
   std::vector<double> dy {1.26};
   std::shared_ptr<Cartesian2D> c2d = std::make_shared<Cartesian2D>(dx, dy);
-  c2d->set_tiles({pincell1});
+  c2d->set_tiles({pincell1, pincell2});
+  
+  Vector r(-1.26, 0.); 
+  Direction u(1.,0.);
+  std::vector<Segment> segs;
+  c2d->trace_segments(r, u, segs);
 
+  std::cout << "Num FSR: " << c2d->num_fsrs() << "\n";
+  std::cout << "x-min = " << c2d->x_min() << "\n";
+  std::cout << "x-max = " << c2d->x_max() << "\n";
+  std::cout << "y-min = " << c2d->y_min() << "\n";
+  std::cout << "y-max = " << c2d->y_max() << "\n";
+
+
+  for (const auto& seg : segs) {
+    std::cout << seg.length() << ", " << seg.xs()->name() << "\n";
+  }
+
+  /*
   YamamotoTabuchi<6> pq;
   PolarQuadrature pquad(pq);
   MOCDriver moc(c2d);
@@ -120,7 +144,9 @@ void test() {
   moc.set_flux_tolerance(1.E-5);
   moc.solve_keff();
   std::cout << "\n";
-
+  */
+  
+  /*
   //=================================================
   Et = {4.52648699E-01};
   Ea = {6.9389522E-02};
@@ -142,6 +168,7 @@ void test() {
   CylindricalFluxSolver cell_flux2(cell2);
   cell_flux2.set_albedo(1.);
   cell_flux2.solve();
+  */
 }
 
 int main() {

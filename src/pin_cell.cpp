@@ -21,6 +21,10 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
   this->build();
 }
 
+std::shared_ptr<Cell> PinCell::clone() const {
+  return std::make_shared<PinCell>(*this);
+}
+
 void PinCell::build() {
   // Clear vectors
   radii_.clear();

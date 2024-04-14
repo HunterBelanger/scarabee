@@ -4,6 +4,9 @@
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xview.hpp>
 
+#include <cstdint>
+#include <string>
+
 namespace scarabee {
 
 class TransportXS {
@@ -12,13 +15,17 @@ class TransportXS {
               const xt::xtensor<double, 1>& Ea,
               const xt::xtensor<double, 2>& Es,
               const xt::xtensor<double, 1>& vEf,
-              const xt::xtensor<double, 1>& chi);
+              const xt::xtensor<double, 1>& chi,
+              const std::string& name = "");
 
   TransportXS(const xt::xtensor<double, 1>& Et,
               const xt::xtensor<double, 1>& Ea,
-              const xt::xtensor<double, 2>& Es);
+              const xt::xtensor<double, 2>& Es,
+              const std::string& name = "");
 
   std::size_t ngroups() const { return Et_.size(); }
+
+  const std::string& name() const { return name_; }
 
   bool fissile() const { return fissile_; }
 
@@ -52,7 +59,8 @@ class TransportXS {
   xt::xtensor<double, 1> Ea_;   // Absorption xs
   xt::xtensor<double, 1> vEf_;  // Fission xs * yield
   xt::xtensor<double, 1> chi_;  // Fission spectrum
-  bool fissile_;                // Fissile indicator
+  std::string name_;
+  bool fissile_;
 
   void check_xs();
 };

@@ -22,9 +22,9 @@ class MOCDriver {
 
   bool drawn() const { return !angle_info_.empty(); }
 
-  void generate_tracks(std::uint32_t n_angles, double d, PolarQuadrature polar_quad, bool precalc_exps = true);
+  const PolarQuadrature& polar_quadrature() const { return polar_quad_; }
 
-  void solve_keff();
+  std::size_t ngroups() const { return ngroups_; }
 
   double keff() const { return keff_; }
 
@@ -34,12 +34,16 @@ class MOCDriver {
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
 
+  void generate_tracks(std::uint32_t n_angles, double d, PolarQuadrature polar_quad, bool precalc_exps = true);
+
+  void solve_keff();
+
+  double get_flux(std::size_t g, const Vector& r, const Direction& u) const;
+
+  std::shared_ptr<TransportXS> get_xs(const Vector& r, const Direction& u) const;
+
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
-
-  const PolarQuadrature& polar_quadrature() const { return polar_quad_; }
-
-  std::size_t ngroups() { return ngroups_; }
 
   BoundaryCondition& x_min_bc() { return x_min_bc_; }
   const BoundaryCondition& x_min_bc() const { return x_min_bc_; }

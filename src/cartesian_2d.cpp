@@ -235,7 +235,7 @@ void Cartesian2D::set_tile(const TileIndex& ti, const std::shared_ptr<Cell>& cel
     throw ScarabeeException(mssg);
   }
 
-  tiles_(ti.i, ti.j).cell = cell;
+  tiles_(ti.i, ti.j).cell = cell->clone();
 }
 
 void Cartesian2D::set_tiles(const std::vector<TileFill>& fills) {
@@ -294,6 +294,16 @@ bool Cartesian2D::tiles_valid() const {
   return true;
 }
 
+std::shared_ptr<TransportXS> Cartesian2D::get_xs(const Vector& r, const Direction& u) const {
+  try {
+    const auto& fsr = this->get_fsr(r, u);
+    return fsr.xs();
+  } catch (ScarabeeException& err) {
+    err.add_to_exception("Could not find flat source region.");
+    throw err;
+  }
+}
+
 FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r, const Direction& u) {
   auto ti = this->get_tile_index(r, u);
 
@@ -308,6 +318,8 @@ FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r, const Direction& u) {
   
   check_tile_index(*ti);
   auto& t = tiles_(ti->i, ti->j);
+  const Vector tc = get_tile_center(*ti);
+  Vector r_tile = r - tc;
 
   if (t.valid() == false) {
     std::stringstream mssg;
@@ -318,9 +330,9 @@ FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r, const Direction& u) {
   }
 
   if (t.c2d) {
-    return t.c2d->get_fsr(r, u);
+    return t.c2d->get_fsr(r_tile, u);
   } else {
-    return t.cell->get_fsr(r, u);
+    return t.cell->get_fsr(r_tile, u);
   }
 }
 
@@ -338,6 +350,8 @@ const FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r,
   }
 
   const auto& t = this->tile(*ti);
+  const Vector tc = get_tile_center(*ti);
+  Vector r_tile = r - tc;
 
   if (t.valid() == false) {
     std::stringstream mssg;
@@ -348,9 +362,9 @@ const FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r,
   }
 
   if (t.c2d) {
-    return t.c2d->get_fsr(r, u);
+    return t.c2d->get_fsr(r_tile, u);
   } else {
-    return t.cell->get_fsr(r, u);
+    return t.cell->get_fsr(r_tile, u);
   }
 }
 

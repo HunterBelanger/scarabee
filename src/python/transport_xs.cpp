@@ -13,29 +13,35 @@ void init_TransportXS(py::module& m) {
                     const xt::xtensor<double, 1>& /*Ea*/,
                     const xt::xtensor<double, 2>& /*Es*/,
                     const xt::xtensor<double, 1>& /*vEf*/,
-                    const xt::xtensor<double, 1>& /*chi*/>(),
+                    const xt::xtensor<double, 1>& /*chi*/,
+                    const std::string& /*name*/>(),
            "Transport corrected macroscopic cross sections.\n\n"
            "Arguments:\n"
            "    Et    transport corrected total cross section\n"
            "    Ea    absorption cross section\n"
            "    Es    transport corrected scattering cross section matrix\n"
            "    vEf   fission yield time cross section\n"
-           "    chi   fission spectrum",
+           "    chi   fission spectrum\n"
+           "    name  name of material",
            py::arg("Et"), py::arg("Ea"), py::arg("Es"), py::arg("vEf"),
-           py::arg("chi"))
+           py::arg("chi"), py::arg("name")="")
 
       .def(py::init<const xt::xtensor<double, 1>& /*Et*/,
                     const xt::xtensor<double, 1>& /*Ea*/,
-                    const xt::xtensor<double, 2>& /*Es*/>(),
+                    const xt::xtensor<double, 2>& /*Es*/,
+                    const std::string& /*name*/>(),
            "Transport corrected macroscopic cross sections.\n"
            "Fission cross sections and spectrum initialized to zero.\n\n"
            "Arguments:\n"
            "    Et    transport corrected total cross section\n"
            "    Ea    absorption cross section\n"
-           "    Es    transport corrected scattering cross section matrix",
-           py::arg("Et"), py::arg("Ea"), py::arg("Es"))
+           "    Es    transport corrected scattering cross section matrix\nn"
+           "    name  name of material",
+           py::arg("Et"), py::arg("Ea"), py::arg("Es"), py::arg("name")="")
 
       .def("ngroups", &TransportXS::ngroups, "Number of energy groups")
+
+      .def_property_readonly("name", &TransportXS::name, "Name of material")
 
       .def("fissile", &TransportXS::fissile, "True if material is fissile")
 

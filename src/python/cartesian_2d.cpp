@@ -29,27 +29,33 @@ void init_Cartesian2D(py::module& m) {
   "    dx  List of all x widths\n"
   "    dy  List of all y heights", py::arg("dx"), py::arg("dy"))
 
-  .def("nx", &Cartesian2D::nx, "Number of cells in x direction.")
+  .def_property_readonly("nx", &Cartesian2D::nx, "Number of cells in x direction.")
 
-  .def("ny", &Cartesian2D::ny, "Number of cells in y direction.")
+  .def_property_readonly("ny", &Cartesian2D::ny, "Number of cells in y direction.")
 
-  .def("dx", &Cartesian2D::dx, "Width of geometry in x.")
+  .def_property_readonly("dx", &Cartesian2D::dx, "Width of geometry in x.")
 
-  .def("dy", &Cartesian2D::dy, "Width of geometry in y.")
+  .def_property_readonly("dy", &Cartesian2D::dy, "Width of geometry in y.")
 
-  .def("x_min", &Cartesian2D::x_min, "Minimum x coordinate.")
+  .def_property_readonly("x_min", &Cartesian2D::x_min, "Minimum x coordinate.")
 
-  .def("x_max", &Cartesian2D::x_min, "Maximum x coordinate.")
+  .def_property_readonly("x_max", &Cartesian2D::x_max, "Maximum x coordinate.")
 
-  .def("y_min", &Cartesian2D::y_min, "Minimum y coordinate.")
+  .def_property_readonly("y_min", &Cartesian2D::y_min, "Minimum y coordinate.")
 
-  .def("y_max", &Cartesian2D::y_min, "Maximum y coordinate.")
+  .def_property_readonly("y_max", &Cartesian2D::y_max, "Maximum y coordinate.")
 
   .def("tiles_valid", &Cartesian2D::tiles_valid,
   "Returns true if all tiles are populated.")
 
   .def("get_tile_index", &Cartesian2D::get_tile_index,
   "Returns TileIndex for given position and direction.\n\n"
+  "Arguments:\n"
+  "    r  position Vector\n"
+  "    u  Direction", py::arg("r"), py::arg("u"))
+
+  .def("get_xs", &Cartesian2D::get_xs,
+  "Returns TransportXS for given position and direction.\n\n"
   "Arguments:\n"
   "    r  position Vector\n"
   "    u  Direction", py::arg("r"), py::arg("u"))
