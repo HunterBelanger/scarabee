@@ -105,10 +105,10 @@ void PinCell::build() {
   }
 
   // Make sure largest radius doesn't intersect the cell walls
-  if (x0_ - mat_radii_.back() <= x_min_->x0() ||
-      x0_ + mat_radii_.back() >= x_max_->x0() ||
-      y0_ - mat_radii_.back() <= y_min_->y0() ||
-      y0_ + mat_radii_.back() >= y_max_->y0()) {
+  if (x0_ - mat_radii_.back() < x_min_->x0() ||
+      x0_ + mat_radii_.back() > x_max_->x0() ||
+      y0_ - mat_radii_.back() < y_min_->y0() ||
+      y0_ + mat_radii_.back() > y_max_->y0()) {
     auto mssg = "Outer material radius may not intersect cell wall.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
