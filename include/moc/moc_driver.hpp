@@ -37,6 +37,7 @@ class MOCDriver {
   void generate_tracks(std::uint32_t n_angles, double d, PolarQuadrature polar_quad, bool precalc_exps = true);
 
   void solve_keff();
+  bool solved() const { return solved_; }
 
   double get_flux(std::size_t g, const Vector& r, const Direction& u) const;
 
@@ -56,6 +57,11 @@ class MOCDriver {
 
   BoundaryCondition& y_max_bc() { return y_max_bc_; }
   const BoundaryCondition& y_max_bc() const { return y_max_bc_; }
+
+  double x_min() const { return geometry_->x_min(); }
+  double x_max() const { return geometry_->x_max(); }
+  double y_min() const { return geometry_->y_min(); }
+  double y_max() const { return geometry_->y_max(); }
 
  private:
   struct AngleInfo {
@@ -80,6 +86,7 @@ class MOCDriver {
   double keff_ = 1.;
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
   bool precalculated_exps_{false};
+  bool solved_{false};
 
   void generate_azimuthal_quadrature(std::uint32_t n_angles, double d);
   void generate_tracks();

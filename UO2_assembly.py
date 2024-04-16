@@ -39,11 +39,11 @@ Es = np.array([[6.61659E-02, 5.90700E-02, 2.83340E-04, 1.46220E-06, 2.06420E-08,
 GT = TransportXS(Et, Ea, Es)
 
 # Define Cells
-radii = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.54, 0.57, 0.6, 0.629]
-mats =  [UO2, UO2,  UO2, UO2,  UO2, UO2,  UO2, UO2,  UO2, UO2,  H2O,  H2O, H2O, H2O]
+radii = [0.1, 0.2, 0.3, 0.4, 0.5, 0.54, 0.57, 0.6, 0.629]
+mats =  [UO2, UO2, UO2, UO2, UO2, UO2,  H2O,  H2O, H2O, H2O]
 U = PinCell(radii, mats, 1.26, 1.26)
 
-mats =  [GT, GT, GT, GT, GT, GT, GT, GT, GT, GT, H2O, H2O, H2O, H2O]
+mats =  [GT, GT, GT, GT, GT, GT, H2O, H2O, H2O, H2O]
 G = PinCell(radii, mats, 1.26, 1.26)
 
 dx = [1.26]*17
@@ -67,36 +67,15 @@ c2d.set_tiles([U,U,U,U,U,U,U,U,U,U,U,U,U,U,U,U,U,
                U,U,U,U,U,U,U,U,U,U,U,U,U,U,U,U,U])
 
 moc = MOCDriver(c2d)
-moc.generate_tracks(128, 0.05, PolarQuadrature(YamamotoTabuchi6()));
+moc.generate_tracks(64, 0.05, YamamotoTabuchi6())
 moc.keff_tolerance = 1.E-5
 moc.flux_tolerance = 1.E-5
 moc.solve_keff()
 
-NX = 1000
-NY = 1000
-NG = moc.ngroups
-flux = np.zeros((NG,NX,NY))
+flux, x, y = moc.rasterize_flux(1000, 1000)
 
-print("x-min = {:.10f}".format(c2d.x_min))
-print("x-max = {:.10f}".format(c2d.x_max))
-print("y-min = {:.10f}".format(c2d.y_min))
-print("y-max = {:.10f}".format(c2d.y_max))
-
-dx = (c2d.x_max - c2d.x_min) / NX
-dy = (c2d.y_max - c2d.y_min) / NY
-u = Direction(1.,1.)
-for g in range(NG):
-  x = c2d.x_min + 0.5*dx
-  for i in range(NX):
-    y = c2d.y_min + 0.5*dy
-    for j in range(NY):
-      r = Vector(x, y)
-      flux[g,i,j] = moc.get_flux(g, r, u)
-      y += dy
-    x += dx
-
-for g in range(NG):
+for g in range(moc.ngroups):
   plt.title("Flux in group {}".format(g+1))
-  plt.imshow(flux[g,:,:], cmap='jet')
+  plt.pcolormesh(x, y, flux[g,:,:], cmap='jet')
   plt.show()
 

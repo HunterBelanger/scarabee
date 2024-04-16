@@ -247,14 +247,14 @@ void Cartesian2D::set_tiles(const std::vector<TileFill>& fills) {
   }
 
   std::size_t indx = 0;
-  for (std::size_t i = 0; i < nx(); i++) {
-    for (std::size_t j = 0; j < ny(); j++) {
+  for (std::size_t j = ny(); j > 0; j--) {
+    for (std::size_t i = 0; i < nx(); i++) {
       // Check which fill type we have
       const TileFill& fill = fills[indx];
       if (std::holds_alternative<std::shared_ptr<Cartesian2D>>(fill)) {
-        this->set_tile({i,j}, std::get<std::shared_ptr<Cartesian2D>>(fill));   
+        this->set_tile({i,j-1}, std::get<std::shared_ptr<Cartesian2D>>(fill));   
       } else {
-        this->set_tile({i,j}, std::get<std::shared_ptr<Cell>>(fill));
+        this->set_tile({i,j-1}, std::get<std::shared_ptr<Cell>>(fill));
       }
       
       indx++; 

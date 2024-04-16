@@ -100,6 +100,9 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   Timer draw_timer;
   draw_timer.start();
 
+  // Since we are reallocating bits, set solved to false
+  solved_ = false;
+
   polar_quad_ = polar_quad;
   n_pol_angles_ = polar_quad_.sin().size();
 
@@ -201,6 +204,8 @@ void MOCDriver::solve_keff() {
     spdlog::info("     Iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
   }
+
+  solved_ = true;
 
   keff_timer.stop();
   spdlog::info("");

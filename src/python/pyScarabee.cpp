@@ -1,5 +1,8 @@
 #include <pybind11/pybind11.h>
 
+#define FORCE_IMPORT_ARRAY
+#include <xtensor-python/pytensor.hpp>
+
 #include <utils/version.hpp>
 
 namespace py = pybind11;
@@ -19,6 +22,8 @@ extern void init_Cartesian2D(py::module&);
 extern void init_MOCDriver(py::module&);
 
 PYBIND11_MODULE(pyScarabee, m) {
+  xt::import_numpy();
+
   init_Logging(m);
   init_Vector(m);
   init_Direction(m);
