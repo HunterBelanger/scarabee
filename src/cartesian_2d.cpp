@@ -124,6 +124,22 @@ Cartesian2D::Cartesian2D(const std::vector<double>& dx,
   tiles_.fill(Tile{nullptr, nullptr});
 }
 
+std::shared_ptr<Cartesian2D> Cartesian2D::clone() const {
+  std::shared_ptr<Cartesian2D> c2d_out(new Cartesian2D);
+
+  c2d_out->x_bounds_ = this->x_bounds_;
+  c2d_out->y_bounds_ = this->y_bounds_;
+  c2d_out->nx_ = this->nx_;
+  c2d_out->ny_ = this->ny_;
+
+  c2d_out->tiles_.resize({nx_, ny_});
+  for (std::size_t i = 0; i < this->tiles_.size(); i++) {
+    c2d_out->tiles_[i] = this->tiles_[i].clone();
+  }
+
+  return c2d_out;
+}
+
 std::optional<Cartesian2D::TileIndex> Cartesian2D::get_tile_index(
     const Vector& r, const Direction& u) const {
   for (std::size_t i = 0; i < nx(); i++) {
@@ -217,7 +233,7 @@ void Cartesian2D::set_tile(const TileIndex& ti,
     throw ScarabeeException(mssg);
   }
 
-  tiles_(ti.i, ti.j).c2d = std::make_shared<Cartesian2D>(*c2d);
+  tiles_(ti.i, ti.j).c2d = c2d->clone();
 }
 
 void Cartesian2D::set_tile(const TileIndex& ti,

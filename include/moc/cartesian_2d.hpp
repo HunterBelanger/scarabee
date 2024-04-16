@@ -41,6 +41,20 @@ class Cartesian2D {
 
     double trace_segments(Vector& r, const Direction& u,
                           std::vector<Segment>& segments);
+    
+    Tile clone() const {
+      Tile t_out;
+
+      if (this->c2d) {
+        t_out.c2d = this->c2d->clone();
+      }
+
+      if (this->cell) {
+        t_out.cell = this->cell->clone();
+      }
+
+      return t_out;
+    }
   };
 
   struct TileIndex {
@@ -51,6 +65,8 @@ class Cartesian2D {
               const std::vector<std::shared_ptr<Surface>>& y_bounds);
 
   Cartesian2D(const std::vector<double>& dx, const std::vector<double>& dy);
+
+  std::shared_ptr<Cartesian2D> clone() const;
 
   std::size_t nx() const { return nx_; }
   std::size_t ny() const { return ny_; }
@@ -94,6 +110,8 @@ class Cartesian2D {
   std::vector<std::shared_ptr<Surface>> y_bounds_;
   xt::xarray<Tile> tiles_;
   std::size_t nx_, ny_;
+
+  Cartesian2D() = default;
 
   void check_tile_index(const TileIndex& ti) const;
   std::pair<double, double> tile_dx_dy(const TileIndex& ti) const;
