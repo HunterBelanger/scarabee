@@ -9,7 +9,7 @@
 #include <moc/vector.hpp>
 #include <transport_xs.hpp>
 
-#include <xtensor/xarray.hpp>
+#include <xtensor/xtensor.hpp>
 
 #include <memory>
 #include <optional>
@@ -108,7 +108,7 @@ class Cartesian2D {
  private:
   std::vector<std::shared_ptr<Surface>> x_bounds_;
   std::vector<std::shared_ptr<Surface>> y_bounds_;
-  xt::xarray<Tile> tiles_;
+  xt::xtensor<Tile, 2> tiles_;
   std::size_t nx_, ny_;
 
   Cartesian2D() = default;
