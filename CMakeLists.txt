@@ -143,8 +143,3 @@ pybind11_add_module(pyScarabee src/python/pyScarabee.cpp
                              )
 
 target_link_libraries(pyScarabee PRIVATE scarabee)
-
-#===============================================================================
-# Make test executable
-add_executable(mscarabee src/main.cpp)
-target_link_libraries(mscarabee PUBLIC scarabee)
