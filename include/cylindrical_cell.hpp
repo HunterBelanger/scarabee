@@ -54,7 +54,9 @@ class CylindricalCell {
     return p_(g, i, j);
   }
 
-  const std::shared_ptr<TransportXS>& mat(std::size_t i) const { return mats_[i]; }
+  const std::shared_ptr<TransportXS>& mat(std::size_t i) const {
+    return mats_[i];
+  }
 
  private:
   xt::xtensor<double, 3> p_;

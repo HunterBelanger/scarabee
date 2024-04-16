@@ -15,7 +15,13 @@ TransportXS::TransportXS(const xt::xtensor<double, 1>& Et,
                          const xt::xtensor<double, 1>& vEf,
                          const xt::xtensor<double, 1>& chi,
                          const std::string& name)
-    : Es_(Es), Et_(Et), Ea_(Ea), vEf_(vEf), chi_(chi), name_(name), fissile_(false) {
+    : Es_(Es),
+      Et_(Et),
+      Ea_(Ea),
+      vEf_(vEf),
+      chi_(chi),
+      name_(name),
+      fissile_(false) {
   this->check_xs();
 }
 

@@ -24,7 +24,7 @@ void init_TransportXS(py::module& m) {
            "    chi   fission spectrum\n"
            "    name  name of material",
            py::arg("Et"), py::arg("Ea"), py::arg("Es"), py::arg("vEf"),
-           py::arg("chi"), py::arg("name")="")
+           py::arg("chi"), py::arg("name") = "")
 
       .def(py::init<const xt::xtensor<double, 1>& /*Et*/,
                     const xt::xtensor<double, 1>& /*Ea*/,
@@ -37,7 +37,7 @@ void init_TransportXS(py::module& m) {
            "    Ea    absorption cross section\n"
            "    Es    transport corrected scattering cross section matrix\nn"
            "    name  name of material",
-           py::arg("Et"), py::arg("Ea"), py::arg("Es"), py::arg("name")="")
+           py::arg("Et"), py::arg("Ea"), py::arg("Es"), py::arg("name") = "")
 
       .def("ngroups", &TransportXS::ngroups, "Number of energy groups")
 

@@ -8,7 +8,6 @@ using namespace scarabee;
 
 void init_BoundaryCondition(py::module& m) {
   py::enum_<BoundaryCondition>(m, "BoundaryCondition")
-  .value("Reflective", BoundaryCondition::Reflective)
-  .value("Vacuum", BoundaryCondition::Vacuum);
+      .value("Reflective", BoundaryCondition::Reflective)
+      .value("Vacuum", BoundaryCondition::Vacuum);
 }
-

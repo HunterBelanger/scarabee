@@ -66,8 +66,10 @@ void test() {
          6.99913E-01, 5.37320E-01},
         {0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
          1.32440E-01, 2.48070E+00}};
-  std::shared_ptr<TransportXS> H2O_1 = std::make_shared<TransportXS>(Et, Ea, Es, "H2O_1");
-  std::shared_ptr<TransportXS> H2O_2 = std::make_shared<TransportXS>(Et, Ea, Es, "H2O_2");
+  std::shared_ptr<TransportXS> H2O_1 =
+      std::make_shared<TransportXS>(Et, Ea, Es, "H2O_1");
+  std::shared_ptr<TransportXS> H2O_2 =
+      std::make_shared<TransportXS>(Et, Ea, Es, "H2O_2");
 
   const double Rfuel = 0.54;
   const double Rwtr = 1.26 / std::sqrt(PI);
@@ -106,21 +108,23 @@ void test() {
 
   //==============================================
   // MOC
-  //radii = {0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.54, 0.57, 0.6};
-  //mats = {UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, H2O, H2O, H2O};
+  // radii = {0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.54, 0.57, 0.6};
+  // mats = {UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, UO2, H2O, H2O, H2O};
   radii = {0.54};
   mats = {UO2_1, H2O_1};
-  std::shared_ptr<PinCell> pincell1 = std::make_shared<PinCell>(radii, mats, 1.26, 1.26);
+  std::shared_ptr<PinCell> pincell1 =
+      std::make_shared<PinCell>(radii, mats, 1.26, 1.26);
   mats = {UO2_2, H2O_2};
-  std::shared_ptr<PinCell> pincell2 = std::make_shared<PinCell>(radii, mats, 1.26, 1.26);
-  
-  std::vector<double> dx {1.26, 1.26};
-  std::vector<double> dy {1.26};
+  std::shared_ptr<PinCell> pincell2 =
+      std::make_shared<PinCell>(radii, mats, 1.26, 1.26);
+
+  std::vector<double> dx{1.26, 1.26};
+  std::vector<double> dy{1.26};
   std::shared_ptr<Cartesian2D> c2d = std::make_shared<Cartesian2D>(dx, dy);
   c2d->set_tiles({pincell1, pincell2});
-  
-  Vector r(-1.26, 0.); 
-  Direction u(1.,0.);
+
+  Vector r(-1.26, 0.);
+  Direction u(1., 0.);
   std::vector<Segment> segs;
   c2d->trace_segments(r, u, segs);
 
@@ -129,7 +133,6 @@ void test() {
   std::cout << "x-max = " << c2d->x_max() << "\n";
   std::cout << "y-min = " << c2d->y_min() << "\n";
   std::cout << "y-max = " << c2d->y_max() << "\n";
-
 
   for (const auto& seg : segs) {
     std::cout << seg.length() << ", " << seg.xs()->name() << "\n";
@@ -145,7 +148,7 @@ void test() {
   moc.solve_keff();
   std::cout << "\n";
   */
-  
+
   /*
   //=================================================
   Et = {4.52648699E-01};
@@ -154,12 +157,14 @@ void test() {
   nu = {2.5};
   chi = {1.};
   Es = {{3.83259177E-01}};
-  std::shared_ptr<TransportXS> fuel = std::make_shared<TransportXS>(Et, Ea, Es, nu*Ef, chi);
+  std::shared_ptr<TransportXS> fuel = std::make_shared<TransportXS>(Et, Ea, Es,
+  nu*Ef, chi);
 
   Et = {8.41545641E-01};
   Ea = {3.751099E-3};
   Es = {{8.37794542E-01}};
-  std::shared_ptr<TransportXS> water = std::make_shared<TransportXS>(Et, Ea, Es);
+  std::shared_ptr<TransportXS> water = std::make_shared<TransportXS>(Et, Ea,
+  Es);
 
   radii = {0.1,  0.2,  0.3,  0.4,  0.5,   0.6,   std::sqrt(1.27*1.27 / PI)};
   mats  = {fuel, fuel, fuel, fuel, water, water, water};

@@ -7,7 +7,11 @@
 namespace scarabee {
 
 Cell::Cell(double dx, double dy)
-    : fsrs_(), x_min_(nullptr), x_max_(nullptr), y_min_(nullptr), y_max_(nullptr) {
+    : fsrs_(),
+      x_min_(nullptr),
+      x_max_(nullptr),
+      y_min_(nullptr),
+      y_max_(nullptr) {
   // Check delta's
   if (dx <= 0.) {
     auto mssg = "Cell dx must be > 0.";
@@ -24,19 +28,19 @@ Cell::Cell(double dx, double dy)
   // Build surfaces
   x_min_ = std::make_shared<Surface>();
   x_min_->type() = Surface::Type::XPlane;
-  x_min_->x0() = -0.5*dx;
+  x_min_->x0() = -0.5 * dx;
 
   x_max_ = std::make_shared<Surface>();
   x_max_->type() = Surface::Type::XPlane;
-  x_max_->x0() = 0.5*dx;
+  x_max_->x0() = 0.5 * dx;
 
   y_min_ = std::make_shared<Surface>();
   y_min_->type() = Surface::Type::YPlane;
-  y_min_->y0() = -0.5*dy;
+  y_min_->y0() = -0.5 * dy;
 
   y_max_ = std::make_shared<Surface>();
   y_max_->type() = Surface::Type::YPlane;
-  y_max_->y0() = 0.5*dy;
+  y_max_->y0() = 0.5 * dy;
 
   this->check_surfaces();
 }
@@ -79,7 +83,8 @@ std::vector<Segment> Cell::trace_segments(Vector& r, const Direction& u) {
   return segments;
 }
 
-double Cell::trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments) {
+double Cell::trace_segments(Vector& r, const Direction& u,
+                            std::vector<Segment>& segments) {
   double dist = 0.;
 
   while (this->inside(r, u)) {

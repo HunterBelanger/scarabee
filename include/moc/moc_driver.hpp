@@ -34,14 +34,16 @@ class MOCDriver {
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
 
-  void generate_tracks(std::uint32_t n_angles, double d, PolarQuadrature polar_quad, bool precalc_exps = true);
+  void generate_tracks(std::uint32_t n_angles, double d,
+                       PolarQuadrature polar_quad, bool precalc_exps = true);
 
   void solve_keff();
   bool solved() const { return solved_; }
 
   double get_flux(std::size_t g, const Vector& r, const Direction& u) const;
 
-  std::shared_ptr<TransportXS> get_xs(const Vector& r, const Direction& u) const;
+  std::shared_ptr<TransportXS> get_xs(const Vector& r,
+                                      const Direction& u) const;
 
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
@@ -76,9 +78,9 @@ class MOCDriver {
   std::vector<std::vector<Track>> tracks_;  // All tracks, indexed by angle
   std::vector<FlatSourceRegion*> fsrs_;     // All FSRs in the geometry
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
-  PolarQuadrature polar_quad_;   // Polar quadrature
-  xt::xtensor<double, 2> flux_;  // Indexed by group then FSR
-  xt::xtensor<double, 2> src_;   // Indexed by group then FSR
+  PolarQuadrature polar_quad_;              // Polar quadrature
+  xt::xtensor<double, 2> flux_;             // Indexed by group then FSR
+  xt::xtensor<double, 2> src_;              // Indexed by group then FSR
   std::size_t ngroups_;
   std::size_t n_pol_angles_;
   double flux_tol_ = 1.E-5;

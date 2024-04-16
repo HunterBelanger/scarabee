@@ -90,10 +90,10 @@ void init_CylindricalFluxSolver(py::module& m) {
            "Arguments:\n"
            "    g  group index",
            py::arg("g"))
-      
+
       .def("solve", &CylindricalFluxSolver::solve,
-      "Solves the system for the flux and eigenvalue.")
-      
+           "Solves the system for the flux and eigenvalue.")
+
       .def("solved", &CylindricalFluxSolver::solved,
-      "Returns true if the system has been solved.");
+           "Returns true if the system has been solved.");
 }

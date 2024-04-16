@@ -12,8 +12,8 @@ namespace scarabee {
 class PinCell : public Cell {
  public:
   PinCell(const std::vector<double>& rads,
-          const std::vector<std::shared_ptr<TransportXS>>& mats,
-          double dx, double dy);
+          const std::vector<std::shared_ptr<TransportXS>>& mats, double dx,
+          double dy);
 
   std::shared_ptr<Cell> clone() const override final;
 
@@ -22,7 +22,6 @@ class PinCell : public Cell {
   std::vector<std::shared_ptr<TransportXS>> mats_;
   std::vector<std::shared_ptr<Surface>> radii_;
   std::shared_ptr<Surface> xm_, pd_, ym_, nd_;
-
 
   void build();
 };

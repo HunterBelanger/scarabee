@@ -21,7 +21,8 @@ class Cell {
   virtual std::shared_ptr<Cell> clone() const = 0;
 
   std::vector<Segment> trace_segments(Vector& r, const Direction& u);
-  double trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments);
+  double trace_segments(Vector& r, const Direction& u,
+                        std::vector<Segment>& segments);
 
   bool inside(const Vector& r, const Direction& u) const;
 

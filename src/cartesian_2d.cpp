@@ -50,7 +50,9 @@ Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
   tiles_.fill(Tile{nullptr, nullptr});
 }
 
-Cartesian2D::Cartesian2D(const std::vector<double>& dx, const std::vector<double>& dy): x_bounds_(), y_bounds_(), tiles_(), nx_(), ny_() {
+Cartesian2D::Cartesian2D(const std::vector<double>& dx,
+                         const std::vector<double>& dy)
+    : x_bounds_(), y_bounds_(), tiles_(), nx_(), ny_() {
   // Make sure we have at least 1 bin in each direction
   if (dx.size() == 0) {
     auto mssg = "Must provide at least 1 x width.";
@@ -90,10 +92,10 @@ Cartesian2D::Cartesian2D(const std::vector<double>& dx, const std::vector<double
   }
 
   // Create surfaces
-  x_bounds_.reserve(dx.size()+1);
+  x_bounds_.reserve(dx.size() + 1);
   x_bounds_.push_back(std::make_shared<Surface>());
   x_bounds_.back()->type() = Surface::Type::XPlane;
-  x_bounds_.back()->x0() = -0.5*dx_tot;
+  x_bounds_.back()->x0() = -0.5 * dx_tot;
   for (const auto& d : dx) {
     const double new_x0 = x_bounds_.back()->x0() + d;
 
@@ -102,10 +104,10 @@ Cartesian2D::Cartesian2D(const std::vector<double>& dx, const std::vector<double
     x_bounds_.back()->x0() = new_x0;
   }
 
-  y_bounds_.reserve(dy.size()+1);
+  y_bounds_.reserve(dy.size() + 1);
   y_bounds_.push_back(std::make_shared<Surface>());
   y_bounds_.back()->type() = Surface::Type::YPlane;
-  y_bounds_.back()->y0() = -0.5*dy_tot;
+  y_bounds_.back()->y0() = -0.5 * dy_tot;
   for (const auto& d : dy) {
     const double new_y0 = y_bounds_.back()->y0() + d;
 
@@ -154,11 +156,11 @@ Vector Cartesian2D::get_tile_center(const TileIndex& ti) const {
   const auto& yl = y_bounds_[ti.j];
   const auto& yh = y_bounds_[ti.j + 1];
 
-  return Vector(0.5*(xl->x0() + xh->x0()), 0.5*(yl->y0() + yh->y0()));
+  return Vector(0.5 * (xl->x0() + xh->x0()), 0.5 * (yl->y0() + yh->y0()));
 }
 
 double Cartesian2D::trace_segments(Vector& r, const Direction& u,
-                                 std::vector<Segment>& segments) {
+                                   std::vector<Segment>& segments) {
   if (this->tiles_valid() == false) {
     auto mssg =
         "Cannot trace segments on a Cartesian2D geometry with invalid tiles.";
@@ -175,7 +177,7 @@ double Cartesian2D::trace_segments(Vector& r, const Direction& u,
   while (ti) {
     // Get tile center
     auto r_tile_center = this->get_tile_center(*ti);
-    
+
     // Get reference to the tile
     auto& tile = tiles_(ti->i, ti->j);
 
@@ -198,7 +200,8 @@ const Cartesian2D::Tile& Cartesian2D::tile(
   return tiles_(ti.i, ti.j);
 }
 
-void Cartesian2D::set_tile(const TileIndex& ti, const std::shared_ptr<Cartesian2D>& c2d) {
+void Cartesian2D::set_tile(const TileIndex& ti,
+                           const std::shared_ptr<Cartesian2D>& c2d) {
   check_tile_index(ti);
   const auto dxdy = tile_dx_dy(ti);
 
@@ -217,7 +220,8 @@ void Cartesian2D::set_tile(const TileIndex& ti, const std::shared_ptr<Cartesian2
   tiles_(ti.i, ti.j).c2d = std::make_shared<Cartesian2D>(*c2d);
 }
 
-void Cartesian2D::set_tile(const TileIndex& ti, const std::shared_ptr<Cell>& cell) {
+void Cartesian2D::set_tile(const TileIndex& ti,
+                           const std::shared_ptr<Cell>& cell) {
   check_tile_index(ti);
   const auto dxdy = tile_dx_dy(ti);
 
@@ -241,7 +245,7 @@ void Cartesian2D::set_tile(const TileIndex& ti, const std::shared_ptr<Cell>& cel
 void Cartesian2D::set_tiles(const std::vector<TileFill>& fills) {
   // Make sure dimensions match
   if (fills.size() != tiles_.size()) {
-    auto mssg = "Number of provided file fills does not match number of files."; 
+    auto mssg = "Number of provided file fills does not match number of files.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -252,12 +256,13 @@ void Cartesian2D::set_tiles(const std::vector<TileFill>& fills) {
       // Check which fill type we have
       const TileFill& fill = fills[indx];
       if (std::holds_alternative<std::shared_ptr<Cartesian2D>>(fill)) {
-        this->set_tile({i,j-1}, std::get<std::shared_ptr<Cartesian2D>>(fill));   
+        this->set_tile({i, j - 1},
+                       std::get<std::shared_ptr<Cartesian2D>>(fill));
       } else {
-        this->set_tile({i,j-1}, std::get<std::shared_ptr<Cell>>(fill));
+        this->set_tile({i, j - 1}, std::get<std::shared_ptr<Cell>>(fill));
       }
-      
-      indx++; 
+
+      indx++;
     }
   }
 }
@@ -269,7 +274,7 @@ std::pair<double, double> Cartesian2D::tile_dx_dy(const TileIndex& ti) const {
   const double yl = y_bounds_[ti.j]->y0();
   const double yh = y_bounds_[ti.j + 1]->y0();
 
-  return {xh-xl, yh-yl};
+  return {xh - xl, yh - yl};
 }
 
 void Cartesian2D::check_tile_index(const TileIndex& ti) const {
@@ -294,7 +299,8 @@ bool Cartesian2D::tiles_valid() const {
   return true;
 }
 
-std::shared_ptr<TransportXS> Cartesian2D::get_xs(const Vector& r, const Direction& u) const {
+std::shared_ptr<TransportXS> Cartesian2D::get_xs(const Vector& r,
+                                                 const Direction& u) const {
   try {
     const auto& fsr = this->get_fsr(r, u);
     return fsr.xs();
@@ -315,7 +321,7 @@ FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r, const Direction& u) {
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
-  
+
   check_tile_index(*ti);
   auto& t = tiles_(ti->i, ti->j);
   const Vector tc = get_tile_center(*ti);
@@ -381,7 +387,7 @@ void Cartesian2D::append_fsrs(std::vector<FlatSourceRegion*>& fsrs) {
 }
 
 double Cartesian2D::Tile::trace_segments(Vector& r, const Direction& u,
-                                       std::vector<Segment>& segments) {
+                                         std::vector<Segment>& segments) {
   if (this->valid() == false) {
     auto mssg = "Cannot trace a Tile which is empty.";
     spdlog::error(mssg);

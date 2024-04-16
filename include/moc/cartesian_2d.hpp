@@ -23,7 +23,8 @@ class Cartesian2D;
 
 class Cartesian2D {
  public:
-  using TileFill = std::variant<std::shared_ptr<Cartesian2D>, std::shared_ptr<Cell>>;
+  using TileFill =
+      std::variant<std::shared_ptr<Cartesian2D>, std::shared_ptr<Cell>>;
 
   struct Tile {
     std::shared_ptr<Cartesian2D> c2d;
@@ -38,16 +39,17 @@ class Cartesian2D {
 
     void append_fsrs(std::vector<FlatSourceRegion*>& fsrs);
 
-    double trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments);
+    double trace_segments(Vector& r, const Direction& u,
+                          std::vector<Segment>& segments);
   };
 
   struct TileIndex {
     std::size_t i, j;
   };
-  
+
   Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
               const std::vector<std::shared_ptr<Surface>>& y_bounds);
-  
+
   Cartesian2D(const std::vector<double>& dx, const std::vector<double>& dy);
 
   std::size_t nx() const { return nx_; }
@@ -68,7 +70,8 @@ class Cartesian2D {
 
   bool tiles_valid() const;
 
-  std::shared_ptr<TransportXS> get_xs(const Vector& r, const Direction& u) const;
+  std::shared_ptr<TransportXS> get_xs(const Vector& r,
+                                      const Direction& u) const;
 
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
@@ -77,11 +80,12 @@ class Cartesian2D {
 
   void append_fsrs(std::vector<FlatSourceRegion*>& fsrs);
 
-  double trace_segments(Vector& r, const Direction& u, std::vector<Segment>& segments);
+  double trace_segments(Vector& r, const Direction& u,
+                        std::vector<Segment>& segments);
 
   double x_min() const { return x_bounds_.front()->x0(); }
   double x_max() const { return x_bounds_.back()->x0(); }
-  
+
   double y_min() const { return y_bounds_.front()->y0(); }
   double y_max() const { return y_bounds_.back()->y0(); }
 

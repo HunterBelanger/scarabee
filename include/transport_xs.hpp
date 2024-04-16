@@ -15,13 +15,11 @@ class TransportXS {
               const xt::xtensor<double, 1>& Ea,
               const xt::xtensor<double, 2>& Es,
               const xt::xtensor<double, 1>& vEf,
-              const xt::xtensor<double, 1>& chi,
-              const std::string& name = "");
+              const xt::xtensor<double, 1>& chi, const std::string& name = "");
 
   TransportXS(const xt::xtensor<double, 1>& Et,
               const xt::xtensor<double, 1>& Ea,
-              const xt::xtensor<double, 2>& Es,
-              const std::string& name = "");
+              const xt::xtensor<double, 2>& Es, const std::string& name = "");
 
   std::size_t ngroups() const { return Et_.size(); }
 

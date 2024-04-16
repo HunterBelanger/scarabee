@@ -9,7 +9,8 @@ namespace py = pybind11;
 using namespace scarabee;
 
 void init_CylindricalCell(py::module& m) {
-  py::class_<CylindricalCell, std::shared_ptr<CylindricalCell>>(m, "CylindricalCell")
+  py::class_<CylindricalCell, std::shared_ptr<CylindricalCell>>(
+      m, "CylindricalCell")
       .def(
           py::init<const std::vector<double>& /*radii*/,
                    const std::vector<std::shared_ptr<TransportXS>>& /*mats*/>(),
