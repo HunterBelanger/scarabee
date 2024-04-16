@@ -94,6 +94,7 @@ add_library(scarabee STATIC src/logging.cpp
                             src/cylindrical_flux_solver.cpp
                             src/surface.cpp
                             src/cell.cpp
+                            src/empty_cell.cpp
                             src/pin_cell.cpp
                             src/cartesian_2d.cpp
                             src/track.cpp
@@ -137,6 +138,7 @@ pybind11_add_module(pyScarabee src/python/pyScarabee.cpp
                                src/python/boundary_condition.cpp
                                src/python/track.cpp 
                                src/python/cell.cpp
+                               src/python/empty_cell.cpp
                                src/python/pin_cell.cpp
                                src/python/cartesian_2d.cpp
                                src/python/moc_driver.cpp
