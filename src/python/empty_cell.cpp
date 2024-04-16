@@ -9,8 +9,8 @@ using namespace scarabee;
 
 void init_EmptyCell(py::module& m) {
   py::class_<EmptyCell, Cell, std::shared_ptr<EmptyCell>>(m, "EmptyCell")
-      .def(py::init<const std::shared_ptr<TransportXS>& /*mat*/,
-                    double /*dx*/, double /*dy*/>(),
+      .def(py::init<const std::shared_ptr<TransportXS>& /*mat*/, double /*dx*/,
+                    double /*dy*/>(),
            "An empty cell with one flat source region.\n\n"
            "Arguments:\n"
            "    mat    TransportXS for cell\n"

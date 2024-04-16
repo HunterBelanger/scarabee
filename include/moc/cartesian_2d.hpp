@@ -41,7 +41,7 @@ class Cartesian2D {
 
     double trace_segments(Vector& r, const Direction& u,
                           std::vector<Segment>& segments);
-    
+
     Tile clone() const {
       Tile t_out;
 

@@ -105,7 +105,9 @@ void init_MOCDriver(py::module& m) {
           [](const MOCDriver& md) -> BoundaryCondition {
             return md.x_min_bc();
           },
-          [](MOCDriver& md, BoundaryCondition& bc) { return md.x_min_bc() = bc; },
+          [](MOCDriver& md, BoundaryCondition& bc) {
+            return md.x_min_bc() = bc;
+          },
           "boundadary condition at x_min")
 
       .def_property(
@@ -113,7 +115,9 @@ void init_MOCDriver(py::module& m) {
           [](const MOCDriver& md) -> BoundaryCondition {
             return md.x_max_bc();
           },
-          [](MOCDriver& md, BoundaryCondition& bc) { return md.x_max_bc() = bc; },
+          [](MOCDriver& md, BoundaryCondition& bc) {
+            return md.x_max_bc() = bc;
+          },
           "boundadary condition at x_max")
 
       .def_property(
@@ -121,7 +125,9 @@ void init_MOCDriver(py::module& m) {
           [](const MOCDriver& md) -> BoundaryCondition {
             return md.y_min_bc();
           },
-          [](MOCDriver& md, BoundaryCondition& bc) { return md.y_min_bc() = bc; },
+          [](MOCDriver& md, BoundaryCondition& bc) {
+            return md.y_min_bc() = bc;
+          },
           "boundadary condition at y_min")
 
       .def_property(
@@ -129,7 +135,9 @@ void init_MOCDriver(py::module& m) {
           [](const MOCDriver& md) -> BoundaryCondition {
             return md.y_max_bc();
           },
-          [](MOCDriver& md, BoundaryCondition& bc) { return md.y_max_bc() = bc; },
+          [](MOCDriver& md, BoundaryCondition& bc) {
+            return md.y_max_bc() = bc;
+          },
           "boundadary condition at y_max")
 
       .def_property_readonly("x_min", &MOCDriver::x_min,
