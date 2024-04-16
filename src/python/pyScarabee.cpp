@@ -17,6 +17,7 @@ extern void init_PolarQuadrature(py::module&);
 extern void init_BoundaryCondition(py::module&);
 extern void init_Track(py::module&);
 extern void init_Cell(py::module&);
+extern void init_EmptyCell(py::module&);
 extern void init_PinCell(py::module&);
 extern void init_Cartesian2D(py::module&);
 extern void init_MOCDriver(py::module&);
@@ -34,6 +35,7 @@ PYBIND11_MODULE(pyScarabee, m) {
   init_BoundaryCondition(m);
   init_Track(m);
   init_Cell(m);
+  init_EmptyCell(m);
   init_PinCell(m);
   init_Cartesian2D(m);
   init_MOCDriver(m);
