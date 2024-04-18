@@ -38,6 +38,7 @@ class MOCDriver {
                        PolarQuadrature polar_quad, bool precalc_exps = true);
 
   void solve_keff();
+  void solve_fixed_source();
   bool solved() const { return solved_; }
 
   double get_flux(std::size_t g, const Vector& r, const Direction& u) const;
@@ -47,6 +48,12 @@ class MOCDriver {
 
   FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
   const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
+
+  void set_extern_src(const Vector& r, const Direction& u, std::size_t g, double src);
+  double extern_src(const Vector& r, const Direction& u, std::size_t g) const;
+
+  void set_extern_src(std::size_t i, std::size_t g, double src);
+  double extern_src(std::size_t i, std::size_t g) const;
 
   BoundaryCondition& x_min_bc() { return x_min_bc_; }
   const BoundaryCondition& x_min_bc() const { return x_min_bc_; }
@@ -80,7 +87,7 @@ class MOCDriver {
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
   PolarQuadrature polar_quad_;              // Polar quadrature
   xt::xtensor<double, 2> flux_;             // Indexed by group then FSR
-  xt::xtensor<double, 2> src_;              // Indexed by group then FSR
+  xt::xtensor<double, 2> extern_src_;       // Indexed by group then FSR
   std::size_t ngroups_;
   std::size_t n_pol_angles_;
   double flux_tol_ = 1.E-5;
@@ -97,7 +104,7 @@ class MOCDriver {
   void segment_renormalization();
   void calculate_segment_exps();
 
-  void sweep(xt::xtensor<double, 2>& flux);
+  void sweep(xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& src);
 
   double calc_keff(const xt::xtensor<double, 2>& flux,
                    const xt::xtensor<double, 2>& old_flux) const;

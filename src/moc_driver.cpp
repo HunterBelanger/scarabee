@@ -21,7 +21,7 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
       geometry_(geometry),
       polar_quad_(YamamotoTabuchi<6>()),
       flux_(),
-      src_(),
+      extern_src_(),
       ngroups_(0),
       n_pol_angles_(polar_quad_.sin().size()),
       x_min_bc_(xmin),
@@ -59,7 +59,9 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
   }
 
   flux_.resize({ngroups_, fsrs_.size()});
-  src_.resize({ngroups_, fsrs_.size()});
+  flux_.fill(0.);
+  extern_src_.resize({ngroups_, fsrs_.size()});
+  extern_src_.fill(0.);
 }
 
 void MOCDriver::set_flux_tolerance(double ftol) {
@@ -156,6 +158,7 @@ void MOCDriver::solve_keff() {
   spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
 
   flux_.resize({ngroups_, fsrs_.size()});
+  xt::xtensor<double, 2> src_;
   src_.resize({ngroups_, fsrs_.size()});
   src_.fill(0.);
 
@@ -183,9 +186,10 @@ void MOCDriver::solve_keff() {
     iteration++;
 
     fill_source(src_, flux_);
+    src_ += extern_src_;
 
     next_flux.fill(0.);
-    sweep(next_flux);
+    sweep(next_flux, src_);
 
     prev_keff = keff_;
     keff_ = calc_keff(next_flux, flux_);
@@ -212,7 +216,94 @@ void MOCDriver::solve_keff() {
   spdlog::info("Time to calculate keff: {:.5E} s", keff_timer.elapsed_time());
 }
 
-void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
+void MOCDriver::solve_fixed_source() {
+  Timer fs_timer;
+  fs_timer.start();
+
+  // Make sure the geometry has been drawn
+  if (angle_info_.empty()) {
+    auto mssg = "Cannot solve MOC problem. Geometry has not been traced.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  spdlog::info("Solving fixed source problem.");
+  spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
+
+  // Make sure extern_src_ is not all zero. Otherwise, we have no source !
+  bool all_zero_extern_src = true;
+  for (const auto& es : extern_src_) {
+    if (es < 0.) {
+      auto mssg = "All external sources must be > 0."; 
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    } 
+
+    if (es > 0.) {
+      all_zero_extern_src = false; 
+    }
+  }
+  
+  if (all_zero_extern_src) {
+    auto mssg = "Must have at least one non-zero external source."; 
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  flux_.resize({ngroups_, fsrs_.size()});
+  xt::xtensor<double, 2> src_;
+  src_.resize({ngroups_, fsrs_.size()});
+  src_.fill(0.);
+
+  // Initialize flux and keff
+  flux_.fill(0.);
+  auto next_flux = flux_;
+  keff_ = 1.; // Must be 1 always for FS problem
+
+  // Initialize angular flux
+  for (auto& tracks : tracks_) {
+    for (auto& track : tracks) {
+      track.entry_flux().fill(1. / (4. * PI));
+      track.exit_flux().fill(1. / (4. * PI));
+    }
+  }
+
+  double rel_diff_keff = 100.;
+  double max_flx_diff = 100;
+  std::size_t iteration = 0;
+  Timer iteration_timer;
+  while (max_flx_diff > flux_tol_) {
+    iteration_timer.reset();
+    iteration_timer.start();
+    iteration++;
+
+    fill_source(src_, flux_);
+    src_ += extern_src_;
+
+    next_flux.fill(0.);
+    sweep(next_flux, src_);
+
+    // Get difference
+    max_flx_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
+
+    flux_ = next_flux;
+
+    iteration_timer.stop();
+    spdlog::info("-------------------------------------");
+    spdlog::info("Iteration {:>4d}", iteration);
+    spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
+    spdlog::info("     Iteration time: {:.5E} s",
+                 iteration_timer.elapsed_time());
+  }
+
+  solved_ = true;
+
+  fs_timer.stop();
+  spdlog::info("");
+  spdlog::info("Time to solve fixed source: {:.5E} s", fs_timer.elapsed_time());
+}
+
+void MOCDriver::sweep(xt::xtensor<double, 2>& sflux, const xt::xtensor<double, 2>& src) {
 #pragma omp parallel for
   for (std::size_t g = 0; g < ngroups_; g++) {
     for (auto& tracks : tracks_) {
@@ -225,7 +316,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
         for (auto& seg : track) {
           const std::size_t i = seg.fsr_indx();
           const double Et = seg.xs()->Et(g);
-          const double Q = src_(g, i);
+          const double Q = src(g, i);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             double exp_m1;
             if (precalculated_exps_) {
@@ -254,7 +345,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
           auto& seg = *seg_it;
           const std::size_t i = seg.fsr_indx();
           const double Et = seg.xs()->Et(g);
-          const double Q = src_(g, i);
+          const double Q = src(g, i);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             double exp_m1;
             if (precalculated_exps_) {
@@ -284,7 +375,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux) {
       const double Vi = fsrs_[i]->volume();
       const double Et = mat.Et(g);
       sflux(g, i) *= 1. / (Vi * Et);
-      sflux(g, i) += 4. * PI * src_(g, i) / Et;
+      sflux(g, i) += 4. * PI * src(g, i) / Et;
     }
   }  // For all groups
 }
@@ -710,6 +801,86 @@ const FlatSourceRegion& MOCDriver::get_fsr(const Vector& r,
     err.add_to_exception("Could not find FSR in Cartesian2D.");
     throw err;
   }
+}
+
+void MOCDriver::set_extern_src(const Vector& r, const Direction& u, std::size_t g, double src) {
+  std::size_t i;
+  
+  try {
+    i = this->get_fsr(r, u).indx();
+  } catch (ScarabeeException& err) {
+    err.add_to_exception("Could not obtain source region index."); 
+  }
+
+  if (g >= this->ngroups()) {
+    auto mssg = "Group index out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (src < 0.) {
+    auto mssg = "Cannot assign negative external source.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  extern_src_(g,i) = src;
+}
+
+double MOCDriver::extern_src(const Vector& r, const Direction& u, std::size_t g) const {
+  std::size_t i;
+  
+  try {
+    i = this->get_fsr(r, u).indx();
+  } catch (ScarabeeException& err) {
+    err.add_to_exception("Could not obtain source region index."); 
+  }
+
+  if (g >= this->ngroups()) {
+    auto mssg = "Group index out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  return extern_src_(g,i);
+}
+
+void MOCDriver::set_extern_src(std::size_t i, std::size_t g, double src) {
+  if (i >= fsrs_.size()) {
+    auto mssg = "Source region index out of range."; 
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (g >= this->ngroups()) {
+    auto mssg = "Group index out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (src < 0.) {
+    auto mssg = "Cannot assign negative external source.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  extern_src_(g,i) = src;
+}
+
+double MOCDriver::extern_src(std::size_t i, std::size_t g) const {
+  if (i >= fsrs_.size()) {
+    auto mssg = "Source region index out of range."; 
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (g >= this->ngroups()) {
+    auto mssg = "Group index out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  return extern_src_(g,i);
 }
 
 }  // namespace scarabee

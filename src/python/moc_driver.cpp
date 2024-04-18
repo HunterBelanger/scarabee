@@ -100,6 +100,9 @@ void init_MOCDriver(py::module& m) {
       .def("solve_keff", &MOCDriver::solve_keff,
            "begins iterations to solve k-eigenvalue problem")
 
+      .def("solve_fixed_source", &MOCDriver::solve_fixed_source,
+           "begins iterations to solve fixed source problem")
+
       .def_property(
           "x_min_bc",
           [](const MOCDriver& md) -> BoundaryCondition {
@@ -155,6 +158,34 @@ void init_MOCDriver(py::module& m) {
       .def_property_readonly("solved", &MOCDriver::solved,
                              "returns true if solve_keff has been run "
                              "sucessfully (reset to false on generate_tracks)")
+
+      .def("set_extern_src", py::overload_cast<const Vector&, const Direction& ,std::size_t,double>(&MOCDriver::set_extern_src),
+          "Sets the external source in the flat source region at r.\n\n"
+          "Arguments:\n"
+          "    r    position\n"
+          "    u    direction\n"
+          "    g    group index\n"
+          "    src  value of source", py::arg("r"), py::arg("u"), py::arg("g"), py::arg("src"))
+
+      .def("set_extern_src", py::overload_cast<std::size_t,std::size_t,double>(&MOCDriver::set_extern_src),
+          "Sets the external source in flat source region i.\n\n"
+          "Arguments:\n"
+          "    i    flat source region index\n"
+          "    g    group index\n"
+          "    src  value of source", py::arg("i"), py::arg("g"), py::arg("src"))
+
+      .def("extern_src", py::overload_cast<const Vector&, const Direction& ,std::size_t>(&MOCDriver::extern_src, py::const_),
+          "Returns the external source in the flat source region at r.\n\n"
+          "Arguments:\n"
+          "    r    position\n"
+          "    u    direction\n"
+          "    g    group index", py::arg("r"), py::arg("u"), py::arg("g"))
+
+      .def("extern_src", py::overload_cast<std::size_t,std::size_t>(&MOCDriver::extern_src, py::const_),
+          "Returns the external source in flat source region i.\n\n"
+          "Arguments:\n"
+          "    i    flat source region index\n"
+          "    g    group index", py::arg("i"), py::arg("g"))
 
       .def(
           "rasterize_flux",
