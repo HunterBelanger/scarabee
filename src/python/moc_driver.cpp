@@ -97,11 +97,18 @@ void init_MOCDriver(py::module& m) {
       .def_property_readonly("polar_quadrature", &MOCDriver::polar_quadrature,
                              "quadrature used for polar angle integration")
 
-      .def("solve_keff", &MOCDriver::solve_keff,
-           "begins iterations to solve k-eigenvalue problem")
+      .def("solve", &MOCDriver::solve,
+           "begins iterations to solve problem")
 
-      .def("solve_fixed_source", &MOCDriver::solve_fixed_source,
-           "begins iterations to solve fixed source problem")
+      .def_property(
+          "sim_mode",
+          [](const MOCDriver& md) -> SimulationMode {
+            return md.sim_mode();
+          },
+          [](MOCDriver& md, SimulationMode& m) {
+            md.sim_mode() = m;
+          },
+          "simulation mode (fixed-source, keff)")
 
       .def_property(
           "x_min_bc",
@@ -109,7 +116,7 @@ void init_MOCDriver(py::module& m) {
             return md.x_min_bc();
           },
           [](MOCDriver& md, BoundaryCondition& bc) {
-            return md.x_min_bc() = bc;
+            md.x_min_bc() = bc;
           },
           "boundadary condition at x_min")
 
@@ -119,7 +126,7 @@ void init_MOCDriver(py::module& m) {
             return md.x_max_bc();
           },
           [](MOCDriver& md, BoundaryCondition& bc) {
-            return md.x_max_bc() = bc;
+            md.x_max_bc() = bc;
           },
           "boundadary condition at x_max")
 
@@ -129,7 +136,7 @@ void init_MOCDriver(py::module& m) {
             return md.y_min_bc();
           },
           [](MOCDriver& md, BoundaryCondition& bc) {
-            return md.y_min_bc() = bc;
+            md.y_min_bc() = bc;
           },
           "boundadary condition at y_min")
 
@@ -139,7 +146,7 @@ void init_MOCDriver(py::module& m) {
             return md.y_max_bc();
           },
           [](MOCDriver& md, BoundaryCondition& bc) {
-            return md.y_max_bc() = bc;
+            md.y_max_bc() = bc;
           },
           "boundadary condition at y_max")
 

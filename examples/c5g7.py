@@ -179,7 +179,7 @@ moc.y_min_bc = BoundaryCondition.Vacuum
 moc.generate_tracks(64, 0.05, YamamotoTabuchi6())
 moc.keff_tolerance = 1.E-5
 moc.flux_tolerance = 1.E-5
-moc.solve_keff()
+moc.solve()
 
 flux, x, y = moc.rasterize_flux(1000, 1000)
 

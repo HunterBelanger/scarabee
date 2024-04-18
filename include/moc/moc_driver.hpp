@@ -3,6 +3,7 @@
 
 #include <moc/cartesian_2d.hpp>
 #include <moc/boundary_condition.hpp>
+#include <moc/simulation_mode.hpp>
 #include <moc/flat_source_region.hpp>
 #include <moc/track.hpp>
 #include <moc/quadrature/polar_quadrature.hpp>
@@ -28,6 +29,9 @@ class MOCDriver {
 
   double keff() const { return keff_; }
 
+  SimulationMode& sim_mode() { return mode_; }
+  const SimulationMode& sim_mode() const { return mode_; }
+
   double keff_tolerance() const { return keff_tol_; }
   void set_keff_tolerance(double ktol);
 
@@ -37,8 +41,7 @@ class MOCDriver {
   void generate_tracks(std::uint32_t n_angles, double d,
                        PolarQuadrature polar_quad, bool precalc_exps = true);
 
-  void solve_keff();
-  void solve_fixed_source();
+  void solve();
   bool solved() const { return solved_; }
 
   double get_flux(std::size_t g, const Vector& r, const Direction& u) const;
@@ -94,6 +97,7 @@ class MOCDriver {
   double keff_tol_ = 1.E-5;
   double keff_ = 1.;
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
+  SimulationMode mode_ {SimulationMode::Keff};
   bool precalculated_exps_{false};
   bool solved_{false};
 

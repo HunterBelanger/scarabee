@@ -142,9 +142,9 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   spdlog::info("Time spent dawing tracks: {:.5} s.", draw_timer.elapsed_time());
 }
 
-void MOCDriver::solve_keff() {
-  Timer keff_timer;
-  keff_timer.start();
+void MOCDriver::solve() {
+  Timer sim_timer;
+  sim_timer.start();
 
   // Make sure the geometry has been drawn
   if (angle_info_.empty()) {
@@ -153,9 +153,35 @@ void MOCDriver::solve_keff() {
     throw ScarabeeException(mssg);
   }
 
-  spdlog::info("Solving for keff.");
-  spdlog::info("keff tolerance: {:.5E}", keff_tol_);
+  if (mode_ == SimulationMode::Keff) {
+    spdlog::info("Solving for keff.");
+    spdlog::info("keff tolerance: {:.5E}", keff_tol_);
+  } else if (mode_ == SimulationMode::FixedSource) {
+    spdlog::info("Solving fixed source problem.");
+  }
   spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
+
+  if (mode_ == SimulationMode::FixedSource) {
+    // Make sure extern_src_ is not all zero. Otherwise, we have no source !
+    bool all_zero_extern_src = true;
+    for (const auto& es : extern_src_) {
+      if (es < 0.) {
+        auto mssg = "All external sources must be > 0."; 
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      } 
+
+      if (es > 0.) {
+        all_zero_extern_src = false; 
+      }
+    }
+    
+    if (all_zero_extern_src) {
+      auto mssg = "Must have at least one non-zero external source."; 
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+  }
 
   flux_.resize({ngroups_, fsrs_.size()});
   xt::xtensor<double, 2> src_;
@@ -163,7 +189,11 @@ void MOCDriver::solve_keff() {
   src_.fill(0.);
 
   // Initialize flux and keff
-  flux_.fill(1.);
+  if (mode_ == SimulationMode::Keff) {
+    flux_.fill(1.);
+  } else {
+    flux_.fill(0.);
+  }
   keff_ = 1.;
   auto next_flux = flux_;
   double prev_keff = keff_;
@@ -177,6 +207,9 @@ void MOCDriver::solve_keff() {
   }
 
   double rel_diff_keff = 100.;
+  if (mode_ == SimulationMode::FixedSource) {
+    rel_diff_keff = 0.;
+  }
   double max_flx_diff = 100;
   std::size_t iteration = 0;
   Timer iteration_timer;
@@ -191,9 +224,11 @@ void MOCDriver::solve_keff() {
     next_flux.fill(0.);
     sweep(next_flux, src_);
 
-    prev_keff = keff_;
-    keff_ = calc_keff(next_flux, flux_);
-    rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+    if (mode_ == SimulationMode::Keff) {
+      prev_keff = keff_;
+      keff_ = calc_keff(next_flux, flux_);
+      rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+    }
 
     // Get difference
     max_flx_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
@@ -202,8 +237,12 @@ void MOCDriver::solve_keff() {
 
     iteration_timer.stop();
     spdlog::info("-------------------------------------");
-    spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff_);
-    spdlog::info("     keff difference:     {:.5E}", rel_diff_keff);
+    if (mode_ == SimulationMode::Keff) {
+      spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff_);
+      spdlog::info("     keff difference:     {:.5E}", rel_diff_keff);
+    } else if (mode_ == SimulationMode::FixedSource) {
+      spdlog::info("Iteration {:>4d}", iteration);
+    }
     spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
     spdlog::info("     Iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
@@ -211,96 +250,9 @@ void MOCDriver::solve_keff() {
 
   solved_ = true;
 
-  keff_timer.stop();
+  sim_timer.stop();
   spdlog::info("");
-  spdlog::info("Time to calculate keff: {:.5E} s", keff_timer.elapsed_time());
-}
-
-void MOCDriver::solve_fixed_source() {
-  Timer fs_timer;
-  fs_timer.start();
-
-  // Make sure the geometry has been drawn
-  if (angle_info_.empty()) {
-    auto mssg = "Cannot solve MOC problem. Geometry has not been traced.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  spdlog::info("Solving fixed source problem.");
-  spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
-
-  // Make sure extern_src_ is not all zero. Otherwise, we have no source !
-  bool all_zero_extern_src = true;
-  for (const auto& es : extern_src_) {
-    if (es < 0.) {
-      auto mssg = "All external sources must be > 0."; 
-      spdlog::error(mssg);
-      throw ScarabeeException(mssg);
-    } 
-
-    if (es > 0.) {
-      all_zero_extern_src = false; 
-    }
-  }
-  
-  if (all_zero_extern_src) {
-    auto mssg = "Must have at least one non-zero external source."; 
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  flux_.resize({ngroups_, fsrs_.size()});
-  xt::xtensor<double, 2> src_;
-  src_.resize({ngroups_, fsrs_.size()});
-  src_.fill(0.);
-
-  // Initialize flux and keff
-  flux_.fill(0.);
-  auto next_flux = flux_;
-  keff_ = 1.; // Must be 1 always for FS problem
-
-  // Initialize angular flux
-  for (auto& tracks : tracks_) {
-    for (auto& track : tracks) {
-      track.entry_flux().fill(1. / (4. * PI));
-      track.exit_flux().fill(1. / (4. * PI));
-    }
-  }
-
-  double rel_diff_keff = 100.;
-  double max_flx_diff = 100;
-  std::size_t iteration = 0;
-  Timer iteration_timer;
-  while (max_flx_diff > flux_tol_) {
-    iteration_timer.reset();
-    iteration_timer.start();
-    iteration++;
-
-    fill_source(src_, flux_);
-    src_ += extern_src_;
-
-    next_flux.fill(0.);
-    sweep(next_flux, src_);
-
-    // Get difference
-    max_flx_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
-
-    flux_ = next_flux;
-
-    iteration_timer.stop();
-    spdlog::info("-------------------------------------");
-    spdlog::info("Iteration {:>4d}", iteration);
-    spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
-    spdlog::info("     Iteration time: {:.5E} s",
-                 iteration_timer.elapsed_time());
-  }
-
-  solved_ = true;
-
-  fs_timer.stop();
-  spdlog::info("");
-  spdlog::info("Time to solve fixed source: {:.5E} s", fs_timer.elapsed_time());
+  spdlog::info("Simulation Time: {:.5E} s", sim_timer.elapsed_time());
 }
 
 void MOCDriver::sweep(xt::xtensor<double, 2>& sflux, const xt::xtensor<double, 2>& src) {
