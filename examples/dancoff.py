@@ -2,8 +2,10 @@ from pyScarabee import *
 import numpy as np
 import matplotlib.pyplot as plt
 
-Et = np.array([0.4336])
-Ea = np.array([0.4336])
+#Et = np.array([0.4336])
+#Ea = np.array([0.4336])
+Et = np.array([1.E5])
+Ea = np.array([1.E5])
 Es = np.array([[0.]])
 UO2 = TransportXS(Et, Ea, Es)
 
