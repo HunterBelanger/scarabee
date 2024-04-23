@@ -25,11 +25,7 @@ class Segment {
 
   std::size_t fsr_indx() const { return fsr_indx_; }
 
-  xt::xtensor<double, 2>& exp() { return exp_; }
-  const xt::xtensor<double, 2>& exp() const { return exp_; }
-
  private:
-  xt::xtensor<double, 2> exp_;  // exp (- Etg * l / sin(theta))
   const FlatSourceRegion* fsr_;
   double length_;
   std::size_t fsr_indx_;

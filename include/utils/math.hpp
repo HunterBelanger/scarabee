@@ -5,6 +5,9 @@ namespace scarabee {
 
 double exp(double x);
 
+// Evaluates 1 - exp(-x)
+double mexp(double x);
+
 double Ki3(double x);
 double Ki3_quad(double x);
 

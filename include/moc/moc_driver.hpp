@@ -40,7 +40,7 @@ class MOCDriver {
   void set_flux_tolerance(double ftol);
 
   void generate_tracks(std::uint32_t n_angles, double d,
-                       PolarQuadrature polar_quad, bool precalc_exps = true);
+                       PolarQuadrature polar_quad);
 
   void solve();
   bool solved() const { return solved_; }
@@ -103,7 +103,6 @@ class MOCDriver {
   double keff_ = 1.;
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
   SimulationMode mode_{SimulationMode::Keff};
-  bool precalculated_exps_{false};
   bool solved_{false};
 
   void generate_azimuthal_quadrature(std::uint32_t n_angles, double d);
@@ -111,7 +110,6 @@ class MOCDriver {
   void set_track_ends_bcs();
   void allocate_track_fluxes();
   void segment_renormalization();
-  void calculate_segment_exps();
 
   void sweep(xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& src);
 

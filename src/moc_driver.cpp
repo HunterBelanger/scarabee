@@ -119,7 +119,7 @@ void MOCDriver::set_keff_tolerance(double ktol) {
 }
 
 void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
-                                PolarQuadrature polar_quad, bool precalc_exps) {
+                                PolarQuadrature polar_quad) {
   // Timer for method
   Timer draw_timer;
   draw_timer.start();
@@ -156,7 +156,6 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   generate_azimuthal_quadrature(n_angles, d);
   generate_tracks();
   segment_renormalization();
-  if (precalc_exps) calculate_segment_exps();
   set_track_ends_bcs();
   allocate_track_fluxes();
 
@@ -293,12 +292,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
           const double Et = seg.xs()->Et(g);
           const double Q = src(g, i);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            double exp_m1;
-            if (precalculated_exps_) {
-              exp_m1 = (1. - seg.exp()(g, p));
-            } else {
-              exp_m1 = 1. - exp(-Et * seg.length() * polar_quad_.invs_sin()[p]);
-            }
+            double exp_m1 = mexp(Et * seg.length() * polar_quad_.invs_sin()[p]);
             const double delta_flx = (angflux(p) - (Q / Et)) * exp_m1;
             sflux(g, i) += 4. * PI * tw * polar_quad_.wgt()[p] *
                            polar_quad_.sin()[p] * delta_flx;
@@ -322,12 +316,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
           const double Et = seg.xs()->Et(g);
           const double Q = src(g, i);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            double exp_m1;
-            if (precalculated_exps_) {
-              exp_m1 = (1. - seg.exp()(g, p));
-            } else {
-              exp_m1 = 1. - exp(-Et * seg.length() * polar_quad_.invs_sin()[p]);
-            }
+            double exp_m1 = mexp(Et * seg.length() * polar_quad_.invs_sin()[p]);
             const double delta_flx = (angflux(p) - (Q / Et)) * exp_m1;
             sflux(g, i) += 4. * PI * tw * polar_quad_.wgt()[p] *
                            polar_quad_.sin()[p] * delta_flx;
@@ -701,36 +690,6 @@ void MOCDriver::segment_renormalization() {
       }
     }
   }
-}
-
-void MOCDriver::calculate_segment_exps() {
-  spdlog::info("Calculating segment exponentials");
-
-  xt::xtensor<double, 1> pd;  // Temp array to hold polar angle distance factors
-  pd.resize({n_pol_angles_});
-  for (std::size_t pi = 0; pi < n_pol_angles_; pi++) {
-    pd(pi) = 1. / polar_quad_.sin()[pi];
-  }
-
-  for (auto& tracks : tracks_) {
-    for (auto& track : tracks) {
-      for (auto& seg : track) {
-        const auto& Et = seg.xs()->Et();
-        const double l = -seg.length();
-        // We unfortunately can't use xtensor-blas, as we don't have BLAS or
-        // LAPACK on Windows. We instead construct the matrix ourselves.
-        seg.exp().resize({ngroups_, n_pol_angles_});
-
-        for (std::size_t g = 0; g < ngroups_; g++) {
-          for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            seg.exp()(g, p) = std::exp(l * Et(g) * pd(p));
-          }  // For all polar angles
-        }    // For all groups
-      }      // For all Segments
-    }        // For all Tracks
-  }          // For all angles
-
-  precalculated_exps_ = true;
 }
 
 double MOCDriver::get_flux(std::size_t g, const Vector& r,

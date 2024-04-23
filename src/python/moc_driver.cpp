@@ -35,29 +35,25 @@ void init_MOCDriver(py::module& m) {
            py::arg("ymaxbc") = BoundaryCondition::Reflective)
 
       .def("generate_tracks",
-           py::overload_cast<std::uint32_t, double, PolarQuadrature, bool>(
+           py::overload_cast<std::uint32_t, double, PolarQuadrature>(
                &MOCDriver::generate_tracks),
            "Traces tracks for the calculation across the geometry.\n\n"
            "Arguments:\n"
            "    nangles       number of azimuthal angles (even)\n"
            "    d             max spacing between tracks of a given angle\n"
-           "    polar_quad    polar quadrature for generating segment lengths\n"
-           "    precalc_exps  precalculate exponentials (default = True)",
-           py::arg("nangles"), py::arg("d"), py::arg("polar_quad"),
-           py::arg("precalc_exps") = true)
+           "    polar_quad    polar quadrature for generating segment lengths",
+           py::arg("nangles"), py::arg("d"), py::arg("polar_quad"))
 
       .def(
           "generate_tracks",
-          [](MOCDriver& md, std::uint32_t na, double d, PolarQuadratureType pq,
-             bool pe) { return md.generate_tracks(na, d, pq, pe); },
+          [](MOCDriver& md, std::uint32_t na, double d,
+             PolarQuadratureType pq) { return md.generate_tracks(na, d, pq); },
           "Traces tracks for the calculation across the geometry.\n\n"
           "Arguments:\n"
           "    nangles       number of azimuthal angles (even)\n"
           "    d             max spacing between tracks of a given angle\n"
-          "    polar_quad    polar quadrature for generating segment lengths\n"
-          "    precalc_exps  precalculate exponentials (default = True)",
-          py::arg("nangles"), py::arg("d"), py::arg("polar_quad"),
-          py::arg("precalc_exps") = true)
+          "    polar_quad    polar quadrature for generating segment lengths",
+          py::arg("nangles"), py::arg("d"), py::arg("polar_quad"))
 
       .def("drawn", &MOCDriver::drawn,
            "return True if geometry has been traced")
