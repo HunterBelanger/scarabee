@@ -10,7 +10,7 @@ namespace scarabee {
 
 Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
                          const std::vector<std::shared_ptr<Surface>>& y_bounds)
-    : x_bounds_(x_bounds), y_bounds_(y_bounds), tiles_(), nx_(), ny_() {
+    : x_bounds_(x_bounds), y_bounds_(y_bounds), tiles_(), fsr_offset_map_(), nx_(), ny_() {
   // First, make sure we have at least 2 bounds in each direction
   if (x_bounds_.size() < 2) {
     auto mssg = "Must provide at least 2 x-bounds.";
@@ -48,6 +48,8 @@ Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
   // All tiles start as uninitialized
   tiles_.resize({nx_, ny_});
   tiles_.fill(Tile{nullptr, nullptr});
+
+  fsr_offset_map_.resize({nx_, ny_});
 }
 
 Cartesian2D::Cartesian2D(const std::vector<double>& dx,
@@ -122,22 +124,8 @@ Cartesian2D::Cartesian2D(const std::vector<double>& dx,
   // All tiles start as uninitialized
   tiles_.resize({nx_, ny_});
   tiles_.fill(Tile{nullptr, nullptr});
-}
 
-std::shared_ptr<Cartesian2D> Cartesian2D::clone() const {
-  std::shared_ptr<Cartesian2D> c2d_out(new Cartesian2D);
-
-  c2d_out->x_bounds_ = this->x_bounds_;
-  c2d_out->y_bounds_ = this->y_bounds_;
-  c2d_out->nx_ = this->nx_;
-  c2d_out->ny_ = this->ny_;
-
-  c2d_out->tiles_.resize({nx_, ny_});
-  for (std::size_t i = 0; i < this->tiles_.size(); i++) {
-    c2d_out->tiles_[i] = this->tiles_[i].clone();
-  }
-
-  return c2d_out;
+  fsr_offset_map_.resize({nx_, ny_});
 }
 
 std::optional<Cartesian2D::TileIndex> Cartesian2D::get_tile_index(
@@ -175,41 +163,6 @@ Vector Cartesian2D::get_tile_center(const TileIndex& ti) const {
   return Vector(0.5 * (xl->x0() + xh->x0()), 0.5 * (yl->y0() + yh->y0()));
 }
 
-double Cartesian2D::trace_segments(Vector& r, const Direction& u,
-                                   std::vector<Segment>& segments) {
-  if (this->tiles_valid() == false) {
-    auto mssg =
-        "Cannot trace segments on a Cartesian2D geometry with invalid tiles.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  double dist_total = 0.;
-
-  // Get our current tile index
-  auto ti = this->get_tile_index(r, u);
-
-  // While we have a tile index
-  while (ti) {
-    // Get tile center
-    auto r_tile_center = this->get_tile_center(*ti);
-
-    // Get reference to the tile
-    auto& tile = tiles_(ti->i, ti->j);
-
-    // Trace segments on tile
-    auto r_tile = r - r_tile_center;
-    double dist = tile.trace_segments(r_tile, u, segments);
-    r = r + dist * u;
-    dist_total += dist;
-
-    // Get new tile index
-    ti = this->get_tile_index(r, u);
-  }
-
-  return dist_total;
-}
-
 const Cartesian2D::Tile& Cartesian2D::tile(
     const Cartesian2D::TileIndex& ti) const {
   check_tile_index(ti);
@@ -233,7 +186,7 @@ void Cartesian2D::set_tile(const TileIndex& ti,
     throw ScarabeeException(mssg);
   }
 
-  tiles_(ti.i, ti.j).c2d = c2d->clone();
+  tiles_(ti.i, ti.j).c2d = c2d;
 }
 
 void Cartesian2D::set_tile(const TileIndex& ti,
@@ -255,7 +208,7 @@ void Cartesian2D::set_tile(const TileIndex& ti,
     throw ScarabeeException(mssg);
   }
 
-  tiles_(ti.i, ti.j).cell = cell->clone();
+  tiles_(ti.i, ti.j).cell = cell;
 }
 
 void Cartesian2D::set_tiles(const std::vector<TileFill>& fills) {
@@ -281,6 +234,8 @@ void Cartesian2D::set_tiles(const std::vector<TileFill>& fills) {
       indx++;
     }
   }
+
+  make_offset_map();
 }
 
 std::pair<double, double> Cartesian2D::tile_dx_dy(const TileIndex& ti) const {
@@ -319,47 +274,14 @@ std::shared_ptr<TransportXS> Cartesian2D::get_xs(const Vector& r,
                                                  const Direction& u) const {
   try {
     const auto& fsr = this->get_fsr(r, u);
-    return fsr.xs();
+    return fsr.fsr->xs();
   } catch (ScarabeeException& err) {
     err.add_to_exception("Could not find flat source region.");
     throw err;
   }
 }
 
-FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r, const Direction& u) {
-  auto ti = this->get_tile_index(r, u);
-
-  if (ti.has_value() == false) {
-    // We apparently are not in a tile
-    std::stringstream mssg;
-    mssg << "Position r = " << r << ", and Direction u = " << u
-         << ", are not in Cartesian2D geometry.";
-    spdlog::error(mssg.str());
-    throw ScarabeeException(mssg.str());
-  }
-
-  check_tile_index(*ti);
-  auto& t = tiles_(ti->i, ti->j);
-  const Vector tc = get_tile_center(*ti);
-  Vector r_tile = r - tc;
-
-  if (t.valid() == false) {
-    std::stringstream mssg;
-    mssg << "Tile for Position r = " << r << ", and Direction u = " << u
-         << " is empty.";
-    spdlog::error(mssg.str());
-    throw ScarabeeException(mssg.str());
-  }
-
-  if (t.c2d) {
-    return t.c2d->get_fsr(r_tile, u);
-  } else {
-    return t.cell->get_fsr(r_tile, u);
-  }
-}
-
-const FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r,
-                                             const Direction& u) const {
+UniqueFSR Cartesian2D::get_fsr(const Vector& r, const Direction& u) const {
   auto ti = this->get_tile_index(r, u);
 
   if (ti.has_value() == false) {
@@ -382,12 +304,69 @@ const FlatSourceRegion& Cartesian2D::get_fsr(const Vector& r,
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
+  
+  UniqueFSR out;
 
   if (t.c2d) {
-    return t.c2d->get_fsr(r_tile, u);
+    out = t.c2d->get_fsr(r_tile, u);
   } else {
-    return t.cell->get_fsr(r_tile, u);
+    out = t.cell->get_fsr(r_tile, u);
   }
+
+  // Get unique ID
+  if (out.fsr) {
+    out.instance += fsr_offset_map_(ti->i, ti->j).find(out.fsr->id())->second;
+  }
+
+  return out;
+}
+
+std::pair<UniqueFSR,Vector> Cartesian2D::get_fsr_r_local(const Vector& r, const Direction& u) const {
+  auto ti = this->get_tile_index(r, u);
+
+  if (ti.has_value() == false) {
+    // We apparently are not in a tile
+    std::stringstream mssg;
+    mssg << "Position r = " << r << ", and Direction u = " << u
+         << ", are not in Cartesian2D geometry.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  const auto& t = this->tile(*ti);
+  const Vector tc = get_tile_center(*ti);
+  Vector r_tile = r - tc;
+
+  if (t.valid() == false) {
+    std::stringstream mssg;
+    mssg << "Tile for Position r = " << r << ", and Direction u = " << u
+         << " is empty.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+  
+  std::pair<UniqueFSR, Vector> out{{nullptr, 0}, r_tile};
+
+  if (t.c2d) {
+    out = t.c2d->get_fsr_r_local(r_tile, u);
+  } else {
+    out.first = t.cell->get_fsr(r_tile, u);
+  }
+
+  // Get unique ID
+  if (out.first.fsr) {
+    out.first.instance += fsr_offset_map_(ti->i, ti->j).find(out.first.fsr->id())->second;
+  }
+
+  return out;
+}
+
+std::size_t Cartesian2D::get_num_fsr_instances(std::size_t id) const {
+  std::size_t n = 0;
+  for (const auto& t : tiles_) {
+    n += t.get_num_fsr_instances(id);
+  }
+  return n;
 }
 
 std::size_t Cartesian2D::num_fsrs() const {
@@ -396,29 +375,6 @@ std::size_t Cartesian2D::num_fsrs() const {
   for (const auto& tile : tiles_) n += tile.num_fsrs();
 
   return n;
-}
-
-void Cartesian2D::append_fsrs(std::vector<FlatSourceRegion*>& fsrs) {
-  for (auto& tile : tiles_) tile.append_fsrs(fsrs);
-}
-
-double Cartesian2D::Tile::trace_segments(Vector& r, const Direction& u,
-                                         std::vector<Segment>& segments) {
-  if (this->valid() == false) {
-    auto mssg = "Cannot trace a Tile which is empty.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  double dist = 0.;
-
-  if (c2d) {
-    dist = c2d->trace_segments(r, u, segments);
-  } else {
-    dist = cell->trace_segments(r, u, segments);
-  }
-
-  return dist;
 }
 
 std::size_t Cartesian2D::Tile::num_fsrs() const {
@@ -433,16 +389,65 @@ std::size_t Cartesian2D::Tile::num_fsrs() const {
   }
 }
 
-void Cartesian2D::Tile::append_fsrs(std::vector<FlatSourceRegion*>& fsrs) {
+std::size_t Cartesian2D::Tile::ngroups() const {
   if (this->valid() == false) {
-    return;
+    return 0;
   }
 
   if (c2d) {
-    c2d->append_fsrs(fsrs);
+    return c2d->ngroups();
   } else {
-    cell->append_fsrs(fsrs);
+    return cell->ngroups();
   }
+}
+
+std::size_t Cartesian2D::Tile::get_num_fsr_instances(std::size_t id) const {
+  if (c2d) {
+    return c2d->get_num_fsr_instances(id);
+  } else if (cell) {
+    return cell->get_num_fsr_instances(id);
+  }
+  return 0;
+}
+
+std::set<std::size_t> Cartesian2D::get_all_fsr_ids() const {
+  std::set<std::size_t> fsr_ids;
+
+  for (std::size_t t = 0; t < tiles_.size(); t++) {
+    std::set<std::size_t> tile_ids;
+    if (tiles_[t].c2d) {
+      tile_ids = tiles_[t].c2d->get_all_fsr_ids();
+    } else if (tiles_[t].cell) {
+      tile_ids = tiles_[t].cell->get_all_fsr_ids();
+    }
+
+    for (const auto fsr : tile_ids)
+      fsr_ids.insert(fsr);
+  }
+
+  return fsr_ids;
+}
+
+void Cartesian2D::make_offset_map(){
+  auto fsr_ids = this->get_all_fsr_ids();
+
+  // Set all offsets to be zero
+  for (auto& map : fsr_offset_map_) {
+    for (uint32_t fsr_id : fsr_ids) {
+      map[fsr_id] = 0;
+    }
+  }
+
+  // Now go through and build all offsets
+  for (std::size_t i = 1; i < tiles_.size(); i++) {
+    const auto& t = tiles_[i];
+
+    for (uint32_t fsr_id : fsr_ids) {
+      fsr_offset_map_[i][fsr_id] = fsr_offset_map_[i - 1][fsr_id];
+      fsr_offset_map_[i][fsr_id] += t.get_num_fsr_instances(fsr_id);
+    }
+  }
+
 }
 
 }  // namespace scarabee

@@ -17,12 +17,12 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
                      BoundaryCondition ymin, BoundaryCondition ymax)
     : angle_info_(),
       tracks_(),
-      fsrs_(),
       geometry_(geometry),
       polar_quad_(YamamotoTabuchi<6>()),
       flux_(),
       extern_src_(),
       ngroups_(0),
+      nfsrs_(0),
       n_pol_angles_(polar_quad_.sin().size()),
       x_min_bc_(xmin),
       x_max_bc_(xmax),
@@ -40,27 +40,29 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
     throw ScarabeeException(mssg);
   }
 
-  // Get all FSRs
-  auto nfsr = geometry_->num_fsrs();
-  fsrs_.reserve(nfsr);
-  geometry_->append_fsrs(fsrs_);
-
-  if (fsrs_.empty()) {
+  // Get all FSRs and ID offsets
+  nfsrs_ = geometry_->num_fsrs();
+  if (nfsrs_ == 0) {
     auto mssg = "No flat source regions found.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
-
-  ngroups_ = fsrs_.front()->xs()->ngroups();
-
-  // Allocate arrays and assign indices
-  for (std::size_t i = 0; i < fsrs_.size(); i++) {
-    fsrs_[i]->set_indx(i);
+  auto fsr_ids = geometry_->get_all_fsr_ids();
+  for (auto id : fsr_ids) fsr_offsets_[id] = 0;
+  auto id_it_prev = fsr_offsets_.begin();
+  for (auto id_it = ++fsr_offsets_.begin(); id_it != fsr_offsets_.end(); id_it++) {
+    const std::size_t id_prev = id_it_prev->first;
+    const std::size_t ninst_prev = geometry_->get_num_fsr_instances(id_prev);
+    fsr_offsets_[id_it->first] = fsr_offsets_[id_prev] + ninst_prev;
+    id_it_prev++;
   }
 
-  flux_.resize({ngroups_, fsrs_.size()});
+  ngroups_ = geometry_->ngroups();
+
+  // Allocate arrays and assign indices
+  flux_.resize({ngroups_, nfsrs_});
   flux_.fill(0.);
-  extern_src_.resize({ngroups_, fsrs_.size()});
+  extern_src_.resize({ngroups_, nfsrs_});
   extern_src_.fill(0.);
 }
 
@@ -183,9 +185,9 @@ void MOCDriver::solve() {
     }
   }
 
-  flux_.resize({ngroups_, fsrs_.size()});
+  flux_.resize({ngroups_, nfsrs_});
   xt::xtensor<double, 2> src_;
-  src_.resize({ngroups_, fsrs_.size()});
+  src_.resize({ngroups_, nfsrs_});
   src_.fill(0.);
 
   // Initialize flux and keff
@@ -322,7 +324,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux, const xt::xtensor<double, 2
       }  // For all tracks
     }    // For all azimuthal angles
 
-    for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
       const double Vi = fsrs_[i]->volume();
       const double Et = mat.Et(g);
@@ -483,7 +485,16 @@ void MOCDriver::generate_tracks() {
         Vector r_start(x, y);
         Vector r_end = r_start;
         std::vector<Segment> segments;
-        geometry_->trace_segments(r_end, u, segments);
+        std::pair<UniqueFSR,Vector> fsr_r = geometry_->get_fsr_r_local(r_end, u);
+        auto ti = geometry_->get_tile_index(r_end, u);
+        while (fsr_r.first.fsr && ti) {
+          const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
+          segments.emplace_back(fsr_r.first.fsr, d, this->get_fsr_indx(fsr_r.first));
+          r_end = r_end + d*u;
+          ti = geometry_->get_tile_index(r_end, u);
+          if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
+        }
+
         tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt * ai.d,
                                 segments);
 
@@ -507,7 +518,16 @@ void MOCDriver::generate_tracks() {
         Vector r_start(x, y);
         Vector r_end = r_start;
         std::vector<Segment> segments;
-        geometry_->trace_segments(r_end, u, segments);
+        std::pair<UniqueFSR,Vector> fsr_r = geometry_->get_fsr_r_local(r_end, u);
+        auto ti = geometry_->get_tile_index(r_end, u);
+        while (fsr_r.first.fsr && ti) {
+          const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
+          segments.emplace_back(fsr_r.first.fsr, d, this->get_fsr_indx(fsr_r.first));
+          r_end = r_end + d*u;
+          ti = geometry_->get_tile_index(r_end, u);
+          if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
+        }
+
         tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt * ai.d,
                                 segments);
 
@@ -630,7 +650,7 @@ void MOCDriver::segment_renormalization() {
   // found in the MPACT theory manual ORNL/SPR-2021/2330 end of 5.4.
 
   // This holds the approximations for the FSR areas
-  std::vector<double> approx_vols(fsrs_.size(), 0.);
+  std::vector<double> approx_vols(nfsrs_, 0.);
 
   // Go through all angles
   for (std::size_t a = 0; a < angle_info_.size(); a++) {
@@ -699,7 +719,7 @@ double MOCDriver::get_flux(std::size_t g, const Vector& r,
 
   try {
     const auto& fsr = this->get_fsr(r, u);
-    return flux_(g, fsr.indx());
+    return flux_(g, get_fsr_indx(fsr));
   } catch (ScarabeeException& err) {
     std::stringstream mssg;
     mssg << "Could not find flat source region at r = " << r << " u = " << u
@@ -719,7 +739,7 @@ std::shared_ptr<TransportXS> MOCDriver::get_xs(const Vector& r,
                                                const Direction& u) const {
   try {
     const auto& fsr = this->get_fsr(r, u);
-    return fsr.xs();
+    return fsr.fsr->xs();
   } catch (ScarabeeException& err) {
     std::stringstream mssg;
     mssg << "Could not find flat source region at r = " << r << " u = " << u
@@ -736,7 +756,7 @@ std::shared_ptr<TransportXS> MOCDriver::get_xs(const Vector& r,
   return nullptr;
 }
 
-FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) {
+UniqueFSR MOCDriver::get_fsr(const Vector& r, const Direction& u) const {
   try {
     return geometry_->get_fsr(r, u);
   } catch (ScarabeeException& err) {
@@ -745,21 +765,21 @@ FlatSourceRegion& MOCDriver::get_fsr(const Vector& r, const Direction& u) {
   }
 }
 
-const FlatSourceRegion& MOCDriver::get_fsr(const Vector& r,
-                                           const Direction& u) const {
-  try {
-    return geometry_->get_fsr(r, u);
-  } catch (ScarabeeException& err) {
-    err.add_to_exception("Could not find FSR in Cartesian2D.");
-    throw err;
+std::size_t MOCDriver::get_fsr_indx(const UniqueFSR& fsr) const {
+  const std::size_t i = fsr_offsets_.at(fsr.fsr->id()) + fsr.instance;
+  if (i >= nfsrs_) {
+    auto mssg = "FSR index out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
+  return i;
 }
 
 void MOCDriver::set_extern_src(const Vector& r, const Direction& u, std::size_t g, double src) {
   std::size_t i;
   
   try {
-    i = this->get_fsr(r, u).indx();
+    i = this->get_fsr_indx(this->get_fsr(r, u));
   } catch (ScarabeeException& err) {
     err.add_to_exception("Could not obtain source region index."); 
   }
@@ -783,7 +803,7 @@ double MOCDriver::extern_src(const Vector& r, const Direction& u, std::size_t g)
   std::size_t i;
   
   try {
-    i = this->get_fsr(r, u).indx();
+    i = this->get_fsr_indx(this->get_fsr(r, u));
   } catch (ScarabeeException& err) {
     err.add_to_exception("Could not obtain source region index."); 
   }
@@ -798,7 +818,7 @@ double MOCDriver::extern_src(const Vector& r, const Direction& u, std::size_t g)
 }
 
 void MOCDriver::set_extern_src(std::size_t i, std::size_t g, double src) {
-  if (i >= fsrs_.size()) {
+  if (i >= nfsrs_) {
     auto mssg = "Source region index out of range."; 
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -820,7 +840,7 @@ void MOCDriver::set_extern_src(std::size_t i, std::size_t g, double src) {
 }
 
 double MOCDriver::extern_src(std::size_t i, std::size_t g) const {
-  if (i >= fsrs_.size()) {
+  if (i >= nfsrs_) {
     auto mssg = "Source region index out of range."; 
     spdlog::error(mssg);
     throw ScarabeeException(mssg);

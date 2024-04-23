@@ -13,8 +13,6 @@ class EmptyCell : public Cell {
  public:
   EmptyCell(const std::shared_ptr<TransportXS>& mat, double dx, double dy);
 
-  std::shared_ptr<Cell> clone() const override final;
-
  private:
   std::shared_ptr<TransportXS> mat_;
 };

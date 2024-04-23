@@ -17,10 +17,6 @@ SimplePinCell::SimplePinCell(const std::vector<double>& mat_rads,
   this->build();
 }
 
-std::shared_ptr<Cell> SimplePinCell::clone() const {
-  return std::make_shared<SimplePinCell>(*this);
-}
-
 void SimplePinCell::build() {
   // Clear vectors
   radii_.clear();

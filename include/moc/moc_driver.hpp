@@ -8,6 +8,7 @@
 #include <moc/track.hpp>
 #include <moc/quadrature/polar_quadrature.hpp>
 
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -49,8 +50,9 @@ class MOCDriver {
   std::shared_ptr<TransportXS> get_xs(const Vector& r,
                                       const Direction& u) const;
 
-  FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
-  const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
+  UniqueFSR get_fsr(const Vector& r, const Direction& u) const;
+
+  std::size_t get_fsr_indx(const UniqueFSR& fsr) const;
 
   void set_extern_src(const Vector& r, const Direction& u, std::size_t g, double src);
   double extern_src(const Vector& r, const Direction& u, std::size_t g) const;
@@ -86,12 +88,13 @@ class MOCDriver {
 
   std::vector<AngleInfo> angle_info_;       // Information for all angles
   std::vector<std::vector<Track>> tracks_;  // All tracks, indexed by angle
-  std::vector<FlatSourceRegion*> fsrs_;     // All FSRs in the geometry
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
   PolarQuadrature polar_quad_;              // Polar quadrature
   xt::xtensor<double, 2> flux_;             // Indexed by group then FSR
   xt::xtensor<double, 2> extern_src_;       // Indexed by group then FSR
+  std::map<std::size_t, std::size_t> fsr_offsets_;
   std::size_t ngroups_;
+  std::size_t nfsrs_;
   std::size_t n_pol_angles_;
   double flux_tol_ = 1.E-5;
   double keff_tol_ = 1.E-5;

@@ -10,32 +10,26 @@
 #include <utils/constants.hpp>
 
 #include <memory>
+#include <set>
 #include <vector>
 
 namespace scarabee {
 
 class Cell {
  public:
-  virtual ~Cell() = default;
-
-  virtual std::shared_ptr<Cell> clone() const = 0;
-
-  std::vector<Segment> trace_segments(Vector& r, const Direction& u);
-  double trace_segments(Vector& r, const Direction& u,
-                        std::vector<Segment>& segments);
-
   bool inside(const Vector& r, const Direction& u) const;
 
   double distance(const Vector& r, const Direction& u) const;
 
-  FlatSourceRegion& get_fsr(const Vector& r, const Direction& u);
-  const FlatSourceRegion& get_fsr(const Vector& r, const Direction& u) const;
+  UniqueFSR get_fsr(const Vector& r, const Direction& u) const;
 
   std::size_t num_fsrs() const { return fsrs_.size(); }
 
-  void append_fsrs(std::vector<FlatSourceRegion*>& fsrs) {
-    for (auto& fsr : fsrs_) fsrs.push_back(&fsr);
-  }
+  std::size_t ngroups() const { return fsrs_.front().xs()->ngroups(); }
+
+  std::set<std::size_t> get_all_fsr_ids() const;
+
+  std::size_t get_num_fsr_instances(std::size_t id) const;
 
   double dx() const { return x_max_->x0() - x_min_->x0(); }
   double dy() const { return y_max_->y0() - y_min_->y0(); }

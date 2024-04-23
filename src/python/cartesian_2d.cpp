@@ -53,6 +53,8 @@ void init_Cartesian2D(py::module& m) {
       .def_property_readonly("y_max", &Cartesian2D::y_max,
                              "Maximum y coordinate.")
 
+      .def("num_fsrs", &Cartesian2D::num_fsrs, "Number of flat source regions.")
+
       .def("tiles_valid", &Cartesian2D::tiles_valid,
            "Returns true if all tiles are populated.")
 
@@ -75,26 +77,6 @@ void init_Cartesian2D(py::module& m) {
            "Arguments:\n"
            "    ti  TileIndex for desired Tile.",
            py::arg("ti"))
-
-      .def("set_tile",
-           py::overload_cast<const Cartesian2D::TileIndex&,
-                             const std::shared_ptr<Cartesian2D>&>(
-               &Cartesian2D::set_tile),
-           "Fills tile with provided Cartesian2D.\n\n"
-           "Arguments:\n"
-           "    ti   TileIndex\n"
-           "    c2d  Cartesian2D to fill Tile.",
-           py::arg("ti"), py::arg("c2d"))
-
-      .def("set_tile",
-           py::overload_cast<const Cartesian2D::TileIndex&,
-                             const std::shared_ptr<Cell>&>(
-               &Cartesian2D::set_tile),
-           "Fills tile with provided Cell.\n\n"
-           "Arguments:\n"
-           "    ti    TileIndex\n"
-           "    cell  Cell to fill Tile.",
-           py::arg("ti"), py::arg("cell"))
 
       .def("set_tiles", &Cartesian2D::set_tiles,
            "Sets all tiles in the geometry.\n\n"

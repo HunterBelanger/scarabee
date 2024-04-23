@@ -28,7 +28,7 @@ struct RegionToken {
 
 class FlatSourceRegion {
  public:
-  FlatSourceRegion() : tokens_(), xs_(), volume_(), indx_(0) {}
+  FlatSourceRegion() : tokens_(), xs_(), volume_(), id_(id_counter++) {}
 
   bool inside(const Vector& r, const Direction& u) const {
     for (const auto& t : tokens_) {
@@ -46,8 +46,7 @@ class FlatSourceRegion {
     return min_dist;
   }
 
-  std::size_t indx() const { return indx_; }
-  void set_indx(std::size_t i) { indx_ = i; }
+  std::size_t id() const { return id_; }
 
   std::shared_ptr<TransportXS>& xs() { return xs_; }
   const std::shared_ptr<TransportXS>& xs() const { return xs_; }
@@ -64,7 +63,14 @@ class FlatSourceRegion {
   htl::static_vector<RegionToken, MAX_SURFS> tokens_;
   std::shared_ptr<TransportXS> xs_;
   double volume_;
-  std::size_t indx_;
+  std::size_t id_;
+
+  static std::size_t id_counter;
+};
+
+struct UniqueFSR {
+  const FlatSourceRegion* fsr {nullptr};
+  std::size_t instance {0};
 };
 
 }  // namespace scarabee

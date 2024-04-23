@@ -77,34 +77,6 @@ void Cell::check_surfaces() const {
   }
 }
 
-std::vector<Segment> Cell::trace_segments(Vector& r, const Direction& u) {
-  std::vector<Segment> segments;
-  this->trace_segments(r, u, segments);
-  return segments;
-}
-
-double Cell::trace_segments(Vector& r, const Direction& u,
-                            std::vector<Segment>& segments) {
-  double dist = 0.;
-
-  while (this->inside(r, u)) {
-    // Get current FSR
-    auto& fsr = this->get_fsr(r, u);
-
-    // Get distance we can travel in FSR
-    double distance = fsr.distance(r, u);
-
-    // Add new segment
-    segments.emplace_back(&fsr, distance);
-
-    // Increment distance
-    r = r + distance * u;
-    dist += distance;
-  }
-
-  return dist;
-}
-
 bool Cell::inside(const Vector& r, const Direction& u) const {
   if (x_min_->side(r, u) == Surface::Side::Negative) return false;
   if (y_min_->side(r, u) == Surface::Side::Negative) return false;
@@ -122,29 +94,7 @@ double Cell::distance(const Vector& r, const Direction& u) const {
                   std::min(y_min_dist, y_max_dist));
 }
 
-FlatSourceRegion& Cell::get_fsr(const Vector& r, const Direction& u) {
-  std::stringstream mssg;
-  if (this->inside(r, u) == false) {
-    mssg << "Could not find FSR at r = " << r << ", u = " << u << ".\n";
-    mssg << "Position r and direction u are not inside the cell.";
-    spdlog::error(mssg.str());
-    throw ScarabeeException(mssg.str());
-  }
-
-  for (auto& fsr : fsrs_) {
-    if (fsr.inside(r, u)) return fsr;
-  }
-
-  mssg << "Could not find FSR at r = " << r << ", u = " << u << ".";
-  spdlog::error(mssg.str());
-  throw ScarabeeException(mssg.str());
-
-  // NEVER GETS HERE
-  return fsrs_.front();
-}
-
-const FlatSourceRegion& Cell::get_fsr(const Vector& r,
-                                      const Direction& u) const {
+UniqueFSR Cell::get_fsr(const Vector& r, const Direction& u) const {
   std::stringstream mssg;
   if (this->inside(r, u) == false) {
     mssg << "Could not find FSR at r = " << r << ", u = " << u << ".\n";
@@ -154,7 +104,7 @@ const FlatSourceRegion& Cell::get_fsr(const Vector& r,
   }
 
   for (const auto& fsr : fsrs_) {
-    if (fsr.inside(r, u)) return fsr;
+    if (fsr.inside(r, u)) return {&fsr, 0};
   }
 
   mssg << "Could not find FSR at r = " << r << ", u = " << u << ".";
@@ -162,7 +112,27 @@ const FlatSourceRegion& Cell::get_fsr(const Vector& r,
   throw ScarabeeException(mssg.str());
 
   // NEVER GETS HERE
-  return fsrs_.front();
+  return {&fsrs_.front(), 0};
+}
+
+std::set<std::size_t> Cell::get_all_fsr_ids() const {
+  std::set<std::size_t> ids;
+
+  for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    ids.insert(fsrs_[i].id());
+  }
+
+  return ids;
+}
+
+std::size_t Cell::get_num_fsr_instances(std::size_t id) const {
+  // Each cell should only have up to 1 instance of a FSR
+  for (const auto& fsr : fsrs_) {
+    if (fsr.id() == id)
+      return 1;
+  }
+
+  return 0;
 }
 
 }  // namespace scarabee

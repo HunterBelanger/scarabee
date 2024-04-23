@@ -20,8 +20,4 @@ EmptyCell::EmptyCell(const std::shared_ptr<TransportXS>& mat, double dx,
   fsrs_.back().tokens().push_back({y_max_, Surface::Side::Negative});
 }
 
-std::shared_ptr<Cell> EmptyCell::clone() const {
-  return std::make_shared<EmptyCell>(*this);
-}
-
 }  // namespace scarabee

@@ -14,8 +14,6 @@ class SimplePinCell : public Cell {
   SimplePinCell(const std::vector<double>& rads, const std::vector<std::shared_ptr<TransportXS>>& mats, double dx,
           double dy);
 
-  std::shared_ptr<Cell> clone() const override final;
-
  private:
   std::vector<double> mat_radii_;
   std::vector<std::shared_ptr<TransportXS>> mats_;

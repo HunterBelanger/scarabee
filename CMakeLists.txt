@@ -93,6 +93,7 @@ add_library(scarabee STATIC src/logging.cpp
                             src/cylindrical_cell.cpp
                             src/cylindrical_flux_solver.cpp
                             src/surface.cpp
+                            src/flat_source_region.cpp
                             src/cell.cpp
                             src/empty_cell.cpp
                             src/simple_pin_cell.cpp
