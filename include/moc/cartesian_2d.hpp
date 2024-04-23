@@ -66,7 +66,7 @@ class Cartesian2D {
   Vector get_tile_center(const TileIndex& ti) const;
 
   const Tile& tile(const TileIndex& ti) const;
-  
+
   void set_tiles(const std::vector<TileFill>& fills);
 
   bool tiles_valid() const;
@@ -76,11 +76,14 @@ class Cartesian2D {
 
   UniqueFSR get_fsr(const Vector& r, const Direction& u) const;
 
-  std::pair<UniqueFSR,Vector> get_fsr_r_local(const Vector& r, const Direction& u) const;
+  std::pair<UniqueFSR, Vector> get_fsr_r_local(const Vector& r,
+                                               const Direction& u) const;
 
   std::size_t get_num_fsr_instances(std::size_t id) const;
 
   std::set<std::size_t> get_all_fsr_ids() const;
+
+  void fill_fsrs(std::map<std::size_t, const FlatSourceRegion*>& fsrs) const;
 
   std::size_t num_fsrs() const;
 

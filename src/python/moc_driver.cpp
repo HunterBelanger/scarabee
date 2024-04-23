@@ -97,17 +97,12 @@ void init_MOCDriver(py::module& m) {
       .def_property_readonly("polar_quadrature", &MOCDriver::polar_quadrature,
                              "quadrature used for polar angle integration")
 
-      .def("solve", &MOCDriver::solve,
-           "begins iterations to solve problem")
+      .def("solve", &MOCDriver::solve, "begins iterations to solve problem")
 
       .def_property(
           "sim_mode",
-          [](const MOCDriver& md) -> SimulationMode {
-            return md.sim_mode();
-          },
-          [](MOCDriver& md, SimulationMode& m) {
-            md.sim_mode() = m;
-          },
+          [](const MOCDriver& md) -> SimulationMode { return md.sim_mode(); },
+          [](MOCDriver& md, SimulationMode& m) { md.sim_mode() = m; },
           "simulation mode (fixed-source, keff)")
 
       .def_property(
@@ -115,9 +110,7 @@ void init_MOCDriver(py::module& m) {
           [](const MOCDriver& md) -> BoundaryCondition {
             return md.x_min_bc();
           },
-          [](MOCDriver& md, BoundaryCondition& bc) {
-            md.x_min_bc() = bc;
-          },
+          [](MOCDriver& md, BoundaryCondition& bc) { md.x_min_bc() = bc; },
           "boundadary condition at x_min")
 
       .def_property(
@@ -125,9 +118,7 @@ void init_MOCDriver(py::module& m) {
           [](const MOCDriver& md) -> BoundaryCondition {
             return md.x_max_bc();
           },
-          [](MOCDriver& md, BoundaryCondition& bc) {
-            md.x_max_bc() = bc;
-          },
+          [](MOCDriver& md, BoundaryCondition& bc) { md.x_max_bc() = bc; },
           "boundadary condition at x_max")
 
       .def_property(
@@ -135,9 +126,7 @@ void init_MOCDriver(py::module& m) {
           [](const MOCDriver& md) -> BoundaryCondition {
             return md.y_min_bc();
           },
-          [](MOCDriver& md, BoundaryCondition& bc) {
-            md.y_min_bc() = bc;
-          },
+          [](MOCDriver& md, BoundaryCondition& bc) { md.y_min_bc() = bc; },
           "boundadary condition at y_min")
 
       .def_property(
@@ -145,9 +134,7 @@ void init_MOCDriver(py::module& m) {
           [](const MOCDriver& md) -> BoundaryCondition {
             return md.y_max_bc();
           },
-          [](MOCDriver& md, BoundaryCondition& bc) {
-            md.y_max_bc() = bc;
-          },
+          [](MOCDriver& md, BoundaryCondition& bc) { md.y_max_bc() = bc; },
           "boundadary condition at y_max")
 
       .def_property_readonly("x_min", &MOCDriver::x_min,
@@ -166,33 +153,45 @@ void init_MOCDriver(py::module& m) {
                              "returns true if solve_keff has been run "
                              "sucessfully (reset to false on generate_tracks)")
 
-      .def("set_extern_src", py::overload_cast<const Vector&, const Direction& ,std::size_t,double>(&MOCDriver::set_extern_src),
-          "Sets the external source in the flat source region at r.\n\n"
-          "Arguments:\n"
-          "    r    position\n"
-          "    u    direction\n"
-          "    g    group index\n"
-          "    src  value of source", py::arg("r"), py::arg("u"), py::arg("g"), py::arg("src"))
+      .def("set_extern_src",
+           py::overload_cast<const Vector&, const Direction&, std::size_t,
+                             double>(&MOCDriver::set_extern_src),
+           "Sets the external source in the flat source region at r.\n\n"
+           "Arguments:\n"
+           "    r    position\n"
+           "    u    direction\n"
+           "    g    group index\n"
+           "    src  value of source",
+           py::arg("r"), py::arg("u"), py::arg("g"), py::arg("src"))
 
-      .def("set_extern_src", py::overload_cast<std::size_t,std::size_t,double>(&MOCDriver::set_extern_src),
-          "Sets the external source in flat source region i.\n\n"
-          "Arguments:\n"
-          "    i    flat source region index\n"
-          "    g    group index\n"
-          "    src  value of source", py::arg("i"), py::arg("g"), py::arg("src"))
+      .def("set_extern_src",
+           py::overload_cast<std::size_t, std::size_t, double>(
+               &MOCDriver::set_extern_src),
+           "Sets the external source in flat source region i.\n\n"
+           "Arguments:\n"
+           "    i    flat source region index\n"
+           "    g    group index\n"
+           "    src  value of source",
+           py::arg("i"), py::arg("g"), py::arg("src"))
 
-      .def("extern_src", py::overload_cast<const Vector&, const Direction& ,std::size_t>(&MOCDriver::extern_src, py::const_),
-          "Returns the external source in the flat source region at r.\n\n"
-          "Arguments:\n"
-          "    r    position\n"
-          "    u    direction\n"
-          "    g    group index", py::arg("r"), py::arg("u"), py::arg("g"))
+      .def("extern_src",
+           py::overload_cast<const Vector&, const Direction&, std::size_t>(
+               &MOCDriver::extern_src, py::const_),
+           "Returns the external source in the flat source region at r.\n\n"
+           "Arguments:\n"
+           "    r    position\n"
+           "    u    direction\n"
+           "    g    group index",
+           py::arg("r"), py::arg("u"), py::arg("g"))
 
-      .def("extern_src", py::overload_cast<std::size_t,std::size_t>(&MOCDriver::extern_src, py::const_),
-          "Returns the external source in flat source region i.\n\n"
-          "Arguments:\n"
-          "    i    flat source region index\n"
-          "    g    group index", py::arg("i"), py::arg("g"))
+      .def("extern_src",
+           py::overload_cast<std::size_t, std::size_t>(&MOCDriver::extern_src,
+                                                       py::const_),
+           "Returns the external source in flat source region i.\n\n"
+           "Arguments:\n"
+           "    i    flat source region index\n"
+           "    g    group index",
+           py::arg("i"), py::arg("g"))
 
       .def(
           "rasterize_flux",

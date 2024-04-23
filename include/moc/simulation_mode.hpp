@@ -3,12 +3,10 @@
 
 #include <cstdint>
 
-namespace scarabee
-{
+namespace scarabee {
 
 enum class SimulationMode : std::uint8_t { FixedSource, Keff };
-    
-} // namespace scarabee
 
+}  // namespace scarabee
 
 #endif

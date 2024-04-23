@@ -7,13 +7,10 @@
 
 namespace scarabee {
 
-SimplePinCell::SimplePinCell(const std::vector<double>& mat_rads,
-                 const std::vector<std::shared_ptr<TransportXS>>& mats,
-                 double dx, double dy)
-    : Cell(dx, dy),
-      mat_radii_(mat_rads),
-      mats_(mats),
-      radii_() {
+SimplePinCell::SimplePinCell(
+    const std::vector<double>& mat_rads,
+    const std::vector<std::shared_ptr<TransportXS>>& mats, double dx, double dy)
+    : Cell(dx, dy), mat_radii_(mat_rads), mats_(mats), radii_() {
   this->build();
 }
 
@@ -109,9 +106,10 @@ void SimplePinCell::build() {
     }
   }
 
-  // We now make the outer region 
+  // We now make the outer region
   fsrs_.emplace_back();
-  fsrs_.back().volume() = dx*dy - (PI * mat_radii_.back() * mat_radii_.back());
+  fsrs_.back().volume() =
+      dx * dy - (PI * mat_radii_.back() * mat_radii_.back());
   fsrs_.back().xs() = mats_.back();
   fsrs_.back().tokens().push_back({radii_.back(), Surface::Side::Positive});
   fsrs_.back().tokens().push_back({x_min_, Surface::Side::Positive});

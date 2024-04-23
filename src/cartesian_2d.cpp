@@ -10,7 +10,12 @@ namespace scarabee {
 
 Cartesian2D::Cartesian2D(const std::vector<std::shared_ptr<Surface>>& x_bounds,
                          const std::vector<std::shared_ptr<Surface>>& y_bounds)
-    : x_bounds_(x_bounds), y_bounds_(y_bounds), tiles_(), fsr_offset_map_(), nx_(), ny_() {
+    : x_bounds_(x_bounds),
+      y_bounds_(y_bounds),
+      tiles_(),
+      fsr_offset_map_(),
+      nx_(),
+      ny_() {
   // First, make sure we have at least 2 bounds in each direction
   if (x_bounds_.size() < 2) {
     auto mssg = "Must provide at least 2 x-bounds.";
@@ -304,7 +309,7 @@ UniqueFSR Cartesian2D::get_fsr(const Vector& r, const Direction& u) const {
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
-  
+
   UniqueFSR out;
 
   if (t.c2d) {
@@ -321,7 +326,8 @@ UniqueFSR Cartesian2D::get_fsr(const Vector& r, const Direction& u) const {
   return out;
 }
 
-std::pair<UniqueFSR,Vector> Cartesian2D::get_fsr_r_local(const Vector& r, const Direction& u) const {
+std::pair<UniqueFSR, Vector> Cartesian2D::get_fsr_r_local(
+    const Vector& r, const Direction& u) const {
   auto ti = this->get_tile_index(r, u);
 
   if (ti.has_value() == false) {
@@ -344,7 +350,7 @@ std::pair<UniqueFSR,Vector> Cartesian2D::get_fsr_r_local(const Vector& r, const 
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
-  
+
   std::pair<UniqueFSR, Vector> out{{nullptr, 0}, r_tile};
 
   if (t.c2d) {
@@ -355,7 +361,8 @@ std::pair<UniqueFSR,Vector> Cartesian2D::get_fsr_r_local(const Vector& r, const 
 
   // Get unique ID
   if (out.first.fsr) {
-    out.first.instance += fsr_offset_map_(ti->i, ti->j).find(out.first.fsr->id())->second;
+    out.first.instance +=
+        fsr_offset_map_(ti->i, ti->j).find(out.first.fsr->id())->second;
   }
 
   return out;
@@ -421,14 +428,24 @@ std::set<std::size_t> Cartesian2D::get_all_fsr_ids() const {
       tile_ids = tiles_[t].cell->get_all_fsr_ids();
     }
 
-    for (const auto fsr : tile_ids)
-      fsr_ids.insert(fsr);
+    for (const auto fsr : tile_ids) fsr_ids.insert(fsr);
   }
 
   return fsr_ids;
 }
 
-void Cartesian2D::make_offset_map(){
+void Cartesian2D::fill_fsrs(
+    std::map<std::size_t, const FlatSourceRegion*>& fsrs) const {
+  for (const auto t : tiles_) {
+    if (t.c2d) {
+      t.c2d->fill_fsrs(fsrs);
+    } else if (t.cell) {
+      t.cell->fill_fsrs(fsrs);
+    }
+  }
+}
+
+void Cartesian2D::make_offset_map() {
   auto fsr_ids = this->get_all_fsr_ids();
 
   // Set all offsets to be zero
@@ -440,14 +457,13 @@ void Cartesian2D::make_offset_map(){
 
   // Now go through and build all offsets
   for (std::size_t i = 1; i < tiles_.size(); i++) {
-    const auto& t = tiles_[i];
+    const auto& t = tiles_[i - 1];
 
     for (uint32_t fsr_id : fsr_ids) {
       fsr_offset_map_[i][fsr_id] = fsr_offset_map_[i - 1][fsr_id];
       fsr_offset_map_[i][fsr_id] += t.get_num_fsr_instances(fsr_id);
     }
   }
-
 }
 
 }  // namespace scarabee

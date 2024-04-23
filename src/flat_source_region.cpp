@@ -2,6 +2,6 @@
 
 namespace scarabee {
 
-std::size_t FlatSourceRegion::id_counter {0};
+std::size_t FlatSourceRegion::id_counter{0};
 
 }

@@ -128,11 +128,19 @@ std::set<std::size_t> Cell::get_all_fsr_ids() const {
 std::size_t Cell::get_num_fsr_instances(std::size_t id) const {
   // Each cell should only have up to 1 instance of a FSR
   for (const auto& fsr : fsrs_) {
-    if (fsr.id() == id)
-      return 1;
+    if (fsr.id() == id) return 1;
   }
 
   return 0;
+}
+
+void Cell::fill_fsrs(
+    std::map<std::size_t, const FlatSourceRegion*>& fsrs) const {
+  for (std::size_t i = 0; i < fsrs_.size(); i++) {
+    if (fsrs.find(fsrs_[i].id()) == fsrs.end()) {
+      fsrs[fsrs_[i].id()] = &fsrs_[i];
+    }
+  }
 }
 
 }  // namespace scarabee

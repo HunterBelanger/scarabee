@@ -40,21 +40,41 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
     throw ScarabeeException(mssg);
   }
 
-  // Get all FSRs and ID offsets
+  // Get total number of unique FSRs
   nfsrs_ = geometry_->num_fsrs();
   if (nfsrs_ == 0) {
     auto mssg = "No flat source regions found.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
+  fsrs_.reserve(nfsrs_);
+
+  // Get all FSRs IDs, and pointers to them
   auto fsr_ids = geometry_->get_all_fsr_ids();
+  std::map<std::size_t, const FlatSourceRegion*> fsr_ptrs;
+  geometry_->fill_fsrs(fsr_ptrs);
+
+  // We now create offsets for each FSR ID, so that we can get a linear index
+  // in the global FSR array, based on the ID and the unique instance number.
   for (auto id : fsr_ids) fsr_offsets_[id] = 0;
   auto id_it_prev = fsr_offsets_.begin();
-  for (auto id_it = ++fsr_offsets_.begin(); id_it != fsr_offsets_.end(); id_it++) {
+  for (auto id_it = ++fsr_offsets_.begin(); id_it != fsr_offsets_.end();
+       id_it++) {
     const std::size_t id_prev = id_it_prev->first;
     const std::size_t ninst_prev = geometry_->get_num_fsr_instances(id_prev);
     fsr_offsets_[id_it->first] = fsr_offsets_[id_prev] + ninst_prev;
     id_it_prev++;
+
+    // Save ninst_prev points
+    for (std::size_t i = 0; i < ninst_prev; i++) {
+      fsrs_.push_back(fsr_ptrs[id_prev]);
+    }
+  }
+  // Save pointers for last FSR
+  const std::size_t id_prev = id_it_prev->first;
+  const std::size_t ninst_prev = geometry_->get_num_fsr_instances(id_prev);
+  for (std::size_t i = 0; i < ninst_prev; i++) {
+    fsrs_.push_back(fsr_ptrs[id_prev]);
   }
 
   ngroups_ = geometry_->ngroups();
@@ -168,18 +188,18 @@ void MOCDriver::solve() {
     bool all_zero_extern_src = true;
     for (const auto& es : extern_src_) {
       if (es < 0.) {
-        auto mssg = "All external sources must be > 0."; 
+        auto mssg = "All external sources must be > 0.";
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
-      } 
+      }
 
       if (es > 0.) {
-        all_zero_extern_src = false; 
+        all_zero_extern_src = false;
       }
     }
-    
+
     if (all_zero_extern_src) {
-      auto mssg = "Must have at least one non-zero external source."; 
+      auto mssg = "Must have at least one non-zero external source.";
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
     }
@@ -257,7 +277,8 @@ void MOCDriver::solve() {
   spdlog::info("Simulation Time: {:.5E} s", sim_timer.elapsed_time());
 }
 
-void MOCDriver::sweep(xt::xtensor<double, 2>& sflux, const xt::xtensor<double, 2>& src) {
+void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
+                      const xt::xtensor<double, 2>& src) {
 #pragma omp parallel for
   for (std::size_t g = 0; g < ngroups_; g++) {
     for (auto& tracks : tracks_) {
@@ -485,12 +506,14 @@ void MOCDriver::generate_tracks() {
         Vector r_start(x, y);
         Vector r_end = r_start;
         std::vector<Segment> segments;
-        std::pair<UniqueFSR,Vector> fsr_r = geometry_->get_fsr_r_local(r_end, u);
+        std::pair<UniqueFSR, Vector> fsr_r =
+            geometry_->get_fsr_r_local(r_end, u);
         auto ti = geometry_->get_tile_index(r_end, u);
         while (fsr_r.first.fsr && ti) {
           const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
-          segments.emplace_back(fsr_r.first.fsr, d, this->get_fsr_indx(fsr_r.first));
-          r_end = r_end + d*u;
+          segments.emplace_back(fsr_r.first.fsr, d,
+                                this->get_fsr_indx(fsr_r.first));
+          r_end = r_end + d * u;
           ti = geometry_->get_tile_index(r_end, u);
           if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
         }
@@ -518,12 +541,14 @@ void MOCDriver::generate_tracks() {
         Vector r_start(x, y);
         Vector r_end = r_start;
         std::vector<Segment> segments;
-        std::pair<UniqueFSR,Vector> fsr_r = geometry_->get_fsr_r_local(r_end, u);
+        std::pair<UniqueFSR, Vector> fsr_r =
+            geometry_->get_fsr_r_local(r_end, u);
         auto ti = geometry_->get_tile_index(r_end, u);
         while (fsr_r.first.fsr && ti) {
           const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
-          segments.emplace_back(fsr_r.first.fsr, d, this->get_fsr_indx(fsr_r.first));
-          r_end = r_end + d*u;
+          segments.emplace_back(fsr_r.first.fsr, d,
+                                this->get_fsr_indx(fsr_r.first));
+          r_end = r_end + d * u;
           ti = geometry_->get_tile_index(r_end, u);
           if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
         }
@@ -775,13 +800,14 @@ std::size_t MOCDriver::get_fsr_indx(const UniqueFSR& fsr) const {
   return i;
 }
 
-void MOCDriver::set_extern_src(const Vector& r, const Direction& u, std::size_t g, double src) {
+void MOCDriver::set_extern_src(const Vector& r, const Direction& u,
+                               std::size_t g, double src) {
   std::size_t i;
-  
+
   try {
     i = this->get_fsr_indx(this->get_fsr(r, u));
   } catch (ScarabeeException& err) {
-    err.add_to_exception("Could not obtain source region index."); 
+    err.add_to_exception("Could not obtain source region index.");
   }
 
   if (g >= this->ngroups()) {
@@ -796,16 +822,17 @@ void MOCDriver::set_extern_src(const Vector& r, const Direction& u, std::size_t 
     throw ScarabeeException(mssg);
   }
 
-  extern_src_(g,i) = src;
+  extern_src_(g, i) = src;
 }
 
-double MOCDriver::extern_src(const Vector& r, const Direction& u, std::size_t g) const {
+double MOCDriver::extern_src(const Vector& r, const Direction& u,
+                             std::size_t g) const {
   std::size_t i;
-  
+
   try {
     i = this->get_fsr_indx(this->get_fsr(r, u));
   } catch (ScarabeeException& err) {
-    err.add_to_exception("Could not obtain source region index."); 
+    err.add_to_exception("Could not obtain source region index.");
   }
 
   if (g >= this->ngroups()) {
@@ -814,12 +841,12 @@ double MOCDriver::extern_src(const Vector& r, const Direction& u, std::size_t g)
     throw ScarabeeException(mssg);
   }
 
-  return extern_src_(g,i);
+  return extern_src_(g, i);
 }
 
 void MOCDriver::set_extern_src(std::size_t i, std::size_t g, double src) {
   if (i >= nfsrs_) {
-    auto mssg = "Source region index out of range."; 
+    auto mssg = "Source region index out of range.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -836,12 +863,12 @@ void MOCDriver::set_extern_src(std::size_t i, std::size_t g, double src) {
     throw ScarabeeException(mssg);
   }
 
-  extern_src_(g,i) = src;
+  extern_src_(g, i) = src;
 }
 
 double MOCDriver::extern_src(std::size_t i, std::size_t g) const {
   if (i >= nfsrs_) {
-    auto mssg = "Source region index out of range."; 
+    auto mssg = "Source region index out of range.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -852,7 +879,7 @@ double MOCDriver::extern_src(std::size_t i, std::size_t g) const {
     throw ScarabeeException(mssg);
   }
 
-  return extern_src_(g,i);
+  return extern_src_(g, i);
 }
 
 }  // namespace scarabee

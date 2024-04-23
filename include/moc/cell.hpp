@@ -9,6 +9,7 @@
 #include <moc/surface.hpp>
 #include <utils/constants.hpp>
 
+#include <map>
 #include <memory>
 #include <set>
 #include <vector>
@@ -30,6 +31,8 @@ class Cell {
   std::set<std::size_t> get_all_fsr_ids() const;
 
   std::size_t get_num_fsr_instances(std::size_t id) const;
+
+  void fill_fsrs(std::map<std::size_t, const FlatSourceRegion*>& fsrs) const;
 
   double dx() const { return x_max_->x0() - x_min_->x0(); }
   double dy() const { return y_max_->y0() - y_min_->y0(); }

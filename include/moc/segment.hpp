@@ -12,7 +12,8 @@ namespace scarabee {
 
 class Segment {
  public:
-  Segment(const FlatSourceRegion* fsr, double length, std::size_t indx) : fsr_(fsr), length_(length), fsr_indx_(indx) {}
+  Segment(const FlatSourceRegion* fsr, double length, std::size_t indx)
+      : fsr_(fsr), length_(length), fsr_indx_(indx) {}
 
   double length() const { return length_; }
 

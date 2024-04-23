@@ -11,8 +11,9 @@ namespace scarabee {
 
 class SimplePinCell : public Cell {
  public:
-  SimplePinCell(const std::vector<double>& rads, const std::vector<std::shared_ptr<TransportXS>>& mats, double dx,
-          double dy);
+  SimplePinCell(const std::vector<double>& rads,
+                const std::vector<std::shared_ptr<TransportXS>>& mats,
+                double dx, double dy);
 
  private:
   std::vector<double> mat_radii_;

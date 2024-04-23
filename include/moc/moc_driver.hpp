@@ -54,7 +54,8 @@ class MOCDriver {
 
   std::size_t get_fsr_indx(const UniqueFSR& fsr) const;
 
-  void set_extern_src(const Vector& r, const Direction& u, std::size_t g, double src);
+  void set_extern_src(const Vector& r, const Direction& u, std::size_t g,
+                      double src);
   double extern_src(const Vector& r, const Direction& u, std::size_t g) const;
 
   void set_extern_src(std::size_t i, std::size_t g, double src);
@@ -92,7 +93,8 @@ class MOCDriver {
   PolarQuadrature polar_quad_;              // Polar quadrature
   xt::xtensor<double, 2> flux_;             // Indexed by group then FSR
   xt::xtensor<double, 2> extern_src_;       // Indexed by group then FSR
-  std::map<std::size_t, std::size_t> fsr_offsets_;
+  std::vector<const FlatSourceRegion*> fsrs_;
+  std::map<std::size_t, std::size_t> fsr_offsets_;  // Indexed by id -> offset
   std::size_t ngroups_;
   std::size_t nfsrs_;
   std::size_t n_pol_angles_;
@@ -100,7 +102,7 @@ class MOCDriver {
   double keff_tol_ = 1.E-5;
   double keff_ = 1.;
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
-  SimulationMode mode_ {SimulationMode::Keff};
+  SimulationMode mode_{SimulationMode::Keff};
   bool precalculated_exps_{false};
   bool solved_{false};
 

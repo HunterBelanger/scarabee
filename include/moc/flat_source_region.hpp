@@ -69,8 +69,8 @@ class FlatSourceRegion {
 };
 
 struct UniqueFSR {
-  const FlatSourceRegion* fsr {nullptr};
-  std::size_t instance {0};
+  const FlatSourceRegion* fsr{nullptr};
+  std::size_t instance{0};
 };
 
 }  // namespace scarabee
