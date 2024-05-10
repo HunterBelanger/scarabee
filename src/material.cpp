@@ -34,7 +34,6 @@ void MaterialComposition::add_nuclide(const MaterialComponent& comp) {
 
 Material::Material(const MaterialComposition& comp, double temp, double density, DensityUnits du, std::shared_ptr<NDLibrary> ndl):
 composition_(comp),
-dilutions_(comp.components.size(), 1.E10), // Default to infinite dilution
 temperature_(temp),
 atoms_per_bcm_(-1.),
 grams_per_cm3_(-1.),
@@ -115,17 +114,10 @@ resonant_(false) {
   }
 }
 
-void Material::set_dilution(const std::string& name, double d) {
-  if (d <= 0.) {
-    auto mssg = "Dilution must be > 0.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
+double Material::atom_density(const std::string& name) const {
   for (std::size_t i = 0; i < composition_.components.size(); i++) {
     if (composition_.components[i].name == name) {
-      dilutions_[i] = d;
-      return;
+      return this->atoms_per_bcm() * composition_.components[i].fraction;
     }
   }
 
@@ -133,6 +125,19 @@ void Material::set_dilution(const std::string& name, double d) {
   mssg << "Could not find component with name \"" << name << "\".";
   spdlog::error(mssg.str());
   throw ScarabeeException(mssg.str());
+
+  // NEVER GETS HERE
+  return 0.;
+}
+
+bool Material::has_component(const std::string& name) const {
+  for (std::size_t i = 0; i < composition_.components.size(); i++) {
+    if (composition_.components[i].name == name) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 double Material::calc_avg_molar_mass(const NDLibrary& ndl) const {

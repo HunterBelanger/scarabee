@@ -37,13 +37,13 @@ void init_Material(py::module& m) {
   py::class_<Material>(m, "Material")
   .def(py::init<const MaterialComposition&, double, double, DensityUnits, std::shared_ptr<NDLibrary>>())
   .def_property_readonly("composition", &Material::composition)
-  .def_property("dilutions", py::overload_cast<>(&Material::dilutions, py::const_), [](Material& self, const std::vector<double>& dil) {self.dilutions() = dil;})
   .def_property_readonly("temperature", &Material::temperature)
   .def_property_readonly("average_molar_mass", &Material::average_molar_mass)
   .def_property_readonly("atoms_per_bcm", &Material::atoms_per_bcm)
-  .def_property_readonly("grams_per_cm3", &Material::grams_per_cm3)
   .def_property_readonly("potential_xs", &Material::potential_xs)
+  .def_property_readonly("grams_per_cm3", &Material::grams_per_cm3)
   .def_property_readonly("fissile", &Material::fissile)
   .def_property_readonly("resonant", &Material::resonant)
-  .def("set_dilution", &Material::set_dilution);
+  .def("has_component", &Material::has_component)
+  .def("atom_density", &Material::atom_density);
 }

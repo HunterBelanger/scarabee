@@ -29,6 +29,7 @@ void init_NDLibrary(py::module& m) {
   .def_property_readonly("ngroups", &NDLibrary::ngroups)
   .def_property_readonly("group_structure", &NDLibrary::group_structure)
   .def("get_nuclide", py::overload_cast<const std::string&>(&NDLibrary::get_nuclide, py::const_))
-  .def("build_xs", &NDLibrary::build_xs)
+  .def("interp_nuclide_xs", &NDLibrary::interp_nuclide_xs)
+  .def("carlvik_two_term", &NDLibrary::carlvik_two_term)
   .def("potential_xs", &NDLibrary::potential_xs);
 }

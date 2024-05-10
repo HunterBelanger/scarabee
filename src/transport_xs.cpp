@@ -45,22 +45,32 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
   }
 
   // First, calculate/update fission spectrum
-  for (std::uint32_t g = 0; g < ngroups(); g++) {
-    // Calc new fission data
-    const double vEf_sum = vEf(g) + R.vEf(g);
-    if (vEf_sum > 0.) {
-      chi_(g) = (chi(g) * vEf(g) + R.chi(g) * R.vEf(g)) / vEf_sum;
-    } else {
-      chi_(g) = 0.;
+  double L_vEf_sum = 0.;
+  double R_vEf_sum = 0.;
+  for (std::size_t g = 0; g < ngroups(); g++) {
+    L_vEf_sum += vEf(g);
+    R_vEf_sum += R.vEf(g);
+  }
+
+  double chi_sum = 0.; 
+  if (L_vEf_sum+R_vEf_sum > 0.) {
+    for (std::size_t g = 0; g < ngroups(); g++) {
+      chi_(g) = (chi(g)*L_vEf_sum + R.chi(g)*R_vEf_sum) / (L_vEf_sum + R_vEf_sum);
+      chi_sum += chi_(g);
     }
+
+    // Renormalize chi
+    if (chi_sum > 0.) chi_ /= chi_sum;
+  } else {
+    chi_.fill(0.);
   }
 
   // Make sure that we are fissile if the other was also fissile
   if (R.fissile()) fissile_ = true;
 
   // Add all other cross sections which aren't averaged
-  for (std::uint32_t g = 0; g < ngroups(); g++) {
-    for (std::uint32_t gout = 0; gout < ngroups(); gout++) {
+  for (std::size_t g = 0; g < ngroups(); g++) {
+    for (std::size_t gout = 0; gout < ngroups(); gout++) {
       Es_(g, gout) += R.Es(g, gout);
     }
 
@@ -68,6 +78,8 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
     Ea_(g) += R.Ea(g);
     vEf_(g) += R.vEf(g);
   }
+
+  this->check_xs();
 
   return *this;
 }
@@ -84,6 +96,8 @@ TransportXS& TransportXS::operator*=(double N) {
 
   // Scale vEf_
   vEf_ *= N;
+
+  this->check_xs();
 
   return *this;
 }

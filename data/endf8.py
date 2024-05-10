@@ -1,8 +1,8 @@
 from frendy import FrendyMG
 import h5py
 
-base = "/mnt/c/Users/Hunter/Documents/nuclear_data/ENDF-B-VIII.0_neutrons/"
-tslbase = "/mnt/c/Users/Hunter/Documents/nuclear_data/ENDF-B-VIII.0_thermal_scatt/"
+base = "/mnt/c/Users/BELANH2/Documents/nuclear_data/ENDF-VIII.0/endf/neutrons/"
+tslbase = "/mnt/c/Users/BELANH2/Documents/nuclear_data/ENDF-VIII.0/endf/thermal_scatt/"
 #temps = [293., 500., 600., 800., 1000., 1500., 2000.]
 temps = [293.6]
 dil_u238 = [1.E1, 2.E1, 5.E1, 1.E2, 3.E2, 1.E3, 1.E4, 1.E5, 1.E6, 1.E8]
@@ -10,7 +10,7 @@ dil_hvy = [1.E1, 1.E2, 3.E2, 1.E3, 3.E3, 1.E4, 3.E4, 1.E5, 1.E6, 1.E8]
 dil_oth = [1.E0, 1.E1, 1.E2, 1.E3, 1.E4, 1.E5, 1.E6, 1.E8]
 
 h5 = h5py.File('endf8.h5', 'w')
-h5.attrs['ngroups'] = 281
+h5.attrs['ngroups'] = 172
 h5.attrs['group-structure'] = 'SHEM-281'
 h5.attrs['library'] = 'ENDF/B-VIII.0'
 

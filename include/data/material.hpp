@@ -33,25 +33,20 @@ class Material {
 
     const MaterialComposition& composition() const { return composition_; }
 
-    const std::vector<double>& dilutions() const { return dilutions_; }
-    std::vector<double>& dilutions() { return dilutions_; }
-
-    void set_dilution(const std::string& name, double d);
-
-    double temperature() const { return temperature_; }
-
-    double average_molar_mass() const { return average_molar_mass_; }
+    bool has_component(const std::string& name) const;
+    double atom_density(const std::string& name) const;
 
     double atoms_per_bcm() const { return atoms_per_bcm_; }
     double grams_per_cm3() const { return grams_per_cm3_; }
-    double potential_xs() const { return grams_per_cm3_;}
+    double potential_xs() const { return grams_per_cm3_; }
+    double temperature() const { return temperature_; }
+    double average_molar_mass() const { return average_molar_mass_; }
 
     bool fissile() const { return fissile_; }
     bool resonant() const { return resonant_; }
 
   private:
     MaterialComposition composition_;
-    std::vector<double> dilutions_;
     double temperature_;
     double average_molar_mass_;
     double atoms_per_bcm_;

@@ -95,6 +95,7 @@ void init_TransportXS(py::module& m) {
            py::arg("gin"), py::arg("gout"))
 
       .def("__mul__", &TransportXS::operator*)
+      .def("__rmul__", [](const TransportXS& xs, double N) { return xs*N; })
       .def("__add__", &TransportXS::operator+)
       .def("__imul__", &TransportXS::operator*=)
       .def("__iadd__", &TransportXS::operator+=);

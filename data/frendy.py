@@ -97,7 +97,8 @@ class FrendyMG:
     self.tsl_type = None
     self.label = ""
     self.name = ""
-    self.ngroups = 281
+    #self.ngroups = 281
+    self.ngroups = 172
     self.initialized = False
     self.processed = False
     self.resonant = False
@@ -210,11 +211,12 @@ class FrendyMG:
     out += "mg_file_name {mgfname}\n".format(mgfname=self.name)
     out += "temperature {temp}\n".format(temp=temp)
     out += "legendre_order 1\n"
-    out += "mg_structure ( shem-cea-281 )\n"
+    #out += "mg_structure ( shem-cea-281 )\n"
+    out += "mg_structure ( xmas-nea-lanl-172 )\n"
     out += "mg_weighting_spectrum ( fission+1/e+maxwell  )\n"
     out += "process_gas_xs off\n"
     if self.dilutions is None:
-      out += "sigma_zero_data ( auto 0.01 50 1.E-10 factor linear )"
+      out += "sigma_zero_data ( auto 0.005 100 1.E-10 factor linear )"
     else:
       dil_frmt = len(self.dilutions)*"{:.2E} "
       out += "sigma_zero_data ( " + dil_frmt.format(*self.dilutions) + " )\n"
@@ -286,3 +288,30 @@ class FrendyMG:
         if d == 0:
           self.nu[itemp,:] = xs.nu
           self.chi[itemp,:] = xs.chi
+
+def read_1dxs(fname, nskip=3):
+  fl = open(fname, 'r')
+
+  # Skip first lines that have headers / dilutions / temperatures
+  for i in range(nskip):
+    fl.readline()
+
+  array = []
+
+  for line in fl:
+    line = line.strip()
+    if len(line) == 0:
+      continue
+
+    line = line.split()[4:]
+    line.reverse() # Reverse line for dilutions to go from low to high
+    for i in range(len(line)):
+      line[i] = float(line[i])
+    array.append(line)
+  fl.close()
+
+  array = np.array(array, dtype=np.float32)
+  array = np.copy(np.swapaxes(array, 0, 1))
+
+  # First index on dilution, second on group
+  return array
