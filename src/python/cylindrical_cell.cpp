@@ -20,18 +20,18 @@ void init_CylindricalCell(py::module& m) {
           "    mats   List of TransportXS for each region.",
           py::arg("radii"), py::arg("mats"))
 
-      .def("solved", &CylindricalCell::solved,
+      .def_property_readonly("solved", &CylindricalCell::solved,
            "Returns true is the system has been solved")
 
       .def("solve", &CylindricalCell::solve,
            "Solves the system for partial flux responses")
 
-      .def("ngroups", &CylindricalCell::ngroups, "Number of energy groups")
+      .def_property_readonly("ngroups", &CylindricalCell::ngroups, "Number of energy groups")
 
-      .def("nregions", &CylindricalCell::nregions, "Number of annular regions")
+      .def_property_readonly("nregions", &CylindricalCell::nregions, "Number of annular regions")
 
-      .def("Sb", &CylindricalCell::Sb,
-           "Outer suurface area (circumfrence) of cell")
+      .def_property_readonly("Sb", &CylindricalCell::Sb,
+           "Outer surface area (circumference) of cell")
 
       .def("V", &CylindricalCell::V,
            "Volume of region i\n\n"

@@ -85,11 +85,28 @@ FetchContent_Declare(xtensor-python
 FetchContent_MakeAvailable(xtensor-python)
 
 #===============================================================================
+# Get HighFive
+message(STATUS "Downloading HighFive")
+set(HDF5_USE_STATIC_LIBRARIES ON)
+set(HIGHFIVE_EXAMPLES OFF)
+set(HIGHFIVE_BUILD_DOCS OFF)
+set(HIGHFIVE_USE_BOOST OFF)
+set(HIGHFIVE_USE_XTENSOR ON)
+set(HighFive_FIND_QUIETLY ON)
+FetchContent_Declare(HighFive
+  GIT_REPOSITORY https://github.com/BlueBrain/HighFive.git
+  GIT_TAG        v2.9.0
+)
+FetchContent_MakeAvailable(HighFive)
+
+#===============================================================================
 add_library(scarabee STATIC src/logging.cpp
                             src/gauss_kronrod.cpp
                             src/chebyshev.cpp
                             src/math.cpp
                             src/transport_xs.cpp
+                            src/material.cpp
+                            src/nd_library.cpp
                             src/cylindrical_cell.cpp
                             src/cylindrical_flux_solver.cpp
                             src/surface.cpp
@@ -109,7 +126,7 @@ set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
 set_target_properties(scarabee PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
-target_link_libraries(scarabee PUBLIC xtl xtensor xtensor-python htl Eigen3::Eigen spdlog::spdlog)
+target_link_libraries(scarabee PUBLIC xtl xtensor xtensor-python htl HighFive Eigen3::Eigen spdlog::spdlog)
 target_include_directories(scarabee PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -134,6 +151,8 @@ pybind11_add_module(pyScarabee src/python/pyScarabee.cpp
                                src/python/direction.cpp
                                src/python/logging.cpp
                                src/python/transport_xs.cpp
+                               src/python/material.cpp
+                               src/python/nd_library.cpp
                                src/python/cylindrical_cell.cpp
                                src/python/cylindrical_flux_solver.cpp
                                src/python/polar_quadrature.cpp

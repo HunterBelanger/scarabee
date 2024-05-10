@@ -8,6 +8,11 @@
 namespace py = pybind11;
 
 extern void init_TransportXS(py::module&);
+extern void init_NuclideHandle(py::module&);
+extern void init_NDLibrary(py::module&);
+extern void init_MaterialComponent(py::module&);
+extern void init_MaterialComposition(py::module&);
+extern void init_Material(py::module&);
 extern void init_CylindricalCell(py::module&);
 extern void init_CylindricalFluxSolver(py::module&);
 extern void init_Logging(py::module&);
@@ -31,6 +36,11 @@ PYBIND11_MODULE(pyScarabee, m) {
   init_Vector(m);
   init_Direction(m);
   init_TransportXS(m);
+  init_NuclideHandle(m);
+  init_NDLibrary(m);
+  init_MaterialComponent(m);
+  init_MaterialComposition(m);
+  init_Material(m);
   init_CylindricalCell(m);
   init_CylindricalFluxSolver(m);
   init_PolarQuadrature(m);

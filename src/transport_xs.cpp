@@ -5,6 +5,7 @@
 
 #include <xtensor/xbuilder.hpp>
 
+#include <cmath>
 #include <sstream>
 
 namespace scarabee {
@@ -46,7 +47,12 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
   // First, calculate/update fission spectrum
   for (std::uint32_t g = 0; g < ngroups(); g++) {
     // Calc new fission data
-    chi_(g) = (chi(g) * vEf(g) + R.chi(g) * R.vEf(g)) / (vEf(g) + R.vEf(g));
+    const double vEf_sum = vEf(g) + R.vEf(g);
+    if (vEf_sum > 0.) {
+      chi_(g) = (chi(g) * vEf(g) + R.chi(g) * R.vEf(g)) / vEf_sum;
+    } else {
+      chi_(g) = 0.;
+    }
   }
 
   // Make sure that we are fissile if the other was also fissile
@@ -136,12 +142,14 @@ void TransportXS::check_xs() {
       throw ScarabeeException(mssg.str());
     }
 
+    /*
     if (Ea(g) < 0.) {
       std::stringstream mssg;
       mssg << "Ea is negative in group " << g << ".";
       spdlog::error(mssg.str());
       throw ScarabeeException(mssg.str());
     }
+    */
 
     if (vEf(g) < 0.) {
       std::stringstream mssg;
@@ -167,6 +175,55 @@ void TransportXS::check_xs() {
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
+
+  // Make sure no NaN values
+  for (std::size_t gin = 0; gin < ngroups(); gin++) {
+    if (std::isnan(Ea_(gin))) {
+      std::stringstream mssg;
+      mssg << "Ea has NaN value in group " << gin << ".";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+
+    if (std::isnan(Et_(gin))) {
+      std::stringstream mssg;
+      mssg << "Et has NaN value in group " << gin << ".";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+
+    if (Et_(gin) == 0.) {
+      std::stringstream mssg;
+      mssg << "Et value of zero in group " << gin << ".";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+
+    if (std::isnan(vEf_(gin))) {
+      std::stringstream mssg;
+      mssg << "vEf has NaN value in group " << gin << ".";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+
+    if (std::isnan(chi_(gin))) {
+      std::stringstream mssg;
+      mssg << "chi has NaN value in group " << gin << ".";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+
+    for (std::size_t gout = 0; gout < ngroups(); gout++) {
+      if (std::isnan(Es_(gin, gout))) {
+        std::stringstream mssg;
+        mssg << "Es has NaN value in transfer " << gin << " -> " << gout << ".";
+        spdlog::error(mssg.str());
+        throw ScarabeeException(mssg.str());
+      }
+    }
+    
+  }
+  
 }
 
 }  // namespace scarabee

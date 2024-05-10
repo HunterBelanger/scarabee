@@ -68,20 +68,33 @@ void init_MOCDriver(py::module& m) {
           &MOCDriver::set_flux_tolerance,
           "maximum relative absolute difference in flux for convergence")
 
-      .def("get_flux", &MOCDriver::get_flux,
+      .def("flux", py::overload_cast<const Vector&, const Direction&, std::size_t>(&MOCDriver::flux, py::const_),
            "Returns the scalar flux in group g at position r.\n\n"
            "Arguments:\n"
-           "    g  group index\n"
            "    r  position\n"
-           "    u  direction",
-           py::arg("g"), py::arg("r"), py::arg("u"))
+           "    u  direction\n"
+           "    g  group index",
+           py::arg("r"), py::arg("u"), py::arg("g"))
 
-      .def("get_xs", &MOCDriver::get_xs,
+      .def("flux", py::overload_cast<std::size_t, std::size_t>(&MOCDriver::flux, py::const_),
+           "Returns the scalar flux in group g in FSR i.\n\n"
+           "Arguments:\n"
+           "    i  FSR index\n"
+           "    g  group index",
+           py::arg("i"), py::arg("g"))
+
+      .def("xs", py::overload_cast<const Vector&, const Direction&>(&MOCDriver::xs, py::const_),
            "Returns the TransportXS at position r.\n\n"
            "Arguments:\n"
            "    r  position\n"
            "    u  direction",
            py::arg("r"), py::arg("u"))
+          
+      .def("xs", py::overload_cast<std::size_t>(&MOCDriver::xs, py::const_),
+           "Returns the TransportXS in FSR i.\n\n"
+           "Arguments:\n"
+           "    i  FSR index",
+           py::arg("i"))
 
       .def_property_readonly("keff", &MOCDriver::keff,
                              "value of keff  estimated by solver (1 by default "
@@ -132,6 +145,10 @@ void init_MOCDriver(py::module& m) {
           },
           [](MOCDriver& md, BoundaryCondition& bc) { md.y_max_bc() = bc; },
           "boundadary condition at y_max")
+
+      .def_property_readonly("size", &MOCDriver::size, "number of flat source regions")
+      
+      .def_property_readonly("nfsr", &MOCDriver::size, "number of flat source regions")
 
       .def_property_readonly("x_min", &MOCDriver::x_min,
                              "minimum value of x in problem domain")
@@ -238,7 +255,7 @@ void init_MOCDriver(py::module& m) {
                 double x = md.x_min() + 0.5 * dx;
                 for (std::size_t i = 0; i < nx; i++) {
                   Vector r(x, y);
-                  flux(g, j, i) = md.get_flux(g, r, u);
+                  flux(g, j, i) = md.flux(r, u, g);
                   x += dx;
                 }
                 y += dy;

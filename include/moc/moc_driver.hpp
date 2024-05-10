@@ -45,10 +45,14 @@ class MOCDriver {
   void solve();
   bool solved() const { return solved_; }
 
-  double get_flux(std::size_t g, const Vector& r, const Direction& u) const;
+  std::size_t size() const;
+  std::size_t nfsr() const { return this->size(); }
 
-  std::shared_ptr<TransportXS> get_xs(const Vector& r,
-                                      const Direction& u) const;
+  double flux(const Vector& r, const Direction& u, std::size_t g) const;
+  double flux(std::size_t i, std::size_t g) const;
+
+  std::shared_ptr<TransportXS> xs(const Vector& r, const Direction& u) const;
+  std::shared_ptr<TransportXS> xs(std::size_t i) const;
 
   UniqueFSR get_fsr(const Vector& r, const Direction& u) const;
 
