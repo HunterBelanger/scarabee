@@ -6,8 +6,6 @@
 from pyScarabee import *
 import numpy as np
 
-ndl = NDLibrary("endf8.h5")
-
 Et = np.array([1.E5])
 Ea = np.array([1.E5])
 Es = np.array([[0.]])
