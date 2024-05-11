@@ -126,6 +126,7 @@ class FrendyMG:
     self.Es =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups, self.ngroups))
     self.Es1 = np.zeros((len(self.temps), len(self.dilutions), self.ngroups, self.ngroups))
     self.Ea =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
+    self.flux =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
     if self.fissile:
       self.Ef = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
       self.nu = np.zeros((len(self.temps), self.ngroups))
@@ -169,6 +170,7 @@ class FrendyMG:
     grp.create_dataset("absorption", data=self.Ea)
     grp.create_dataset("scatter", data=self.Es)
     grp.create_dataset("p1-scatter", data=self.Es1)
+    grp.create_dataset("flux", data=self.flux)
     if self.fissile:
       grp.create_dataset("fission", data=self.Ef)
       grp.create_dataset("nu", data=self.nu)
@@ -289,7 +291,12 @@ class FrendyMG:
           self.nu[itemp,:] = xs.nu
           self.chi[itemp,:] = xs.chi
 
-def read_1dxs(fname, nskip=3):
+    # Read flux, and save to file
+    fname = self.name + "_MGFlux.mg"
+    flux = read_1dxs(fname, 2)
+    self.flux[itemp,:,:] = flux
+
+def read_1dxs(fname, nskip):
   fl = open(fname, 'r')
 
   # Skip first lines that have headers / dilutions / temperatures
