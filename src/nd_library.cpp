@@ -105,17 +105,6 @@ NuclideHandle& NDLibrary::get_nuclide(const std::string& name) {
   return nuclide_handles_.at(name);
 }
 
-double NDLibrary::potential_xs(const Material& mat) const {
-  double xs {0.};
-
-  for (const auto& comp : mat.composition().components) {
-    const auto& nuc = this->get_nuclide(comp.name);
-    xs += nuc.potential_xs * mat.atom_density(comp.name);
-  }
-
-  return xs;
-}
-
 std::shared_ptr<TransportXS> NDLibrary::interp_nuclide_xs(const std::string& name, const double temp, const double dil) {
   auto& nuc = this->get_nuclide(name);
 
@@ -168,7 +157,7 @@ std::shared_ptr<TransportXS> NDLibrary::interp_nuclide_xs(const std::string& nam
   }
 
   // Make temp TransportXS
-  return std::make_shared<TransportXS>(Et, Ea, Es, nu*Ef, chi);
+  return std::make_shared<TransportXS>(Et, Ea, Es, Ef, nu*Ef, chi);
 }
 
 std::shared_ptr<TransportXS> NDLibrary::carlvik_two_term(const std::string& name, const double mat_pot_xs, const double temp, const double N, const double C, const double Ee) {
@@ -195,6 +184,7 @@ std::shared_ptr<TransportXS> NDLibrary::carlvik_two_term(const std::string& name
   xt::xtensor<double,1> Et = xt::zeros<double>({ngroups_});
   xt::xtensor<double,1> Ea = xt::zeros<double>({ngroups_});
   xt::xtensor<double,2> Es = xt::zeros<double>({ngroups_, ngroups_});
+  xt::xtensor<double,1> Ef = xt::zeros<double>({ngroups_});
   xt::xtensor<double,1> vEf = xt::zeros<double>({ngroups_});
   xt::xtensor<double,1> chi = xt::zeros<double>({ngroups_});
 
@@ -211,6 +201,7 @@ std::shared_ptr<TransportXS> NDLibrary::carlvik_two_term(const std::string& name
 
     // Compute the xs values
     Ea(g) = f1_g*xs_1->Ea(g) + f2_g*xs_2->Ea(g);
+    Ef(g) = f1_g*xs_1->Ef(g) + f2_g*xs_2->Ef(g);
     for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
       Es(g, g_out) = f1_g*xs_1->Es(g, g_out) + f2_g*xs_2->Es(g, g_out);
     }
@@ -232,7 +223,7 @@ std::shared_ptr<TransportXS> NDLibrary::carlvik_two_term(const std::string& name
     if (chi_sum > 0.) chi /= chi_sum;
   }
 
-  std::shared_ptr<TransportXS> xs_out = std::make_shared<TransportXS>(Et, Ea, Es, vEf, chi);
+  std::shared_ptr<TransportXS> xs_out = std::make_shared<TransportXS>(Et, Ea, Es, Ef, vEf, chi);
   *xs_out *= N;
   return xs_out;
 }

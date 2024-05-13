@@ -27,7 +27,7 @@ void init_MOCDriver(py::module& m) {
            "    xminbc    BoundaryCondition for minimmum x value\n"
            "    xmaxbc    BoundaryCondition for maximum x value\n"
            "    yminbc    BoundaryCondition for minimmum y value\n"
-           "    ymaxbc    BoundaryCondition for maximum y value\n",
+           "    ymaxbc    BoundaryCondition for maximum y value",
            py::arg("geometry"),
            py::arg("xminbc") = BoundaryCondition::Reflective,
            py::arg("xmaxbc") = BoundaryCondition::Reflective,

@@ -14,6 +14,7 @@ class TransportXS {
   TransportXS(const xt::xtensor<double, 1>& Et,
               const xt::xtensor<double, 1>& Ea,
               const xt::xtensor<double, 2>& Es,
+              const xt::xtensor<double, 1>& Ef,
               const xt::xtensor<double, 1>& vEf,
               const xt::xtensor<double, 1>& chi, const std::string& name = "");
 
@@ -33,7 +34,17 @@ class TransportXS {
 
   double Ea(std::size_t g) const { return Ea_(g); }
 
+  double Ef(std::size_t g) const { return Ea_(g); }
+
   double vEf(std::size_t g) const { return vEf_(g); }
+
+  double nu(std::size_t g) const { 
+    const double Efg = Ef_(g);
+    if (Efg > 0.) {
+      return vEf_(g) / Efg;
+    }
+    return 0.;
+  }
 
   double Er(std::size_t g) const { return Ea(g) + Es(g) - Es(g, g); }
 
@@ -55,6 +66,7 @@ class TransportXS {
   xt::xtensor<double, 2> Es_;   // Scattering matrix
   xt::xtensor<double, 1> Et_;   // Total xs
   xt::xtensor<double, 1> Ea_;   // Absorption xs
+  xt::xtensor<double, 1> Ef_;   // Absorption xs
   xt::xtensor<double, 1> vEf_;  // Fission xs * yield
   xt::xtensor<double, 1> chi_;  // Fission spectrum
   std::string name_;

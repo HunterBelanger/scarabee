@@ -58,8 +58,6 @@ class NDLibrary {
 
     void convert_fractions(Material& mat) const;
 
-    double potential_xs(const Material& mat) const;
-
     std::shared_ptr<TransportXS> interp_nuclide_xs(const std::string& name, const double temp, const double dil);
     
     std::shared_ptr<TransportXS> carlvik_two_term(const std::string& name, const double mat_pot_xs, const double temp, const double N, const double C, const double Ee);

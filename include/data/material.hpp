@@ -29,6 +29,7 @@ class NDLibrary;
 
 class Material {
   public:
+    Material(const MaterialComposition& comp, double temp, std::shared_ptr<NDLibrary> ndl);
     Material(const MaterialComposition& comp, double temp, double density, DensityUnits du, std::shared_ptr<NDLibrary> ndl);
 
     const MaterialComposition& composition() const { return composition_; }

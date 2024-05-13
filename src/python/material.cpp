@@ -10,40 +10,123 @@ using namespace scarabee;
 
 void init_MaterialComponent(py::module& m) {
   py::class_<MaterialComponent>(m, "MaterialComponent")
-    .def(py::init<>())
-    .def_readwrite("name", &MaterialComponent::name)
-    .def_readwrite("fraction", &MaterialComponent::fraction);
+      .def(py::init<>(),
+           "A name-fraction pair, representing a component of a material "
+           "composition.")
+      .def_readwrite(
+          "name", &MaterialComponent::name,
+          "Name of the nuclide material component (i.e. U235, H1_H2O, etc.)")
+
+      .def_readwrite("fraction", &MaterialComponent::fraction,
+                     "Fraction of the material (by atoms or weight) that is "
+                     "occupied by this nuclide.");
 }
 
 void init_MaterialComposition(py::module& m) {
   py::enum_<Fraction>(m, "Fraction")
-  .value("Atoms", Fraction::Atoms)
-  .value("Weight", Fraction::Weight);
+      .value("Atoms", Fraction::Atoms)
+      .value("Weight", Fraction::Weight);
 
   py::class_<MaterialComposition>(m, "MaterialComposition")
-  .def(py::init<>())
-  .def_readwrite("components", &MaterialComposition::components)
-  .def_readwrite("fractions", &MaterialComposition::fractions)
-  .def("add_nuclide", py::overload_cast<const std::string&, double>(&MaterialComposition::add_nuclide))
-  .def("add_nuclide", py::overload_cast<const MaterialComponent&>(&MaterialComposition::add_nuclide));
+      .def(py::init<>(), "Creates an empty material composition")
+
+      .def_readwrite(
+          "components", &MaterialComposition::components,
+          "List of components in the material as name-fraction pairs")
+
+      .def_readwrite("fractions", &MaterialComposition::fractions,
+                     "Flag indicating if the fractions are in atoms or weight")
+
+      .def("add_nuclide",
+           py::overload_cast<const std::string&, double>(
+               &MaterialComposition::add_nuclide),
+           "Adds a new nuclide to the material.\n\n"
+           "Arguments:\n"
+           "    name     Name of the nuclide\n"
+           "    fraction Fraction that the nuclide occupies in the material",
+           py::arg("name"), py::arg("fraction"))
+
+      .def("add_nuclide",
+           py::overload_cast<const MaterialComponent&>(
+               &MaterialComposition::add_nuclide),
+           "Adds a new nuclide to the material.\n\n"
+           "Arguments:\n"
+           "    comp MaterialComponent giving the nuclide name and fraction",
+           py::arg("comp"));
 }
 
 void init_Material(py::module& m) {
   py::enum_<DensityUnits>(m, "DensityUnits")
-  .value("g_cm3", DensityUnits::g_cm3)
-  .value("a_bcm", DensityUnits::a_bcm)
-  .value("sum", DensityUnits::sum);
+      .value("g_cm3", DensityUnits::g_cm3, "grams per cubic-centimeter")
+      .value("a_bcm", DensityUnits::a_bcm, "atoms per barn-centimeter")
+      .value("sum", DensityUnits::sum,
+             "computer density from sum of fractions");
 
   py::class_<Material>(m, "Material")
-  .def(py::init<const MaterialComposition&, double, double, DensityUnits, std::shared_ptr<NDLibrary>>())
-  .def_property_readonly("composition", &Material::composition)
-  .def_property_readonly("temperature", &Material::temperature)
-  .def_property_readonly("average_molar_mass", &Material::average_molar_mass)
-  .def_property_readonly("atoms_per_bcm", &Material::atoms_per_bcm)
-  .def_property_readonly("potential_xs", &Material::potential_xs)
-  .def_property_readonly("grams_per_cm3", &Material::grams_per_cm3)
-  .def_property_readonly("fissile", &Material::fissile)
-  .def_property_readonly("resonant", &Material::resonant)
-  .def("has_component", &Material::has_component)
-  .def("atom_density", &Material::atom_density);
+      .def(py::init<const MaterialComposition&, double,
+                    std::shared_ptr<NDLibrary>>(),
+           "Creates a new Material definition.\n\n"
+           "Arguments:\n"
+           "    comp MaterialComposition defining material components\n"
+           "    temp Temperature of the material in kelvin\n"
+           "    ndl  NDLibrary instance for nuclear data",
+           py::arg("comp"), py::arg("temp"), py::arg("ndl"))
+
+      .def(py::init<const MaterialComposition&, double, double, DensityUnits,
+                    std::shared_ptr<NDLibrary>>(),
+           "Creates a new Material definition.\n\n"
+           "Arguments:\n"
+           "    comp MaterialComposition defining material components\n"
+           "    temp Temperature of the material in kelvin\n"
+           "    density Density of the material in units given by du\n"
+           "    du      Units of the provided density (if sum, density is "
+           "ignored)\n"
+           "    ndl  NDLibrary instance for nuclear data",
+           py::arg("comp"), py::arg("temp"), py::arg("density"), py::arg("du"),
+           py::arg("ndl"))
+
+      .def("has_component", &Material::has_component,
+           "Returns True if the indicated nuclide is present in the "
+           "material.\n\n"
+           "Arguments:\n"
+           "    name  Name of the nuclide",
+           py::arg("name"))
+
+      .def("atom_density", &Material::atom_density,
+           "Returns the number of atoms per barn-centimeter of the indicated "
+           "nuclide.\n\n"
+           "Arguments:\n"
+           "    name  Name of the nuclide",
+           py::arg("name"))
+
+      .def_property_readonly(
+          "composition", &Material::composition,
+          "The MaterialComposition defining the nuclides in the Material")
+
+      .def_property_readonly("temperature", &Material::temperature,
+                             "Temperature of the material in kelvin")
+
+      .def_property_readonly("average_molar_mass",
+                             &Material::average_molar_mass,
+                             "Average molar of an atom in the material, mass "
+                             "based on all nuclides in the material")
+
+      .def_property_readonly(
+          "atoms_per_bcm", &Material::atoms_per_bcm,
+          "Total number of atoms per barn-centimeter in the material")
+
+      .def_property_readonly(
+          "potential_xs", &Material::potential_xs,
+          "Macroscopic potential scattering cross section in units of 1/cm")
+
+      .def_property_readonly(
+          "grams_per_cm3", &Material::grams_per_cm3,
+          "Density of the materil in grams per cubic-centimeter")
+
+      .def_property_readonly("fissile", &Material::fissile,
+                             "True if the material is fissile, False otherwise")
+
+      .def_property_readonly(
+          "resonant", &Material::resonant,
+          "True if the material is resonant, False otherwise");
 }

@@ -32,6 +32,78 @@ void MaterialComposition::add_nuclide(const MaterialComponent& comp) {
   components.push_back(comp);
 }
 
+Material::Material(const MaterialComposition& comp, double temp, std::shared_ptr<NDLibrary> ndl):
+composition_(comp),
+temperature_(temp),
+atoms_per_bcm_(-1.),
+grams_per_cm3_(-1.),
+potential_xs_(0.),
+fissile_(false),
+resonant_(false) {
+  // Make sure quantities are positive/valid
+  if (temp <= 0.) {
+    auto mssg = "Material temperature must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (composition_.components.empty()) {
+    auto mssg = "Material must have a composition of at least one component.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (ndl == nullptr) {
+    auto mssg = "Material must be given NDLibrary.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // First, we get our density, assuming that it can be computed from the sum
+  // of the fractions in the composition
+  double frac_sum = 0.;
+  for (const auto& c : composition_.components)
+    frac_sum += c.fraction;
+  
+  if (composition_.fractions == Fraction::Atoms) {
+    atoms_per_bcm_ = frac_sum;
+  } else {
+    grams_per_cm3_ = frac_sum;
+  }
+  
+  this->normalize_fractions();
+
+  // Now that fractions have been normalized, we can get the average molar mass
+  average_molar_mass_ = this->calc_avg_molar_mass(*ndl);
+
+  // Convert to Atoms fractions if necessary
+  if (composition_.fractions == Fraction::Weight) {
+    for (auto& c : composition_.components) {
+      const auto& nuc = ndl->get_nuclide(c.name);
+      c.fraction = c.fraction * average_molar_mass_ / (nuc.awr * N_MASS_AMU);
+    }
+  }
+
+  // Get the missing density
+  if (atoms_per_bcm_ < 0.) {
+    atoms_per_bcm_ = (grams_per_cm3_ * N_AVAGADRO) / average_molar_mass_;
+  } else {
+    grams_per_cm3_ = average_molar_mass_ * atoms_per_bcm_ / N_AVAGADRO;
+  }
+
+  // Check fissile and resonant, also get potential_xs
+  for (const auto& c : composition_.components) {
+    const auto& nuc = ndl->get_nuclide(c.name);
+    potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
+
+    if (nuc.fissile)
+      fissile_ = true;
+
+    if (nuc.resonant)
+      resonant_ = true;
+  }
+}
+
 Material::Material(const MaterialComposition& comp, double temp, double density, DensityUnits du, std::shared_ptr<NDLibrary> ndl):
 composition_(comp),
 temperature_(temp),
@@ -47,7 +119,7 @@ resonant_(false) {
     throw ScarabeeException(mssg);
   }
 
-  if (density < 0.) {
+  if (density < 0. && du != DensityUnits::sum) {
     auto mssg = "Material density must be >= 0.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);

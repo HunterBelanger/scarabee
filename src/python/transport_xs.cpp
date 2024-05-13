@@ -12,6 +12,7 @@ void init_TransportXS(py::module& m) {
       .def(py::init<const xt::xtensor<double, 1>& /*Et*/,
                     const xt::xtensor<double, 1>& /*Ea*/,
                     const xt::xtensor<double, 2>& /*Es*/,
+                    const xt::xtensor<double, 1>& /*Ef*/,
                     const xt::xtensor<double, 1>& /*vEf*/,
                     const xt::xtensor<double, 1>& /*chi*/,
                     const std::string& /*name*/>(),
@@ -20,11 +21,12 @@ void init_TransportXS(py::module& m) {
            "    Et    transport corrected total cross section\n"
            "    Ea    absorption cross section\n"
            "    Es    transport corrected scattering cross section matrix\n"
+           "    Ef    fission cross section\n"
            "    vEf   fission yield time cross section\n"
            "    chi   fission spectrum\n"
            "    name  name of material",
-           py::arg("Et"), py::arg("Ea"), py::arg("Es"), py::arg("vEf"),
-           py::arg("chi"), py::arg("name") = "")
+           py::arg("Et"), py::arg("Ea"), py::arg("Es"), py::arg("Ef"),
+           py::arg("vEf"), py::arg("chi"), py::arg("name") = "")
 
       .def(py::init<const xt::xtensor<double, 1>& /*Et*/,
                     const xt::xtensor<double, 1>& /*Ea*/,
@@ -60,13 +62,25 @@ void init_TransportXS(py::module& m) {
            "    g   energy group",
            py::arg("g"))
 
+     .def("Ef", &TransportXS::Ef,
+           "Fission cross section in group g\n\n"
+           "Arguments:\n"
+           "    g   energy group",
+           py::arg("g"))
+
       .def("vEf", &TransportXS::vEf,
            "Fission yield * cross section in group g\n\n"
            "Arguments:\n"
            "    g   energy group",
            py::arg("g"))
 
-      .def("Er", &TransportXS::Er,
+     .def("nu", &TransportXS::vEf,
+           "Fission yield in group g\n\n"
+           "Arguments:\n"
+           "    g   energy group",
+           py::arg("g"))
+
+      .def("Er", &TransportXS::nu,
            "Removal cross section in group g\n\n"
            "Arguments:\n"
            "    g   energy group",

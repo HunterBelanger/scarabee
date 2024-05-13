@@ -13,7 +13,6 @@ dil_hvy = [1.E1, 1.E2, 3.E2, 1.E3, 3.E3, 1.E4, 3.E4, 1.E5, 1.E6, 1.E8]
 dil_oth = [1.E0, 1.E1, 1.E2, 1.E3, 1.E4, 1.E5, 1.E6, 1.E8]
 
 # Set the default group strucutre
-#frendy.set_default_group_structure("XMAS-172")
 fdy.set_default_group_structure("SHEM-281")
 
 print(fdy.get_default_group_structure())
@@ -54,7 +53,6 @@ N = fdy.FrendyMG()
 N.name = "Zr90"
 N.endf_file = base + "n-040_Zr_090.endf"
 N.label = N.name + " from ENDF/B-8.0"
-N.pot_xs = 6.8813
 N.temps = temps
 N.process(h5)
 
@@ -62,7 +60,6 @@ N = fdy.FrendyMG()
 N.name = "Zr91"
 N.endf_file = base + "n-040_Zr_091.endf"
 N.label = N.name + " from ENDF/B-8.0"
-N.pot_xs = 6.8813
 N.temps = temps
 N.process(h5)
 
@@ -70,7 +67,6 @@ N = fdy.FrendyMG()
 N.name = "Zr92"
 N.endf_file = base + "n-040_Zr_092.endf"
 N.label = N.name + " from ENDF/B-8.0"
-N.pot_xs = 6.8813
 N.temps = temps
 N.process(h5)
 
@@ -78,7 +74,6 @@ N = fdy.FrendyMG()
 N.name = "Zr94"
 N.endf_file = base + "n-040_Zr_094.endf"
 N.label = N.name + " from ENDF/B-8.0"
-N.pot_xs = 6.8813
 N.temps = temps
 N.process(h5)
 
@@ -86,7 +81,6 @@ N = fdy.FrendyMG()
 N.name = "Zr96"
 N.endf_file = base + "n-040_Zr_096.endf"
 N.label = N.name + " from ENDF/B-8.0"
-N.pot_xs = 6.8813
 N.temps = temps
 N.process(h5)
 
@@ -94,7 +88,6 @@ N = fdy.FrendyMG()
 N.name = "U235"
 N.endf_file = base + "n-092_U_235.endf"
 N.label = "U235 from ENDF/B-8.0"
-N.pot_xs = 11.6070
 N.temps = temps
 N.process(h5)
 
@@ -102,7 +95,6 @@ N = fdy.FrendyMG()
 N.name = "U238"
 N.endf_file = base + "n-092_U_238.endf"
 N.label = "U238 from ENDF/B-8.0"
-N.pot_xs = 11.17103
 N.temps = temps
 N.process(h5)
 

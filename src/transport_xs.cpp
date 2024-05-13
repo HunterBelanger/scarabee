@@ -13,12 +13,14 @@ namespace scarabee {
 TransportXS::TransportXS(const xt::xtensor<double, 1>& Et,
                          const xt::xtensor<double, 1>& Ea,
                          const xt::xtensor<double, 2>& Es,
+                         const xt::xtensor<double, 1>& Ef,
                          const xt::xtensor<double, 1>& vEf,
                          const xt::xtensor<double, 1>& chi,
                          const std::string& name)
     : Es_(Es),
       Et_(Et),
       Ea_(Ea),
+      Ef_(Ef),
       vEf_(vEf),
       chi_(chi),
       name_(name),
@@ -31,6 +33,7 @@ TransportXS::TransportXS(const xt::xtensor<double, 1>& Et,
                          const xt::xtensor<double, 2>& Es,
                          const std::string& name)
     : Es_(Es), Et_(Et), Ea_(Ea), vEf_(), chi_(), name_(name), fissile_(false) {
+  Ef_ = xt::zeros<double>({ngroups()});
   vEf_ = xt::zeros<double>({ngroups()});
   chi_ = xt::zeros<double>({ngroups()});
   this->check_xs();
@@ -76,6 +79,7 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
 
     Et_(g) += R.Et(g);
     Ea_(g) += R.Ea(g);
+    Ef_(g) += R.Ef(g);
     vEf_(g) += R.vEf(g);
   }
 
@@ -93,6 +97,9 @@ TransportXS& TransportXS::operator*=(double N) {
 
   // Scale Ea_
   Ea_ *= N;
+
+  // Scale Ef_
+  Ef_ *= N;
 
   // Scale vEf_
   vEf_ *= N;
@@ -124,6 +131,12 @@ void TransportXS::check_xs() {
 
   if (Ea_.size() != ngroups()) {
     auto mssg = "Ea is not the same size of Et.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (Ef_.size() != ngroups()) {
+    auto mssg = "Ef is not the same size of Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -195,6 +208,13 @@ void TransportXS::check_xs() {
     if (std::isnan(Ea_(gin))) {
       std::stringstream mssg;
       mssg << "Ea has NaN value in group " << gin << ".";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+
+    if (std::isnan(Ef_(gin))) {
+      std::stringstream mssg;
+      mssg << "Ef has NaN value in group " << gin << ".";
       spdlog::error(mssg.str());
       throw ScarabeeException(mssg.str());
     }
