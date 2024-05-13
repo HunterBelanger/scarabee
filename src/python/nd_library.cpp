@@ -27,6 +27,7 @@ void init_NDLibrary(py::module& m) {
   .def(py::init<const std::string&>())
   .def_property_readonly("library", &NDLibrary::library)
   .def_property_readonly("ngroups", &NDLibrary::ngroups)
+  .def_property_readonly("group_bounds", &NDLibrary::group_bounds)
   .def_property_readonly("group_structure", &NDLibrary::group_structure)
   .def("get_nuclide", py::overload_cast<const std::string&>(&NDLibrary::get_nuclide, py::const_))
   .def("interp_nuclide_xs", &NDLibrary::interp_nuclide_xs)

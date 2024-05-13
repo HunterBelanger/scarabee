@@ -16,6 +16,8 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
   auto grp = ndl.h5()->getGroup(this->name);
 
   // Create and allocate arrays
+  flux = std::make_shared<xt::xtensor<double, 3>>();
+  flux->resize({temperatures.size(), dilutions.size(), ndl.ngroups()});
   absorption = std::make_shared<xt::xtensor<double, 3>>();
   absorption->resize({temperatures.size(), dilutions.size(), ndl.ngroups()});
   scatter = std::make_shared<xt::xtensor<double, 4>>();
@@ -32,6 +34,7 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
   }
 
   // Read in data
+  grp.getDataSet("flux").read<double>(flux->data());
   grp.getDataSet("absorption").read<double>(absorption->data());
   grp.getDataSet("scatter").read<double>(scatter->data());
   grp.getDataSet("p1-scatter").read<double>(p1_scatter->data());
@@ -44,6 +47,7 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
 
 NDLibrary::NDLibrary(const std::string& fname):
 nuclide_handles_(),
+group_bounds_(),
 library_(),
 group_structure_(),
 ngroups_(0),
@@ -56,6 +60,8 @@ h5_(nullptr) {
     library_ = h5_->getAttribute("library").read<std::string>();
   if (h5_->hasAttribute("group-structure"))
     group_structure_ = h5_->getAttribute("group-structure").read<std::string>();
+  if (h5_->hasAttribute("group-bounds"))
+    group_bounds_ = h5_->getAttribute("group-bounds").read<std::vector<double>>();
   if (h5_->hasAttribute("ngroups"))
     ngroups_ = h5_->getAttribute("ngroups").read<std::size_t>();
 
@@ -107,44 +113,47 @@ double NDLibrary::potential_xs(const Material& mat) const {
 
   for (const auto& comp : mat.composition().components) {
     const auto& nuc = this->get_nuclide(comp.name);
-    xs += nuc.potential_xs * comp.fraction * mat.atoms_per_bcm();
+    xs += nuc.potential_xs * mat.atom_density(comp.name);
   }
 
   return xs;
+}
+
+xt::xtensor<double, 1> NDLibrary::interp_flux(const std::string& name, const double temp, const double dil) {
+  auto& nuc = this->get_nuclide(name);
+
+  // Get temperature interpolation factors
+  std::size_t it = 0; // temperature index
+  double f_temp = 0.; // temperature interpolation factor
+  get_temp_interp_params(temp, nuc, it, f_temp);
+
+  // Get dilution interpolation factors
+  std::size_t id = 0; // dilution index
+  double f_dil = 0.; // dilution interpolation factor
+  get_dil_interp_params(dil, nuc, id, f_dil);
+
+  if (nuc.loaded() == false) {
+    nuc.load_xs_from_hdf5(*this);
+  }
+  
+  xt::xtensor<double,1> flux;
+  this->interp_1d(flux, *nuc.flux, it, f_temp, id, f_dil);
+  
+  return flux; 
 }
 
 std::shared_ptr<TransportXS> NDLibrary::interp_nuclide_xs(const std::string& name, const double temp, const double dil) {
   auto& nuc = this->get_nuclide(name);
 
   // Get temperature interpolation factors
-  int it = 0; // temperature index
+  std::size_t it = 0; // temperature index
   double f_temp = 0.; // temperature interpolation factor
-  for (it = 0; it < static_cast<int>(nuc.temperatures.size())-1; it++) {
-    double T_it = nuc.temperatures[static_cast<std::size_t>(it)];
-    double T_it1 = nuc.temperatures[static_cast<std::size_t>(it)+1];
-
-    if (temp >= T_it) {
-      f_temp = (std::sqrt(temp) - std::sqrt(T_it)) / (std::sqrt(T_it1) - std::sqrt(T_it));
-      break;
-    }
-  }
-  if (f_temp < 0.) f_temp = 0.;
-  else if (f_temp > 1.) f_temp = 1.;
+  get_temp_interp_params(temp, nuc, it, f_temp);
 
   // Get dilution interpolation factors
-  int id = 0; // dilution index
+  std::size_t id = 0; // dilution index
   double f_dil = 0.; // dilution interpolation factor
-  for (id = 0; id < static_cast<int>(nuc.dilutions.size())-1; id++) {
-    double d_id = nuc.dilutions[static_cast<std::size_t>(id)];
-    double d_id1 = nuc.dilutions[static_cast<std::size_t>(id)+1];
-
-    if (dil >= d_id) {
-      f_dil = (dil - d_id) / (d_id1 - d_id);
-      break;
-    }
-  }
-  if (f_dil < 0.) f_dil = 0.;
-  else if (f_dil > 1.) f_dil = 1.;
+  get_dil_interp_params(dil, nuc, id, f_dil);
 
   if (nuc.loaded() == false) {
     nuc.load_xs_from_hdf5(*this);
@@ -153,17 +162,17 @@ std::shared_ptr<TransportXS> NDLibrary::interp_nuclide_xs(const std::string& nam
   //--------------------------------------------------------
   // Do absorption interpolation
   xt::xtensor<double,1> Ea;
-  this->interp_1d(Ea, *nuc.absorption, static_cast<std::size_t>(it), f_temp, static_cast<std::size_t>(id), f_dil);
+  this->interp_1d(Ea, *nuc.absorption, it, f_temp, id, f_dil);
   
   //--------------------------------------------------------
   // Do scattering interpolation
   xt::xtensor<double,2> Es;
-  this->interp_2d(Es, *nuc.scatter, static_cast<std::size_t>(it), f_temp, static_cast<std::size_t>(id), f_dil);
+  this->interp_2d(Es, *nuc.scatter, it, f_temp, id, f_dil);
 
   //--------------------------------------------------------
   // Do p1 scattering interpolation
   xt::xtensor<double,2> Es1;
-  this->interp_2d(Es1, *nuc.p1_scatter, static_cast<std::size_t>(it), f_temp, static_cast<std::size_t>(id), f_dil);
+  this->interp_2d(Es1, *nuc.p1_scatter, it, f_temp, id, f_dil);
 
   //--------------------------------------------------------
   // Do fission interpolation
@@ -171,9 +180,9 @@ std::shared_ptr<TransportXS> NDLibrary::interp_nuclide_xs(const std::string& nam
   xt::xtensor<double,1> nu = xt::zeros<double>({ngroups_});
   xt::xtensor<double,1> chi = xt::zeros<double>({ngroups_});
   if (nuc.fissile) {
-    this->interp_1d(Ef, *nuc.fission, static_cast<std::size_t>(it), f_temp, static_cast<std::size_t>(id), f_dil);
-    this->interp_1d(nu, *nuc.nu, static_cast<std::size_t>(it), f_temp);
-    this->interp_1d(chi, *nuc.chi, static_cast<std::size_t>(it), f_temp);
+    this->interp_1d(Ef, *nuc.fission, it, f_temp, id, f_dil);
+    this->interp_1d(nu, *nuc.nu, it, f_temp);
+    this->interp_1d(chi, *nuc.chi, it, f_temp);
   }
 
   // Reconstruct total, removing p1
@@ -206,6 +215,9 @@ std::shared_ptr<TransportXS> NDLibrary::carlvik_two_term(const std::string& name
   auto xs_1 = interp_nuclide_xs(name, temp, bg_xs_1);
   auto xs_2 = interp_nuclide_xs(name, temp, bg_xs_2);
 
+  auto flux_1 = interp_flux(name, temp, bg_xs_1);
+  auto flux_2 = interp_flux(name, temp, bg_xs_2);
+
   xt::xtensor<double,1> Et = xt::zeros<double>({ngroups_});
   xt::xtensor<double,1> Ea = xt::zeros<double>({ngroups_});
   xt::xtensor<double,2> Es = xt::zeros<double>({ngroups_, ngroups_});
@@ -216,8 +228,10 @@ std::shared_ptr<TransportXS> NDLibrary::carlvik_two_term(const std::string& name
   double vEf_sum_2 = 0.;
   for (std::size_t g = 0; g < ngroups_; g++) {
     // Calculate the two flux values
-    const double flux_1_g = (pot_xs + bg_xs_1) / (xs_1->Ea(g) + pot_xs + bg_xs_1);
-    const double flux_2_g = (pot_xs + bg_xs_2) / (xs_2->Ea(g) + pot_xs + bg_xs_2);
+    //const double flux_1_g = (pot_xs + bg_xs_1) / (xs_1->Ea(g) + pot_xs + bg_xs_1);
+    //const double flux_2_g = (pot_xs + bg_xs_2) / (xs_2->Ea(g) + pot_xs + bg_xs_2);
+    const double flux_1_g = flux_1(g);
+    const double flux_2_g = flux_2(g);
 
     // Calcualte the two weighting factors
     const double f1_g = b1*flux_1_g / (b1*flux_1_g + b2*flux_2_g);
@@ -251,9 +265,58 @@ std::shared_ptr<TransportXS> NDLibrary::carlvik_two_term(const std::string& name
   return xs_out;
 }
 
+void NDLibrary::get_temp_interp_params(double temp, const NuclideHandle& nuc, std::size_t& i, double& f) const {
+  if (temp <= nuc.temperatures.front()) {
+    i = 0;
+    f = 0.;
+    return;
+  } else if (temp >= nuc.temperatures.back()) {
+    i = nuc.temperatures.size() - 2;
+    f = 1.;
+    return;
+  }
+
+  for (i = 0; i < nuc.temperatures.size()-1; i++) {
+    double T_i = nuc.temperatures[i];
+    double T_i1 = nuc.temperatures[i+1];
+
+    if (temp >= T_i && temp <= T_i1) {
+      f = (std::sqrt(temp) - std::sqrt(T_i)) / (std::sqrt(T_i1) - std::sqrt(T_i));
+      break;
+    }
+  }
+  if (f < 0.) f = 0.;
+  else if (f > 1.) f = 1.;
+}
+
+void NDLibrary::get_dil_interp_params(double dil, const NuclideHandle& nuc, std::size_t& i, double& f) const {
+  if (dil <= nuc.dilutions.front()) {
+    i = 0;
+    f = 0.;
+    return;
+  } else if (dil >= nuc.dilutions.back()) {
+    i = nuc.dilutions.size() - 2;
+    f = 1.;
+    return;
+  }
+
+  for (i = 0; i < nuc.dilutions.size()-1; i++) {
+    double d_i = nuc.dilutions[i];
+    double d_i1 = nuc.dilutions[i+1];
+
+    if (dil >= d_i && dil <= d_i1) {
+      f = (dil - d_i) / (d_i1 - d_i);
+      break;
+    }
+  }
+  if (f < 0.) f = 0.;
+  else if (f > 1.) f = 1.;
+}
+
 void NDLibrary::interp_1d(xt::xtensor<double,1>& E, const xt::xtensor<double,2> nE, std::size_t it, double f_temp) const {
   if (f_temp > 0.) {
-    E = (1.-f_temp)*xt::view(nE, it, xt::all()) + f_temp*xt::view(nE, it+1, xt::all());
+    E = (1.-f_temp)*xt::view(nE, it,   xt::all()) +
+             f_temp*xt::view(nE, it+1, xt::all());
   } else {
     E = xt::view(nE, it, xt::all());
   }
@@ -262,13 +325,18 @@ void NDLibrary::interp_1d(xt::xtensor<double,1>& E, const xt::xtensor<double,2> 
 void NDLibrary::interp_1d(xt::xtensor<double,1>& E, const xt::xtensor<double,3> nE, std::size_t it, double f_temp, std::size_t id, double f_dil) const {
   if (f_temp > 0.) {
     if (f_dil > 0.) {
-      E = (1.-f_temp)*((1.-f_dil)*xt::view(nE, it, id, xt::all()) + f_dil*xt::view(nE, it, id+1, xt::all())) + f_temp*((1.-f_dil)*xt::view(nE, it+1, id, xt::all()) + f_dil*xt::view(nE, it+1, id+1, xt::all()));
+      E = (1.-f_temp)*((1.-f_dil)*xt::view(nE, it,   id,   xt::all()) +
+                            f_dil*xt::view(nE, it,   id+1, xt::all())) +
+               f_temp*((1.-f_dil)*xt::view(nE, it+1, id,   xt::all()) +
+                            f_dil*xt::view(nE, it+1, id+1, xt::all()));
     } else {
-      E = (1.-f_temp)*xt::view(nE, it, id, xt::all()) + f_temp*xt::view(nE, it+1, id, xt::all());
+      E = (1.-f_temp)*xt::view(nE, it,   id, xt::all()) +
+               f_temp*xt::view(nE, it+1, id, xt::all());
     }
   } else {
     if (f_dil > 0.) {
-      E = (1.-f_dil)*xt::view(nE, it, id, xt::all()) + f_dil*xt::view(nE, it, id+1, xt::all());
+      E = (1.-f_dil)*xt::view(nE, it, id, xt::all()) +
+               f_dil*xt::view(nE, it, id+1, xt::all());
     } else {
       E = xt::view(nE, it, id, xt::all());
     }
@@ -278,13 +346,18 @@ void NDLibrary::interp_1d(xt::xtensor<double,1>& E, const xt::xtensor<double,3> 
 void NDLibrary::interp_2d(xt::xtensor<double,2>& E, const xt::xtensor<double,4> nE, std::size_t it, double f_temp, std::size_t id, double f_dil) const {
   if (f_temp > 0.) {
     if (f_dil > 0.) {
-      E = (1.-f_temp)*((1.-f_dil)*xt::view(nE, it, id, xt::all(), xt::all()) + f_dil*xt::view(nE, it, id+1, xt::all(), xt::all())) + f_temp*((1.-f_dil)*xt::view(nE, it+1, id, xt::all(), xt::all()) + f_dil*xt::view(nE, it+1, id+1, xt::all(), xt::all()));
+      E = (1.-f_temp)*((1.-f_dil)*xt::view(nE, it,   id,   xt::all(), xt::all()) +
+                            f_dil*xt::view(nE, it,   id+1, xt::all(), xt::all())) +
+               f_temp*((1.-f_dil)*xt::view(nE, it+1, id,   xt::all(), xt::all()) +
+                            f_dil*xt::view(nE, it+1, id+1, xt::all(), xt::all()));
     } else {
-      E = (1.-f_temp)*xt::view(nE, it, id, xt::all(), xt::all()) + f_temp*xt::view(nE, it+1, id, xt::all(), xt::all());
+      E = (1.-f_temp)*xt::view(nE, it,   id, xt::all(), xt::all()) +
+               f_temp*xt::view(nE, it+1, id, xt::all(), xt::all());
     }
   } else {
     if (f_dil > 0.) {
-      E = (1.-f_dil)*xt::view(nE, it, id, xt::all(), xt::all()) + f_dil*xt::view(nE, it, id+1, xt::all(), xt::all());
+      E = (1.-f_dil)*xt::view(nE, it, id,   xt::all(), xt::all()) +
+               f_dil*xt::view(nE, it, id+1, xt::all(), xt::all());
     } else {
       E = xt::view(nE, it, id, xt::all(), xt::all());
     }

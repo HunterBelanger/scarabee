@@ -104,13 +104,13 @@ resonant_(false) {
   // Check fissile and resonant, also get potential_xs
   for (const auto& c : composition_.components) {
     const auto& nuc = ndl->get_nuclide(c.name);
+    potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
+
     if (nuc.fissile)
       fissile_ = true;
 
     if (nuc.resonant)
       resonant_ = true;
-
-    potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
   }
 }
 

@@ -4,6 +4,78 @@ import subprocess
 import os
 import numpy as np
 
+_GROUPS_STRUCTURES = ["WIMS-69", "XMAS-172"]
+
+_GROUP_BOUNDS = {
+  "WIMS-69":
+    np.array([1.00000E+01, 6.06550E+00, 3.67900E+00, 2.23100E+00, 1.35300E+00,
+	            8.21000E-01, 5.00000E-01, 3.02500E-01, 1.83000E-01, 1.11000E-01,
+	            6.73400E-02, 4.08500E-02, 2.47800E-02, 1.50300E-02, 9.11800E-03,
+	            5.53000E-03, 3.51910E-03, 2.23945E-03, 1.42510E-03, 9.06899E-04,
+	            3.67263E-04, 1.48729E-04, 7.55014E-05, 4.80520E-05, 2.77000E-05,
+	            1.59680E-05, 9.87700E-06, 4.00000E-06, 3.30000E-06, 2.60000E-06,
+	            2.10000E-06, 1.50000E-06, 1.30000E-06, 1.15000E-06, 1.12300E-06,
+	            1.09700E-06, 1.07100E-06, 1.04500E-06, 1.02000E-06, 9.96000E-07,
+	            9.72000E-07, 9.50000E-07, 9.10000E-07, 8.50000E-07, 7.80000E-07,
+	            6.25000E-07, 5.00000E-07, 4.00000E-07, 3.50000E-07, 3.20000E-07,
+	            3.00000E-07, 2.80000E-07, 2.50000E-07, 2.20000E-07, 1.80000E-07,
+	            1.40000E-07, 1.00000E-07, 8.00000E-08, 6.70000E-08, 5.80000E-08,
+	            5.00000E-08, 4.20000E-08, 3.50000E-08, 3.00000E-08, 2.50000E-08,
+	            2.00000E-08, 1.50000E-08, 1.00000E-08, 5.00000E-09, 1.00000E-11], dtype=np.float32) * 1.E6,
+
+  "XMAS-172": 
+    np.array([1.96403E+01, 1.73325E+01, 1.49182E+01, 1.38403E+01, 1.16183E+01,
+	            1.00000E+01, 8.18731E+00, 6.70320E+00, 6.06531E+00, 5.48812E+00,
+	            4.49329E+00, 3.67879E+00, 3.01194E+00, 2.46597E+00, 2.23130E+00,
+	            2.01897E+00, 1.65299E+00, 1.35335E+00, 1.22456E+00, 1.10803E+00,
+	            1.00259E+00, 9.07180E-01, 8.20850E-01, 6.08101E-01, 5.50232E-01,
+	            4.97871E-01, 4.50492E-01, 4.07622E-01, 3.01974E-01, 2.73237E-01,
+	            2.47235E-01, 1.83156E-01, 1.22773E-01, 1.11090E-01, 8.22975E-02,
+	            6.73795E-02, 5.51656E-02, 4.08677E-02, 3.69786E-02, 2.92830E-02,
+	            2.73944E-02, 2.47875E-02, 1.66156E-02, 1.50344E-02, 1.11378E-02,
+	            9.11882E-03, 7.46586E-03, 5.53084E-03, 5.00451E-03, 3.52662E-03,
+	            3.35463E-03, 2.24867E-03, 2.03468E-03, 1.50733E-03, 1.43382E-03,
+	            1.23410E-03, 1.01039E-03, 9.14242E-04, 7.48518E-04, 6.77287E-04,
+	            4.53999E-04, 3.71703E-04, 3.04325E-04, 2.03995E-04, 1.48625E-04,
+	            1.36742E-04, 9.16609E-05, 7.56736E-05, 6.79041E-05, 5.55951E-05,
+	            5.15780E-05, 4.82516E-05, 4.55174E-05, 4.01690E-05, 3.72665E-05,
+	            3.37201E-05, 3.05113E-05, 2.76077E-05, 2.49805E-05, 2.26033E-05,
+	            1.94548E-05, 1.59283E-05, 1.37096E-05, 1.12245E-05, 9.90555E-06,
+	            9.18981E-06, 8.31529E-06, 7.52398E-06, 6.16012E-06, 5.34643E-06,
+	            5.04348E-06, 4.12925E-06, 4.00000E-06, 3.38075E-06, 3.30000E-06,
+	            2.76792E-06, 2.72000E-06, 2.60000E-06, 2.55000E-06, 2.36000E-06,
+	            2.13000E-06, 2.10000E-06, 2.02000E-06, 1.93000E-06, 1.84000E-06,
+	            1.75500E-06, 1.67000E-06, 1.59000E-06, 1.50000E-06, 1.47500E-06,
+	            1.44498E-06, 1.37000E-06, 1.33750E-06, 1.30000E-06, 1.23500E-06,
+	            1.17000E-06, 1.15000E-06, 1.12535E-06, 1.11000E-06, 1.09700E-06,
+	            1.07100E-06, 1.04500E-06, 1.03500E-06, 1.02000E-06, 9.96000E-07,
+	            9.86000E-07, 9.72000E-07, 9.50000E-07, 9.30000E-07, 9.10000E-07,
+	            8.60000E-07, 8.50000E-07, 7.90000E-07, 7.80000E-07, 7.05000E-07,
+	            6.25000E-07, 5.40000E-07, 5.00000E-07, 4.85000E-07, 4.33000E-07,
+	            4.00000E-07, 3.91000E-07, 3.50000E-07, 3.20000E-07, 3.14500E-07,
+	            3.00000E-07, 2.80000E-07, 2.48000E-07, 2.20000E-07, 1.89000E-07,
+	            1.80000E-07, 1.60000E-07, 1.40000E-07, 1.34000E-07, 1.15000E-07,
+	            1.00001E-07, 9.50000E-08, 8.00000E-08, 7.70000E-08, 6.70000E-08,
+	            5.80000E-08, 5.00000E-08, 4.20000E-08, 3.50000E-08, 3.00000E-08,
+	            2.50000E-08, 2.00000E-08, 1.50000E-08, 1.00000E-08, 6.90000E-09,
+	            5.00000E-09, 3.00000E-09, 1.00001E-11], dtype=np.float32) * 1.E6
+}
+
+_GROUP_IDS = {"WIMS-69": 9, "XMAS-172": 18}
+
+_DEFAULT_GROUP_STRUCTURE = "XMAS-172"
+
+def set_default_group_structure(name):
+  if name not in _GROUPS_STRUCTURES:
+    raise RuntimeError("Uknown group structure \"{}\".".format(name))
+  _DEFAULT_GROUP_STRUCTURE = name
+
+def get_default_group_structure():
+  return _DEFAULT_GROUP_STRUCTURE
+
+def get_default_group_bounds():
+  return _GROUP_BOUNDS[_DEFAULT_GROUP_STRUCTURE]
+
 class KRAMXS:
   def __init__(self):
     self.Et = None
@@ -88,7 +160,7 @@ class KRAMXS:
     return xs
 
 class FrendyMG:
-  def __init__(self):
+  def __init__(self, group_strucutre=None):
     self.temps = [293.6]
     self.dilutions = None
     self.pot_xs = None
@@ -97,8 +169,12 @@ class FrendyMG:
     self.tsl_type = None
     self.label = ""
     self.name = ""
-    #self.ngroups = 281
-    self.ngroups = 172
+    self.group_strucutre = _DEFAULT_GROUP_STRUCTURE
+    if group_strucutre is not None:
+      if group_strucutre not in _GROUPS_STRUCTURES:
+        raise RuntimeError("Unknown group structure \"{}\".".format(group_strucutre))
+      self.group_strucutre = group_strucutre
+    self.ngroups = len(_GROUP_BOUNDS[self.group_strucutre])-1
     self.initialized = False
     self.processed = False
     self.resonant = False
@@ -213,12 +289,11 @@ class FrendyMG:
     out += "mg_file_name {mgfname}\n".format(mgfname=self.name)
     out += "temperature {temp}\n".format(temp=temp)
     out += "legendre_order 1\n"
-    #out += "mg_structure ( shem-cea-281 )\n"
-    out += "mg_structure ( xmas-nea-lanl-172 )\n"
+    out += "mg_structure ( {id} )\n".format(id=_GROUP_IDS[self.group_strucutre])
     out += "mg_weighting_spectrum ( fission+1/e+maxwell  )\n"
     out += "process_gas_xs off\n"
     if self.dilutions is None:
-      out += "sigma_zero_data ( auto 0.005 100 1.E-10 factor linear )"
+      out += "sigma_zero_data ( auto 0.005 100 1.E-10 rr linear )"
     else:
       dil_frmt = len(self.dilutions)*"{:.2E} "
       out += "sigma_zero_data ( " + dil_frmt.format(*self.dilutions) + " )\n"

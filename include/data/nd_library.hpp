@@ -30,6 +30,7 @@ struct NuclideHandle {
   bool fissile;
   bool resonant;
 
+  std::shared_ptr<xt::xtensor<double, 3>> flux;
   std::shared_ptr<xt::xtensor<double, 3>> absorption;
   std::shared_ptr<xt::xtensor<double, 4>> scatter;
   std::shared_ptr<xt::xtensor<double, 4>> p1_scatter;
@@ -51,6 +52,8 @@ class NDLibrary {
 
     const std::string& group_structure() const { return group_structure_; }
 
+    const std::vector<double>& group_bounds() const { return group_bounds_; }
+
     NuclideHandle& get_nuclide(const std::string& name);
     const NuclideHandle& get_nuclide(const std::string& name) const;
 
@@ -59,6 +62,8 @@ class NDLibrary {
     double potential_xs(const Material& mat) const;
 
     std::shared_ptr<TransportXS> interp_nuclide_xs(const std::string& name, const double temp, const double dil);
+    
+    xt::xtensor<double, 1> interp_flux(const std::string& name, const double temp, const double dil);
 
     std::shared_ptr<TransportXS> carlvik_two_term(const std::string& name, const double mat_pot_xs, const double temp, const double N, const double C, const double Ee);
 
@@ -66,6 +71,7 @@ class NDLibrary {
 
   private:
     std::map<std::string, NuclideHandle> nuclide_handles_;
+    std::vector<double> group_bounds_;
     std::string library_;
     std::string group_structure_;
     std::size_t ngroups_;
@@ -73,6 +79,9 @@ class NDLibrary {
 
     NDLibrary(const NDLibrary&) = delete;
     NDLibrary& operator=(const NDLibrary&) = delete;
+
+    void get_temp_interp_params(double temp, const NuclideHandle& nuc, std::size_t& i, double& f) const;
+    void get_dil_interp_params(double dil, const NuclideHandle& nuc, std::size_t& i, double& f) const;
     
     void interp_1d(xt::xtensor<double,1>& E, const xt::xtensor<double,2> nE, std::size_t it, double f_temp) const;
     void interp_1d(xt::xtensor<double,1>& E, const xt::xtensor<double,3> nE, std::size_t it, double f_temp, std::size_t id, double f_dil) const;
