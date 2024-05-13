@@ -16,8 +16,6 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
   auto grp = ndl.h5()->getGroup(this->name);
 
   // Create and allocate arrays
-  flux = std::make_shared<xt::xtensor<double, 3>>();
-  flux->resize({temperatures.size(), dilutions.size(), ndl.ngroups()});
   absorption = std::make_shared<xt::xtensor<double, 3>>();
   absorption->resize({temperatures.size(), dilutions.size(), ndl.ngroups()});
   scatter = std::make_shared<xt::xtensor<double, 4>>();
@@ -34,7 +32,6 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
   }
 
   // Read in data
-  grp.getDataSet("flux").read<double>(flux->data());
   grp.getDataSet("absorption").read<double>(absorption->data());
   grp.getDataSet("scatter").read<double>(scatter->data());
   grp.getDataSet("p1-scatter").read<double>(p1_scatter->data());
@@ -119,29 +116,6 @@ double NDLibrary::potential_xs(const Material& mat) const {
   return xs;
 }
 
-xt::xtensor<double, 1> NDLibrary::interp_flux(const std::string& name, const double temp, const double dil) {
-  auto& nuc = this->get_nuclide(name);
-
-  // Get temperature interpolation factors
-  std::size_t it = 0; // temperature index
-  double f_temp = 0.; // temperature interpolation factor
-  get_temp_interp_params(temp, nuc, it, f_temp);
-
-  // Get dilution interpolation factors
-  std::size_t id = 0; // dilution index
-  double f_dil = 0.; // dilution interpolation factor
-  get_dil_interp_params(dil, nuc, id, f_dil);
-
-  if (nuc.loaded() == false) {
-    nuc.load_xs_from_hdf5(*this);
-  }
-  
-  xt::xtensor<double,1> flux;
-  this->interp_1d(flux, *nuc.flux, it, f_temp, id, f_dil);
-  
-  return flux; 
-}
-
 std::shared_ptr<TransportXS> NDLibrary::interp_nuclide_xs(const std::string& name, const double temp, const double dil) {
   auto& nuc = this->get_nuclide(name);
 
@@ -198,7 +172,10 @@ std::shared_ptr<TransportXS> NDLibrary::interp_nuclide_xs(const std::string& nam
 }
 
 std::shared_ptr<TransportXS> NDLibrary::carlvik_two_term(const std::string& name, const double mat_pot_xs, const double temp, const double N, const double C, const double Ee) {
-  // First, calculate Dancoff corrected coefficients
+  // This implementation is based on the methods outlined by Koike and Gibson
+  // in his PhD thesis [1,2]. We start by computing the coefficients for the
+  // two-term rational approximation, modified according to the Dancoff
+  // correction factor, C.
   const double a1 = 0.5 * (C + 5. - std::sqrt(C*C + 34.*C + 1.));
   const double a2 = 0.5 * (C + 5. + std::sqrt(C*C + 34.*C + 1.));
   const double b1 = (a2 - (1.-C)) / (a2 - a1);
@@ -215,9 +192,6 @@ std::shared_ptr<TransportXS> NDLibrary::carlvik_two_term(const std::string& name
   auto xs_1 = interp_nuclide_xs(name, temp, bg_xs_1);
   auto xs_2 = interp_nuclide_xs(name, temp, bg_xs_2);
 
-  auto flux_1 = interp_flux(name, temp, bg_xs_1);
-  auto flux_2 = interp_flux(name, temp, bg_xs_2);
-
   xt::xtensor<double,1> Et = xt::zeros<double>({ngroups_});
   xt::xtensor<double,1> Ea = xt::zeros<double>({ngroups_});
   xt::xtensor<double,2> Es = xt::zeros<double>({ngroups_, ngroups_});
@@ -228,10 +202,8 @@ std::shared_ptr<TransportXS> NDLibrary::carlvik_two_term(const std::string& name
   double vEf_sum_2 = 0.;
   for (std::size_t g = 0; g < ngroups_; g++) {
     // Calculate the two flux values
-    //const double flux_1_g = (pot_xs + bg_xs_1) / (xs_1->Ea(g) + pot_xs + bg_xs_1);
-    //const double flux_2_g = (pot_xs + bg_xs_2) / (xs_2->Ea(g) + pot_xs + bg_xs_2);
-    const double flux_1_g = flux_1(g);
-    const double flux_2_g = flux_2(g);
+    const double flux_1_g = (pot_xs + bg_xs_1) / (xs_1->Ea(g) + pot_xs + bg_xs_1);
+    const double flux_2_g = (pot_xs + bg_xs_2) / (xs_2->Ea(g) + pot_xs + bg_xs_2);
 
     // Calcualte the two weighting factors
     const double f1_g = b1*flux_1_g / (b1*flux_1_g + b2*flux_2_g);
@@ -365,3 +337,12 @@ void NDLibrary::interp_2d(xt::xtensor<double,2>& E, const xt::xtensor<double,4> 
 }
 
 }
+
+// References
+// [1] H. Koike, K. Yamaji, K. Kirimura, D. Sato, H. Matsumoto, and A. Yamamoto,
+//     “Advanced resonance self-shielding method for gray resonance treatment in
+//     lattice physics code GALAXY,” J. Nucl. Sci. Technol., vol. 49, no. 7,
+//     pp. 725–747, 2012, doi: 10.1080/00223131.2012.693885.
+//
+// [2] N. Gibson, “Novel Resonance Self-Shielding Methods for Nuclear Reactor
+//     Analysis,” Massachusetts Institute of Technology, 2016.

@@ -30,7 +30,6 @@ struct NuclideHandle {
   bool fissile;
   bool resonant;
 
-  std::shared_ptr<xt::xtensor<double, 3>> flux;
   std::shared_ptr<xt::xtensor<double, 3>> absorption;
   std::shared_ptr<xt::xtensor<double, 4>> scatter;
   std::shared_ptr<xt::xtensor<double, 4>> p1_scatter;
@@ -63,8 +62,6 @@ class NDLibrary {
 
     std::shared_ptr<TransportXS> interp_nuclide_xs(const std::string& name, const double temp, const double dil);
     
-    xt::xtensor<double, 1> interp_flux(const std::string& name, const double temp, const double dil);
-
     std::shared_ptr<TransportXS> carlvik_two_term(const std::string& name, const double mat_pot_xs, const double temp, const double N, const double C, const double Ee);
 
     const std::shared_ptr<H5::File>& h5() const { return h5_; }

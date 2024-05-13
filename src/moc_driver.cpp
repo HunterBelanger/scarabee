@@ -359,10 +359,6 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
       const double flx = flux(g, i);
       const double oflx = old_flux(g, i);
 
-      if (flx == oflx) {
-        spdlog::error("New and old flux is equal");
-      }
-
       num += VvEf * flx;
       denom += VvEf * oflx;
     }
