@@ -13,9 +13,9 @@ void fill_A(Eigen::MatrixXd& A, std::shared_ptr<CrossSection> xs,
 
   for (std::size_t g = 0; g < NG; g++) {
     for (std::size_t gg = 0; gg < NG; gg++) {
-      A(g, gg) = B2 * D(g, gg) - (xs->Es(gg, g) + xs->Es1(g, gg));
+      A(g, gg) = B2 * D(g, gg) - xs->Es(gg, g);
     }
-    A(g, g) += xs->Et(g) + xs->Es1(g, g);
+    A(g, g) += xs->Et(g);
   }
 }
 
@@ -29,7 +29,7 @@ void fill_Dinvs(Eigen::MatrixXd& Dinvs, std::shared_ptr<CrossSection> xs,
     for (std::size_t gg = 0; gg < NG; gg++) {
       Dinvs(g, gg) = -xs->Es1(gg, g);
     }
-    Dinvs(g, g) += a(g) * (xs->Et(g) + xs->Es1(g, g));
+    Dinvs(g, g) += a(g) * xs->Et(g);
   }
 
   Dinvs *= 3.;
@@ -38,26 +38,26 @@ void fill_Dinvs(Eigen::MatrixXd& Dinvs, std::shared_ptr<CrossSection> xs,
 xt::xtensor<double, 2> P1_spectrum(std::shared_ptr<CrossSection> xs) {
   const std::size_t NG = xs->ngroups();
 
+  // For P1 approximation, alphas are all 1
+  const xt::xtensor<double, 1> a = xt::ones<double>({NG});
+
   // First, we create and fill the Dinvs matrix for the current
   Eigen::MatrixXd Dinvs(NG, NG);
   fill_Dinvs(Dinvs, xs, xt::ones<double>({NG}));
 
   // Get the D matrix
-  Eigen::MatrixXd D = Dinvs.inverse();
+  const Eigen::MatrixXd D = Dinvs.inverse();
 
   // Make the chi and vEf vectors
-  Eigen::MatrixXd chi(NG), vEf(NG);
+  Eigen::VectorXd chi(NG), vEf(NG);
   for (std::size_t g = 0; g < NG; g++) {
     chi(g) = xs->chi(g);
     vEf(g) = xs->vEf(g);
   }
 
-  // For P1 approximation, alphas are all 1
-  xt::xtensor<double, 1> a = xt::ones<double>({NG});
-
   // Make vectors for flux and current
-  Eigen::MatrixXd flx(NG);
-  Eigen::MatrixXd cur(NG);
+  Eigen::VectorXd flx(NG);
+  Eigen::VectorXd cur(NG);
 
   // Create the A matrix
   Eigen::MatrixXd A(NG, NG);
@@ -96,6 +96,17 @@ xt::xtensor<double, 2> P1_spectrum(std::shared_ptr<CrossSection> xs) {
 
   // Get the current
   cur = B * D * flx;
+
+  // The output info is in the format (2,NG) where the first line has
+  // the flux spectrum, and the second has the diffusion coefficients.
+  xt::xtensor<double, 2> out;
+  out.resize({2,NG});
+  for (std::size_t g = 0; g < NG; g++) {
+    out(0,g) = flx(g);
+    out(1,g) = cur(g) / (B*flx(g));
+  }
+
+  return out;
 }
 
 }  // namespace scarabee

@@ -76,6 +76,10 @@ class CrossSection {
     return Es_tr_(gin, gout);
   }
 
+  double Es1(std::size_t gin, std::size_t gout) const {
+    return Es1_(gin, gout);
+  }
+
   double Es(std::size_t gin, std::size_t gout) const {
     double Es_gin_gout = Es_tr_(gin, gout);
     if (Es1_.size() > 0 && gin == gout) {

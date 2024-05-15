@@ -121,6 +121,7 @@ pybind11_add_module(scarabee  src/logging.cpp
                               src/legendre.cpp
                               src/yamamoto_tabuchi.cpp
                               src/moc_driver.cpp
+                              src/criticality_spectrum.cpp
                               #=================================================
                               src/python/scarabee.cpp
                               src/python/vector.cpp
