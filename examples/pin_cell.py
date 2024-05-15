@@ -9,7 +9,7 @@ UO2comp.fractions = Fraction.Atoms
 UO2comp.add_nuclide("U235", 7.0803E-4)
 UO2comp.add_nuclide("U238", 2.2604E-2)
 UO2comp.add_nuclide("O16",  4.6624E-2)
-UO2 = Material(UO2comp, 293.6, 0., DensityUnits.sum, ndl)
+UO2 = Material(UO2comp, 293.6, ndl)
 
 Zirccomp = MaterialComposition()
 Zirccomp.fractions = Fraction.Atoms
@@ -18,13 +18,13 @@ Zirccomp.add_nuclide("Zr91", 4.8280E-3)
 Zirccomp.add_nuclide("Zr92", 7.3713E-3)
 Zirccomp.add_nuclide("Zr94", 7.5006E-3)
 Zirccomp.add_nuclide("Zr96", 1.2070E-3)
-Zirc = Material(Zirccomp, 293.6, 0., DensityUnits.sum, ndl)
+Zirc = Material(Zirccomp, 293.6, ndl)
 
 Watercomp = MaterialComposition()
 Watercomp.fractions = Fraction.Atoms
 Watercomp.add_nuclide("H1_H2O", 6.6630E-2)
 Watercomp.add_nuclide("O16",    3.3315E-2)
-Water = Material(Watercomp, 293.6, 0., DensityUnits.sum, ndl)
+Water = Material(Watercomp, 293.6, ndl)
 
 Et = np.array([1.E5])
 Ea = np.array([1.E5])
@@ -96,20 +96,13 @@ print("Dancoff Factor    : {}".format(1.-C))
 
 # Create fuel xs
 Ee = 1. / (2. * fuel_rad)
-Fuel = ndl.carlvik_two_term("U235", UO2.potential_xs, UO2.temperature, UO2.atom_density("U235"), C, Ee)
-Fuel += ndl.carlvik_two_term("U238", UO2.potential_xs, UO2.temperature, UO2.atom_density("U238"), C, Ee)
-Fuel += ndl.carlvik_two_term("O16", UO2.potential_xs, UO2.temperature, UO2.atom_density("O16"), C, Ee)
+Fuel = UO2.build_xs(C, Ee, ndl)
 
 # Create cladding xs using a reference dilution
-Clad = Zirc.atom_density("Zr90") * ndl.interp_nuclide_xs("Zr90", Zirc.temperature,  300)
-Clad += Zirc.atom_density("Zr91") * ndl.interp_nuclide_xs("Zr91", Zirc.temperature, 300)
-Clad += Zirc.atom_density("Zr92") * ndl.interp_nuclide_xs("Zr92", Zirc.temperature, 300)
-Clad += Zirc.atom_density("Zr94") * ndl.interp_nuclide_xs("Zr94", Zirc.temperature, 300)
-Clad += Zirc.atom_density("Zr96") * ndl.interp_nuclide_xs("Zr96", Zirc.temperature, 300)
+Clad = Zirc.build_xs(Zirc.size*[300.], ndl)
 
 # Create moderator xs using a somewhat random dilution (shouldn't matter except a little bit on O16)
-Mod = Water.atom_density("H1_H2O") * ndl.interp_nuclide_xs("H1_H2O", Water.temperature, 10.)
-Mod += Water.atom_density("O16") * ndl.interp_nuclide_xs("O16", Water.temperature, 10.)
+Mod = Water.build_xs(Water.size*[10.], ndl)
 
 # Create and run full real problem with MOC
 radii = [0.5*fuel_rad, 0.8*fuel_rad, fuel_rad, clad_rad, 1.2*clad_rad]

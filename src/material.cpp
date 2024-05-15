@@ -16,20 +16,20 @@ void MaterialComposition::add_nuclide(const std::string& name, double frac) {
     throw ScarabeeException(mssg.str());
   }
 
-  components.emplace_back();
-  components.back().name = name;
-  components.back().fraction = frac;
+  nuclides.emplace_back();
+  nuclides.back().name = name;
+  nuclides.back().fraction = frac;
 }
 
-void MaterialComposition::add_nuclide(const MaterialComponent& comp) {
-  if (comp.fraction <= 0.) {
+void MaterialComposition::add_nuclide(const Nuclide& nuc) {
+  if (nuc.fraction <= 0.) {
     std::stringstream mssg;
-    mssg << "Component \"" << comp.name << "\" has negative or zero fraction.";
+    mssg << "Nuclide \"" << nuc.name << "\" has negative or zero fraction.";
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
-  components.push_back(comp);
+  nuclides.push_back(nuc);
 }
 
 Material::Material(const MaterialComposition& comp, double temp,
@@ -48,7 +48,7 @@ Material::Material(const MaterialComposition& comp, double temp,
     throw ScarabeeException(mssg);
   }
 
-  if (composition_.components.empty()) {
+  if (composition_.nuclides.empty()) {
     auto mssg = "Material must have a composition of at least one component.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -63,7 +63,7 @@ Material::Material(const MaterialComposition& comp, double temp,
   // First, we get our density, assuming that it can be computed from the sum
   // of the fractions in the composition
   double frac_sum = 0.;
-  for (const auto& c : composition_.components) frac_sum += c.fraction;
+  for (const auto& c : composition_.nuclides) frac_sum += c.fraction;
 
   if (composition_.fractions == Fraction::Atoms) {
     atoms_per_bcm_ = frac_sum;
@@ -78,7 +78,7 @@ Material::Material(const MaterialComposition& comp, double temp,
 
   // Convert to Atoms fractions if necessary
   if (composition_.fractions == Fraction::Weight) {
-    for (auto& c : composition_.components) {
+    for (auto& c : composition_.nuclides) {
       const auto& nuc = ndl->get_nuclide(c.name);
       c.fraction = c.fraction * average_molar_mass_ / (nuc.awr * N_MASS_AMU);
     }
@@ -92,7 +92,7 @@ Material::Material(const MaterialComposition& comp, double temp,
   }
 
   // Check fissile and resonant, also get potential_xs
-  for (const auto& c : composition_.components) {
+  for (const auto& c : composition_.nuclides) {
     const auto& nuc = ndl->get_nuclide(c.name);
     potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
 
@@ -124,7 +124,7 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
     throw ScarabeeException(mssg);
   }
 
-  if (composition_.components.empty()) {
+  if (composition_.nuclides.empty()) {
     auto mssg = "Material must have a composition of at least one component.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -139,7 +139,7 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
   // First, we get our provided density
   if (du == DensityUnits::sum) {
     double frac_sum = 0.;
-    for (const auto& c : composition_.components) frac_sum += c.fraction;
+    for (const auto& c : composition_.nuclides) frac_sum += c.fraction;
 
     if (composition_.fractions == Fraction::Atoms) {
       atoms_per_bcm_ = frac_sum;
@@ -158,7 +158,7 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
 
   // Convert to Atoms fractions if necessary
   if (composition_.fractions == Fraction::Weight) {
-    for (auto& c : composition_.components) {
+    for (auto& c : composition_.nuclides) {
       const auto& nuc = ndl->get_nuclide(c.name);
       c.fraction = c.fraction * average_molar_mass_ / (nuc.awr * N_MASS_AMU);
     }
@@ -172,7 +172,7 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
   }
 
   // Check fissile and resonant, also get potential_xs
-  for (const auto& c : composition_.components) {
+  for (const auto& c : composition_.nuclides) {
     const auto& nuc = ndl->get_nuclide(c.name);
     potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
 
@@ -183,14 +183,14 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
 }
 
 double Material::atom_density(const std::string& name) const {
-  for (std::size_t i = 0; i < composition_.components.size(); i++) {
-    if (composition_.components[i].name == name) {
-      return this->atoms_per_bcm() * composition_.components[i].fraction;
+  for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
+    if (composition_.nuclides[i].name == name) {
+      return this->atoms_per_bcm() * composition_.nuclides[i].fraction;
     }
   }
 
   std::stringstream mssg;
-  mssg << "Could not find component with name \"" << name << "\".";
+  mssg << "Could not find nuclide with name \"" << name << "\".";
   spdlog::error(mssg.str());
   throw ScarabeeException(mssg.str());
 
@@ -199,8 +199,8 @@ double Material::atom_density(const std::string& name) const {
 }
 
 bool Material::has_component(const std::string& name) const {
-  for (std::size_t i = 0; i < composition_.components.size(); i++) {
-    if (composition_.components[i].name == name) {
+  for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
+    if (composition_.nuclides[i].name == name) {
       return true;
     }
   }
@@ -211,7 +211,7 @@ bool Material::has_component(const std::string& name) const {
 double Material::calc_avg_molar_mass(const NDLibrary& ndl) const {
   double avg_mm = 0.;
 
-  for (const auto& comp : composition_.components) {
+  for (const auto& comp : composition_.nuclides) {
     const auto& nuc = ndl.get_nuclide(comp.name);
     if (composition_.fractions == Fraction::Atoms) {
       avg_mm += comp.fraction * nuc.awr * N_MASS_AMU;
@@ -228,13 +228,71 @@ double Material::calc_avg_molar_mass(const NDLibrary& ndl) const {
 void Material::normalize_fractions() {
   double frac_sum = 0.;
 
-  for (const auto& comp : composition_.components) {
+  for (const auto& comp : composition_.nuclides) {
     frac_sum += comp.fraction;
   }
 
-  for (auto& comp : composition_.components) {
+  for (auto& comp : composition_.nuclides) {
     comp.fraction /= frac_sum;
   }
+}
+
+std::shared_ptr<CrossSection> Material::build_xs(
+    double C, double Ee, std::shared_ptr<NDLibrary> ndl) const {
+  // Get the first nuclide, then add others to it
+  const std::string& name0 = composition_.nuclides[0].name;
+  const double N0 = this->atom_density(name0);
+  std::shared_ptr<CrossSection> xsout =
+      ndl->carlvik_two_term(name0, potential_xs_, temperature_, N0, C, Ee);
+
+  // Add other components
+  for (std::size_t i = 1; i < composition_.nuclides.size(); i++) {
+    const std::string& namei = composition_.nuclides[i].name;
+    const double Ni = this->atom_density(namei);
+    auto xsi =
+        ndl->carlvik_two_term(namei, potential_xs_, temperature_, Ni, C, Ee);
+    *xsout += *xsi;
+  }
+
+  return xsout;
+}
+
+std::shared_ptr<CrossSection> Material::build_xs(
+    const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl) const {
+  if (dils.size() != this->size()) {
+    std::stringstream mssg;
+    mssg << "The number of provided dilutions (" << dils.size()
+         << ") does not match the number of nuclides (" << this->size() << ").";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  for (std::size_t i = 0; i < dils.size(); i++) {
+    if (dils[i] <= 0.) {
+      std::stringstream mssg;
+      mssg << "The provided dilution at index " << i << " is negative.";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+  }
+
+  // Get the first nuclide, then add others to it
+  const std::string& name0 = composition_.nuclides[0].name;
+  const double N0 = this->atom_density(name0);
+  std::shared_ptr<CrossSection> xsout =
+      ndl->interp_nuclide_xs(name0, temperature_, dils[0]);
+  *xsout *= N0;
+
+  // Add other components
+  for (std::size_t i = 1; i < composition_.nuclides.size(); i++) {
+    const std::string& namei = composition_.nuclides[i].name;
+    const double Ni = this->atom_density(namei);
+    auto xsi = ndl->interp_nuclide_xs(namei, temperature_, dils[i]);
+    *xsi *= Ni;
+    *xsout += *xsi;
+  }
+
+  return xsout;
 }
 
 }  // namespace scarabee

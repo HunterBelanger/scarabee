@@ -10,7 +10,7 @@ namespace py = pybind11;
 extern void init_CrossSection(py::module&);
 extern void init_NuclideHandle(py::module&);
 extern void init_NDLibrary(py::module&);
-extern void init_MaterialComponent(py::module&);
+extern void init_Nuclide(py::module&);
 extern void init_MaterialComposition(py::module&);
 extern void init_Material(py::module&);
 extern void init_CylindricalCell(py::module&);
@@ -39,7 +39,7 @@ PYBIND11_MODULE(scarabee, m) {
   init_CrossSection(m);
   init_NuclideHandle(m);
   init_NDLibrary(m);
-  init_MaterialComponent(m);
+  init_Nuclide(m);
   init_MaterialComposition(m);
   init_Material(m);
   init_CylindricalCell(m);

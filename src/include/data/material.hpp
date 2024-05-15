@@ -1,13 +1,15 @@
 #ifndef SCARABEE_MATERIAL_H
 #define SCARABEE_MATERIAL_H
 
+#include <cross_section.hpp>
+
 #include <string>
 #include <memory>
 #include <vector>
 
 namespace scarabee {
 
-struct MaterialComponent {
+struct Nuclide {
   std::string name;
   double fraction;
 };
@@ -15,11 +17,11 @@ struct MaterialComponent {
 enum class Fraction { Atoms, Weight };
 
 struct MaterialComposition {
-  std::vector<MaterialComponent> components;
+  std::vector<Nuclide> nuclides;
   Fraction fractions;
 
   void add_nuclide(const std::string& name, double frac);
-  void add_nuclide(const MaterialComponent& comp);
+  void add_nuclide(const Nuclide& nuc);
 };
 
 enum class DensityUnits { g_cm3, a_bcm, sum };
@@ -36,6 +38,8 @@ class Material {
 
   const MaterialComposition& composition() const { return composition_; }
 
+  std::size_t size() const { return composition_.nuclides.size(); }
+
   bool has_component(const std::string& name) const;
   double atom_density(const std::string& name) const;
 
@@ -47,6 +51,11 @@ class Material {
 
   bool fissile() const { return fissile_; }
   bool resonant() const { return resonant_; }
+
+  std::shared_ptr<CrossSection> build_xs(double C, double Ee,
+                                         std::shared_ptr<NDLibrary> ndl) const;
+  std::shared_ptr<CrossSection> build_xs(const std::vector<double>& dils,
+                                         std::shared_ptr<NDLibrary> ndl) const;
 
  private:
   MaterialComposition composition_;
