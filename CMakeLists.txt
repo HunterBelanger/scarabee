@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 project(scarabee CXX)
 
-option(SCARABEE_USE_OMP "Compile Scarabée with OpenMP for shared memory parallelism" OFF)
+option(SCARABEE_USE_OMP "Compile Scarabée with OpenMP for shared memory parallelism" ON)
 
 # Get FetchContent for downloading dependencies
 include(FetchContent)
@@ -152,7 +152,7 @@ target_include_directories(scarabee PUBLIC
 
 # Find OpenMP if desired
 if(SCARABEE_USE_OMP)
-  find_package(OpenMP REQUIRED)
+  find_package(OpenMP)
   if(OpenMP_CXX_FOUND)
     target_link_libraries(scarabee PUBLIC OpenMP::OpenMP_CXX)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # Compile options for Windows
