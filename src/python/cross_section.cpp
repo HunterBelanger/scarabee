@@ -152,13 +152,15 @@ void init_CrossSection(py::module& m) {
            "    gout  outgoing energy group",
            py::arg("gin"), py::arg("gout"))
 
-      .def("Es1",
-           py::overload_cast<std::size_t, std::size_t>(&CrossSection::Es1, py::const_),
-           "P1 moment of the scattering cross section from group gin to gout\n\n"
-           "Arguments:\n"
-           "    gin   incoming energy group\n"
-           "    gout  outgoing energy group",
-           py::arg("gin"), py::arg("gout"))
+      .def(
+          "Es1",
+          py::overload_cast<std::size_t, std::size_t>(&CrossSection::Es1,
+                                                      py::const_),
+          "P1 moment of the scattering cross section from group gin to gout\n\n"
+          "Arguments:\n"
+          "    gin   incoming energy group\n"
+          "    gout  outgoing energy group",
+          py::arg("gin"), py::arg("gout"))
 
       .def("Es", py::overload_cast<std::size_t>(&CrossSection::Es, py::const_),
            "Scattering cross section in group g\n\n"

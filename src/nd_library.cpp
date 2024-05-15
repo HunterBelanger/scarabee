@@ -52,7 +52,6 @@ NDLibrary::NDLibrary(const std::string& fname)
       group_structure_(),
       ngroups_(0),
       h5_(nullptr) {
-
   // Make sure HDF5 file exists
   if (std::filesystem::exists(fname) == false) {
     std::stringstream mssg;
