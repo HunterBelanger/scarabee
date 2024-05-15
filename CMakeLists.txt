@@ -142,6 +142,7 @@ pybind11_add_module(scarabee  src/logging.cpp
                               src/python/pin_cell.cpp
                               src/python/cartesian_2d.cpp
                               src/python/moc_driver.cpp
+                              src/python/criticality_spectrum.cpp
                             )
 
 target_include_directories(scarabee PRIVATE include)
