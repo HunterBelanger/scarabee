@@ -6,6 +6,7 @@
 #include <xtensor/xtensor.hpp>
 
 #include <cmath>
+#include <filesystem>
 #include <sstream>
 
 namespace scarabee {
@@ -51,6 +52,15 @@ NDLibrary::NDLibrary(const std::string& fname)
       group_structure_(),
       ngroups_(0),
       h5_(nullptr) {
+
+  // Make sure HDF5 file exists
+  if (std::filesystem::exists(fname) == false) {
+    std::stringstream mssg;
+    mssg << "The file \"" << fname << "\" does not exist.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
   // Open the HDF5 file
   h5_ = std::make_shared<H5::File>(fname, H5::File::ReadOnly);
 
