@@ -7,7 +7,7 @@
 #include <moc/pin_cell.hpp>
 #include <moc/direction.hpp>
 #include <moc/vector.hpp>
-#include <transport_xs.hpp>
+#include <cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 
@@ -71,8 +71,8 @@ class Cartesian2D {
 
   bool tiles_valid() const;
 
-  std::shared_ptr<TransportXS> get_xs(const Vector& r,
-                                      const Direction& u) const;
+  std::shared_ptr<CrossSection> get_xs(const Vector& r,
+                                       const Direction& u) const;
 
   UniqueFSR get_fsr(const Vector& r, const Direction& u) const;
 

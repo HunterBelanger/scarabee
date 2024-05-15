@@ -1,7 +1,7 @@
 #ifndef SCARABEE_CYLINDRICAL_CELL_H
 #define SCARABEE_CYLINDRICAL_CELL_H
 
-#include <transport_xs.hpp>
+#include <cross_section.hpp>
 #include <utils/constants.hpp>
 
 #include <xtensor/xtensor.hpp>
@@ -14,7 +14,7 @@ namespace scarabee {
 class CylindricalCell {
  public:
   CylindricalCell(const std::vector<double>& radii,
-                  const std::vector<std::shared_ptr<TransportXS>>& mats);
+                  const std::vector<std::shared_ptr<CrossSection>>& mats);
   bool solved() const { return solved_; }
   void solve();
 
@@ -54,7 +54,7 @@ class CylindricalCell {
     return p_(g, i, j);
   }
 
-  const std::shared_ptr<TransportXS>& mat(std::size_t i) const {
+  const std::shared_ptr<CrossSection>& mat(std::size_t i) const {
     return mats_[i];
   }
 
@@ -65,7 +65,7 @@ class CylindricalCell {
   xt::xtensor<double, 1> Gamma_;  // Multicollision blackness in each group
   std::vector<double> radii_;
   std::vector<double> vols_;
-  std::vector<std::shared_ptr<TransportXS>> mats_;
+  std::vector<std::shared_ptr<CrossSection>> mats_;
   std::size_t ngroups_;
   bool solved_;
 

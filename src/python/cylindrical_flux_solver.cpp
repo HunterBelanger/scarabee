@@ -18,10 +18,10 @@ void init_CylindricalFluxSolver(py::module& m) {
            py::arg("cell"))
 
       .def_property_readonly("ngroups", &CylindricalFluxSolver::ngroups,
-           "Number of energy groups")
+                             "Number of energy groups")
 
       .def_property_readonly("nregions", &CylindricalFluxSolver::nregions,
-           "Number of annular regions")
+                             "Number of annular regions")
 
       .def("flux", &CylindricalFluxSolver::flux,
            "Flux in group g region i.\n\n"
@@ -30,8 +30,9 @@ void init_CylindricalFluxSolver(py::module& m) {
            "    i  region index",
            py::arg("g"), py::arg("i"))
 
-      .def_property("flux_tolerance", &CylindricalFluxSolver::flux_tolerance, &CylindricalFluxSolver::set_flux_tolerance,
-           "Tolerance for flux convergence")
+      .def_property("flux_tolerance", &CylindricalFluxSolver::flux_tolerance,
+                    &CylindricalFluxSolver::set_flux_tolerance,
+                    "Tolerance for flux convergence")
 
       .def("set_flux_tolerance", &CylindricalFluxSolver::set_flux_tolerance,
            "Sets the flux convervence tolerance.\n\n"
@@ -40,12 +41,15 @@ void init_CylindricalFluxSolver(py::module& m) {
            py::arg("flux_tol"))
 
       .def_property_readonly("keff", &CylindricalFluxSolver::keff,
-           "Multiplication factor of cell")
+                             "Multiplication factor of cell")
 
-      .def_property("keff_tolerance", &CylindricalFluxSolver::keff_tolerance, &CylindricalFluxSolver::set_keff_tolerance,
-           "Tolerance for keff convergence")
+      .def_property("keff_tolerance", &CylindricalFluxSolver::keff_tolerance,
+                    &CylindricalFluxSolver::set_keff_tolerance,
+                    "Tolerance for keff convergence")
 
-      .def_property("albedo", &CylindricalFluxSolver::albedo, &CylindricalFluxSolver::set_albedo, "Albedo for outer cell boundary")
+      .def_property("albedo", &CylindricalFluxSolver::albedo,
+                    &CylindricalFluxSolver::set_albedo,
+                    "Albedo for outer cell boundary")
 
       .def("j_ext", &CylindricalFluxSolver::j_ext,
            "External current.\n\n"
@@ -82,5 +86,5 @@ void init_CylindricalFluxSolver(py::module& m) {
            "Solves the system for the flux and eigenvalue.")
 
       .def_property_readonly("solved", &CylindricalFluxSolver::solved,
-           "Returns true if the system has been solved.");
+                             "Returns true if the system has been solved.");
 }

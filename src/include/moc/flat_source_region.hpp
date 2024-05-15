@@ -4,7 +4,7 @@
 #include <moc/surface.hpp>
 #include <moc/vector.hpp>
 #include <moc/direction.hpp>
-#include <transport_xs.hpp>
+#include <cross_section.hpp>
 #include <utils/constants.hpp>
 
 #include <htl/static_vector.hpp>
@@ -48,8 +48,8 @@ class FlatSourceRegion {
 
   std::size_t id() const { return id_; }
 
-  std::shared_ptr<TransportXS>& xs() { return xs_; }
-  const std::shared_ptr<TransportXS>& xs() const { return xs_; }
+  std::shared_ptr<CrossSection>& xs() { return xs_; }
+  const std::shared_ptr<CrossSection>& xs() const { return xs_; }
 
   htl::static_vector<RegionToken, MAX_SURFS>& tokens() { return tokens_; }
   const htl::static_vector<RegionToken, MAX_SURFS>& tokens() const {
@@ -61,7 +61,7 @@ class FlatSourceRegion {
 
  private:
   htl::static_vector<RegionToken, MAX_SURFS> tokens_;
-  std::shared_ptr<TransportXS> xs_;
+  std::shared_ptr<CrossSection> xs_;
   double volume_;
   std::size_t id_;
 

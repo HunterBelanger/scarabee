@@ -7,7 +7,7 @@
 
 namespace scarabee {
 
-EmptyCell::EmptyCell(const std::shared_ptr<TransportXS>& mat, double dx,
+EmptyCell::EmptyCell(const std::shared_ptr<CrossSection>& mat, double dx,
                      double dy)
     : Cell(dx, dy), mat_(mat) {
   // Just a single FSR

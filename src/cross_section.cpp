@@ -1,4 +1,4 @@
-#include <transport_xs.hpp>
+#include <cross_section.hpp>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
@@ -10,15 +10,16 @@
 
 namespace scarabee {
 
-TransportXS::TransportXS(const xt::xtensor<double, 1>& Et,
-                         const xt::xtensor<double, 1>& Ea,
-                         const xt::xtensor<double, 2>& Es,
-                         const xt::xtensor<double, 1>& Ef,
-                         const xt::xtensor<double, 1>& vEf,
-                         const xt::xtensor<double, 1>& chi,
-                         const std::string& name)
-    : Es_(Es),
-      Et_(Et),
+CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
+                           const xt::xtensor<double, 1>& Ea,
+                           const xt::xtensor<double, 2>& Es_tr,
+                           const xt::xtensor<double, 1>& Ef,
+                           const xt::xtensor<double, 1>& vEf,
+                           const xt::xtensor<double, 1>& chi,
+                           const std::string& name)
+    : Es_tr_(Es_tr),
+      Es1_(),
+      Etr_(Etr),
       Ea_(Ea),
       Ef_(Ef),
       vEf_(vEf),
@@ -28,18 +29,74 @@ TransportXS::TransportXS(const xt::xtensor<double, 1>& Et,
   this->check_xs();
 }
 
-TransportXS::TransportXS(const xt::xtensor<double, 1>& Et,
-                         const xt::xtensor<double, 1>& Ea,
-                         const xt::xtensor<double, 2>& Es,
-                         const std::string& name)
-    : Es_(Es), Et_(Et), Ea_(Ea), vEf_(), chi_(), name_(name), fissile_(false) {
+CrossSection::CrossSection(
+    const xt::xtensor<double, 1>& Et, const xt::xtensor<double, 1>& Ea,
+    const xt::xtensor<double, 2>& Es, const xt::xtensor<double, 2>& Es1,
+    const xt::xtensor<double, 1>& Ef, const xt::xtensor<double, 1>& vEf,
+    const xt::xtensor<double, 1>& chi, const std::string& name)
+    : Es_tr_(Es),
+      Es1_(Es1),
+      Etr_(Et),
+      Ea_(Ea),
+      Ef_(Ef),
+      vEf_(vEf),
+      chi_(chi),
+      name_(name),
+      fissile_(false) {
+  // Check xs first, to make sure the size of everything is okay
+  this->check_xs();
+
+  // Apply the transport correction
+  for (std::size_t g = 0; g < ngroups(); g++) {
+    Etr_(g) -= Es1_(g, g);
+    Es_tr_(g, g) -= Es1_(g, g);
+  }
+}
+
+CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
+                           const xt::xtensor<double, 1>& Ea,
+                           const xt::xtensor<double, 2>& Es_tr,
+                           const std::string& name)
+    : Es_tr_(Es_tr),
+      Es1_(),
+      Etr_(Etr),
+      Ea_(Ea),
+      vEf_(),
+      chi_(),
+      name_(name),
+      fissile_(false) {
   Ef_ = xt::zeros<double>({ngroups()});
   vEf_ = xt::zeros<double>({ngroups()});
   chi_ = xt::zeros<double>({ngroups()});
   this->check_xs();
 }
 
-TransportXS& TransportXS::operator+=(const TransportXS& R) {
+CrossSection::CrossSection(const xt::xtensor<double, 1>& Et,
+                           const xt::xtensor<double, 1>& Ea,
+                           const xt::xtensor<double, 2>& Es,
+                           const xt::xtensor<double, 2>& Es1,
+                           const std::string& name)
+    : Es_tr_(Es),
+      Es1_(Es1),
+      Etr_(Et),
+      Ea_(Ea),
+      vEf_(),
+      chi_(),
+      name_(name),
+      fissile_(false) {
+  Ef_ = xt::zeros<double>({ngroups()});
+  vEf_ = xt::zeros<double>({ngroups()});
+  chi_ = xt::zeros<double>({ngroups()});
+  this->check_xs();
+
+  // Apply the transport correction
+  for (std::size_t g = 0; g < ngroups(); g++) {
+    Etr_(g) -= Es1_(g, g);
+    Es_tr_(g, g) -= Es1_(g, g);
+  }
+}
+
+CrossSection& CrossSection::operator+=(const CrossSection& R) {
   // Perform dimensionality checks
   if (ngroups() != R.ngroups()) {
     auto mssg = "Disagreement in number of groups.";
@@ -55,10 +112,11 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
     R_vEf_sum += R.vEf(g);
   }
 
-  double chi_sum = 0.; 
-  if (L_vEf_sum+R_vEf_sum > 0.) {
+  double chi_sum = 0.;
+  if (L_vEf_sum + R_vEf_sum > 0.) {
     for (std::size_t g = 0; g < ngroups(); g++) {
-      chi_(g) = (chi(g)*L_vEf_sum + R.chi(g)*R_vEf_sum) / (L_vEf_sum + R_vEf_sum);
+      chi_(g) =
+          (chi(g) * L_vEf_sum + R.chi(g) * R_vEf_sum) / (L_vEf_sum + R_vEf_sum);
       chi_sum += chi_(g);
     }
 
@@ -74,10 +132,10 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
   // Add all other cross sections which aren't averaged
   for (std::size_t g = 0; g < ngroups(); g++) {
     for (std::size_t gout = 0; gout < ngroups(); gout++) {
-      Es_(g, gout) += R.Es(g, gout);
+      Es_tr_(g, gout) += R.Es_tr(g, gout);
     }
 
-    Et_(g) += R.Et(g);
+    Etr_(g) += R.Etr(g);
     Ea_(g) += R.Ea(g);
     Ef_(g) += R.Ef(g);
     vEf_(g) += R.vEf(g);
@@ -88,12 +146,12 @@ TransportXS& TransportXS::operator+=(const TransportXS& R) {
   return *this;
 }
 
-TransportXS& TransportXS::operator*=(double N) {
-  // Scale Es_
-  Es_ *= N;
+CrossSection& CrossSection::operator*=(double N) {
+  // Scale Es_tr_
+  Es_tr_ *= N;
 
-  // Scale Et_
-  Et_ *= N;
+  // Scale Etr_
+  Etr_ *= N;
 
   // Scale Ea_
   Ea_ *= N;
@@ -109,19 +167,19 @@ TransportXS& TransportXS::operator*=(double N) {
   return *this;
 }
 
-TransportXS TransportXS::operator+(const TransportXS& R) const {
-  TransportXS out = *this;
+CrossSection CrossSection::operator+(const CrossSection& R) const {
+  CrossSection out = *this;
   out += R;
   return out;
 }
 
-TransportXS TransportXS::operator*(double N) const {
-  TransportXS out = *this;
+CrossSection CrossSection::operator*(double N) const {
+  CrossSection out = *this;
   out *= N;
   return out;
 }
 
-void TransportXS::check_xs() {
+void CrossSection::check_xs() {
   // Make correct number of groups
   if (ngroups() == 0) {
     auto mssg = "Must have at least 1 energy group.";
@@ -153,30 +211,29 @@ void TransportXS::check_xs() {
     throw ScarabeeException(mssg);
   }
 
-  if (Es_.shape(0) != ngroups() || Es_.shape(1) != ngroups()) {
+  if (Es_tr_.shape(0) != ngroups() || Es_tr_.shape(1) != ngroups()) {
     auto mssg = "Es is not the same size of Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
+  if (Es1_.size() > 0) {
+    if (Es1_.shape(0) != ngroups() || Es1_.shape(1) != ngroups()) {
+      auto mssg = "Es1 is not the same size of Et.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+  }
+
   // Check values for each group
   double chi_sum = 0.;
   for (std::size_t g = 0; g < ngroups(); g++) {
-    if (std::abs((Et(g) - Ea(g) - Es(g)) / Et(g)) > 1.E-3) {
+    if (std::abs((Etr(g) - Ea(g) - Es_tr(g)) / Etr(g)) > 1.E-3) {
       std::stringstream mssg;
-      mssg << "Ea + Es != Et in group " << g << ".";
+      mssg << "Ea + Es_tr != Etr in group " << g << ".";
       spdlog::error(mssg.str());
       throw ScarabeeException(mssg.str());
     }
-
-    /*
-    if (Ea(g) < 0.) {
-      std::stringstream mssg;
-      mssg << "Ea is negative in group " << g << ".";
-      spdlog::error(mssg.str());
-      throw ScarabeeException(mssg.str());
-    }
-    */
 
     if (vEf(g) < 0.) {
       std::stringstream mssg;
@@ -219,16 +276,16 @@ void TransportXS::check_xs() {
       throw ScarabeeException(mssg.str());
     }
 
-    if (std::isnan(Et_(gin))) {
+    if (std::isnan(Etr_(gin))) {
       std::stringstream mssg;
-      mssg << "Et has NaN value in group " << gin << ".";
+      mssg << "Etr has NaN value in group " << gin << ".";
       spdlog::error(mssg.str());
       throw ScarabeeException(mssg.str());
     }
 
-    if (Et_(gin) == 0.) {
+    if (Etr_(gin) == 0.) {
       std::stringstream mssg;
-      mssg << "Et value of zero in group " << gin << ".";
+      mssg << "Etr value of zero in group " << gin << ".";
       spdlog::error(mssg.str());
       throw ScarabeeException(mssg.str());
     }
@@ -248,16 +305,23 @@ void TransportXS::check_xs() {
     }
 
     for (std::size_t gout = 0; gout < ngroups(); gout++) {
-      if (std::isnan(Es_(gin, gout))) {
+      if (std::isnan(Es_tr_(gin, gout))) {
         std::stringstream mssg;
-        mssg << "Es has NaN value in transfer " << gin << " -> " << gout << ".";
+        mssg << "Es_tr has NaN value in transfer " << gin << " -> " << gout
+             << ".";
+        spdlog::error(mssg.str());
+        throw ScarabeeException(mssg.str());
+      }
+
+      if (Es1_.size() > 0 && std::isnan(Es1_(gin, gout))) {
+        std::stringstream mssg;
+        mssg << "Es1 has NaN value in transfer " << gin << " -> " << gout
+             << ".";
         spdlog::error(mssg.str());
         throw ScarabeeException(mssg.str());
       }
     }
-    
   }
-  
 }
 
 }  // namespace scarabee

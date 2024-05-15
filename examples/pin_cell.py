@@ -1,4 +1,4 @@
-from pyScarabee import *
+from scarabee import *
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -29,15 +29,15 @@ Water = Material(Watercomp, 293.6, 0., DensityUnits.sum, ndl)
 Et = np.array([1.E5])
 Ea = np.array([1.E5])
 Es = np.array([[0.]])
-Fuel = TransportXS(Et, Ea, Es, "Fuel")
+Fuel = CrossSection(Et, Ea, Es, "Fuel")
 
 Et = np.array([Zirc.potential_xs])
 Ea = np.array([Zirc.potential_xs])
-Clad = TransportXS(Et, Ea, Es, "Clad")
+Clad = CrossSection(Et, Ea, Es, "Clad")
 
 Et = np.array([Water.potential_xs])
 Ea = np.array([Water.potential_xs])
-Mod = TransportXS(Et, Ea, Es, "Mod")
+Mod = CrossSection(Et, Ea, Es, "Mod")
 
 # Define Cells
 pitch = 1.26

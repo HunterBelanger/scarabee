@@ -32,14 +32,15 @@ void MaterialComposition::add_nuclide(const MaterialComponent& comp) {
   components.push_back(comp);
 }
 
-Material::Material(const MaterialComposition& comp, double temp, std::shared_ptr<NDLibrary> ndl):
-composition_(comp),
-temperature_(temp),
-atoms_per_bcm_(-1.),
-grams_per_cm3_(-1.),
-potential_xs_(0.),
-fissile_(false),
-resonant_(false) {
+Material::Material(const MaterialComposition& comp, double temp,
+                   std::shared_ptr<NDLibrary> ndl)
+    : composition_(comp),
+      temperature_(temp),
+      atoms_per_bcm_(-1.),
+      grams_per_cm3_(-1.),
+      potential_xs_(0.),
+      fissile_(false),
+      resonant_(false) {
   // Make sure quantities are positive/valid
   if (temp <= 0.) {
     auto mssg = "Material temperature must be > 0.";
@@ -62,15 +63,14 @@ resonant_(false) {
   // First, we get our density, assuming that it can be computed from the sum
   // of the fractions in the composition
   double frac_sum = 0.;
-  for (const auto& c : composition_.components)
-    frac_sum += c.fraction;
-  
+  for (const auto& c : composition_.components) frac_sum += c.fraction;
+
   if (composition_.fractions == Fraction::Atoms) {
     atoms_per_bcm_ = frac_sum;
   } else {
     grams_per_cm3_ = frac_sum;
   }
-  
+
   this->normalize_fractions();
 
   // Now that fractions have been normalized, we can get the average molar mass
@@ -96,22 +96,21 @@ resonant_(false) {
     const auto& nuc = ndl->get_nuclide(c.name);
     potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
 
-    if (nuc.fissile)
-      fissile_ = true;
+    if (nuc.fissile) fissile_ = true;
 
-    if (nuc.resonant)
-      resonant_ = true;
+    if (nuc.resonant) resonant_ = true;
   }
 }
 
-Material::Material(const MaterialComposition& comp, double temp, double density, DensityUnits du, std::shared_ptr<NDLibrary> ndl):
-composition_(comp),
-temperature_(temp),
-atoms_per_bcm_(-1.),
-grams_per_cm3_(-1.),
-potential_xs_(0.),
-fissile_(false),
-resonant_(false) {
+Material::Material(const MaterialComposition& comp, double temp, double density,
+                   DensityUnits du, std::shared_ptr<NDLibrary> ndl)
+    : composition_(comp),
+      temperature_(temp),
+      atoms_per_bcm_(-1.),
+      grams_per_cm3_(-1.),
+      potential_xs_(0.),
+      fissile_(false),
+      resonant_(false) {
   // Make sure quantities are positive/valid
   if (temp <= 0.) {
     auto mssg = "Material temperature must be > 0.";
@@ -140,9 +139,8 @@ resonant_(false) {
   // First, we get our provided density
   if (du == DensityUnits::sum) {
     double frac_sum = 0.;
-    for (const auto& c : composition_.components)
-      frac_sum += c.fraction;
-    
+    for (const auto& c : composition_.components) frac_sum += c.fraction;
+
     if (composition_.fractions == Fraction::Atoms) {
       atoms_per_bcm_ = frac_sum;
     } else {
@@ -178,11 +176,9 @@ resonant_(false) {
     const auto& nuc = ndl->get_nuclide(c.name);
     potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
 
-    if (nuc.fissile)
-      fissile_ = true;
+    if (nuc.fissile) fissile_ = true;
 
-    if (nuc.resonant)
-      resonant_ = true;
+    if (nuc.resonant) resonant_ = true;
   }
 }
 
@@ -208,7 +204,7 @@ bool Material::has_component(const std::string& name) const {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -224,8 +220,7 @@ double Material::calc_avg_molar_mass(const NDLibrary& ndl) const {
     }
   }
 
-  if (composition_.fractions == Fraction::Weight)
-    avg_mm = 1. / avg_mm;
+  if (composition_.fractions == Fraction::Weight) avg_mm = 1. / avg_mm;
 
   return avg_mm;
 }
@@ -242,4 +237,4 @@ void Material::normalize_fractions() {
   }
 }
 
-}
+}  // namespace scarabee

@@ -66,7 +66,7 @@ void init_Cartesian2D(py::module& m) {
            py::arg("r"), py::arg("u"))
 
       .def("get_xs", &Cartesian2D::get_xs,
-           "Returns TransportXS for given position and direction.\n\n"
+           "Returns CrossSection for given position and direction.\n\n"
            "Arguments:\n"
            "    r  position Vector\n"
            "    u  Direction",

@@ -11,27 +11,29 @@ using namespace scarabee;
 void init_CylindricalCell(py::module& m) {
   py::class_<CylindricalCell, std::shared_ptr<CylindricalCell>>(
       m, "CylindricalCell")
-      .def(
-          py::init<const std::vector<double>& /*radii*/,
-                   const std::vector<std::shared_ptr<TransportXS>>& /*mats*/>(),
-          "1D annular cell problem.\n\n"
-          "Arguments:\n"
-          "    radii  List of region radii\n"
-          "    mats   List of TransportXS for each region.",
-          py::arg("radii"), py::arg("mats"))
+      .def(py::init<
+               const std::vector<double>& /*radii*/,
+               const std::vector<std::shared_ptr<CrossSection>>& /*mats*/>(),
+           "1D annular cell problem.\n\n"
+           "Arguments:\n"
+           "    radii  List of region radii\n"
+           "    mats   List of CrossSection for each region.",
+           py::arg("radii"), py::arg("mats"))
 
       .def_property_readonly("solved", &CylindricalCell::solved,
-           "Returns true is the system has been solved")
+                             "Returns true is the system has been solved")
 
       .def("solve", &CylindricalCell::solve,
            "Solves the system for partial flux responses")
 
-      .def_property_readonly("ngroups", &CylindricalCell::ngroups, "Number of energy groups")
+      .def_property_readonly("ngroups", &CylindricalCell::ngroups,
+                             "Number of energy groups")
 
-      .def_property_readonly("nregions", &CylindricalCell::nregions, "Number of annular regions")
+      .def_property_readonly("nregions", &CylindricalCell::nregions,
+                             "Number of annular regions")
 
       .def_property_readonly("Sb", &CylindricalCell::Sb,
-           "Outer surface area (circumference) of cell")
+                             "Outer surface area (circumference) of cell")
 
       .def("V", &CylindricalCell::V,
            "Volume of region i\n\n"
@@ -88,7 +90,7 @@ void init_CylindricalCell(py::module& m) {
            py::arg("g"), py::arg("i"), py::arg("k"))
 
       .def("mat", &CylindricalCell::mat,
-           "TransportXS for region i.\n\n"
+           "CrossSection for region i.\n\n"
            "Arguments:\n"
            "    i  region index",
            py::arg("i"));

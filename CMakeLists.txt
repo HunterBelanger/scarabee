@@ -100,36 +100,54 @@ FetchContent_Declare(HighFive
 FetchContent_MakeAvailable(HighFive)
 
 #===============================================================================
-add_library(scarabee STATIC src/logging.cpp
-                            src/gauss_kronrod.cpp
-                            src/chebyshev.cpp
-                            src/math.cpp
-                            src/transport_xs.cpp
-                            src/material.cpp
-                            src/nd_library.cpp
-                            src/cylindrical_cell.cpp
-                            src/cylindrical_flux_solver.cpp
-                            src/surface.cpp
-                            src/flat_source_region.cpp
-                            src/cell.cpp
-                            src/empty_cell.cpp
-                            src/simple_pin_cell.cpp
-                            src/pin_cell.cpp
-                            src/cartesian_2d.cpp
-                            src/track.cpp
-                            src/legendre.cpp
-                            src/yamamoto_tabuchi.cpp
-                            src/moc_driver.cpp)
-set_target_properties(scarabee PROPERTIES OUTPUT_NAME "scarabée")
-# Must make position independent on linux so that it can be linked with the
-# python shared library. This unfortunately adds an indirection.
-set_target_properties(scarabee PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+# Make python library
+pybind11_add_module(scarabee  src/logging.cpp
+                              src/gauss_kronrod.cpp
+                              src/chebyshev.cpp
+                              src/math.cpp
+                              src/cross_section.cpp
+                              src/material.cpp
+                              src/nd_library.cpp
+                              src/cylindrical_cell.cpp
+                              src/cylindrical_flux_solver.cpp
+                              src/surface.cpp
+                              src/flat_source_region.cpp
+                              src/cell.cpp
+                              src/empty_cell.cpp
+                              src/simple_pin_cell.cpp
+                              src/pin_cell.cpp
+                              src/cartesian_2d.cpp
+                              src/track.cpp
+                              src/legendre.cpp
+                              src/yamamoto_tabuchi.cpp
+                              src/moc_driver.cpp
+                              #=================================================
+                              src/python/scarabee.cpp
+                              src/python/vector.cpp
+                              src/python/direction.cpp
+                              src/python/logging.cpp
+                              src/python/cross_section.cpp
+                              src/python/material.cpp
+                              src/python/nd_library.cpp
+                              src/python/cylindrical_cell.cpp
+                              src/python/cylindrical_flux_solver.cpp
+                              src/python/polar_quadrature.cpp
+                              src/python/boundary_condition.cpp
+                              src/python/simulation_mode.cpp
+                              src/python/track.cpp 
+                              src/python/cell.cpp
+                              src/python/empty_cell.cpp
+                              src/python/simple_pin_cell.cpp
+                              src/python/pin_cell.cpp
+                              src/python/cartesian_2d.cpp
+                              src/python/moc_driver.cpp
+                            )
+
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
 target_link_libraries(scarabee PUBLIC xtl xtensor xtensor-python htl HighFive Eigen3::Eigen spdlog::spdlog)
 target_include_directories(scarabee PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/include>
 )
 
 # Find OpenMP if desired
@@ -143,28 +161,3 @@ if(SCARABEE_USE_OMP)
     target_compile_definitions(scarabee PUBLIC SCARABEE_USE_OMP)
   endif()
 endif()
-
-#===============================================================================
-# Make python library
-pybind11_add_module(pyScarabee src/python/pyScarabee.cpp
-                               src/python/vector.cpp
-                               src/python/direction.cpp
-                               src/python/logging.cpp
-                               src/python/transport_xs.cpp
-                               src/python/material.cpp
-                               src/python/nd_library.cpp
-                               src/python/cylindrical_cell.cpp
-                               src/python/cylindrical_flux_solver.cpp
-                               src/python/polar_quadrature.cpp
-                               src/python/boundary_condition.cpp
-                               src/python/simulation_mode.cpp
-                               src/python/track.cpp 
-                               src/python/cell.cpp
-                               src/python/empty_cell.cpp
-                               src/python/simple_pin_cell.cpp
-                               src/python/pin_cell.cpp
-                               src/python/cartesian_2d.cpp
-                               src/python/moc_driver.cpp
-                             )
-
-target_link_libraries(pyScarabee PRIVATE scarabee)

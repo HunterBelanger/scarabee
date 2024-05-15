@@ -3,29 +3,29 @@
 # Geometry using the Method of Characteristics,” J. Nucl. Sci. Technol.,
 # vol. 43, no. 10, pp. 1182–1187, 2006, doi: 10.1080/18811248.2006.9711210.
 
-from pyScarabee import *
+from scarabee import *
 import numpy as np
 np.set_printoptions(linewidth=200)
 
 Et = np.array([1.E5])
 Ea = np.array([1.E5])
 Es = np.array([[0.]])
-Fuel = TransportXS(Et, Ea, Es, "Fuel")
+Fuel = CrossSection(Et, Ea, Es, "Fuel")
 
 Mod_pot_xs = 1.05
 Et = np.array([Mod_pot_xs])
 Ea = np.array([Mod_pot_xs])
-Mod = TransportXS(Et, Ea, Es, "Mod")
+Mod = CrossSection(Et, Ea, Es, "Mod")
 
 Clad_pot_xs = 0.30
 Et = np.array([Clad_pot_xs])
 Ea = np.array([Clad_pot_xs])
-Clad = TransportXS(Et, Ea, Es, "Clad")
+Clad = CrossSection(Et, Ea, Es, "Clad")
 
 Thmb_pot_xs = 0.30
 Et = np.array([Thmb_pot_xs])
 Ea = np.array([Thmb_pot_xs])
-Thmb = TransportXS(Et, Ea, Es, "Thmb")
+Thmb = CrossSection(Et, Ea, Es, "Thmb")
 
 # Define Cells
 pitch = 1.26

@@ -275,8 +275,8 @@ bool Cartesian2D::tiles_valid() const {
   return true;
 }
 
-std::shared_ptr<TransportXS> Cartesian2D::get_xs(const Vector& r,
-                                                 const Direction& u) const {
+std::shared_ptr<CrossSection> Cartesian2D::get_xs(const Vector& r,
+                                                  const Direction& u) const {
   try {
     const auto& fsr = this->get_fsr(r, u);
     return fsr.fsr->xs();

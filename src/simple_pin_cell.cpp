@@ -9,7 +9,8 @@ namespace scarabee {
 
 SimplePinCell::SimplePinCell(
     const std::vector<double>& mat_rads,
-    const std::vector<std::shared_ptr<TransportXS>>& mats, double dx, double dy)
+    const std::vector<std::shared_ptr<CrossSection>>& mats, double dx,
+    double dy)
     : Cell(dx, dy), mat_radii_(mat_rads), mats_(mats), radii_() {
   this->build();
 }
@@ -56,7 +57,7 @@ void SimplePinCell::build() {
   // Make sure mats aren't nullptr
   for (const auto& mat : mats_) {
     if (!mat) {
-      auto mssg = "Found TransportXS which was nullptr.";
+      auto mssg = "Found CrossSection which was nullptr.";
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
     }

@@ -51,8 +51,8 @@ class MOCDriver {
   double flux(const Vector& r, const Direction& u, std::size_t g) const;
   double flux(std::size_t i, std::size_t g) const;
 
-  std::shared_ptr<TransportXS> xs(const Vector& r, const Direction& u) const;
-  std::shared_ptr<TransportXS> xs(std::size_t i) const;
+  std::shared_ptr<CrossSection> xs(const Vector& r, const Direction& u) const;
+  std::shared_ptr<CrossSection> xs(std::size_t i) const;
 
   UniqueFSR get_fsr(const Vector& r, const Direction& u) const;
 

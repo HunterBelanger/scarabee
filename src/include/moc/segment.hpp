@@ -2,7 +2,7 @@
 #define SEGMENT_H
 
 #include <moc/flat_source_region.hpp>
-#include <transport_xs.hpp>
+#include <cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 
@@ -21,7 +21,7 @@ class Segment {
 
   double volume() const { return fsr_->volume(); }
 
-  const std::shared_ptr<TransportXS>& xs() const { return fsr_->xs(); }
+  const std::shared_ptr<CrossSection>& xs() const { return fsr_->xs(); }
 
   std::size_t fsr_indx() const { return fsr_indx_; }
 

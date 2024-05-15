@@ -5,41 +5,43 @@
 
 namespace scarabee {
 
-void fill_A(Eigen::MatrixXd& A, std::shared_ptr<TransportXS> xs, const Eigen::MatrixXd& D, double B2) {
+void fill_A(Eigen::MatrixXd& A, std::shared_ptr<CrossSection> xs,
+            const Eigen::MatrixXd& D, double B2) {
   const std::size_t NG = xs->ngroups();
 
   A.fill(0.);
-  
+
   for (std::size_t g = 0; g < NG; g++) {
     for (std::size_t gg = 0; gg < NG; gg++) {
-      A(g,gg) = B2*D(g,gg) - (xs->Es(gg, g) + xs->Es1(g, gg));
+      A(g, gg) = B2 * D(g, gg) - (xs->Es(gg, g) + xs->Es1(g, gg));
     }
-    A(g,g) += xs->Et(g) + xs->Es1(g, g);
+    A(g, g) += xs->Et(g) + xs->Es1(g, g);
   }
 }
 
-void fill_Dinvs(Eigen::MatrixXd& Dinvs, std::shared_ptr<TransportXS> xs, const xt::xtensor<double, 1>& a) {
+void fill_Dinvs(Eigen::MatrixXd& Dinvs, std::shared_ptr<CrossSection> xs,
+                const xt::xtensor<double, 1>& a) {
   const std::size_t NG = xs->ngroups();
-  
+
   Dinvs.fill(0.);
 
   for (std::size_t g = 0; g < NG; g++) {
     for (std::size_t gg = 0; gg < NG; gg++) {
-      Dinvs(g,gg) = -xs->Es1(gg, g);
+      Dinvs(g, gg) = -xs->Es1(gg, g);
     }
-    Dinvs(g,g) += a(g) * (xs->Et(g) + xs->Es1(g, g));
+    Dinvs(g, g) += a(g) * (xs->Et(g) + xs->Es1(g, g));
   }
 
   Dinvs *= 3.;
 }
 
-xt::xtensor<double, 2> P1_spectrum(std::shared_ptr<TransportXS> xs) {
+xt::xtensor<double, 2> P1_spectrum(std::shared_ptr<CrossSection> xs) {
   const std::size_t NG = xs->ngroups();
 
   // First, we create and fill the Dinvs matrix for the current
   Eigen::MatrixXd Dinvs(NG, NG);
   fill_Dinvs(Dinvs, xs, xt::ones<double>({NG}));
-  
+
   // Get the D matrix
   Eigen::MatrixXd D = Dinvs.inverse();
 
@@ -94,7 +96,6 @@ xt::xtensor<double, 2> P1_spectrum(std::shared_ptr<TransportXS> xs) {
 
   // Get the current
   cur = B * D * flx;
+}
 
-} 
-
-} // namespace scarabee
+}  // namespace scarabee

@@ -1,4 +1,4 @@
-from pyScarabee import *
+from scarabee import *
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -11,7 +11,7 @@ Es = np.array([[4.44777E-02, 1.13400E-01, 7.23470E-04, 3.74990E-06, 5.31840E-08,
                [0.00000E+00, 0.00000E+00, 0.00000E+00, 7.14370E-05, 1.39138E-01, 5.11820E-01, 6.12290E-02],
                [0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 2.21570E-03, 6.99913E-01, 5.37320E-01],
                [0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 1.32440E-01, 2.48070E+00]])
-H2Oxs = TransportXS(Et, Ea, Es)
+H2Oxs = CrossSection(Et, Ea, Es)
 
 # Define Cells
 pitch = 1.26

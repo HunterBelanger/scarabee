@@ -86,7 +86,7 @@ double CylindricalFluxSolver::Qscat(std::uint32_t g, std::size_t i,
     const double flux_gg_i = flux(gg, i);
 
     // Scattering into group g, excluding g -> g
-    if (gg != g) Qout += mat->Es(gg, g) * flux_gg_i;
+    if (gg != g) Qout += mat->Es_tr(gg, g) * flux_gg_i;
   }
 
   return Qout;

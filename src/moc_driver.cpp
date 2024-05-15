@@ -291,7 +291,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
         // Follow track in forward direction
         for (auto& seg : track) {
           const std::size_t i = seg.fsr_indx();
-          const double Et = seg.xs()->Et(g);
+          const double Et = seg.xs()->Etr(g);
           const double Q = src(g, i);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             double exp_m1 = mexp(Et * seg.length() * polar_quad_.invs_sin()[p]);
@@ -315,7 +315,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
         for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
           auto& seg = *seg_it;
           const std::size_t i = seg.fsr_indx();
-          const double Et = seg.xs()->Et(g);
+          const double Et = seg.xs()->Etr(g);
           const double Q = src(g, i);
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             double exp_m1 = mexp(Et * seg.length() * polar_quad_.invs_sin()[p]);
@@ -339,7 +339,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
       const double Vi = fsrs_[i]->volume();
-      const double Et = mat.Et(g);
+      const double Et = mat.Etr(g);
       sflux(g, i) *= 1. / (Vi * Et);
       sflux(g, i) += 4. * PI * src(g, i) / Et;
     }
@@ -381,7 +381,7 @@ void MOCDriver::fill_source(xt::xtensor<double, 2>& scat_src,
       for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
         // Sccatter source
         const double flux_gg_i = flux(gg, i);
-        const double Es_gg_to_g = mat.Es(gg, g);
+        const double Es_gg_to_g = mat.Es_tr(gg, g);
         Qout += Es_gg_to_g * flux_gg_i;
 
         // Fission source
@@ -568,14 +568,14 @@ void MOCDriver::set_track_ends_bcs() {
       tracks.at(i).set_exit_track_flux(&comp_tracks.at(ai.ny + i).exit_flux());
       comp_tracks.at(ai.ny + i).set_exit_track_flux(&tracks.at(i).exit_flux());
 
-      //if (tracks.at(i).exit_pos() != comp_tracks.at(ai.ny + i).exit_pos()) {
-      //  std::stringstream mssg;
-      //  mssg << "Disagreement in track end alignments: "
-      //       << tracks.at(i).exit_pos() << " and "
-      //       << comp_tracks.at(ai.ny + i).exit_pos() << ".";
-      //  spdlog::error(mssg.str());
-      //  throw ScarabeeException(mssg.str());
-      //}
+      // if (tracks.at(i).exit_pos() != comp_tracks.at(ai.ny + i).exit_pos()) {
+      //   std::stringstream mssg;
+      //   mssg << "Disagreement in track end alignments: "
+      //        << tracks.at(i).exit_pos() << " and "
+      //        << comp_tracks.at(ai.ny + i).exit_pos() << ".";
+      //   spdlog::error(mssg.str());
+      //   throw ScarabeeException(mssg.str());
+      // }
 
       tracks.at(i).exit_bc() = this->y_max_bc_;
       comp_tracks.at(ai.nx - 1 - i).exit_bc() = this->y_max_bc_;
@@ -588,14 +588,15 @@ void MOCDriver::set_track_ends_bcs() {
       comp_tracks.at(i).set_entry_track_flux(
           &tracks.at(ai.ny + i).entry_flux());
 
-      //if (tracks.at(ai.ny + i).entry_pos() != comp_tracks.at(i).entry_pos()) {
-      //  std::stringstream mssg;
-      //  mssg << "Disagreement in track end alignments: "
-      //       << tracks.at(ai.ny + i).entry_pos() << " and "
-      //       << comp_tracks.at(i).entry_pos() << ".";
-      //  spdlog::error(mssg.str());
-      //  throw ScarabeeException(mssg.str());
-      //}
+      // if (tracks.at(ai.ny + i).entry_pos() != comp_tracks.at(i).entry_pos())
+      // {
+      //   std::stringstream mssg;
+      //   mssg << "Disagreement in track end alignments: "
+      //        << tracks.at(ai.ny + i).entry_pos() << " and "
+      //        << comp_tracks.at(i).entry_pos() << ".";
+      //   spdlog::error(mssg.str());
+      //   throw ScarabeeException(mssg.str());
+      // }
 
       tracks.at(ai.ny + i).entry_bc() = this->y_min_bc_;
       comp_tracks.at(nt - 1 - i).entry_bc() = this->y_min_bc_;
@@ -609,15 +610,15 @@ void MOCDriver::set_track_ends_bcs() {
       comp_tracks.at(ai.ny - 1 - i)
           .set_exit_track_flux(&tracks.at(i).entry_flux());
 
-      //if (tracks.at(i).entry_pos() !=
-      //    comp_tracks.at(ai.ny - 1 - i).exit_pos()) {
-      //  std::stringstream mssg;
-      //  mssg << "Disagreement in track end alignments: "
-      //       << tracks.at(i).entry_pos() << " and "
-      //       << comp_tracks.at(ai.ny - 1 - i).exit_pos() << ".";
-      //  spdlog::error(mssg.str());
-      //  throw ScarabeeException(mssg.str());
-      //}
+      // if (tracks.at(i).entry_pos() !=
+      //     comp_tracks.at(ai.ny - 1 - i).exit_pos()) {
+      //   std::stringstream mssg;
+      //   mssg << "Disagreement in track end alignments: "
+      //        << tracks.at(i).entry_pos() << " and "
+      //        << comp_tracks.at(ai.ny - 1 - i).exit_pos() << ".";
+      //   spdlog::error(mssg.str());
+      //   throw ScarabeeException(mssg.str());
+      // }
 
       tracks.at(i).entry_bc() = this->x_min_bc_;
       comp_tracks.at(ai.nx + i).exit_bc() = this->x_min_bc_;
@@ -628,15 +629,15 @@ void MOCDriver::set_track_ends_bcs() {
       comp_tracks.at(nt - 1 - i)
           .set_entry_track_flux(&tracks.at(ai.nx + i).exit_flux());
 
-      //if (tracks.at(ai.nx + i).exit_pos() !=
-      //    comp_tracks.at(nt - 1 - i).entry_pos()) {
-      //  std::stringstream mssg;
-      //  mssg << "Disagreement in track end alignments: "
-      //       << tracks.at(ai.nx + i).exit_pos() << " and "
-      //       << comp_tracks.at(nt - 1 - i).entry_pos() << ".";
-      //  spdlog::error(mssg.str());
-      //  throw ScarabeeException(mssg.str());
-      //}
+      // if (tracks.at(ai.nx + i).exit_pos() !=
+      //     comp_tracks.at(nt - 1 - i).entry_pos()) {
+      //   std::stringstream mssg;
+      //   mssg << "Disagreement in track end alignments: "
+      //        << tracks.at(ai.nx + i).exit_pos() << " and "
+      //        << comp_tracks.at(nt - 1 - i).entry_pos() << ".";
+      //   spdlog::error(mssg.str());
+      //   throw ScarabeeException(mssg.str());
+      // }
 
       tracks.at(ai.nx + i).exit_bc() = this->x_max_bc_;
       comp_tracks.at(i).entry_bc() = this->x_max_bc_;
@@ -690,7 +691,8 @@ void MOCDriver::segment_renormalization() {
   }
 }
 
-double MOCDriver::flux(const Vector& r, const Direction& u, std::size_t g) const {
+double MOCDriver::flux(const Vector& r, const Direction& u,
+                       std::size_t g) const {
   if (g >= ngroups()) {
     std::stringstream mssg;
     mssg << "Group index g = " << g << " is out of range.";
@@ -727,7 +729,8 @@ double MOCDriver::flux(std::size_t i, std::size_t g) const {
   return flux_(g, i);
 }
 
-std::shared_ptr<TransportXS> MOCDriver::xs(const Vector& r, const Direction& u) const {
+std::shared_ptr<CrossSection> MOCDriver::xs(const Vector& r,
+                                            const Direction& u) const {
   try {
     const auto& fsr = this->get_fsr(r, u);
     return fsr.fsr->xs();
@@ -747,7 +750,7 @@ std::shared_ptr<TransportXS> MOCDriver::xs(const Vector& r, const Direction& u) 
   return nullptr;
 }
 
-std::shared_ptr<TransportXS> MOCDriver::xs(std::size_t i) const {
+std::shared_ptr<CrossSection> MOCDriver::xs(std::size_t i) const {
   if (i >= this->size()) {
     std::stringstream mssg;
     mssg << "FSR index i=" << i << " is out of range.";

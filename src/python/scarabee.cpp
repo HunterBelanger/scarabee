@@ -7,7 +7,7 @@
 
 namespace py = pybind11;
 
-extern void init_TransportXS(py::module&);
+extern void init_CrossSection(py::module&);
 extern void init_NuclideHandle(py::module&);
 extern void init_NDLibrary(py::module&);
 extern void init_MaterialComponent(py::module&);
@@ -29,13 +29,13 @@ extern void init_PinCell(py::module&);
 extern void init_Cartesian2D(py::module&);
 extern void init_MOCDriver(py::module&);
 
-PYBIND11_MODULE(pyScarabee, m) {
+PYBIND11_MODULE(scarabee, m) {
   xt::import_numpy();
 
   init_Logging(m);
   init_Vector(m);
   init_Direction(m);
-  init_TransportXS(m);
+  init_CrossSection(m);
   init_NuclideHandle(m);
   init_NDLibrary(m);
   init_MaterialComponent(m);
