@@ -87,6 +87,19 @@ void init_MOCDriver(py::module& m) {
            "    g  group index",
            py::arg("i"), py::arg("g"))
 
+      .def("volume", py::overload_cast<const Vector&, const Direction&>(&MOCDriver::volume, py::const_),
+           "Returns the volume of the flat source region at position r.\n\n"
+           "Arguments:\n"
+           "    r  position\n"
+           "    u  direction",
+           py::arg("r"), py::arg("u"))
+
+      .def("volume", py::overload_cast<std::size_t>(&MOCDriver::volume, py::const_),
+           "Returns the volume of Flat Source Region i.\n\n"
+           "Arguments:\n"
+           "    i  FSR index",
+           py::arg("i"))
+
       .def("xs",
            py::overload_cast<const Vector&, const Direction&>(&MOCDriver::xs,
                                                               py::const_),
@@ -155,7 +168,10 @@ void init_MOCDriver(py::module& m) {
       .def_property_readonly("size", &MOCDriver::size,
                              "number of flat source regions")
 
-      .def_property_readonly("nfsr", &MOCDriver::size,
+      .def_property_readonly("nfsr", &MOCDriver::nfsr,
+                             "number of flat source regions")
+
+      .def_property_readonly("nregions", &MOCDriver::nregions,
                              "number of flat source regions")
 
       .def_property_readonly("x_min", &MOCDriver::x_min,

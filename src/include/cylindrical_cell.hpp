@@ -25,10 +25,10 @@ class CylindricalCell {
   double Sb() const { return 2. * PI * radii_.back(); }
 
   // Volume of region i
-  double V(std::size_t i) const { return vols_[i]; }
+  double volume(std::size_t i) const { return vols_[i]; }
 
   // Outer radius of region i
-  double R(std::size_t i) const { return radii_[i]; }
+  double radius(std::size_t i) const { return radii_[i]; }
 
   double Y(double a, std::uint32_t g, std::size_t i) const {
     const double Yi = Y_(g, i);
@@ -38,7 +38,7 @@ class CylindricalCell {
   }
 
   double x(std::uint32_t g, std::size_t i) const {
-    return 0.25 * Sb() * V(i) * Y_(g, i);
+    return 0.25 * Sb() * volume(i) * Y_(g, i);
   }
 
   double X(double a, std::uint32_t g, std::size_t i, std::size_t k) const {
@@ -54,7 +54,7 @@ class CylindricalCell {
     return p_(g, i, j);
   }
 
-  const std::shared_ptr<CrossSection>& mat(std::size_t i) const {
+  const std::shared_ptr<CrossSection>& xs(std::size_t i) const {
     return mats_[i];
   }
 

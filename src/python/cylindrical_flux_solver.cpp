@@ -26,9 +26,21 @@ void init_CylindricalFluxSolver(py::module& m) {
       .def("flux", &CylindricalFluxSolver::flux,
            "Flux in group g region i.\n\n"
            "Arguments:\n"
-           "    g  group index\n"
+           "    i  region index\n"
+           "    g  group index",
+           py::arg("i"), py::arg("g"))
+
+      .def("volume", &CylindricalFluxSolver::volume,
+           "Volume of region i.\n\n"
+           "Arguments:\n"
            "    i  region index",
-           py::arg("g"), py::arg("i"))
+           py::arg("i"))
+
+      .def("xs", &CylindricalFluxSolver::xs,
+           "CrossSection in region i.\n\n"
+           "Arguments:\n"
+           "    i  region index",
+           py::arg("i"))
 
       .def_property("flux_tolerance", &CylindricalFluxSolver::flux_tolerance,
                     &CylindricalFluxSolver::set_flux_tolerance,

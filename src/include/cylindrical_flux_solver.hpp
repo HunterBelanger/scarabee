@@ -20,7 +20,10 @@ class CylindricalFluxSolver {
   void solve();
   bool solved() const { return solved_; }
 
-  double flux(std::uint32_t g, std::size_t i) const { return flux_(g, i); }
+  double flux(std::size_t i, std::size_t g) const { return flux_(g, i); }
+  double volume(std::size_t i) const { return cell_->volume(i); }
+  std::shared_ptr<CrossSection> xs(std::size_t i) const { return cell_->xs(i); }
+
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
 

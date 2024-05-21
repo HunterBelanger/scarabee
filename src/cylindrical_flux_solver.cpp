@@ -80,13 +80,13 @@ void CylindricalFluxSolver::set_keff_tolerance(double ktol) {
 double CylindricalFluxSolver::Qscat(std::uint32_t g, std::size_t i,
                                     const xt::xtensor<double, 2>& flux) const {
   double Qout = 0.;
-  const auto& mat = cell_->mat(i);
+  const auto& xs = cell_->xs(i);
 
   for (std::uint32_t gg = 0; gg < ngroups(); gg++) {
     const double flux_gg_i = flux(gg, i);
 
     // Scattering into group g, excluding g -> g
-    if (gg != g) Qout += mat->Es_tr(gg, g) * flux_gg_i;
+    if (gg != g) Qout += xs->Es_tr(gg, g) * flux_gg_i;
   }
 
   return Qout;
@@ -96,11 +96,11 @@ double CylindricalFluxSolver::Qfiss(std::uint32_t g, std::size_t i,
                                     const xt::xtensor<double, 2>& flux) const {
   double Qout = 0.;
   const double inv_k = 1. / k_;
-  const auto& mat = cell_->mat(i);
-  const double chi_g = mat->chi(g);
+  const auto& xs = cell_->xs(i);
+  const double chi_g = xs->chi(g);
 
   for (std::uint32_t gg = 0; gg < ngroups(); gg++) {
-    Qout += mat->vEf(gg) * flux(gg, i);
+    Qout += xs->vEf(gg) * flux(gg, i);
   }
 
   Qout *= inv_k * chi_g;
@@ -112,10 +112,10 @@ double CylindricalFluxSolver::calc_keff(
     const xt::xtensor<double, 2>& flux) const {
   double keff = 0.;
   for (std::size_t r = 0; r < nregions(); r++) {
-    const double Vr = cell_->V(r);
-    const auto& mat = cell_->mat(r);
+    const double Vr = cell_->volume(r);
+    const auto& xs = cell_->xs(r);
     for (std::uint32_t g = 0; g < ngroups(); g++) {
-      keff += Vr * mat->vEf(g) * flux(g, r);
+      keff += Vr * xs->vEf(g) * flux(g, r);
     }
   }
 

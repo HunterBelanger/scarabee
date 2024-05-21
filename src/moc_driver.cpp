@@ -729,6 +729,36 @@ double MOCDriver::flux(std::size_t i, std::size_t g) const {
   return flux_(g, i);
 }
 
+double MOCDriver::volume(const Vector& r, const Direction& u) const {
+  try {
+    const auto& fsr = this->get_fsr(r, u);
+    return fsr.fsr->volume();
+  } catch (ScarabeeException& err) {
+    std::stringstream mssg;
+    mssg << "Could not find flat source region at r = " << r << " u = " << u
+         << "n";
+    err.add_to_exception(mssg.str());
+    throw err;
+  }
+
+  // SHOULD NEVER GET HERE
+  auto mssg = "How did I get here ?";
+  spdlog::error(mssg);
+  throw ScarabeeException(mssg);
+  return 0.;
+}
+
+double MOCDriver::volume(std::size_t i) const {
+  if (i >= this->size()) {
+    std::stringstream mssg;
+    mssg << "FSR index i=" << i << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  return fsrs_[i]->volume();
+}
+
 std::shared_ptr<CrossSection> MOCDriver::xs(const Vector& r,
                                             const Direction& u) const {
   try {

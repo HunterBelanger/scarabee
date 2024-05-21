@@ -35,13 +35,13 @@ void init_CylindricalCell(py::module& m) {
       .def_property_readonly("Sb", &CylindricalCell::Sb,
                              "Outer surface area (circumference) of cell")
 
-      .def("V", &CylindricalCell::V,
+      .def("volume", &CylindricalCell::volume,
            "Volume of region i\n\n"
            "Arguments:\n"
            "    i  region index",
            py::arg("i"))
 
-      .def("R", &CylindricalCell::R,
+      .def("radius", &CylindricalCell::radius,
            "Radius of region i\n\n"
            "Arguments:\n"
            "    i  region index",
@@ -89,7 +89,7 @@ void init_CylindricalCell(py::module& m) {
            "    k  final region index",
            py::arg("g"), py::arg("i"), py::arg("k"))
 
-      .def("mat", &CylindricalCell::mat,
+      .def("xs", &CylindricalCell::xs,
            "CrossSection for region i.\n\n"
            "Arguments:\n"
            "    i  region index",

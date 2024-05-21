@@ -47,9 +47,13 @@ class MOCDriver {
 
   std::size_t size() const;
   std::size_t nfsr() const { return this->size(); }
+  std::size_t nregions() const { return this->nfsr(); }
 
   double flux(const Vector& r, const Direction& u, std::size_t g) const;
   double flux(std::size_t i, std::size_t g) const;
+
+  double volume(const Vector& r, const Direction& u) const;
+  double volume(std::size_t i) const;
 
   std::shared_ptr<CrossSection> xs(const Vector& r, const Direction& u) const;
   std::shared_ptr<CrossSection> xs(std::size_t i) const;
