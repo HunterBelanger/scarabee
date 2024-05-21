@@ -237,27 +237,45 @@ void Material::normalize_fractions() {
   }
 }
 
-std::shared_ptr<CrossSection> Material::build_xs(
+std::shared_ptr<CrossSection> Material::carlvik_xs(
     double C, double Ee, std::shared_ptr<NDLibrary> ndl) const {
-  // Get the first nuclide, then add others to it
-  const std::string& name0 = composition_.nuclides[0].name;
-  const double N0 = this->atom_density(name0);
-  std::shared_ptr<CrossSection> xsout =
-      ndl->carlvik_two_term(name0, potential_xs_, temperature_, N0, C, Ee);
+  // This implementation is based on the methods outlined by Koike and Gibson
+  // in his PhD thesis [1,2]. We start by computing the coefficients for the
+  // two-term rational approximation, modified according to the Dancoff
+  // correction factor, C.
+  const double a1 = 0.5 * (C + 5. - std::sqrt(C * C + 34. * C + 1.));
+  const double a2 = 0.5 * (C + 5. + std::sqrt(C * C + 34. * C + 1.));
+  const double b1 = (a2 - (1. - C)) / (a2 - a1);
+  const double b2 = 1. - b1;
 
-  // Add other components
-  for (std::size_t i = 1; i < composition_.nuclides.size(); i++) {
-    const std::string& namei = composition_.nuclides[i].name;
-    const double Ni = this->atom_density(namei);
-    auto xsi =
-        ndl->carlvik_two_term(namei, potential_xs_, temperature_, Ni, C, Ee);
-    *xsout += *xsi;
-  }
-
-  return xsout;
+  return this->two_term_xs(a1, a2, b1, b2, Ee, ndl);
 }
 
-std::shared_ptr<CrossSection> Material::build_xs(
+std::shared_ptr<CrossSection> Material::roman_xs(
+    double C, double Ee, std::shared_ptr<NDLibrary> ndl) const {
+  // This implementation is based on the methods outlined by Koike and Gibson
+  // in his PhD thesis [1,2]. We start by computing the coefficients for the
+  // two-term rational approximation, modified according to the Dancoff
+  // correction factor, C.
+  constexpr double a1_base = 1.4;
+  constexpr double a2_base = 5.4;
+  constexpr double b1_base = 1.1;
+  constexpr double b2_base = 0.1;
+  const double A = (1. - C) / C;
+  const double g = A + (b1_base * a1_base) + (b2_base * a2_base);
+  const double t = A * (a1_base + a2_base) + a1_base * a2_base;
+  const double a1 =
+      (t - std::sqrt(t * t - (4. * g * A * a1_base * a2_base))) / (2. * g);
+  const double a2 =
+      (t + std::sqrt(t * t - (4. * g * A * a1_base * a2_base))) / (2. * g);
+  const double b1 = (a2 - ((A * (b1_base * a1_base + b2_base * a2_base)) / g)) *
+                    (1. / (a2 - a1));
+  const double b2 = 1. - b1;
+
+  return this->two_term_xs(a1, a2, b1, b2, Ee, ndl);
+}
+
+std::shared_ptr<CrossSection> Material::dilution_xs(
     const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl) const {
   if (dils.size() != this->size()) {
     std::stringstream mssg;
@@ -277,22 +295,60 @@ std::shared_ptr<CrossSection> Material::build_xs(
   }
 
   // Get the first nuclide, then add others to it
-  const std::string& name0 = composition_.nuclides[0].name;
-  const double N0 = this->atom_density(name0);
-  std::shared_ptr<CrossSection> xsout =
-      ndl->interp_nuclide_xs(name0, temperature_, dils[0]);
-  *xsout *= N0;
+  std::shared_ptr<CrossSection> xsout(nullptr);
 
   // Add other components
-  for (std::size_t i = 1; i < composition_.nuclides.size(); i++) {
+  for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
     const std::string& namei = composition_.nuclides[i].name;
     const double Ni = this->atom_density(namei);
-    auto xsi = ndl->interp_nuclide_xs(namei, temperature_, dils[i]);
+    auto xsi = ndl->interp_xs(namei, temperature_, dils[i]);
     *xsi *= Ni;
-    *xsout += *xsi;
+
+    if (xsout) {
+      *xsout += *xsi;
+    } else {
+      xsout = xsi;
+    }
+  }
+
+  return xsout;
+}
+
+std::shared_ptr<CrossSection> Material::two_term_xs(
+    const double a1, const double a2, const double b1, const double b2,
+    const double Ee, std::shared_ptr<NDLibrary> ndl) const {
+  std::shared_ptr<CrossSection> xsout(nullptr);
+
+  // Add component from each nuclide
+  for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
+    const std::string& namei = composition_.nuclides[i].name;
+    const double Ni = this->atom_density(namei);
+    const double pot_xs = ndl->get_nuclide(namei).potential_xs;
+    const double macro_pot_xs = Ni * pot_xs;
+    const double bg_xs_1 = (potential_xs() - macro_pot_xs + a1 * Ee) / Ni;
+    const double bg_xs_2 = (potential_xs() - macro_pot_xs + a2 * Ee) / Ni;
+
+    auto xsi = ndl->two_term_xs(namei, temperature(), a1, a2, b1, b2, bg_xs_1,
+                                bg_xs_2);
+    *xsi *= Ni;
+
+    if (xsout) {
+      *xsout += *xsi;
+    } else {
+      xsout = xsi;
+    }
   }
 
   return xsout;
 }
 
 }  // namespace scarabee
+
+// References
+// [1] H. Koike, K. Yamaji, K. Kirimura, D. Sato, H. Matsumoto, and A. Yamamoto,
+//     “Advanced resonance self-shielding method for gray resonance treatment in
+//     lattice physics code GALAXY,” J. Nucl. Sci. Technol., vol. 49, no. 7,
+//     pp. 725–747, 2012, doi: 10.1080/00223131.2012.693885.
+//
+// [2] N. Gibson, “Novel Resonance Self-Shielding Methods for Nuclear Reactor
+//     Analysis,” Massachusetts Institute of Technology, 2016.

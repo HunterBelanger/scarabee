@@ -96,13 +96,13 @@ print("Dancoff Factor    : {}".format(1.-C))
 
 # Create fuel xs
 Ee = 1. / (2. * fuel_rad)
-Fuel = UO2.build_xs(C, Ee, ndl)
+Fuel = UO2.carlvik_xs(C, Ee, ndl)
 
 # Create cladding xs using a reference dilution
-Clad = Zirc.build_xs(Zirc.size*[300.], ndl)
+Clad = Zirc.dilution_xs(Zirc.size*[300.], ndl)
 
 # Create moderator xs using a somewhat random dilution (shouldn't matter except a little bit on O16)
-Mod = Water.build_xs(Water.size*[10.], ndl)
+Mod = Water.dilution_xs(Water.size*[10.], ndl)
 
 # Create and run full real problem with MOC
 radii = [0.5*fuel_rad, 0.8*fuel_rad, fuel_rad, clad_rad, 1.2*clad_rad]

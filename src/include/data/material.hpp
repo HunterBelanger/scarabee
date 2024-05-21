@@ -52,10 +52,14 @@ class Material {
   bool fissile() const { return fissile_; }
   bool resonant() const { return resonant_; }
 
-  std::shared_ptr<CrossSection> build_xs(double C, double Ee,
+  std::shared_ptr<CrossSection> carlvik_xs(
+      double C, double Ee, std::shared_ptr<NDLibrary> ndl) const;
+
+  std::shared_ptr<CrossSection> roman_xs(double C, double Ee,
                                          std::shared_ptr<NDLibrary> ndl) const;
-  std::shared_ptr<CrossSection> build_xs(const std::vector<double>& dils,
-                                         std::shared_ptr<NDLibrary> ndl) const;
+
+  std::shared_ptr<CrossSection> dilution_xs(
+      const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl) const;
 
  private:
   MaterialComposition composition_;
@@ -69,6 +73,10 @@ class Material {
 
   double calc_avg_molar_mass(const NDLibrary& ndl) const;
   void normalize_fractions();
+
+  std::shared_ptr<CrossSection> two_term_xs(
+      const double a1, const double a2, const double b1, const double b2,
+      const double Ee, std::shared_ptr<NDLibrary> ndl) const;
 };
 
 }  // namespace scarabee

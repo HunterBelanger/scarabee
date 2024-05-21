@@ -96,9 +96,7 @@ void init_Material(py::module& m) {
            "    name  Name of the nuclide",
            py::arg("name"))
 
-      .def("build_xs",
-           py::overload_cast<double, double, std::shared_ptr<NDLibrary>>(
-               &Material::build_xs, py::const_),
+      .def("carlvik_xs", &Material::carlvik_xs,
            "Returns the macroscopic material cross section, self-shielded "
            "according to the Carlvik two-term approximation.\n\n"
            "Arguments:\n"
@@ -107,10 +105,16 @@ void init_Material(py::module& m) {
            "    ndl  Nuclear data library",
            py::arg("C"), py::arg("Ee"), py::arg("ndl"))
 
-      .def("build_xs",
-           py::overload_cast<const std::vector<double>&,
-                             std::shared_ptr<NDLibrary>>(&Material::build_xs,
-                                                         py::const_),
+      .def("roman_xs", &Material::roman_xs,
+           "Returns the macroscopic material cross section, self-shielded "
+           "according to the Roman two-term approximation.\n\n"
+           "Arguments:\n"
+           "    C    Dancoff correction factor\n"
+           "    Ee   Escpae cross section\n"
+           "    ndl  Nuclear data library",
+           py::arg("C"), py::arg("Ee"), py::arg("ndl"))
+
+      .def("dilution_xs", &Material::dilution_xs,
            "Returns the macroscopic material cross section with nuclides "
            "interpolated to the provided dilutions.\n\n"
            "Arguments:\n"

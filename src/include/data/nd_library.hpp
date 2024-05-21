@@ -58,15 +58,15 @@ class NDLibrary {
 
   void convert_fractions(Material& mat) const;
 
-  std::shared_ptr<CrossSection> interp_nuclide_xs(const std::string& name,
-                                                  const double temp,
-                                                  const double dil);
+  std::shared_ptr<CrossSection> interp_xs(const std::string& name,
+                                          const double temp, const double dil);
 
-  std::shared_ptr<CrossSection> carlvik_two_term(const std::string& name,
-                                                 const double mat_pot_xs,
-                                                 const double temp,
-                                                 const double N, const double C,
-                                                 const double Ee);
+  std::shared_ptr<CrossSection> two_term_xs(const std::string& name,
+                                            const double temp, const double a1,
+                                            const double a2, const double b1,
+                                            const double b2,
+                                            const double bg_xs_1,
+                                            const double bg_xs_2);
 
   const std::shared_ptr<H5::File>& h5() const { return h5_; }
 

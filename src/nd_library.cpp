@@ -119,8 +119,9 @@ NuclideHandle& NDLibrary::get_nuclide(const std::string& name) {
   return nuclide_handles_.at(name);
 }
 
-std::shared_ptr<CrossSection> NDLibrary::interp_nuclide_xs(
-    const std::string& name, const double temp, const double dil) {
+std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
+                                                   const double temp,
+                                                   const double dil) {
   auto& nuc = this->get_nuclide(name);
 
   // Get temperature interpolation factors
@@ -175,28 +176,18 @@ std::shared_ptr<CrossSection> NDLibrary::interp_nuclide_xs(
   return std::make_shared<CrossSection>(Et, Ea, Es, Ef, nu * Ef, chi);
 }
 
-std::shared_ptr<CrossSection> NDLibrary::carlvik_two_term(
-    const std::string& name, const double mat_pot_xs, const double temp,
-    const double N, const double C, const double Ee) {
-  // This implementation is based on the methods outlined by Koike and Gibson
-  // in his PhD thesis [1,2]. We start by computing the coefficients for the
-  // two-term rational approximation, modified according to the Dancoff
-  // correction factor, C.
-  const double a1 = 0.5 * (C + 5. - std::sqrt(C * C + 34. * C + 1.));
-  const double a2 = 0.5 * (C + 5. + std::sqrt(C * C + 34. * C + 1.));
-  const double b1 = (a2 - (1. - C)) / (a2 - a1);
-  const double b2 = 1. - b1;
-
-  const double pot_xs = get_nuclide(name).potential_xs;
-  const double macro_pot_xs = N * pot_xs;
-
-  // Compute the two background xs values for the nuclide
-  const double bg_xs_1 = (mat_pot_xs - macro_pot_xs + a1 * Ee) / N;
-  const double bg_xs_2 = (mat_pot_xs - macro_pot_xs + a2 * Ee) / N;
+std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
+    const std::string& name, const double temp, const double a1,
+    const double a2, const double b1, const double b2, const double bg_xs_1,
+    const double bg_xs_2) {
+  // See reference [1] to understand this interpolation scheme, in addition to
+  // the calculation of the flux based on the pot_xs and sig_a.
 
   // Get the two cross section sets
-  auto xs_1 = interp_nuclide_xs(name, temp, bg_xs_1);
-  auto xs_2 = interp_nuclide_xs(name, temp, bg_xs_2);
+  auto xs_1 = interp_xs(name, temp, bg_xs_1);
+  auto xs_2 = interp_xs(name, temp, bg_xs_2);
+
+  const double pot_xs = get_nuclide(name).potential_xs;
 
   xt::xtensor<double, 1> Etr = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> Ea = xt::zeros<double>({ngroups_});
@@ -244,10 +235,7 @@ std::shared_ptr<CrossSection> NDLibrary::carlvik_two_term(
     if (chi_sum > 0.) chi /= chi_sum;
   }
 
-  std::shared_ptr<CrossSection> xs_out =
-      std::make_shared<CrossSection>(Etr, Ea, Es_tr, Ef, vEf, chi);
-  *xs_out *= N;
-  return xs_out;
+  return std::make_shared<CrossSection>(Etr, Ea, Es_tr, Ef, vEf, chi);
 }
 
 void NDLibrary::get_temp_interp_params(double temp, const NuclideHandle& nuc,
@@ -371,6 +359,3 @@ void NDLibrary::interp_2d(xt::xtensor<double, 2>& E,
 //     “Advanced resonance self-shielding method for gray resonance treatment in
 //     lattice physics code GALAXY,” J. Nucl. Sci. Technol., vol. 49, no. 7,
 //     pp. 725–747, 2012, doi: 10.1080/00223131.2012.693885.
-//
-// [2] N. Gibson, “Novel Resonance Self-Shielding Methods for Nuclear Reactor
-//     Analysis,” Massachusetts Institute of Technology, 2016.

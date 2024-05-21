@@ -55,7 +55,7 @@ void init_NDLibrary(py::module& m) {
            "    name  Name of the desired nuclide",
            py::arg("name"))
 
-      .def("interp_nuclide_xs", &NDLibrary::interp_nuclide_xs,
+      .def("interp_xs", &NDLibrary::interp_xs,
            "Interpolates the cross section of the prescribed nuclide to the\n"
            "desired temperature and dilution.\n\n"
            "Arguments:\n"
@@ -64,19 +64,22 @@ void init_NDLibrary(py::module& m) {
            "    dil   Desired dilution in barns",
            py::arg("name"), py::arg("temp"), py::arg("dil"))
 
-      .def("carlvik_two_term", &NDLibrary::carlvik_two_term,
-           "Uses Carlvik's two-term rational approximation for self shielding "
-           "of cross sections.\n\n"
+      .def("two_term_xs", &NDLibrary::two_term_xs,
+           "Uses the two-term rational approximation for self shielding of "
+           "cross sections.\n"
+           "The coefficients of the rational approximation must be provided by "
+           "the user.\n\n"
            "Arguments:\n"
-           "    name        Name of the nuclide to be treated\n"
-           "    mat_pot_xs  Macroscopic potential scattering cross section of "
-           "the material\n"
-           "    temp        Temperature of the material (in kelvin)\n"
-           "    N           Atom density of the nuclide\n"
-           "    C           Dancoff correction factor\n"
-           "    Ee          Escape cross section of the fuel lump",
-           py::arg("name"), py::arg("mat_pot_xs"), py::arg("temp"),
-           py::arg("N"), py::arg("C"), py::arg("Ee"))
+           "    name  Name of the nuclide to be treated\n"
+           "    temp  Temperature of the material (in kelvin)\n"
+           "    a1    Alpha coefficient for first term\n"
+           "    a2    Alpha coefficient for second term\n"
+           "    b1    Beta coefficient for first term\n"
+           "    b2    Beta coefficient for second term\n"
+           "    xs1   Background cross section for first term\n"
+           "    xs2   Background cross section for second term",
+           py::arg("name"), py::arg("temp"), py::arg("a1"), py::arg("a2"),
+           py::arg("b1"), py::arg("b2"), py::arg("xs1"), py::arg("xs2"))
 
       .def_property_readonly("library", &NDLibrary::library,
                              "Name of the nuclear data library (if provided)")
