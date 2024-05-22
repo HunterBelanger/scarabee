@@ -22,6 +22,8 @@ class MOCDriver {
             BoundaryCondition ymin = BoundaryCondition::Reflective,
             BoundaryCondition ymax = BoundaryCondition::Reflective);
 
+  std::shared_ptr<Cartesian2D> geometry() const { return geometry_; }
+
   bool drawn() const { return !angle_info_.empty(); }
 
   const PolarQuadrature& polar_quadrature() const { return polar_quad_; }

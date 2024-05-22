@@ -133,6 +133,31 @@ Cartesian2D::Cartesian2D(const std::vector<double>& dx,
   fsr_offset_map_.resize({nx_, ny_});
 }
 
+bool Cartesian2D::inside(const Vector& r, const Direction& u) const {
+  return this->get_tile_index(r, u).has_value();
+}
+
+double Cartesian2D::distance(const Vector& r, const Direction& u) const {
+  Surface x, y;
+  x.type() = Surface::Type::XPlane;
+  y.type() = Surface::Type::YPlane;
+
+  x.x0() = x_min();
+  const double x_min_dist = x.distance(r, u);
+
+  x.x0() = x_max();
+  const double x_max_dist = x.distance(r, u);
+
+  y.y0() = y_min();
+  const double y_min_dist = y.distance(r, u);
+
+  y.y0() = y_max();
+  const double y_max_dist = y.distance(r, u);
+
+  return std::min(std::min(x_min_dist, x_max_dist),
+                  std::min(y_min_dist, y_max_dist));
+}
+
 std::optional<Cartesian2D::TileIndex> Cartesian2D::get_tile_index(
     const Vector& r, const Direction& u) const {
   for (std::size_t i = 0; i < nx(); i++) {
@@ -279,6 +304,14 @@ std::shared_ptr<CrossSection> Cartesian2D::get_xs(const Vector& r,
                                                   const Direction& u) const {
   try {
     const auto& fsr = this->get_fsr(r, u);
+
+    if (fsr.fsr == nullptr) {
+      std::stringstream mssg;
+      mssg << "Could not find an FSR at r = " << r << ", u = " << u << ".";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+
     return fsr.fsr->xs();
   } catch (ScarabeeException& err) {
     err.add_to_exception("Could not find flat source region.");
@@ -291,11 +324,7 @@ UniqueFSR Cartesian2D::get_fsr(const Vector& r, const Direction& u) const {
 
   if (ti.has_value() == false) {
     // We apparently are not in a tile
-    std::stringstream mssg;
-    mssg << "Position r = " << r << ", and Direction u = " << u
-         << ", are not in Cartesian2D geometry.";
-    spdlog::error(mssg.str());
-    throw ScarabeeException(mssg.str());
+    return {nullptr, 0};
   }
 
   const auto& t = this->tile(*ti);
@@ -332,11 +361,7 @@ std::pair<UniqueFSR, Vector> Cartesian2D::get_fsr_r_local(
 
   if (ti.has_value() == false) {
     // We apparently are not in a tile
-    std::stringstream mssg;
-    mssg << "Position r = " << r << ", and Direction u = " << u
-         << ", are not in Cartesian2D geometry.";
-    spdlog::error(mssg.str());
-    throw ScarabeeException(mssg.str());
+    return {{nullptr, 0}, r};
   }
 
   const auto& t = this->tile(*ti);

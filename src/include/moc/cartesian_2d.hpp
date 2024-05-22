@@ -60,6 +60,10 @@ class Cartesian2D {
   double dx() const { return x_bounds_.back()->x0() - x_bounds_.front()->x0(); }
   double dy() const { return y_bounds_.back()->y0() - y_bounds_.front()->y0(); }
 
+  bool inside(const Vector& r, const Direction& u) const;
+
+  double distance(const Vector& r, const Direction& u) const;
+
   std::optional<TileIndex> get_tile_index(const Vector& r,
                                           const Direction& u) const;
 

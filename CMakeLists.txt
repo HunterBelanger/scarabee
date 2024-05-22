@@ -101,6 +101,15 @@ FetchContent_Declare(HighFive
 FetchContent_MakeAvailable(HighFive)
 
 #===============================================================================
+# Get ImApp
+message(STATUS "Downloading ImApp")
+FetchContent_Declare(ImApp
+  GIT_REPOSITORY https://github.com/HunterBelanger/ImApp.git
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(ImApp)
+
+#===============================================================================
 # Make python library
 pybind11_add_module(scarabee  src/logging.cpp
                               src/gauss_kronrod.cpp
@@ -122,6 +131,7 @@ pybind11_add_module(scarabee  src/logging.cpp
                               src/legendre.cpp
                               src/yamamoto_tabuchi.cpp
                               src/moc_driver.cpp
+                              src/moc_plotter.cpp
                               src/criticality_spectrum.cpp
                               #=================================================
                               src/python/scarabee.cpp
@@ -148,7 +158,7 @@ pybind11_add_module(scarabee  src/logging.cpp
 
 target_include_directories(scarabee PRIVATE include)
 target_compile_features(scarabee PRIVATE cxx_std_20)
-target_link_libraries(scarabee PUBLIC xtl xtensor xtensor-python htl HighFive Eigen3::Eigen spdlog::spdlog)
+target_link_libraries(scarabee PUBLIC xtl xtensor xtensor-python htl HighFive Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
 target_include_directories(scarabee PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/include>
 )

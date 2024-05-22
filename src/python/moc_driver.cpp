@@ -2,8 +2,10 @@
 #include <pybind11/stl.h>
 
 #include <xtensor-python/pytensor.hpp>
+#include <ImApp/imapp.hpp>
 
 #include <moc/moc_driver.hpp>
+#include <moc/moc_plotter.hpp>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 
@@ -165,6 +167,8 @@ void init_MOCDriver(py::module& m) {
           [](MOCDriver& md, BoundaryCondition& bc) { md.y_max_bc() = bc; },
           "boundadary condition at y_max")
 
+      .def_property_readonly("geometry", &MOCDriver::geometry, "the Cartesian2D geometry for the problem")
+
       .def_property_readonly("size", &MOCDriver::size,
                              "number of flat source regions")
 
@@ -229,6 +233,13 @@ void init_MOCDriver(py::module& m) {
            "    i    flat source region index\n"
            "    g    group index",
            py::arg("i"), py::arg("g"))
+
+      .def("plot", [](const MOCDriver& md){
+          ImApp::App guiplotter(1920, 1080, "Scarabee MOC Plotter");
+          guiplotter.enable_docking();
+          guiplotter.push_layer(std::make_unique<MOCPlotter>(&md));
+          guiplotter.run();
+      })
 
       .def(
           "rasterize_flux",

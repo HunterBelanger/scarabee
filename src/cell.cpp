@@ -97,10 +97,7 @@ double Cell::distance(const Vector& r, const Direction& u) const {
 UniqueFSR Cell::get_fsr(const Vector& r, const Direction& u) const {
   std::stringstream mssg;
   if (this->inside(r, u) == false) {
-    mssg << "Could not find FSR at r = " << r << ", u = " << u << ".\n";
-    mssg << "Position r and direction u are not inside the cell.";
-    spdlog::error(mssg.str());
-    throw ScarabeeException(mssg.str());
+    return {nullptr, 0};
   }
 
   for (const auto& fsr : fsrs_) {
