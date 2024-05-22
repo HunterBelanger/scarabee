@@ -79,7 +79,7 @@ void init_CrossSection(py::module& m) {
 
       .def("ngroups", &CrossSection::ngroups, "Number of energy groups")
 
-      .def_property_readonly("name", &CrossSection::name, "Name of material")
+      .def_property("name", &CrossSection::name, &CrossSection::set_name, "Name of material")
 
       .def("fissile", &CrossSection::fissile, "True if material is fissile")
 

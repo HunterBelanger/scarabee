@@ -39,6 +39,7 @@ class CrossSection {
   std::size_t ngroups() const { return Etr_.size(); }
 
   const std::string& name() const { return name_; }
+  void set_name(const std::string& new_name) { name_ = new_name; }
 
   bool fissile() const { return fissile_; }
 
