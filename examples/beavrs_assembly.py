@@ -332,7 +332,7 @@ def run_assembly(C_fuel, C_clad):
     # First, we need to make the 4 corner pieces of the gap
     CG = EmptyCell(Mod, gap_width, gap_width) # Corner Gap
 
-    ng = 17*5
+    ng = 17*2
     gap_cell_size = (asm_pitch-2.*gap_width) / ng
     
     # Vertical gap tiles

@@ -485,8 +485,8 @@ void Cartesian2D::make_offset_map() {
     const auto& t = tiles_[i - 1];
 
     for (std::size_t fsr_id : fsr_ids) {
-      fsr_offset_map_[i][fsr_id] = fsr_offset_map_[i - 1][fsr_id];
-      fsr_offset_map_[i][fsr_id] += t.get_num_fsr_instances(fsr_id);
+      fsr_offset_map_.flat(i)[fsr_id] = fsr_offset_map_.flat(i - 1)[fsr_id];
+      fsr_offset_map_.flat(i)[fsr_id] += t.get_num_fsr_instances(fsr_id);
     }
   }
 }
