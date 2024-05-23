@@ -5,6 +5,8 @@
 
 #include <ImApp/imapp.hpp>
 
+#include <mutex>
+
 namespace scarabee {
 
 class MOCPlotter : public ImApp::Layer {
@@ -32,7 +34,7 @@ class MOCPlotter : public ImApp::Layer {
   // Maps for colors from plotter.hpp
   const MOCDriver* moc_;
   const Cartesian2D* geom_;
-  std::map<uint32_t, ImApp::Pixel> cell_id_to_color;
+  std::map<std::size_t, ImApp::Pixel> cell_id_to_color;
   std::map<CrossSection*, ImApp::Pixel> material_id_to_color;
   ImApp::Image image;
   std::mutex create_color_mutex;
