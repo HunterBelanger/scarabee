@@ -3,4 +3,5 @@ compile_commands.json
 .cache
 .vscode
 *__pycache__
+scarabee.egg-info
 data/*.h5
