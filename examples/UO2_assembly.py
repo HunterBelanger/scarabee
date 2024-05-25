@@ -39,11 +39,11 @@ Es = np.array([[6.61659E-02, 5.90700E-02, 2.83340E-04, 1.46220E-06, 2.06420E-08,
 GT = CrossSection(Et, Ea, Es)
 
 # Define Cells
-radii = [0.1, 0.2, 0.3, 0.4, 0.5, 0.54, 0.57, 0.6, 0.629]
-mats =  [UO2, UO2, UO2, UO2, UO2, UO2,  H2O,  H2O, H2O, H2O]
+radii = [0.4, 0.54, 0.63]
+mats =  [UO2, UO2,  H2O, H2O]
 U = PinCell(radii, mats, 1.26, 1.26)
 
-mats =  [GT, GT, GT, GT, GT, GT, H2O, H2O, H2O, H2O]
+mats =  [GT, GT, H2O, H2O]
 G = PinCell(radii, mats, 1.26, 1.26)
 
 dx = [1.26]*17
@@ -72,7 +72,7 @@ moc.keff_tolerance = 1.E-5
 moc.flux_tolerance = 1.E-5
 moc.solve()
 
-flux, x, y = moc.rasterize_flux(1000, 1000)
+flux, x, y = moc.rasterize_flux(500, 500)
 
 for g in range(moc.ngroups):
   plt.title("Flux in group {}".format(g+1))

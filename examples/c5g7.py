@@ -97,23 +97,23 @@ GTxs = CrossSection(Et, Ea, Es)
 # Define Cells
 pitch = 1.26
 
-radii = [0.2, 0.4, 0.5, 0.54, 0.57, 0.6, 0.63]
-mats =  [UO2xs, UO2xs, UO2xs, UO2xs, H2Oxs, H2Oxs, H2Oxs, H2Oxs]
+radii = [0.4,   0.54,  0.63]
+mats =  [UO2xs, UO2xs, H2Oxs, H2Oxs]
 U2 = PinCell(radii, mats, pitch, pitch)
 
-mats =  [M4xs, M4xs, M4xs, M4xs,  H2Oxs, H2Oxs, H2Oxs, H2Oxs]
+mats =  [M4xs, M4xs, H2Oxs, H2Oxs]
 M4 = PinCell(radii, mats, pitch, pitch)
 
-mats =  [M7xs, M7xs, M7xs, M7xs,  H2Oxs, H2Oxs, H2Oxs, H2Oxs]
+mats =  [M7xs, M7xs, H2Oxs, H2Oxs]
 M7 = PinCell(radii, mats, pitch, pitch)
 
-mats =  [M8xs, M8xs, M8xs, M8xs,  H2Oxs, H2Oxs, H2Oxs, H2Oxs]
+mats =  [M8xs, M8xs, H2Oxs, H2Oxs]
 M8 = PinCell(radii, mats, pitch, pitch)
 
-mats =  [FCxs, FCxs, FCxs, FCxs,  H2Oxs, H2Oxs, H2Oxs, H2Oxs]
+mats =  [FCxs, FCxs, H2Oxs, H2Oxs]
 FC = PinCell(radii, mats, pitch, pitch)
 
-mats =  [GTxs, GTxs, GTxs, GTxs, H2Oxs, H2Oxs, H2Oxs, H2Oxs]
+mats =  [GTxs, GTxs, H2Oxs, H2Oxs]
 GT = PinCell(radii, mats, pitch, pitch)
 
 dx = [pitch]*17
@@ -155,7 +155,7 @@ MOX.set_tiles([M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,
                M4,M7,M7,M7,M7,M7,M7,M7,M7,M7,M7,M7,M7,M7,M7,M7,M4,
                M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4,M4])
 
-NW = 5 # Number of empty water cells in a pin cell
+NW = 4 # Number of empty water cells in a pin cell
 dx = [pitch / NW] * NW
 WC = EmptyCell(H2Oxs, pitch / NW, pitch / NW)
 WT = Cartesian2D(dx, dx)
