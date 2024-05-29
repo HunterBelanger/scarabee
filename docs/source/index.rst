@@ -1,4 +1,4 @@
-Scarabee : A Light Water Reactor Lattice Physics Code
+Scarabée : A Light Water Reactor Lattice Physics Code
 =====================================================
 
 Details will go here.

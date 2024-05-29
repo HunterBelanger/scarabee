@@ -8,7 +8,13 @@ namespace py = pybind11;
 using namespace scarabee;
 
 void init_CrossSection(py::module& m) {
-  py::class_<CrossSection, std::shared_ptr<CrossSection>>(m, "CrossSection")
+  py::class_<CrossSection, std::shared_ptr<CrossSection>>(m, "CrossSection",
+      "A CrossSection object contains all necessary cross section information "
+      "to perform a transport calculation. A reduced set of arithmetic "
+      "operations can be performed on CrossSections to facilitate the "
+      "construction of macroscopic material cross sections. This includes "
+      "scalar multiplication, and the addition of CrossSection objects.")
+
       .def(py::init<const xt::xtensor<double, 1>& /*Etr*/,
                     const xt::xtensor<double, 1>& /*Ea*/,
                     const xt::xtensor<double, 2>& /*Es_tr*/,
@@ -16,15 +22,23 @@ void init_CrossSection(py::module& m) {
                     const xt::xtensor<double, 1>& /*vEf*/,
                     const xt::xtensor<double, 1>& /*chi*/,
                     const std::string& /*name*/>(),
-           "Transport corrected macroscopic cross sections.\n\n"
-           "Arguments:\n"
-           "    Etr    transport corrected total cross section\n"
-           "    Ea     absorption cross section\n"
-           "    Es_tr  transport corrected scattering cross section matrix\n"
-           "    Ef     fission cross section\n"
-           "    vEf    fission yield time cross section\n"
-           "    chi    fission spectrum\n"
-           "    name   name of material",
+           "Creates a CrossSection from transport corrected data.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "Etr : ndarray\n"
+           "      Transport corrected total cross section.\n"
+           "Ea : ndarray\n"
+           "     Absorption cross section.\n"
+           "Es_tr : ndarray\n"
+           "        Transport corrected scattering cross section matrix.\n"
+           "Ef : ndarray\n"
+           "     Fission cross section.\n"
+           "vEf : ndarray\n"
+           "      Fission yield time cross section.\n"
+           "chi : ndarray\n"
+           "      Fission spectrum.\n"
+           "name : str (optional)\n"
+           "       Name of material.\n\n",
            py::arg("Etr"), py::arg("Ea"), py::arg("Es_tr"), py::arg("Ef"),
            py::arg("vEf"), py::arg("chi"), py::arg("name") = "")
 
@@ -36,15 +50,26 @@ void init_CrossSection(py::module& m) {
                     const xt::xtensor<double, 1>& /*vEf*/,
                     const xt::xtensor<double, 1>& /*chi*/,
                     const std::string& /*name*/>(),
-           "Transport corrected macroscopic cross sections.\n\n"
-           "Arguments:\n"
-           "    Et    total cross section\n"
-           "    Ea    absorption cross section\n"
-           "    Es    scattering cross section matrix\n"
-           "    Ef    fission cross section\n"
-           "    vEf   fission yield time cross section\n"
-           "    chi   fission spectrum\n"
-           "    name  name of material",
+           "Creates a CrossSection object from uncorrected cross section "
+           "data.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "Et : ndarray\n"
+           "     Total cross section\n"
+           "Ea : ndarray\n"
+           "     Absorption cross section\n"
+           "Es : ndarray\n"
+           "     Scattering cross section matrix\n"
+           "Es1 : ndarray\n"
+           "     P1 scattering cross section matrix\n"
+           "Ef : ndarray\n"
+           "     Fission cross section\n"
+           "vEf : ndarray\n"
+           "      Fission yield time cross section\n"
+           "chi : ndarray\n"
+           "      Fission spectrum\n"
+           "name : str (optional)\n"
+           "       Name of material.\n\n",
            py::arg("Et"), py::arg("Ea"), py::arg("Es"), py::arg("Es1"),
            py::arg("Ef"), py::arg("vEf"), py::arg("chi"), py::arg("name") = "")
 
@@ -52,13 +77,18 @@ void init_CrossSection(py::module& m) {
                     const xt::xtensor<double, 1>& /*Ea*/,
                     const xt::xtensor<double, 2>& /*Es_tr*/,
                     const std::string& /*name*/>(),
-           "Transport corrected macroscopic cross sections.\n"
+           "Creates a CrossSection from transport corrected data. "
            "Fission cross sections and spectrum initialized to zero.\n\n"
-           "Arguments:\n"
-           "    Etr    transport corrected total cross section\n"
-           "    Ea     absorption cross section\n"
-           "    Es_tr  transport corrected scattering cross section matrix\nn"
-           "    name   name of material",
+           "Parameters\n"
+           "----------\n"
+           "Etr : ndarray\n"
+           "      Transport corrected total cross section.\n"
+           "Ea : ndarray\n"
+           "     Absorption cross section.\n"
+           "Es_tr : ndarray\n"
+           "        Transport corrected scattering cross section matrix.\n"
+           "name : str (optional)\n"
+           "       Name of material.\n\n",
            py::arg("Etr"), py::arg("Ea"), py::arg("Es_tr"),
            py::arg("name") = "")
 
@@ -67,79 +97,105 @@ void init_CrossSection(py::module& m) {
                     const xt::xtensor<double, 2>& /*Es*/,
                     const xt::xtensor<double, 2>& /*Es1*/,
                     const std::string& /*name*/>(),
-           "Transport corrected macroscopic cross sections.\n"
+           "Creates a CrossSection object from uncorrected cross section data. "
            "Fission cross sections and spectrum initialized to zero.\n\n"
-           "Arguments:\n"
-           "    Et    total cross section\n"
-           "    Ea    absorption cross section\n"
-           "    Es    scattering cross section matrix\nn"
-           "    name  name of material",
+           "Parameters\n"
+           "----------\n"
+           "Et : ndarray\n"
+           "     Total cross section.\n"
+           "Ea : ndarray\n"
+           "     Absorption cross section.\n"
+           "Es : ndarray\n"
+           "     Scattering cross section matrix\n"
+           "Es1 : ndarray\n"
+           "      P1 scattering cross section matrix\n"
+           "name : str (optional)\n"
+           "       Name of material.\n\n",
            py::arg("Et"), py::arg("Ea"), py::arg("Es"), py::arg("Es1"),
            py::arg("name") = "")
 
-      .def("ngroups", &CrossSection::ngroups, "Number of energy groups")
+      .def("ngroups", &CrossSection::ngroups, "Number of energy groups.")
 
-      .def_property("name", &CrossSection::name, &CrossSection::set_name, "Name of material")
+      .def_property("name", &CrossSection::name, &CrossSection::set_name,
+                    "Name of material.")
 
-      .def("fissile", &CrossSection::fissile, "True if material is fissile")
+      .def("fissile", &CrossSection::fissile, "True if material is fissile.")
 
       .def("Etr", py::overload_cast<>(&CrossSection::Etr, py::const_),
-           "Transport corrected total cross section array")
+           "Transport corrected total cross section array.")
 
       .def("Etr",
            py::overload_cast<std::size_t>(&CrossSection::Etr, py::const_),
-           "Transport corrected total cross section in group g\n\n"
-           "Arguments:\n"
-           "    g   energy group",
+           "Transport corrected total cross section in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
            py::arg("g"))
 
       .def("Et", &CrossSection::Et,
-           "Total cross section in group g\n\n"
-           "Arguments:\n"
-           "    g   energy group",
+           "Total cross section in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
            py::arg("g"))
 
       .def("Ea", &CrossSection::Ea,
-           "Absorption cross section in group g\n\n"
-           "Arguments:\n"
-           "    g   energy group",
+           "Absorption cross section in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
            py::arg("g"))
 
       .def("Ef", &CrossSection::Ef,
-           "Fission cross section in group g\n\n"
-           "Arguments:\n"
-           "    g   energy group",
+           "Fission cross section in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
            py::arg("g"))
 
       .def("vEf", &CrossSection::vEf,
-           "Fission yield * cross section in group g\n\n"
-           "Arguments:\n"
-           "    g   energy group",
+           "Fission yield * cross section in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
            py::arg("g"))
 
       .def("nu", &CrossSection::vEf,
-           "Fission yield in group g\n\n"
-           "Arguments:\n"
-           "    g   energy group",
+           "Fission yield in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
            py::arg("g"))
 
       .def("Er", &CrossSection::nu,
-           "Removal cross section in group g\n\n"
-           "Arguments:\n"
-           "    g   energy group",
+           "Removal cross section in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
            py::arg("g"))
 
       .def("chi", &CrossSection::chi,
-           "Fission spectrum in group g\n\n"
-           "Arguments:\n"
-           "    g   energy group",
+           "Fission spectrum in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
            py::arg("g"))
 
       .def("Es_tr",
            py::overload_cast<std::size_t>(&CrossSection::Es_tr, py::const_),
-           "Transport corrected scattering cross section in group g\n\n"
-           "Arguments:\n"
-           "    g   energy group",
+           "Transport corrected scattering cross section in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
            py::arg("g"))
 
       .def("Es_tr",
@@ -147,9 +203,12 @@ void init_CrossSection(py::module& m) {
                                                        py::const_),
            "Transport corrected scattering cross section from group gin to "
            "gout\n\n"
-           "Arguments:\n"
-           "    gin   incoming energy group\n"
-           "    gout  outgoing energy group",
+           "Parameters\n"
+           "----------\n"
+           "gin : int\n"
+           "      Incoming energy group.\n"
+           "gout : int\n"
+           "       Outgoing energy group.",
            py::arg("gin"), py::arg("gout"))
 
       .def(
@@ -157,24 +216,32 @@ void init_CrossSection(py::module& m) {
           py::overload_cast<std::size_t, std::size_t>(&CrossSection::Es1,
                                                       py::const_),
           "P1 moment of the scattering cross section from group gin to gout\n\n"
-          "Arguments:\n"
-          "    gin   incoming energy group\n"
-          "    gout  outgoing energy group",
+          "Parameters\n"
+          "----------\n"
+          "gin : int\n"
+          "      Incoming energy group.\n"
+          "gout : int\n"
+          "       Outgoing energy group.",
           py::arg("gin"), py::arg("gout"))
 
       .def("Es", py::overload_cast<std::size_t>(&CrossSection::Es, py::const_),
-           "Scattering cross section in group g\n\n"
-           "Arguments:\n"
-           "    g   energy group",
+           "Scattering cross section in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
            py::arg("g"))
 
       .def("Es",
            py::overload_cast<std::size_t, std::size_t>(&CrossSection::Es,
                                                        py::const_),
-           "Scattering cross section from group gin to gout\n\n"
-           "Arguments:\n"
-           "    gin   incoming energy group\n"
-           "    gout  outgoing energy group",
+           "Scattering cross section from group gin to gout.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "gin : int\n"
+           "      Incoming energy group.\n"
+           "gout : int\n"
+           "       Outgoing energy group.",
            py::arg("gin"), py::arg("gout"))
 
       .def("__mul__", &CrossSection::operator*)

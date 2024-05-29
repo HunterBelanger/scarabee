@@ -1,11 +1,12 @@
 .. _api:
 
 ============
-Scarabee API
+Scarabée API
 ============
 
 .. toctree::
    :maxdepth: 3
 
-   logging.rst
+   materials.rst
    geometry.rst
+   logging.rst

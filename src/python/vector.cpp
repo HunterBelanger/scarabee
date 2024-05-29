@@ -9,32 +9,34 @@ namespace py = pybind11;
 using namespace scarabee;
 
 void init_Vector(py::module& m) {
-  py::class_<Vector>(m, "Vector")
+  py::class_<Vector>(
+      m, "Vector",
+      "A Vector object represents a two dimentional spatial vector of "
+      "arbitrary magnitude. It supports standard vector arithmetic such "
+      "as addtion, subtraction, and scaling. Vector objects are immutable, "
+      "and can only be changed through assigning a new Vector.")
+
       .def(py::init<double, double>(),
-           R"(A 2D vector of arbitrary length.
-             
-Parameters
-----------
-x : float
-    x component of vector.
-y : float
-    y component of vector.)",
+           "Creates a Vector for an x and a y component.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "x : float\n"
+           "    x component of vector.\n"
+           "y : float\n"
+           "    y component of vector.\n",
            py::arg("x"), py::arg("y"))
 
       .def("dot", &Vector::dot,
-           R"(Computes dot product with another vector.
-
-.. math:: d = \text{self}.x * v.x + \text{self}.y * v.y
-
-Parameters
-----------
-v : Vector
-    Vector with which to take the dot product.
-
-Returns
--------
-d : float
-    The result of  the dot product)",
+           "Computes dot product with another vector.\n\n"
+           ".. math:: d = \text{self}.x * v.x + \text{self}.y * v.y\n\n"
+           "Parameters\n"
+           "----------\n"
+           "v : Vector\n"
+           "    Vector with which to take the dot product.\n\n"
+           "Returns\n"
+           "-------\n"
+           "d : float\n"
+           "    The result of  the dot product\n",
            py::arg("v"))
 
       .def_property_readonly("x", &Vector::x, "x component of vector.")
@@ -84,5 +86,5 @@ d : float
             mssg << "<" << v.x() << "," << v.y() << ">";
             return mssg.str();
           },
-          "String representation of a vector.");
+          "String representation of a Vector.");
 }
