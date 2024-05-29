@@ -4,10 +4,10 @@ Scarabee : A Light Water Reactor Lattice Physics Code
 Details will go here.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
    
-   scarabee
+   api/index 
 
 Indices and tables
 ==================

@@ -56,22 +56,6 @@ PYBIND11_MODULE(scarabee, m) {
   init_MOCDriver(m);
   init_CriticalitySpectrum(m);
 
-  m.doc() = R"pbdoc(
-  Scarabee Lattice Physics Code 
-  -----------------------------
-
-  .. currentmodule:: scarabee
-
-  .. autosummary::
-     :toctree: _generate
-
-     LogLevel
-     set_logging_level
-     set_output_file
-     Vector
-     Vector.dot
-  )pbdoc";
-
   m.attr("__author__") = "Hunter Belanger";
   m.attr("__copyright__") = "Copyright 2024, Hunter Belanger";
   m.attr("__license__") = "GPL-3.0-or-later";
