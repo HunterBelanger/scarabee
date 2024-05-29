@@ -31,7 +31,7 @@ extern void init_MOCDriver(py::module&);
 extern void init_CriticalitySpectrum(py::module&);
 
 PYBIND11_MODULE(scarabee, m) {
-  xt::import_numpy();
+  xt::import_numpy(); 
 
   init_Logging(m);
   init_Vector(m);
@@ -55,6 +55,22 @@ PYBIND11_MODULE(scarabee, m) {
   init_Cartesian2D(m);
   init_MOCDriver(m);
   init_CriticalitySpectrum(m);
+
+  m.doc() = R"pbdoc(
+  Scarabee Lattice Physics Code 
+  -----------------------------
+
+  .. currentmodule:: scarabee
+
+  .. autosummary::
+     :toctree: _generate
+
+     LogLevel
+     set_logging_level
+     set_output_file
+     Vector
+     Vector.dot
+  )pbdoc";
 
   m.attr("__author__") = "Hunter Belanger";
   m.attr("__copyright__") = "Copyright 2024, Hunter Belanger";

@@ -15,6 +15,23 @@ void init_Logging(py::module& m) {
       .value("Trace", LogLevel::trace)
       .value("Warning", LogLevel::warn);
 
-  m.def("set_logging_level", &set_logging_level);
-  m.def("set_output_file", &set_output_file);
+  m.def("set_logging_level", &set_logging_level,
+        R"(Sets the verbosity of logging output.
+     
+Parameters
+----------
+level : LogLevel
+        Minimmum logging information level written to console/file.
+     )",
+        py::arg("level"));
+
+  m.def("set_output_file", &set_output_file,
+        R"(Sets the name of an optional output file for logging.
+    
+Parameters
+----------
+fname : str
+        Name of the output file.
+    )",
+        py::arg("fname"));
 }

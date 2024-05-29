@@ -11,23 +11,35 @@ using namespace scarabee;
 void init_Vector(py::module& m) {
   py::class_<Vector>(m, "Vector")
       .def(py::init<double, double>(),
-           "A vector in R2 of arbitrary length.\n\n"
-           "Arguments:\n"
-           "    x  x-axis component\n"
-           "    y  y-axis component",
-           py::arg("x"), py::arg("y"))
+          R"(A 2D vector of arbitrary length.
+             
+Parameters
+----------
+x : float
+    x component of vector.
+y : float
+    y component of vector.)", py::arg("x"), py::arg("y"))
 
       .def("dot", &Vector::dot,
-           "Computes dot product with another vector.\n\n"
-           "Arguments:\n"
-           "    v  other vector for dot product",
-           py::arg("v"))
+          R"(Computes dot product with another vector.
 
-      .def_property_readonly("x", &Vector::x, "y component of vector")
+.. math:: d = \text{self}.x * v.x + \text{self}.y * v.y
 
-      .def_property_readonly("y", &Vector::y, "y component of vector")
+Parameters
+----------
+v : Vector
+    Vector with which to take the dot product.
 
-      .def_property_readonly("norm", &Vector::norm, "Length of the vector")
+Returns
+-------
+d : float
+    The result of  the dot product)", py::arg("v"))
+
+      .def_property_readonly("x", &Vector::x, "x component of vector.")
+
+      .def_property_readonly("y", &Vector::y, "y component of vector.")
+
+      .def_property_readonly("norm", &Vector::norm, "Length of the vector.")
 
       .def("__neg__", &Vector::operator-)
 
