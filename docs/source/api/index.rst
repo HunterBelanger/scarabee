@@ -5,8 +5,9 @@ Scarabée API
 ============
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    materials.rst
+   annular_collision_prob.rst
    geometry.rst
    logging.rst

@@ -8,7 +8,8 @@ namespace py = pybind11;
 using namespace scarabee;
 
 void init_CrossSection(py::module& m) {
-  py::class_<CrossSection, std::shared_ptr<CrossSection>>(m, "CrossSection",
+  py::class_<CrossSection, std::shared_ptr<CrossSection>>(
+      m, "CrossSection",
       "A CrossSection object contains all necessary cross section information "
       "to perform a transport calculation. A reduced set of arithmetic "
       "operations can be performed on CrossSections to facilitate the "

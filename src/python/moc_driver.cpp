@@ -89,14 +89,17 @@ void init_MOCDriver(py::module& m) {
            "    g  group index",
            py::arg("i"), py::arg("g"))
 
-      .def("volume", py::overload_cast<const Vector&, const Direction&>(&MOCDriver::volume, py::const_),
+      .def("volume",
+           py::overload_cast<const Vector&, const Direction&>(
+               &MOCDriver::volume, py::const_),
            "Returns the volume of the flat source region at position r.\n\n"
            "Arguments:\n"
            "    r  position\n"
            "    u  direction",
            py::arg("r"), py::arg("u"))
 
-      .def("volume", py::overload_cast<std::size_t>(&MOCDriver::volume, py::const_),
+      .def("volume",
+           py::overload_cast<std::size_t>(&MOCDriver::volume, py::const_),
            "Returns the volume of Flat Source Region i.\n\n"
            "Arguments:\n"
            "    i  FSR index",
@@ -167,7 +170,8 @@ void init_MOCDriver(py::module& m) {
           [](MOCDriver& md, BoundaryCondition& bc) { md.y_max_bc() = bc; },
           "boundadary condition at y_max")
 
-      .def_property_readonly("geometry", &MOCDriver::geometry, "the Cartesian2D geometry for the problem")
+      .def_property_readonly("geometry", &MOCDriver::geometry,
+                             "the Cartesian2D geometry for the problem")
 
       .def_property_readonly("size", &MOCDriver::size,
                              "number of flat source regions")
@@ -234,12 +238,13 @@ void init_MOCDriver(py::module& m) {
            "    g    group index",
            py::arg("i"), py::arg("g"))
 
-      .def("plot", [](const MOCDriver& md){
-          ImApp::App guiplotter(1920, 1080, "Scarabee MOC Plotter");
-          guiplotter.enable_docking();
-          guiplotter.push_layer(std::make_unique<MOCPlotter>(&md));
-          guiplotter.run();
-      })
+      .def("plot",
+           [](const MOCDriver& md) {
+             ImApp::App guiplotter(1920, 1080, "Scarabee MOC Plotter");
+             guiplotter.enable_docking();
+             guiplotter.push_layer(std::make_unique<MOCPlotter>(&md));
+             guiplotter.run();
+           })
 
       .def(
           "rasterize_flux",

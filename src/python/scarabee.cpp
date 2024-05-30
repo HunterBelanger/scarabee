@@ -31,7 +31,7 @@ extern void init_MOCDriver(py::module&);
 extern void init_CriticalitySpectrum(py::module&);
 
 PYBIND11_MODULE(scarabee, m) {
-  xt::import_numpy(); 
+  xt::import_numpy();
 
   init_Logging(m);
   init_Vector(m);

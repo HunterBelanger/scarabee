@@ -4,13 +4,29 @@ Materials
 .. currentmodule:: scarabee
 
 .. autoclass:: CrossSection
-    :special-members: __init__
     :members:
+    :special-members: __init__
 
 .. autoclass:: NuclideHandle
    :members:
 
-.. _ndl:
-
 .. autoclass:: NDLibrary
    :members:
+   :special-members: __init__
+
+.. autoclass:: Nuclide
+   :members:
+
+.. autoclass:: Fraction
+   :members:
+
+.. autoclass:: MaterialComposition
+   :members:
+   :special-members: __init__
+
+.. autoclass:: DensityUnits
+   :members:
+
+.. autoclass:: Material
+   :members:
+   :special-members: __init__

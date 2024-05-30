@@ -1,5 +1,4 @@
 import ENDFtk
-import shutil
 import subprocess
 import os
 import numpy as np

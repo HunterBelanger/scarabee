@@ -4,7 +4,7 @@ Scarabée : A Light Water Reactor Lattice Physics Code
 Details will go here.
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :caption: Contents:
    
    api/index 

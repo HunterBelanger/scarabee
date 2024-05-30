@@ -85,6 +85,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # Seetings for the PyData theme
 html_theme = 'pydata_sphinx_theme'
 
+html_title = "Scarabée"
+
 html_theme_options = {
    "icon_links": [
         {

@@ -10,7 +10,8 @@ namespace py = pybind11;
 using namespace scarabee;
 
 void init_NuclideHandle(py::module& m) {
-  py::class_<NuclideHandle>(m, "NuclideHandle",
+  py::class_<NuclideHandle>(
+      m, "NuclideHandle",
       "A NuclideHandle contains information about a specific nuclide, obtained "
       "from the nuclear data library (see :py:class:`NDLibrary` ).")
 
@@ -55,7 +56,8 @@ void init_NDLibrary(py::module& m) {
       .def("get_nuclide",
            py::overload_cast<const std::string&>(&NDLibrary::get_nuclide,
                                                  py::const_),
-           "Returns the :py:class:`NuclideHandle` of the the desired nuclide.\n\n"
+           "Returns the :py:class:`NuclideHandle` of the the desired "
+           "nuclide.\n\n"
            "Parameters\n"
            "----------\n"
            "name : str\n"
@@ -75,40 +77,45 @@ void init_NDLibrary(py::module& m) {
            "      Desired dilution in barns.",
            py::arg("name"), py::arg("temp"), py::arg("dil"))
 
-      .def("two_term_xs", &NDLibrary::two_term_xs,
-           "Uses the two-term rational approximation for self shielding of "
-           "cross sections, where the fuel escape probability is approximated "
-           "as \n\n"
-           ".. math:: P^{F\\to M}(E) = \\beta_1\\frac{\\alpha_1 \\Sigma_e}{\\Sigma_t(E) + \\alpha_1\\Sigma_e} + "
-           "\\beta_2\\frac{\\alpha_2 \\Sigma_e}{\\Sigma_t(E) + \\alpha_2\\Sigma_e}.\n\n"
-           "If shielding isotope :math:`r` with potential cross section "
-           ":math:`\\sigma_p^r` and number density :math:`N_r`, then the "
-           "background cross sections are computed as\n\n"
-           ".. math:: \\sigma_1 = \\frac{\\Sigma_p - N_r\\sigma_p^r + \\alpha_1\\Sigma_e}{N_r} \\\\\\\\"
-           "          \\sigma_2 = \\frac{\\Sigma_p - N_r\\sigma_p^r + \\alpha_2\\Sigma_e}{N_r}\n\n"
-           "where :math:`\\Sigma_p` is the macroscopic potential scattering "
-           "cross section of the material and :math:`\\Sigma_e` is the escape "
-           "cross section.\n\n"
-           "Parameters\n"
-           "----------\n"
-           "name : str\n"
-           "       Name of the nuclide to be treated.\n"
-           "temp : float\n"
-           "       Temperature of the material (in kelvin).\n"
-           "a1 : float\n"
-           "     :math:`\\alpha_1`.\n"
-           "a2 : float\n"
-           "     :math:`\\alpha_2`.\n"
-           "b1 : float\n"
-           "     :math:`\\beta_1`.\n"
-           "b2 : float\n"
-           "     :math:`\\beta_2`.\n"
-           "xs1 : float\n"
-           "      Background cross section for first term (:math:`\\sigma_1`).\n"
-           "xs2 : float\n"
-           "      Background cross section for second term (:math:`\\sigma_2`).",
-           py::arg("name"), py::arg("temp"), py::arg("a1"), py::arg("a2"),
-           py::arg("b1"), py::arg("b2"), py::arg("xs1"), py::arg("xs2"))
+      .def(
+          "two_term_xs", &NDLibrary::two_term_xs,
+          "Uses the two-term rational approximation for self shielding of "
+          "cross sections, where the fuel escape probability is approximated "
+          "as \n\n"
+          ".. math:: P^{F\\to M}(E) = \\beta_1\\frac{\\alpha_1 "
+          "\\Sigma_e}{\\Sigma_t(E) + \\alpha_1\\Sigma_e} + "
+          "\\beta_2\\frac{\\alpha_2 \\Sigma_e}{\\Sigma_t(E) + "
+          "\\alpha_2\\Sigma_e}.\n\n"
+          "If shielding isotope :math:`r` with potential cross section "
+          ":math:`\\sigma_p^r` and number density :math:`N_r`, then the "
+          "background cross sections are computed as\n\n"
+          ".. math:: \\sigma_1 = \\frac{\\Sigma_p - N_r\\sigma_p^r + "
+          "\\alpha_1\\Sigma_e}{N_r} \\\\\\\\"
+          "          \\sigma_2 = \\frac{\\Sigma_p - N_r\\sigma_p^r + "
+          "\\alpha_2\\Sigma_e}{N_r}\n\n"
+          "where :math:`\\Sigma_p` is the macroscopic potential scattering "
+          "cross section of the material and :math:`\\Sigma_e` is the escape "
+          "cross section.\n\n"
+          "Parameters\n"
+          "----------\n"
+          "name : str\n"
+          "       Name of the nuclide to be treated.\n"
+          "temp : float\n"
+          "       Temperature of the material (in kelvin).\n"
+          "a1 : float\n"
+          "     :math:`\\alpha_1`.\n"
+          "a2 : float\n"
+          "     :math:`\\alpha_2`.\n"
+          "b1 : float\n"
+          "     :math:`\\beta_1`.\n"
+          "b2 : float\n"
+          "     :math:`\\beta_2`.\n"
+          "xs1 : float\n"
+          "      Background cross section for first term (:math:`\\sigma_1`).\n"
+          "xs2 : float\n"
+          "      Background cross section for second term (:math:`\\sigma_2`).",
+          py::arg("name"), py::arg("temp"), py::arg("a1"), py::arg("a2"),
+          py::arg("b1"), py::arg("b2"), py::arg("xs1"), py::arg("xs2"))
 
       .def_property_readonly("library", &NDLibrary::library,
                              "Name of the nuclear data library (if provided).")
