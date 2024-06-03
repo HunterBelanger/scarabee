@@ -116,6 +116,7 @@ pybind11_add_module(scarabee  src/logging.cpp
                               src/chebyshev.cpp
                               src/math.cpp
                               src/cross_section.cpp
+                              src/diffusion_cross_section.cpp
                               src/material.cpp
                               src/nd_library.cpp
                               src/cylindrical_cell.cpp
@@ -133,12 +134,15 @@ pybind11_add_module(scarabee  src/logging.cpp
                               src/moc_driver.cpp
                               src/moc_plotter.cpp
                               src/criticality_spectrum.cpp
+                              src/diffusion_geometry.cpp
+                              src/fd_diffusion_driver.cpp
                               #=================================================
                               src/python/scarabee.cpp
                               src/python/vector.cpp
                               src/python/direction.cpp
                               src/python/logging.cpp
                               src/python/cross_section.cpp
+                              src/python/diffusion_cross_section.cpp
                               src/python/material.cpp
                               src/python/nd_library.cpp
                               src/python/cylindrical_cell.cpp
@@ -154,6 +158,7 @@ pybind11_add_module(scarabee  src/logging.cpp
                               src/python/cartesian_2d.cpp
                               src/python/moc_driver.cpp
                               src/python/criticality_spectrum.cpp
+                              src/python/diffusion_geometry.cpp
                             )
 
 target_include_directories(scarabee PRIVATE include)

@@ -9,5 +9,6 @@ Scarabée API
 
    materials.rst
    annular_collision_prob.rst
+   diffusion.rst
    geometry.rst
    logging.rst

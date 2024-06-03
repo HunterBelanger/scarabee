@@ -7,6 +7,10 @@ Materials
     :members:
     :special-members: __init__
 
+.. autoclass:: DiffusionCrossSection
+    :members:
+    :special-members: __init__
+
 .. autoclass:: NuclideHandle
    :members:
 

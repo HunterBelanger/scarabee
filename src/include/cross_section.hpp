@@ -113,7 +113,7 @@ class CrossSection {
   xt::xtensor<double, 2> Es1_;    // P1 Scattering matrix
   xt::xtensor<double, 1> Etr_;    // Transport xs
   xt::xtensor<double, 1> Ea_;     // Absorption xs
-  xt::xtensor<double, 1> Ef_;     // Absorption xs
+  xt::xtensor<double, 1> Ef_;     // Fission xs
   xt::xtensor<double, 1> vEf_;    // Fission xs * yield
   xt::xtensor<double, 1> chi_;    // Fission spectrum
   std::string name_;

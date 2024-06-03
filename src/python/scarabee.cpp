@@ -8,6 +8,7 @@
 namespace py = pybind11;
 
 extern void init_CrossSection(py::module&);
+extern void init_DiffusionCrossSection(py::module&);
 extern void init_NuclideHandle(py::module&);
 extern void init_NDLibrary(py::module&);
 extern void init_Nuclide(py::module&);
@@ -29,6 +30,7 @@ extern void init_PinCell(py::module&);
 extern void init_Cartesian2D(py::module&);
 extern void init_MOCDriver(py::module&);
 extern void init_CriticalitySpectrum(py::module&);
+extern void init_DiffusionGeometry(py::module& m);
 
 PYBIND11_MODULE(scarabee, m) {
   xt::import_numpy();
@@ -37,6 +39,7 @@ PYBIND11_MODULE(scarabee, m) {
   init_Vector(m);
   init_Direction(m);
   init_CrossSection(m);
+  init_DiffusionCrossSection(m);
   init_NuclideHandle(m);
   init_NDLibrary(m);
   init_Nuclide(m);
@@ -55,6 +58,7 @@ PYBIND11_MODULE(scarabee, m) {
   init_Cartesian2D(m);
   init_MOCDriver(m);
   init_CriticalitySpectrum(m);
+  init_DiffusionGeometry(m);
 
   m.attr("__author__") = "Hunter Belanger";
   m.attr("__copyright__") = "Copyright 2024, Hunter Belanger";
