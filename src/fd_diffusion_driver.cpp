@@ -261,6 +261,14 @@ void load_matrix(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M) {
   // Allocate M
   M.resize(geom.ngroups()*geom.nmats(), geom.ngroups()*geom.nmats());
 
+  if (geom.ndims() == 1) {
+    M.reserve(Eigen::VectorXd::Constant(geom.ngroups()*geom.nmats(), 3));
+  } else if (geom.ndims() == 2) {
+    M.reserve(Eigen::VectorXd::Constant(geom.ngroups()*geom.nmats(), 5));
+  } else {
+    M.reserve(Eigen::VectorXd::Constant(geom.ngroups()*geom.nmats(), 7));
+  }
+
   for (std::size_t g = 0; g < geom.ngroups(); g++) {
     for (std::size_t m = 0; m < geom.nmats(); m++) {
       set_x_current_diff(geom, M, g, m);
