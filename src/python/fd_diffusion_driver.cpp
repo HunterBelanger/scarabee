@@ -30,9 +30,23 @@ void init_FDDiffusionDriver(py::module& m) {
   
   .def_property_readonly("keff", &FDDiffusionDriver::keff, "Value of keff. This is 1 by default is solved is False.")
 
-  .def_property_readonly("flux", &FDDiffusionDriver::flux)
-  
   .def_property("keff_tolerance", &FDDiffusionDriver::keff_tolerance, &FDDiffusionDriver::set_keff_tolerance, "Maximum relative error in keff for problem convergence.")
   
-  .def_property("flux_tolerance", &FDDiffusionDriver::flux_tolerance, &FDDiffusionDriver::flux_tolerance, "Maximum relative error in the flux for problem convergence.");
+  .def_property("flux_tolerance", &FDDiffusionDriver::flux_tolerance, &FDDiffusionDriver::flux_tolerance, "Maximum relative error in the flux for problem convergence.")
+  
+  .def("flux", &FDDiffusionDriver::flux,
+  "Returns the computed flux, along with the mesh bounds. The first dimension "
+  "of the flux array is the energy group index. The second index is for the x "
+  "coordinate. If the problem is 2 or 3 dimensional, the third and fourth "
+  "indices are for the y and z coordinates respectively.\n\n"
+  "Returns\n"
+  "-------\n"
+  "flux : ndarray\n"
+  "       2D, 3D, or 3D array containing the multigroup flux.\n"
+  "x_bounds : ndarray\n"
+  "           1D array with the x-bounds for the flux mesh.\n"
+  "y_bounds : ndarray or None\n"
+  "           1D array with the y-bounds for the flux mesh, if a 2D problem.\n"
+  "z_bounds : ndarray or None\n"
+  "           1D array with the z-bounds for the flux mesh, if a 3D problem.\n");
 }

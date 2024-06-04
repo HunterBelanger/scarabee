@@ -8,6 +8,8 @@
 #include <xtensor/xtensor.hpp>
 
 #include <memory>
+#include <optional>
+#include <tuple>
 
 namespace scarabee {
 
@@ -28,7 +30,7 @@ class FDDiffusionDriver {
 
     double keff() const { return keff_; }
 
-    const xt::xtensor<double, 1>& flux() const { return flux_; }
+    std::tuple<xt::xarray<double>, xt::xarray<double>, std::optional<xt::xarray<double>>, std::optional<xt::xarray<double>>> flux() const;
 
   private:
     std::shared_ptr<DiffusionGeometry> geom_;
