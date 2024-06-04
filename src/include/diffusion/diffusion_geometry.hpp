@@ -41,6 +41,7 @@ class DiffusionGeometry {
     std::pair<Tile, std::optional<std::size_t>> neighbor(std::size_t m, Neighbor n) const;
     const std::shared_ptr<DiffusionCrossSection>& mat(std::size_t m) const;
     std::vector<std::size_t> mat_indxs(std::size_t m) const;
+    double volume(std::size_t m) const;
 
     double dx(std::size_t i) const { return x_bounds_[i+1] - x_bounds_[i]; }
     double dy(std::size_t j) const { return y_bounds_[j+1] - y_bounds_[j]; }

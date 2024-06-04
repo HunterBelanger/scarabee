@@ -159,6 +159,7 @@ pybind11_add_module(scarabee  src/logging.cpp
                               src/python/moc_driver.cpp
                               src/python/criticality_spectrum.cpp
                               src/python/diffusion_geometry.cpp
+                              src/python/fd_diffusion_driver.cpp
                             )
 
 target_include_directories(scarabee PRIVATE include)

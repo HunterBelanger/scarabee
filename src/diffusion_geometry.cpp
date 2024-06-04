@@ -204,6 +204,25 @@ const std::shared_ptr<DiffusionCrossSection>& DiffusionGeometry::mat(std::size_t
   return tiles_.flat(mat_indx_to_flat_tile_indx_[m]).xs;
 }
 
+double DiffusionGeometry::volume(std::size_t m ) const {
+  if (m >= nmats()) {
+    std::stringstream mssg;
+    mssg << "Requested material index out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  auto inds = this->mat_indxs(m);
+
+  if (ndims() == 1) {
+    return dx(inds[0]);
+  } else if (ndims() == 2) {
+    return dx(inds[0]) * dy(inds[1]);
+  } else {
+    return dx(inds[0]) * dy(inds[1]) * dz(inds[2]);
+  }
+}
+
 std::vector<std::size_t> DiffusionGeometry::mat_indxs(std::size_t m) const {
   if (m >= nmats()) {
     std::stringstream mssg;

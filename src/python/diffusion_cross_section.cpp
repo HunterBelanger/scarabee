@@ -97,7 +97,7 @@ void init_DiffusionCrossSection(py::module& m) {
            "    Energy group.",
            py::arg("g"))
 
-      .def("nu", &DiffusionCrossSection::vEf,
+      .def("nu", &DiffusionCrossSection::nu,
            "Fission yield in group g.\n\n"
            "Parameters\n"
            "----------\n"
@@ -105,7 +105,7 @@ void init_DiffusionCrossSection(py::module& m) {
            "    Energy group.",
            py::arg("g"))
 
-      .def("Er", &DiffusionCrossSection::nu,
+      .def("Er", &DiffusionCrossSection::Er,
            "Removal cross section in group g.\n\n"
            "Parameters\n"
            "----------\n"

@@ -95,6 +95,18 @@ void init_DiffusionGeometry(py::module& m) {
            "                     Cross section data for material m.\n",
            py::arg("m"))
 
+      .def("volume", &DiffusionGeometry::volume,
+           "Obtains the volume for material m.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "m : int\n"
+           "    Material index.\n\n"
+           "Returns\n"
+           "-------\n"
+           "float\n"
+           "     Volume of material m.\n",
+           py::arg("m"))
+
       .def("mat_indxs", &DiffusionGeometry::mat_indxs,
            "The geometry indices for material index m.\n\n"
            "Parameters\n"

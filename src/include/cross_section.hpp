@@ -57,7 +57,7 @@ class CrossSection {
 
   double Ea(std::size_t g) const { return Ea_(g); }
 
-  double Ef(std::size_t g) const { return Ea_(g); }
+  double Ef(std::size_t g) const { return Ef_(g); }
 
   double vEf(std::size_t g) const { return vEf_(g); }
 

@@ -31,6 +31,7 @@ extern void init_Cartesian2D(py::module&);
 extern void init_MOCDriver(py::module&);
 extern void init_CriticalitySpectrum(py::module&);
 extern void init_DiffusionGeometry(py::module& m);
+extern void init_FDDiffusionDriver(py::module& m);
 
 PYBIND11_MODULE(scarabee, m) {
   xt::import_numpy();
@@ -59,6 +60,7 @@ PYBIND11_MODULE(scarabee, m) {
   init_MOCDriver(m);
   init_CriticalitySpectrum(m);
   init_DiffusionGeometry(m);
+  init_FDDiffusionDriver(m);
 
   m.attr("__author__") = "Hunter Belanger";
   m.attr("__copyright__") = "Copyright 2024, Hunter Belanger";
