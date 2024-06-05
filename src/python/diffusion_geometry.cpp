@@ -38,8 +38,7 @@ void init_DiffusionGeometry(py::module& m) {
       .def(py::init<const std::vector<DiffusionGeometry::TileFill>& /*tiles*/,
                     const std::vector<double>& /*dx*/,
                     const std::vector<std::size_t>& /*xdivs*/,
-                    double /*albedo_xn*/,
-                    double /*albedo_xp*/>(),
+                    double /*albedo_xn*/, double /*albedo_xp*/>(),
            "Creates a 1D DiffusionGeometry.\n\n"
            "Parameters\n"
            "----------\n"
@@ -53,8 +52,8 @@ void init_DiffusionGeometry(py::module& m) {
            "            Albedo at the negative x boundary.\n"
            "albedo_xp : float\n"
            "            Albedo at the positive x boundary.\n\n",
-           py::arg("tiles"), py::arg("dx"), py::arg("xdivs"), py::arg("albedo_xs"),
-           py::arg("albedo_xp"))
+           py::arg("tiles"), py::arg("dx"), py::arg("xdivs"),
+           py::arg("albedo_xs"), py::arg("albedo_xp"))
 
       .def(
           "neighbor", &DiffusionGeometry::neighbor,
@@ -101,17 +100,22 @@ void init_DiffusionGeometry(py::module& m) {
            "     Volume of material m.\n",
            py::arg("m"))
 
-      .def("geom_indx", &DiffusionGeometry::geom_indx,
-           "The geometry indices for material index m.\n\n"
-           "Parameters\n"
-           "----------\n"
-           "m : int\n"
-           "    Material index.\n\n"
-           "Returns\n"
-           "-------\n"
-           "list of int\n"
-           "           Geometry indices of material index m.\n",
-           py::arg("m"))
+      .def(
+          "geom_indx",
+          [](const DiffusionGeometry& geom, std::size_t m) {
+            auto inds = geom.geom_indx(m);
+            return std::vector<std::size_t>(inds.begin(), inds.end());
+          },
+          "The geometry indices for material index m.\n\n"
+          "Parameters\n"
+          "----------\n"
+          "m : int\n"
+          "    Material index.\n\n"
+          "Returns\n"
+          "-------\n"
+          "list of int\n"
+          "           Geometry indices of material index m.\n",
+          py::arg("m"))
 
       .def("dx", &DiffusionGeometry::dx,
            "Width in the x direction of the i mesh along the x axis.\n\n"

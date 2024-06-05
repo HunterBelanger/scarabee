@@ -4,6 +4,7 @@
 
 #include <xtensor/xstrides.hpp>
 
+#include <algorithm>
 #include <sstream>
 
 namespace scarabee {
@@ -32,9 +33,9 @@ DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
       nz_(0),
       geom_shape_() {
   // Make sure numbers are coherent !
-  if ((tile_dx_.size() != xdivs.size()) || 
-      (tile_dx_.size() != tiles.size())) {
-    auto mssg = "The number of provided tiles, widths, and divisions does not agree.";
+  if ((tile_dx_.size() != xdivs.size()) || (tile_dx_.size() != tiles.size())) {
+    auto mssg =
+        "The number of provided tiles, widths, and divisions does not agree.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -109,8 +110,16 @@ DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
   // geometry index. This fact greatly simplifies the remaining bits.
   nmats_ = nx_;
   mat_indx_to_flat_geom_indx_.resize(nmats_);
-  for (std::size_t m = 0; m < nmats_; m++)
-    mat_indx_to_flat_geom_indx_[m] = m;
+  for (std::size_t m = 0; m < nmats_; m++) mat_indx_to_flat_geom_indx_[m] = m;
+
+  // We must make sure mat_indx_to_flat_geom is sorted, otherwise our method
+  // to get mat index will not work !
+  if (std::is_sorted(mat_indx_to_flat_geom_indx_.begin(),
+                     mat_indx_to_flat_geom_indx_.end()) == false) {
+    auto mssg = "Material index to flat geometry index is not sorted.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
 }
 
 std::size_t DiffusionGeometry::ngroups() const {
@@ -146,15 +155,19 @@ DiffusionGeometry::neighbor_1d(std::size_t m, Neighbor n) const {
   auto geo_indx = this->geom_indx(m);
 
   // First, check for and edge case
-  if (geo_indx[0] == 0 && n == Neighbor::XN) return {xn_, std::nullopt};
-  else if (geo_indx[0] == nx()-1 && n == Neighbor::XP) return {xp_, std::nullopt};
+  if (geo_indx[0] == 0 && n == Neighbor::XN)
+    return {xn_, std::nullopt};
+  else if (geo_indx[0] == nx() - 1 && n == Neighbor::XP)
+    return {xp_, std::nullopt};
 
   // Next, change mat array to desired neighbor
-  if (n == Neighbor::XN) geo_indx[0]--;
-  else geo_indx[0]++;
+  if (n == Neighbor::XN)
+    geo_indx[0]--;
+  else
+    geo_indx[0]++;
 
   // Now, we get the respective tile index and tile
-  std::vector<std::size_t> tile_indx = this->geom_to_tile_indx(geo_indx);
+  xt::svector<std::size_t> tile_indx = this->geom_to_tile_indx(geo_indx);
   const auto& tile = tiles_.element(tile_indx.begin(), tile_indx.end());
 
   if (tile.xs == nullptr) return {tile, std::nullopt};
@@ -177,19 +190,27 @@ DiffusionGeometry::neighbor_2d(std::size_t m, Neighbor n) const {
   auto geo_indx = this->geom_indx(m);
 
   // First, check for and edge case
-  if (geo_indx[0] == 0 && n == Neighbor::XN) return {xn_, std::nullopt};
-  else if (geo_indx[0] == nx()-1 && n == Neighbor::XP) return {xp_, std::nullopt};
-  else if (geo_indx[1] == 0 && n == Neighbor::YN) return {yn_, std::nullopt};
-  else if (geo_indx[1] == ny()-1 && n == Neighbor::YP) return {yp_, std::nullopt};
+  if (geo_indx[0] == 0 && n == Neighbor::XN)
+    return {xn_, std::nullopt};
+  else if (geo_indx[0] == nx() - 1 && n == Neighbor::XP)
+    return {xp_, std::nullopt};
+  else if (geo_indx[1] == 0 && n == Neighbor::YN)
+    return {yn_, std::nullopt};
+  else if (geo_indx[1] == ny() - 1 && n == Neighbor::YP)
+    return {yp_, std::nullopt};
 
   // Next, change mat array to desired neighbor
-  if (n == Neighbor::XN) geo_indx[0]--;
-  else if (n == Neighbor::XP) geo_indx[0]++;
-  else if (n == Neighbor::YN) geo_indx[1]--;
-  else geo_indx[1]++;
+  if (n == Neighbor::XN)
+    geo_indx[0]--;
+  else if (n == Neighbor::XP)
+    geo_indx[0]++;
+  else if (n == Neighbor::YN)
+    geo_indx[1]--;
+  else
+    geo_indx[1]++;
 
   // Now, we get the respective tile index and tile
-  std::vector<std::size_t> tile_indx = this->geom_to_tile_indx(geo_indx);
+  xt::svector<std::size_t> tile_indx = this->geom_to_tile_indx(geo_indx);
   const auto& tile = tiles_.element(tile_indx.begin(), tile_indx.end());
 
   if (tile.xs == nullptr) return {tile, std::nullopt};
@@ -206,23 +227,35 @@ DiffusionGeometry::neighbor_3d(std::size_t m, Neighbor n) const {
   auto geo_indx = this->geom_indx(m);
 
   // First, check for and edge case
-  if (geo_indx[0] == 0 && n == Neighbor::XN) return {xn_, std::nullopt};
-  else if (geo_indx[0] == nx()-1 && n == Neighbor::XP) return {xp_, std::nullopt};
-  else if (geo_indx[1] == 0 && n == Neighbor::YN) return {yn_, std::nullopt};
-  else if (geo_indx[1] == ny()-1 && n == Neighbor::YP) return {yp_, std::nullopt};
-  else if (geo_indx[2] == 0 && n == Neighbor::ZN) return {zn_, std::nullopt};
-  else if (geo_indx[2] == nz()-1 && n == Neighbor::ZP) return {zp_, std::nullopt};
+  if (geo_indx[0] == 0 && n == Neighbor::XN)
+    return {xn_, std::nullopt};
+  else if (geo_indx[0] == nx() - 1 && n == Neighbor::XP)
+    return {xp_, std::nullopt};
+  else if (geo_indx[1] == 0 && n == Neighbor::YN)
+    return {yn_, std::nullopt};
+  else if (geo_indx[1] == ny() - 1 && n == Neighbor::YP)
+    return {yp_, std::nullopt};
+  else if (geo_indx[2] == 0 && n == Neighbor::ZN)
+    return {zn_, std::nullopt};
+  else if (geo_indx[2] == nz() - 1 && n == Neighbor::ZP)
+    return {zp_, std::nullopt};
 
   // Next, change mat array to desired neighbor
-  if (n == Neighbor::XN) geo_indx[0]--;
-  else if (n == Neighbor::XP) geo_indx[0]++;
-  else if (n == Neighbor::YN) geo_indx[1]--;
-  else if (n == Neighbor::YP) geo_indx[1]++;
-  else if (n == Neighbor::ZN) geo_indx[2]--;
-  else if (n == Neighbor::ZP) geo_indx[2]++;
+  if (n == Neighbor::XN)
+    geo_indx[0]--;
+  else if (n == Neighbor::XP)
+    geo_indx[0]++;
+  else if (n == Neighbor::YN)
+    geo_indx[1]--;
+  else if (n == Neighbor::YP)
+    geo_indx[1]++;
+  else if (n == Neighbor::ZN)
+    geo_indx[2]--;
+  else if (n == Neighbor::ZP)
+    geo_indx[2]++;
 
   // Now, we get the respective tile index and tile
-  std::vector<std::size_t> tile_indx = this->geom_to_tile_indx(geo_indx);
+  xt::svector<std::size_t> tile_indx = this->geom_to_tile_indx(geo_indx);
   const auto& tile = tiles_.element(tile_indx.begin(), tile_indx.end());
 
   if (tile.xs == nullptr) return {tile, std::nullopt};
@@ -233,7 +266,8 @@ DiffusionGeometry::neighbor_3d(std::size_t m, Neighbor n) const {
   return {tile, mn};
 }
 
-const std::shared_ptr<DiffusionCrossSection>& DiffusionGeometry::mat(std::size_t m) const {
+const std::shared_ptr<DiffusionCrossSection>& DiffusionGeometry::mat(
+    std::size_t m) const {
   if (m >= nmats()) {
     auto mssg = "Material index out of range.";
     spdlog::error(mssg);
@@ -245,7 +279,7 @@ const std::shared_ptr<DiffusionCrossSection>& DiffusionGeometry::mat(std::size_t
   return tiles_.element(tile_indx.begin(), tile_indx.end()).xs;
 }
 
-std::vector<std::size_t> DiffusionGeometry::geom_indx(std::size_t m) const {
+xt::svector<std::size_t> DiffusionGeometry::geom_indx(std::size_t m) const {
   if (m >= nmats()) {
     auto mssg = "Material index out of range.";
     spdlog::error(mssg);
@@ -253,14 +287,16 @@ std::vector<std::size_t> DiffusionGeometry::geom_indx(std::size_t m) const {
   }
 
   std::size_t flat_geom_indx = mat_indx_to_flat_geom_indx_[m];
-  std::array<std::size_t, 1> flat_geom_vec {flat_geom_indx};
+  std::array<std::size_t, 1> flat_geom_vec{flat_geom_indx};
 
   // Now get the complete geometry index
-  auto geom_inds = xt::unravel_indices(flat_geom_vec, geom_shape_, xt::layout_type::column_major)[0];
-  return std::vector<std::size_t>(geom_inds.begin(), geom_inds.end());
+  auto geom_inds = xt::unravel_indices(flat_geom_vec, geom_shape_,
+                                       xt::layout_type::column_major)[0];
+  return xt::svector<std::size_t>(geom_inds.begin(), geom_inds.end());
 }
 
-std::vector<std::size_t> DiffusionGeometry::geom_to_tile_indx(const std::vector<std::size_t>& geo_indx) const {
+xt::svector<std::size_t> DiffusionGeometry::geom_to_tile_indx(
+    const xt::svector<std::size_t>& geo_indx) const {
   const std::size_t i = geom_x_indx_to_tile_x_indx(geo_indx[0]);
   if (ndims() == 1) return {i};
 
@@ -271,14 +307,17 @@ std::vector<std::size_t> DiffusionGeometry::geom_to_tile_indx(const std::vector<
   return {i, j, k};
 }
 
-std::size_t DiffusionGeometry::geom_to_mat_indx(const std::vector<std::size_t>& geo_indx) const {
+std::size_t DiffusionGeometry::geom_to_mat_indx(
+    const xt::svector<std::size_t>& geo_indx) const {
   // Get the flat geometry index that we can search for
-  std::array<std::vector<std::size_t>, 1> geo_indx_vec {geo_indx};
-  const std::size_t geom_flat_indx = xt::ravel_indices(geo_indx_vec, geom_shape_, xt::layout_type::column_major)[0];
+  std::array<xt::svector<std::size_t>, 1> geo_indx_vec{geo_indx};
+  const std::size_t geom_flat_indx = xt::ravel_indices(
+      geo_indx_vec, geom_shape_, xt::layout_type::column_major)[0];
 
-  for (std::size_t m = 0; m < mat_indx_to_flat_geom_indx_.size(); m++) {
-    if (mat_indx_to_flat_geom_indx_[m] == geom_flat_indx) return m;
-  }
+  const auto it =
+      std::lower_bound(mat_indx_to_flat_geom_indx_.begin(),
+                       mat_indx_to_flat_geom_indx_.end(), geom_flat_indx);
+  return std::distance(mat_indx_to_flat_geom_indx_.begin(), it);
 
   // Should never get here...
   auto mssg = "Could not find material index.";
@@ -379,4 +418,4 @@ std::size_t DiffusionGeometry::geom_z_indx_to_tile_z_indx(std::size_t i) const {
   return i_tile;
 }
 
-}
+}  // namespace scarabee

@@ -40,9 +40,10 @@ class DiffusionGeometry {
   std::size_t ny() const { return ny_; }
   std::size_t nz() const { return nz_; }
 
-  std::pair<Tile, std::optional<std::size_t>> neighbor(std::size_t m, Neighbor n) const;
+  std::pair<Tile, std::optional<std::size_t>> neighbor(std::size_t m,
+                                                       Neighbor n) const;
   const std::shared_ptr<DiffusionCrossSection>& mat(std::size_t m) const;
-  std::vector<std::size_t> geom_indx(std::size_t m) const;
+  xt::svector<std::size_t> geom_indx(std::size_t m) const;
   double volume(std::size_t m) const;
 
   double dx(std::size_t i) const;
@@ -71,13 +72,17 @@ class DiffusionGeometry {
   std::size_t nx_, ny_, nz_;
   xt::svector<std::size_t> geom_shape_;
 
-  std::vector<std::size_t> geom_to_tile_indx(const std::vector<std::size_t>& geo_indx) const;
+  xt::svector<std::size_t> geom_to_tile_indx(
+      const xt::svector<std::size_t>& geo_indx) const;
 
-  std::size_t geom_to_mat_indx(const std::vector<std::size_t>& geo_indx) const;
+  std::size_t geom_to_mat_indx(const xt::svector<std::size_t>& geo_indx) const;
 
-  std::pair<Tile, std::optional<std::size_t>> neighbor_1d(std::size_t m, Neighbor n) const;
-  std::pair<Tile, std::optional<std::size_t>> neighbor_2d(std::size_t m, Neighbor n) const;
-  std::pair<Tile, std::optional<std::size_t>> neighbor_3d(std::size_t m, Neighbor n) const;
+  std::pair<Tile, std::optional<std::size_t>> neighbor_1d(std::size_t m,
+                                                          Neighbor n) const;
+  std::pair<Tile, std::optional<std::size_t>> neighbor_2d(std::size_t m,
+                                                          Neighbor n) const;
+  std::pair<Tile, std::optional<std::size_t>> neighbor_3d(std::size_t m,
+                                                          Neighbor n) const;
 
   std::size_t geom_x_indx_to_tile_x_indx(std::size_t i) const;
   std::size_t geom_y_indx_to_tile_y_indx(std::size_t i) const;
