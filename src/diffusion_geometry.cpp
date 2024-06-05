@@ -33,7 +33,8 @@ DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
       nz_(0),
       geom_shape_() {
   // Make sure numbers are coherent !
-  if ((tile_dx_.size() != xdivs.size()) || (tile_dx_.size() != tiles.size())) {
+  if ((tile_dx_.size() != x_divs_per_tile_.size()) ||
+      (tile_dx_.size() != tiles.size())) {
     auto mssg =
         "The number of provided tiles, widths, and divisions does not agree.";
     spdlog::error(mssg);
@@ -111,6 +112,199 @@ DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
   nmats_ = nx_;
   mat_indx_to_flat_geom_indx_.resize(nmats_);
   for (std::size_t m = 0; m < nmats_; m++) mat_indx_to_flat_geom_indx_[m] = m;
+
+  // We must make sure mat_indx_to_flat_geom is sorted, otherwise our method
+  // to get mat index will not work !
+  if (std::is_sorted(mat_indx_to_flat_geom_indx_.begin(),
+                     mat_indx_to_flat_geom_indx_.end()) == false) {
+    auto mssg = "Material index to flat geometry index is not sorted.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+}
+
+DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
+                                     const std::vector<double>& dx,
+                                     const std::vector<std::size_t>& xdivs,
+                                     const std::vector<double>& dy,
+                                     const std::vector<std::size_t>& ydivs,
+                                     double albedo_xn, double albedo_xp,
+                                     double albedo_yn, double albedo_yp)
+    : tiles_(),
+      xn_(),
+      xp_(),
+      yn_(),
+      yp_(),
+      zn_(),
+      zp_(),
+      tile_dx_(dx),
+      x_divs_per_tile_(xdivs),
+      tile_dy_(dy),
+      y_divs_per_tile_(ydivs),
+      tile_dz_(),
+      z_divs_per_tile_(),
+      nmats_(0),
+      mat_indx_to_flat_geom_indx_(),
+      nx_(0),
+      ny_(0),
+      nz_(0),
+      geom_shape_() {
+  // Make sure numbers are coherent !
+  if ((tile_dx_.size() != x_divs_per_tile_.size()) ||
+      (tile_dy_.size() != y_divs_per_tile_.size())) {
+    auto mssg = "The number of provided widths and divisions do not agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (tiles.size() != tile_dx_.size() * tile_dy_.size()) {
+    auto mssg =
+        "The number of provided tiles does not agree with the number of "
+        "divisions.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (tile_dx_.size() == 0) {
+    auto mssg = "No tiles were provided along x.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (tile_dy_.size() == 0) {
+    auto mssg = "No tiles were provided along y.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Make sure all widths > 0
+  for (std::size_t i = 0; i < tile_dx_.size(); i++) {
+    if (tile_dx_[i] <= 0.) {
+      std::stringstream mssg;
+      mssg << "dx at index " << i << " is <= 0.";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+  }
+  for (std::size_t i = 0; i < tile_dy_.size(); i++) {
+    if (tile_dy_[i] <= 0.) {
+      std::stringstream mssg;
+      mssg << "dy at index " << i << " is <= 0.";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+  }
+
+  // Make sure all divs are > 0
+  nx_ = 0;
+  for (std::size_t i = 0; i < x_divs_per_tile_.size(); i++) {
+    nx_ += x_divs_per_tile_[i];
+    if (x_divs_per_tile_[i] == 0) {
+      std::stringstream mssg;
+      mssg << "xdivs at index " << i << " is zero.";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+  }
+
+  ny_ = 0;
+  for (std::size_t i = 0; i < y_divs_per_tile_.size(); i++) {
+    ny_ += y_divs_per_tile_[i];
+    if (y_divs_per_tile_[i] == 0) {
+      std::stringstream mssg;
+      mssg << "ydivs at index " << i << " is zero.";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+  }
+
+  // We can now assign the geometry shape
+  geom_shape_ = {nx_, ny_};
+
+  // Assign boundary conditions
+  if (albedo_xn < 0. || albedo_xn > 1.) {
+    std::stringstream mssg;
+    mssg << "Negative x albedo is invalid. Must be in range [0, 1].";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+  xn_.albedo = albedo_xn;
+  xn_.xs = nullptr;
+
+  if (albedo_xp < 0. || albedo_xp > 1.) {
+    std::stringstream mssg;
+    mssg << "Positive x albedo is invalid. Must be in range [0, 1].";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+  xp_.albedo = albedo_xp;
+  xp_.xs = nullptr;
+
+  if (albedo_yn < 0. || albedo_yn > 1.) {
+    std::stringstream mssg;
+    mssg << "Negative y albedo is invalid. Must be in range [0, 1].";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+  yn_.albedo = albedo_yn;
+  yn_.xs = nullptr;
+
+  if (albedo_yp < 0. || albedo_yp > 1.) {
+    std::stringstream mssg;
+    mssg << "Positive y albedo is invalid. Must be in range [0, 1].";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+  yp_.albedo = albedo_yp;
+  yp_.xs = nullptr;
+
+  // Reshape tiles array
+  tiles_.resize({tile_dx_.size(), tile_dy_.size()});
+
+  // Assign all tiles
+  std::size_t tile_indx = 0;
+  std::size_t num_expected_mats = 0;
+  for (std::size_t j = tile_dy_.size(); j > 0; j--) {
+    for (std::size_t i = 0; i < tile_dx_.size(); i++) {
+      const auto& tile = tiles[tile_indx];
+
+      if (std::holds_alternative<double>(tile)) {
+        tiles_(i, j - 1).albedo = std::get<double>(tile);
+      } else {
+        tiles_(i, j - 1).xs =
+            std::get<std::shared_ptr<DiffusionCrossSection>>(tile);
+        num_expected_mats += x_divs_per_tile_[i] * y_divs_per_tile_[j - 1];
+      }
+    }
+  }
+
+  // Assign all material indices and get their geometry index
+  mat_indx_to_flat_geom_indx_.reserve(num_expected_mats);
+  nmats_ = 0;
+  for (std::size_t j = 0; j < ny_; j++) {
+    for (std::size_t i = 0; i < nx_; i++) {
+      // Create the geometry index
+      const xt::svector<std::size_t> geo_inds{i, j};
+
+      // Get the tile index
+      const auto tile_inds = geom_to_tile_indx(geo_inds);
+
+      // Grab the tile
+      const auto& tile = tiles_.element(tile_inds.begin(), tile_inds.end());
+
+      // Check if we have a material or not
+      if (tile.albedo) continue;
+
+      // If we get here, it is a material. We need to compute the flat geometry
+      // index.
+      std::array<xt::svector<std::size_t>, 1> geo_indx_vec{geo_inds};
+      const std::size_t geom_flat_indx = xt::ravel_indices(
+          geo_indx_vec, geom_shape_, xt::layout_type::column_major)[0];
+
+      // Save to the mat_indx_to_flat_geom_indx vector
+      mat_indx_to_flat_geom_indx_.push_back(geom_flat_indx);
+      nmats_++;
+    }
+  }
 
   // We must make sure mat_indx_to_flat_geom is sorted, otherwise our method
   // to get mat index will not work !

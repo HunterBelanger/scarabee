@@ -55,6 +55,38 @@ void init_DiffusionGeometry(py::module& m) {
            py::arg("tiles"), py::arg("dx"), py::arg("xdivs"),
            py::arg("albedo_xs"), py::arg("albedo_xp"))
 
+      .def(py::init<const std::vector<DiffusionGeometry::TileFill>& /*tiles*/,
+                    const std::vector<double>& /*dx*/,
+                    const std::vector<std::size_t>& /*xdivs*/,
+                    const std::vector<double>& /*dy*/,
+                    const std::vector<std::size_t>& /*ydivs*/,
+                    double /*albedo_xn*/, double /*albedo_xp*/,
+                    double /*albedo_yn*/, double /*albedo_yp*/>(),
+           "Creates a 2D DiffusionGeometry.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "tiles : list of float or DiffusionCrossSection\n"
+           "        All tiles in the geometry."
+           "dx : list of float\n"
+           "     Width of each tile along x.\n"
+           "xdivs : list of int\n"
+           "        Number of x meshes in each tile.\n"
+           "dy : list of float\n"
+           "     Width of each tile along y.\n"
+           "ydivs : list of int\n"
+           "        Number of y meshes in each tile.\n"
+           "albedo_xn : float\n"
+           "            Albedo at the negative x boundary.\n"
+           "albedo_xp : float\n"
+           "            Albedo at the positive x boundary.\n"
+           "albedo_yn : float\n"
+           "            Albedo at the negative y boundary.\n"
+           "albedo_yp : float\n"
+           "            Albedo at the positive y boundary.\n\n",
+           py::arg("tiles"), py::arg("dx"), py::arg("xdivs"), py::arg("dy"),
+           py::arg("ydivs"), py::arg("albedo_xs"), py::arg("albedo_xp"),
+           py::arg("albedo_ys"), py::arg("albedo_yp"))
+
       .def(
           "neighbor", &DiffusionGeometry::neighbor,
           "Obtains the desired neighboring DiffusionGeometryTile and index for "
