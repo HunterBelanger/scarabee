@@ -39,13 +39,13 @@ class MOCPlotter : public ImApp::Layer {
   ImApp::Image image;
   std::mutex create_color_mutex;
   int adjust_w_or_h;
-  double height, width;   // Width of image in physical space ([cm]).
-  double ox, oy;      // Plot origin
-  double mx, my;      // Mouse position
-  UniqueFSR mufsr;        // Mouse UniqueFSR
-  std::size_t mfsri;      // Mouse FSR index
-  uint32_t mcell_inst;    // Mouse cell instance
-  CrossSection* mxs;      // Mouse CrossSection
+  double height, width;  // Width of image in physical space ([cm]).
+  double ox, oy;         // Plot origin
+  double mx, my;         // Mouse position
+  UniqueFSR mufsr;       // Mouse UniqueFSR
+  std::size_t mfsri;     // Mouse FSR index
+  uint32_t mcell_inst;   // Mouse cell instance
+  CrossSection* mxs;     // Mouse CrossSection
   double dist_per_pixel;
   ImApp::Pixel background;
   ColorBy colorby;
@@ -53,6 +53,6 @@ class MOCPlotter : public ImApp::Layer {
   bool outline_boundaries;
 };
 
-}
+}  // namespace scarabee
 
 #endif

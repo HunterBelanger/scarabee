@@ -115,12 +115,14 @@ void init_CrossSection(py::module& m) {
            py::arg("Et"), py::arg("Ea"), py::arg("Es"), py::arg("Es1"),
            py::arg("name") = "")
 
-      .def_property_readonly("ngroups", &CrossSection::ngroups, "Number of energy groups.")
+      .def_property_readonly("ngroups", &CrossSection::ngroups,
+                             "Number of energy groups.")
 
       .def_property("name", &CrossSection::name, &CrossSection::set_name,
                     "Name of material.")
 
-      .def_property_readonly("fissile", &CrossSection::fissile, "True if material is fissile.")
+      .def_property_readonly("fissile", &CrossSection::fissile,
+                             "True if material is fissile.")
 
       .def("Etr", py::overload_cast<>(&CrossSection::Etr, py::const_),
            "Transport corrected total cross section array.")

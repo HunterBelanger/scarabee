@@ -143,7 +143,7 @@ void MOCPlotter::render_viewport() {
     mufsr = geom_->get_fsr(mp, mu);
 
     if (mufsr.fsr) {
-      mxs = mufsr.fsr->xs().get();  
+      mxs = mufsr.fsr->xs().get();
       mfsri = moc_->get_fsr_indx(mufsr);
     }
   }
@@ -159,7 +159,7 @@ void MOCPlotter::render_viewport() {
                   static_cast<float>(color.a()) / 255.f);
 
     if (colorby == ColorBy::Material) {
-      //ImGui::Text("Material ID: %i", mxs->id());
+      // ImGui::Text("Material ID: %i", mxs->id());
       ImGui::Text("Material Name: %s", mxs->name().data());
     } else {
       ImGui::Text("FSR ID: %li", mufsr.fsr->id());
@@ -266,7 +266,7 @@ void MOCPlotter::render_controls() {
   if (!mxs) {
     ImGui::Text("Material for given position is not defined.");
   } else {
-    //ImGui::Text("Material ID: %i", mxs->id());
+    // ImGui::Text("Material ID: %i", mxs->id());
     ImGui::Text("Material Name: %s", mxs->name().data());
 
     if (colorby == ColorBy::Material &&
@@ -359,9 +359,9 @@ void MOCPlotter::render_image() {
 
         // Cross boundary, update cell, and get new pixel
         if (pixels_to_bound - static_cast<double>(npixels) < 0.5) {
-          strt = strt + (npixels_dist + dist_per_pixel)*u;
+          strt = strt + (npixels_dist + dist_per_pixel) * u;
         } else {
-          strt = strt + npixels_dist*u;
+          strt = strt + npixels_dist * u;
         }
         ufsr_r = geom_->get_fsr_r_local(strt, u);
         pixel_color = this->get_color(ufsr_r.first);
@@ -419,9 +419,9 @@ void MOCPlotter::render_image() {
 
         // Cross boundary, update cell, and get new pixel
         if (pixels_to_bound - static_cast<double>(npixels) < 0.5) {
-          strt = strt + (npixels_dist + dist_per_pixel)*u;
+          strt = strt + (npixels_dist + dist_per_pixel) * u;
         } else {
-          strt = strt + npixels_dist*u;
+          strt = strt + npixels_dist * u;
         }
         ufsr_r = geom_->get_fsr_r_local(strt, u);
         if (pixels_to_bound - static_cast<double>(npixels) < 0.5) {
@@ -464,12 +464,10 @@ ImApp::Pixel MOCPlotter::get_color(UniqueFSR ufsr) {
       // Color by material
       CrossSection* xs = ufsr.fsr->xs().get();
       // Do same check twice with mutex to make thread safe
-      if (material_id_to_color.find(xs) ==
-          material_id_to_color.end()) {
+      if (material_id_to_color.find(xs) == material_id_to_color.end()) {
         // Check if cell id is in id_to_pixel
         create_color_mutex.lock();
-        if (material_id_to_color.find(xs) ==
-            material_id_to_color.end()) {
+        if (material_id_to_color.find(xs) == material_id_to_color.end()) {
           // Get new random color for id
           material_id_to_color[xs] = get_random_color();
         }
@@ -541,4 +539,4 @@ Vector MOCPlotter::get_comp_start_position(uint64_t i) const {
   return {x, y};
 }
 
-}
+}  // namespace scarabee

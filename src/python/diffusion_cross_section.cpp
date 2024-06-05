@@ -58,12 +58,14 @@ void init_DiffusionCrossSection(py::module& m) {
            "       Name of material.\n\n",
            py::arg("D"), py::arg("Ea"), py::arg("Es"), py::arg("name") = "")
 
-      .def_property_readonly("ngroups", &DiffusionCrossSection::ngroups, "Number of energy groups.")
+      .def_property_readonly("ngroups", &DiffusionCrossSection::ngroups,
+                             "Number of energy groups.")
 
-      .def_property("name", &DiffusionCrossSection::name, &DiffusionCrossSection::set_name,
-                    "Name of material.")
+      .def_property("name", &DiffusionCrossSection::name,
+                    &DiffusionCrossSection::set_name, "Name of material.")
 
-      .def_property_readonly("fissile", &DiffusionCrossSection::fissile, "True if material is fissile.")
+      .def_property_readonly("fissile", &DiffusionCrossSection::fissile,
+                             "True if material is fissile.")
 
       .def("D", &DiffusionCrossSection::D,
            "Diffusion coefficient in group g.\n\n"
@@ -121,7 +123,9 @@ void init_DiffusionCrossSection(py::module& m) {
            "    Energy group.",
            py::arg("g"))
 
-      .def("Es", py::overload_cast<std::size_t>(&DiffusionCrossSection::Es, py::const_),
+      .def("Es",
+           py::overload_cast<std::size_t>(&DiffusionCrossSection::Es,
+                                          py::const_),
            "Transport corrected scattering cross section in group g.\n\n"
            "Parameters\n"
            "----------\n"
@@ -129,7 +133,9 @@ void init_DiffusionCrossSection(py::module& m) {
            "    Energy group.",
            py::arg("g"))
 
-      .def("Es", py::overload_cast<std::size_t, std::size_t>(&DiffusionCrossSection::Es, py::const_),
+      .def("Es",
+           py::overload_cast<std::size_t, std::size_t>(
+               &DiffusionCrossSection::Es, py::const_),
            "Transport corrected scattering cross section from group gin to "
            "gout\n\n"
            "Parameters\n"

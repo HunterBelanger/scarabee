@@ -14,33 +14,36 @@
 namespace scarabee {
 
 class FDDiffusionDriver {
-  public:
-    FDDiffusionDriver(std::shared_ptr<DiffusionGeometry> geom);
+ public:
+  FDDiffusionDriver(std::shared_ptr<DiffusionGeometry> geom);
 
-    std::size_t ngroups() const { return geom_->ngroups(); }
+  std::size_t ngroups() const { return geom_->ngroups(); }
 
-    void solve();
-    bool solved() const { return solved_; }
+  void solve();
+  bool solved() const { return solved_; }
 
-    double keff_tolerance() const { return keff_tol_; }
-    void set_keff_tolerance(double ktol);
+  double keff_tolerance() const { return keff_tol_; }
+  void set_keff_tolerance(double ktol);
 
-    double flux_tolerance() const { return flux_tol_; }
-    void set_flux_tolerance(double ftol);
+  double flux_tolerance() const { return flux_tol_; }
+  void set_flux_tolerance(double ftol);
 
-    double keff() const { return keff_; }
+  double keff() const { return keff_; }
 
-    std::tuple<xt::xarray<double>, xt::xarray<double>, std::optional<xt::xarray<double>>, std::optional<xt::xarray<double>>> flux() const;
+  std::tuple<xt::xarray<double>, xt::xarray<double>,
+             std::optional<xt::xarray<double>>,
+             std::optional<xt::xarray<double>>>
+  flux() const;
 
-  private:
-    std::shared_ptr<DiffusionGeometry> geom_;
-    xt::xtensor<double, 1> flux_; // Flux in each MAT tile in each group
-    double keff_ = 1.;
-    double flux_tol_ = 1.E-5;
-    double keff_tol_ = 1.E-5;
-    bool solved_ {false};
+ private:
+  std::shared_ptr<DiffusionGeometry> geom_;
+  xt::xtensor<double, 1> flux_;  // Flux in each MAT tile in each group
+  double keff_ = 1.;
+  double flux_tol_ = 1.E-5;
+  double keff_tol_ = 1.E-5;
+  bool solved_{false};
 };
 
-}
+}  // namespace scarabee
 
 #endif
