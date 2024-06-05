@@ -12,10 +12,10 @@ using namespace scarabee;
 void init_FDDiffusionDriver(py::module& m) {
   py::class_<FDDiffusionDriver>(
       m, "FDDiffusionDriver",
-      "A FDDiffusionDriver solved a diffusion problem using the cell centered "
+      "A FDDiffusionDriver solves a diffusion problem using the cell centered "
       "finite-difference method. It is capable of solving 1D, 2D, or 3D "
-      "problems "
-      "which are dfined by providing a :py:class:`DiffusionGeometry` instance.")
+      "problems which are dfined by providing a "
+      ":py:class:`DiffusionGeometry` instance.")
 
       .def(py::init<std::shared_ptr<DiffusionGeometry> /*geom*/>(),
            "Initializes a finite-difference diffusion solver.\n\n"

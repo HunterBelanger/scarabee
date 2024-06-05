@@ -13,3 +13,6 @@ Diffusion
    :members:
    :special-members: __init__
 
+.. autoclass:: FDDiffusionDriver
+   :members:
+   :special-members: __init__
