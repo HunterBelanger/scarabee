@@ -35,32 +35,26 @@ void init_DiffusionGeometry(py::module& m) {
       "A DiffusionGeometry represents a cartesian mesh used to solve diffusion "
       "problems.")
 
-      .def(py::init<const std::vector<double>& /*dx*/, double /*albedo_xn*/,
+      .def(py::init<const std::vector<DiffusionGeometry::TileFill>& /*tiles*/,
+                    const std::vector<double>& /*dx*/,
+                    const std::vector<std::size_t>& /*xdivs*/,
+                    double /*albedo_xn*/,
                     double /*albedo_xp*/>(),
            "Creates a 1D DiffusionGeometry.\n\n"
            "Parameters\n"
            "----------\n"
+           "tiles : list of float or DiffusionCrossSection\n"
+           "        All tiles in the geometry."
            "dx : list of float\n"
-           "     Width of each mesh.\n"
+           "     Width of each tile.\n"
+           "xdivs : list of int\n"
+           "        Number of meshes in each tile.\n"
            "albedo_xn : float\n"
            "            Albedo at the negative x boundary.\n"
            "albedo_xp : float\n"
-           "            Albedo at the positive x boundary.\n\n")
-
-      .def("set_tiles", &DiffusionGeometry::set_tiles,
-           "Initializes all of the tiles in the geometry with a list of tiles. "
-           "Each "
-           "entry can either be a float (indicating albedo boundary "
-           "condition), or a "
-           ":py:class:`DiffusionCrossSection` (indicating a material). A 1D "
-           "problem "
-           "may not have any albedo tiles. All albedos must be in the range "
-           "[0,1].\n\n"
-           "Parameters\n"
-           "----------\n"
-           "tiles : list of float or DiffusionCrossSection\n"
-           "        All tiles in the geometry.",
-           py::arg("tiles"))
+           "            Albedo at the positive x boundary.\n\n",
+           py::arg("tiles"), py::arg("dx"), py::arg("xdivs"), py::arg("albedo_xs"),
+           py::arg("albedo_xp"))
 
       .def(
           "neighbor", &DiffusionGeometry::neighbor,
@@ -107,7 +101,7 @@ void init_DiffusionGeometry(py::module& m) {
            "     Volume of material m.\n",
            py::arg("m"))
 
-      .def("mat_indxs", &DiffusionGeometry::mat_indxs,
+      .def("geom_indx", &DiffusionGeometry::geom_indx,
            "The geometry indices for material index m.\n\n"
            "Parameters\n"
            "----------\n"
@@ -157,11 +151,6 @@ void init_DiffusionGeometry(py::module& m) {
 
       .def_property_readonly("ndims", &DiffusionGeometry::ndims,
                              "Number of dimensions (1, 2, or 3).")
-
-      .def_property_readonly(
-          "ntiles", &DiffusionGeometry::ntiles,
-          "Total number of :py:class:`DiffusionGeometryTile` in the problem. "
-          "Includes material and boundary condition tiles.")
 
       .def_property_readonly("nmats", &DiffusionGeometry::nmats,
                              "Total number of material tiles.")

@@ -13,7 +13,7 @@ namespace scarabee {
 
 void set_x_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M, const std::size_t g, const std::size_t m) {
   // Get material index
-  const auto indxs = geom.mat_indxs(m);
+  const auto indxs = geom.geom_indx(m);
 
   // Get our left and right neighbors info
   DiffusionGeometry::Tile tile_mm1, tile_mp1;
@@ -95,7 +95,7 @@ void set_x_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M,
 
 void set_y_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M, const std::size_t g, const std::size_t m) {
   // Get material index
-  const auto indxs = geom.mat_indxs(m);
+  const auto indxs = geom.geom_indx(m);
 
   // Get our left and right neighbors info
   DiffusionGeometry::Tile tile_mm1, tile_mp1;
@@ -177,7 +177,7 @@ void set_y_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M,
 
 void set_z_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M, const std::size_t g, const std::size_t m) {
   // Get material index
-  const auto indxs = geom.mat_indxs(m);
+  const auto indxs = geom.geom_indx(m);
 
   // Get our left and right neighbors info
   DiffusionGeometry::Tile tile_mm1, tile_mp1;
@@ -484,7 +484,7 @@ std::tuple<xt::xarray<double>, xt::xarray<double>, std::optional<xt::xarray<doub
 
   // Fill the flux
   for (std::size_t m = 0; m < geom_->nmats(); m++) {
-    auto inds = geom_->mat_indxs(m);
+    auto inds = geom_->geom_indx(m);
     inds.insert(inds.begin(), 0); // Add entry for group index
 
     for (std::size_t g = 0; g < geom_->ngroups(); g++) {

@@ -14,57 +14,76 @@
 namespace scarabee {
 
 class DiffusionGeometry {
-  public:
-    struct Tile {
-      std::optional<double> albedo;
-      std::shared_ptr<DiffusionCrossSection> xs;
-    };
+ public:
+  struct Tile {
+    std::optional<double> albedo;
+    std::shared_ptr<DiffusionCrossSection> xs;
+  };
 
-    using TileFill = std::variant<double, std::shared_ptr<DiffusionCrossSection>>;
+  using TileFill = std::variant<double, std::shared_ptr<DiffusionCrossSection>>;
 
-    enum class Neighbor : std::uint8_t {XN, XP, YN, YP, ZN, ZP};
+  enum class Neighbor : std::uint8_t { XN, XP, YN, YP, ZN, ZP };
 
-    DiffusionGeometry(const std::vector<double>& dx, double albedo_xn, double albedo_xp);
+  DiffusionGeometry(const std::vector<TileFill>& tiles,
+                    const std::vector<double>& dx,
+                    const std::vector<std::size_t>& xdivs, double albedo_xn,
+                    double albedo_xp);
 
-    void set_tiles(const std::vector<TileFill>& tiles);
+  std::size_t ngroups() const;
+  std::size_t ndims() const {
+    return tiles_.shape().size();
+  }  // Number of spatial dimentions
 
-    std::size_t ngroups() const;
-    std::size_t ndims() const { return tiles_.shape().size(); } // Number of spatial dimentions
+  std::size_t nmats() const { return nmats_; }
 
-    std::size_t ntiles() const { return tiles_.size(); }
-    std::size_t nmats() const { return n_mat_tiles_; }
+  std::size_t nx() const { return nx_; }
+  std::size_t ny() const { return ny_; }
+  std::size_t nz() const { return nz_; }
 
-    std::size_t nx() const { return x_bounds_.size() > 0 ? x_bounds_.size() - 1 : 0; }
-    std::size_t ny() const { return y_bounds_.size() > 0 ? y_bounds_.size() - 1 : 0; }
-    std::size_t nz() const { return z_bounds_.size() > 0 ? z_bounds_.size() - 1 : 0; }
+  std::pair<Tile, std::optional<std::size_t>> neighbor(std::size_t m, Neighbor n) const;
+  const std::shared_ptr<DiffusionCrossSection>& mat(std::size_t m) const;
+  std::vector<std::size_t> geom_indx(std::size_t m) const;
+  double volume(std::size_t m) const;
 
-    std::pair<Tile, std::optional<std::size_t>> neighbor(std::size_t m, Neighbor n) const;
-    const std::shared_ptr<DiffusionCrossSection>& mat(std::size_t m) const;
-    std::vector<std::size_t> mat_indxs(std::size_t m) const;
-    double volume(std::size_t m) const;
+  double dx(std::size_t i) const;
+  double dy(std::size_t j) const;
+  double dz(std::size_t k) const;
 
-    double dx(std::size_t i) const { return x_bounds_[i+1] - x_bounds_[i]; }
-    double dy(std::size_t j) const { return y_bounds_[j+1] - y_bounds_[j]; }
-    double dz(std::size_t k) const { return z_bounds_[k+1] - z_bounds_[k]; }
+ private:
+  xt::xarray<Tile> tiles_;
 
-  private:
-    xt::xarray<Tile> tiles_;
+  // Boundary condition tiles
+  Tile xn_, xp_, yn_, yp_, zn_, zp_;
 
-    // Boundary condition tiles
-    Tile xn_, xp_, yn_, yp_, zn_, zp_;
+  // The bounds for each tile
+  std::vector<double> tile_dx_;
+  std::vector<std::size_t> x_divs_per_tile_;
 
-    // The bounds for each tile
-    std::vector<double> x_bounds_;
-    std::vector<double> y_bounds_;
-    std::vector<double> z_bounds_;
+  std::vector<double> tile_dy_;
+  std::vector<std::size_t> y_divs_per_tile_;
 
-    std::size_t n_mat_tiles_;
+  std::vector<double> tile_dz_;
+  std::vector<std::size_t> z_divs_per_tile_;
 
-    std::vector<std::size_t> mat_indx_to_flat_tile_indx_;
+  std::size_t nmats_;
+  std::vector<std::size_t> mat_indx_to_flat_geom_indx_;
 
-    void set_tiles_1d(const std::vector<TileFill>& tiles);
+  std::size_t nx_, ny_, nz_;
+  xt::svector<std::size_t> geom_shape_;
+
+  std::vector<std::size_t> geom_to_tile_indx(const std::vector<std::size_t>& geo_indx) const;
+
+  std::size_t geom_to_mat_indx(const std::vector<std::size_t>& geo_indx) const;
+
+  std::pair<Tile, std::optional<std::size_t>> neighbor_1d(std::size_t m, Neighbor n) const;
+  std::pair<Tile, std::optional<std::size_t>> neighbor_2d(std::size_t m, Neighbor n) const;
+  std::pair<Tile, std::optional<std::size_t>> neighbor_3d(std::size_t m, Neighbor n) const;
+
+  std::size_t geom_x_indx_to_tile_x_indx(std::size_t i) const;
+  std::size_t geom_y_indx_to_tile_y_indx(std::size_t i) const;
+  std::size_t geom_z_indx_to_tile_z_indx(std::size_t i) const;
 };
 
-}
+}  // namespace scarabee
 
 #endif
