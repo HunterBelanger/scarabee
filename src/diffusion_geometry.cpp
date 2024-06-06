@@ -274,6 +274,8 @@ DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
             std::get<std::shared_ptr<DiffusionCrossSection>>(tile);
         num_expected_mats += x_divs_per_tile_[i] * y_divs_per_tile_[j - 1];
       }
+      
+      tile_indx++;
     }
   }
 

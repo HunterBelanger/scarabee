@@ -395,7 +395,7 @@ void FDDiffusionDriver::solve() {
   load_matrix(*geom_, M);
 
   // Create a solver for the problem
-  spdlog::info("Performing LU decomposition.");
+  spdlog::info("Performing LU decomposition");
   Eigen::SparseLU<Eigen::SparseMatrix<double>> solver(M);
   if (solver.info() != Eigen::Success) {
     std::stringstream mssg;
@@ -427,7 +427,7 @@ void FDDiffusionDriver::solve() {
   double flux_diff = 100.;
   std::size_t iteration = 0;
   Timer iteration_timer;
-  while ((keff_diff > keff_tol_ || flux_diff > flux_tol_) && iteration < 100) {
+  while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
     iteration_timer.reset();
     iteration_timer.start();
     iteration++;
