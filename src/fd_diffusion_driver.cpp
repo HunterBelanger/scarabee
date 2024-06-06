@@ -284,16 +284,19 @@ void set_z_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M,
   }
 }
 
-void load_matrix(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M) {
+void load_loss_matrix(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M) {
   // Allocate M
   M.resize(geom.ngroups() * geom.nmats(), geom.ngroups() * geom.nmats());
 
   if (geom.ndims() == 1) {
-    M.reserve(Eigen::VectorXd::Constant(geom.ngroups() * geom.nmats(), 3));
+    M.reserve(Eigen::VectorXd::Constant(geom.ngroups() * geom.nmats(),
+                                        2 + geom.ngroups()));
   } else if (geom.ndims() == 2) {
-    M.reserve(Eigen::VectorXd::Constant(geom.ngroups() * geom.nmats(), 5));
+    M.reserve(Eigen::VectorXd::Constant(geom.ngroups() * geom.nmats(),
+                                        4 + geom.ngroups()));
   } else {
-    M.reserve(Eigen::VectorXd::Constant(geom.ngroups() * geom.nmats(), 7));
+    M.reserve(Eigen::VectorXd::Constant(geom.ngroups() * geom.nmats(),
+                                        6 + geom.ngroups()));
   }
 
   for (std::size_t m = 0; m < geom.nmats(); m++) {
@@ -310,33 +313,40 @@ void load_matrix(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M) {
 
       // Add removal xs along the diagonal
       M.coeffRef(m + g * geom.nmats(), m + g * geom.nmats()) += Er;
+
+      // Remove scattering sources
+      for (std::size_t gg = 0; gg < geom.ngroups(); gg++) {
+        if (gg != g) {
+          M.coeffRef(m + g * geom.nmats(), m + gg * geom.nmats()) -=
+              mat->Es(gg, g);
+        }
+      }
     }
   }
   M.makeCompressed();
 }
 
-void fill_source(const DiffusionGeometry& geom, const Eigen::VectorXd& flux,
-                 const double keff, Eigen::VectorXd& Q) {
-  const double invs_keff = 1. / keff;
+void load_source_matrix(const DiffusionGeometry& geom,
+                        Eigen::SparseMatrix<double>& QM) {
+  const std::size_t NMATS = geom.nmats();
+  const std::size_t NGRPS = geom.ngroups();
 
-  for (std::size_t m = 0; m < geom.nmats(); m++) {
+  QM.resize(NGRPS * NMATS, NGRPS * NMATS);
+  QM.reserve(Eigen::VectorXd::Constant(NGRPS * NMATS, NGRPS));
+
+  for (std::size_t m = 0; m < NMATS; m++) {
     const DiffusionCrossSection& xs = *geom.mat(m);
 
-    for (std::size_t g = 0; g < geom.ngroups(); g++) {
-      const double chi_g_keff = xs.chi(g) * invs_keff;
-      double src = 0.;
+    for (std::size_t g = 0; g < NGRPS; g++) {
+      const double chi_g = xs.chi(g);
 
-      for (std::size_t gg = 0; gg < geom.ngroups(); gg++) {
-        src += chi_g_keff * xs.vEf(gg) * flux(m + gg * geom.nmats());
-
-        if (gg != g) {
-          src += xs.Es(gg, g) * flux(m + gg * geom.nmats());
-        }
+      for (std::size_t gg = 0; gg < NGRPS; gg++) {
+        QM.coeffRef(m + g * NMATS, m + gg * NMATS) = chi_g * xs.vEf(gg);
       }
-
-      Q(m + g * geom.nmats()) = src;
     }
   }
+
+  QM.makeCompressed();
 }
 
 FDDiffusionDriver::FDDiffusionDriver(std::shared_ptr<DiffusionGeometry> geom)
@@ -392,7 +402,7 @@ void FDDiffusionDriver::solve() {
   Eigen::SparseMatrix<double> M;
 
   // Load the loss matrix
-  load_matrix(*geom_, M);
+  load_loss_matrix(*geom_, M);
 
   // Create a solver for the problem
   spdlog::info("Performing LU decomposition");
@@ -422,6 +432,10 @@ void FDDiffusionDriver::solve() {
     }
   }
 
+  // Initialize a vector for computing the source vector Q faster
+  Eigen::SparseMatrix<double> QM;
+  load_source_matrix(*geom_, QM);
+
   // Begin power iteration
   double keff_diff = 100.;
   double flux_diff = 100.;
@@ -433,7 +447,7 @@ void FDDiffusionDriver::solve() {
     iteration++;
 
     // Compute source vector
-    fill_source(*geom_, flux, keff_, Q);
+    Q = (1. / keff_) * QM * flux;
 
     // Get new flux
     new_flux = solver.solve(Q);
