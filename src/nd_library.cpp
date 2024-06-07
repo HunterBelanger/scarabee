@@ -220,7 +220,8 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
       Es(g, g_out) = f1_g * xs_1->Es(g, g_out) + f2_g * xs_2->Es(g, g_out);
 
-      if (has_P1) Es1(g, g_out) = f1_g * xs_1->Es1(g, g_out) + f2_g * xs_2->Es1(g, g_out);
+      if (has_P1)
+        Es1(g, g_out) = f1_g * xs_1->Es1(g, g_out) + f2_g * xs_2->Es1(g, g_out);
     }
     Et(g) = Ea(g) + xt::sum(xt::view(Es, g, xt::all()))();
 
@@ -240,8 +241,9 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     }
     if (chi_sum > 0.) chi /= chi_sum;
   }
-  
-  if (has_P1) return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
+
+  if (has_P1)
+    return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
 
   return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
 }

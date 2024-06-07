@@ -106,7 +106,9 @@ class CrossSection {
     return Es;
   }
 
-  std::shared_ptr<CrossSection> condense(const std::vector<std::pair<std::size_t, std::size_t>>& groups, const std::vector<double>& flux) const;
+  std::shared_ptr<CrossSection> condense(
+      const std::vector<std::pair<std::size_t, std::size_t>>& groups,
+      const std::vector<double>& flux) const;
 
   // Operators for constructing compound cross sections
   CrossSection operator+(const CrossSection& R) const;

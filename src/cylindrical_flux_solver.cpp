@@ -243,4 +243,118 @@ void CylindricalFluxSolver::solve() {
   solved_ = true;
 }
 
+std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize() const {
+  // We can only perform a homogenization if we have a flux spectrum
+  if (solved() == false) {
+    auto mssg =
+        "Cannot perform homogenization when problem has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  const std::size_t NR = this->nregions();
+  const std::size_t NG = this->ngroups();
+
+  bool has_P1 = false;
+  for (std::size_t m = 0; m < NR; m++) {
+    if (this->xs(m)->anisotropic()) {
+      has_P1 = true;
+      break;
+    }
+  }
+
+  xt::xtensor<double, 1> Et = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> Ea = xt::zeros<double>({NG});
+  xt::xtensor<double, 2> Es = xt::zeros<double>({NG, NG});
+  xt::xtensor<double, 1> Ef = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> vEf = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> chi = xt::zeros<double>({NG});
+  xt::xtensor<double, 2> Es1;
+  if (has_P1) Es1 = xt::zeros<double>({NG, NG});
+
+  // We need to calculate the total fission production in each volume for
+  // generating the homogenized fission spectrum.
+  std::vector<double> fiss_prod(NR, 0.);
+  for (std::size_t i = 0; i < NR; i++) {
+    const auto& mat = this->xs(i);
+    const double V = this->volume(i);
+    for (std::size_t g = 0; g < NG; g++) {
+      fiss_prod[i] += mat->vEf(g) * flux(i, g) * V;
+    }
+  }
+  const double sum_fiss_prod =
+      std::accumulate(fiss_prod.begin(), fiss_prod.end(), 0.);
+  const double invs_sum_fiss_prod =
+      sum_fiss_prod > 0. ? 1. / sum_fiss_prod : 0.;
+
+  for (std::size_t g = 0; g < NG; g++) {
+    // Get the sum of flux*volume for this group
+    double sum_fluxV = 0.;
+    for (std::size_t i = 0; i < NR; i++) {
+      sum_fluxV += this->flux(i, g) * this->volume(i);
+    }
+    const double invs_sum_fluxV = 1. / sum_fluxV;
+
+    for (std::size_t i = 0; i < NR; i++) {
+      const auto& mat = this->xs(i);
+      const double V = volume(i);
+      const double flx = flux(i, g);
+      const double coeff = invs_sum_fluxV * flx * V;
+      Ea(g) += coeff * mat->Ea(g);
+      Ea(g) += coeff * mat->Ea(g);
+      Ef(g) += coeff * mat->Ef(g);
+      vEf(g) += coeff * mat->vEf(g);
+
+      chi(g) += invs_sum_fiss_prod * fiss_prod[i] * mat->chi(g);
+
+      for (std::size_t gg = 0; gg < NG; gg++) {
+        Es(g, gg) += coeff * mat->Es(g, gg);
+
+        if (has_P1) Es1(g, gg) += coeff * mat->Es1(g, gg);
+      }
+    }
+
+    // Reconstruct total xs from absorption and scattering
+    Et(g) = Ea(g) + xt::sum(xt::view(Es, g, xt::all()))();
+  }
+
+  if (has_P1) {
+    return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
+  }
+
+  // If we don't have a P1 matrix, then Et actually contains Etr and Es
+  // contains Es_tr. We can therefore use that constructor.
+  return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
+}
+
+std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum() const {
+  // We can only perform a homogenization if we have a flux spectrum
+  if (solved() == false) {
+    auto mssg =
+        "Cannot perform spectrum homogenization when problem has not been "
+        "solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  const std::size_t NR = this->nregions();
+  const std::size_t NG = this->ngroups();
+
+  // First, calculate the sum of the volumes
+  double sum_V = 0.;
+  for (std::size_t i = 0; i < NR; i++) {
+    sum_V += this->volume(i);
+  }
+  const double invs_sum_V = 1. / sum_V;
+
+  std::vector<double> spectrum(NG, 0.);
+  for (std::size_t g = 0; g < NG; g++) {
+    for (std::size_t i = 0; i < NG; i++) {
+      spectrum[g] += invs_sum_V * this->volume(i) * this->flux(i, g);
+    }
+  }
+
+  return spectrum;
+}
+
 }  // namespace scarabee

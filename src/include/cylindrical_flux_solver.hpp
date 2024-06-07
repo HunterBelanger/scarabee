@@ -22,7 +22,12 @@ class CylindricalFluxSolver {
 
   double flux(std::size_t i, std::size_t g) const { return flux_(g, i); }
   double volume(std::size_t i) const { return cell_->volume(i); }
-  std::shared_ptr<CrossSection> xs(std::size_t i) const { return cell_->xs(i); }
+  const std::shared_ptr<CrossSection>& xs(std::size_t i) const {
+    return cell_->xs(i);
+  }
+
+  std::shared_ptr<CrossSection> homogenize() const;
+  std::vector<double> homogenize_flux_spectrum() const;
 
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);

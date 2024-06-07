@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <xtensor-python/pytensor.hpp>
 
 #include <cross_section.hpp>
@@ -125,7 +126,7 @@ void init_CrossSection(py::module& m) {
                              "True if material is fissile.")
 
       .def_property_readonly("anisotropic", &CrossSection::anisotropic,
-      "True if the material has a P1 scattering matrix.")
+                             "True if the material has a P1 scattering matrix.")
 
       .def("Etr", py::overload_cast<>(&CrossSection::Etr, py::const_),
            "Transport corrected total cross section array.")
@@ -250,18 +251,19 @@ void init_CrossSection(py::module& m) {
            "       Outgoing energy group.",
            py::arg("gin"), py::arg("gout"))
 
-      .def("condense", &CrossSection::condense,
-           "Condenses the cross sections to a new energy group structure. The "
-           "condensation group structure is provided as a list of pairs "
-           "(2D tuples), indicating the lower and upper bounds (inclusive) of "
-           "a macro energy group. \n\n"
-           "Parameters\n"
-           "----------\n"
-           "groups : list of 2D tuples of ints.\n"
-           "         The scheme for condensing energy groups.\n"
-           "flux : list of floats.\n"
-           "       The weighting flux spectrum of the original group structure.",
-           py::arg("groups"), py::arg("flux"))
+      .def(
+          "condense", &CrossSection::condense,
+          "Condenses the cross sections to a new energy group structure. The "
+          "condensation group structure is provided as a list of pairs "
+          "(2D tuples), indicating the lower and upper bounds (inclusive) of "
+          "a macro energy group. \n\n"
+          "Parameters\n"
+          "----------\n"
+          "groups : list of 2D tuples of ints.\n"
+          "         The scheme for condensing energy groups.\n"
+          "flux : list of floats.\n"
+          "       The weighting flux spectrum of the original group structure.",
+          py::arg("groups"), py::arg("flux"))
 
       .def("__mul__", &CrossSection::operator*)
       .def("__rmul__", [](const CrossSection& xs, double N) { return xs * N; })

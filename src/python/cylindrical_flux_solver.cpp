@@ -144,6 +144,22 @@ void init_CylindricalFluxSolver(py::module& m) {
       .def("solve", &CylindricalFluxSolver::solve,
            "Solves the system for the flux and eigenvalue.")
 
+      .def("homogenize", &CylindricalFluxSolver::homogenize,
+           "Computes a homogenized set of cross sections for the problem.\n\n"
+           "Returns\n"
+           "-------\n"
+           "CrossSection\n"
+           "            Homogenized cross section.")
+
+      .def("homogenize_flux_spectrum",
+           &CylindricalFluxSolver::homogenize_flux_spectrum,
+           "Computes a homogenized flux spectrum which can be used for energy "
+           "condensation.\n\n"
+           "Returns\n"
+           "-------\n"
+           "list of floats\n"
+           "               Homogenized flux spectrum.")
+
       .def_property_readonly(
           "solved", &CylindricalFluxSolver::solved,
           "True if the system has been solved, False otherwise.");
