@@ -285,18 +285,18 @@ void set_z_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M,
 }
 
 void load_loss_matrix(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M) {
+  const std::size_t NMATS = geom.nmats();
+  const std::size_t NGRPS = geom.ngroups();
+
   // Allocate M
-  M.resize(geom.ngroups() * geom.nmats(), geom.ngroups() * geom.nmats());
+  M.resize(NGRPS*NMATS, NGRPS*NMATS);
 
   if (geom.ndims() == 1) {
-    M.reserve(Eigen::VectorXd::Constant(geom.ngroups() * geom.nmats(),
-                                        2 + geom.ngroups()));
+    M.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS*NMATS, 2 + NGRPS));
   } else if (geom.ndims() == 2) {
-    M.reserve(Eigen::VectorXd::Constant(geom.ngroups() * geom.nmats(),
-                                        4 + geom.ngroups()));
+    M.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS*NMATS, 4 + NGRPS));
   } else {
-    M.reserve(Eigen::VectorXd::Constant(geom.ngroups() * geom.nmats(),
-                                        6 + geom.ngroups()));
+    M.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS*NMATS, 6 + NGRPS));
   }
 
   for (std::size_t m = 0; m < geom.nmats(); m++) {
@@ -332,7 +332,7 @@ void load_source_matrix(const DiffusionGeometry& geom,
   const std::size_t NGRPS = geom.ngroups();
 
   QM.resize(NGRPS * NMATS, NGRPS * NMATS);
-  QM.reserve(Eigen::VectorXd::Constant(NGRPS * NMATS, NGRPS));
+  QM.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS * NMATS, NGRPS));
 
   for (std::size_t m = 0; m < NMATS; m++) {
     const DiffusionCrossSection& xs = *geom.mat(m);
