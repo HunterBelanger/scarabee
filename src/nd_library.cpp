@@ -189,12 +189,17 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
 
   const double pot_xs = get_nuclide(name).potential_xs;
 
-  xt::xtensor<double, 1> Etr = xt::zeros<double>({ngroups_});
+  xt::xtensor<double, 1> Et = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> Ea = xt::zeros<double>({ngroups_});
-  xt::xtensor<double, 2> Es_tr = xt::zeros<double>({ngroups_, ngroups_});
+  xt::xtensor<double, 2> Es = xt::zeros<double>({ngroups_, ngroups_});
   xt::xtensor<double, 1> Ef = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> chi = xt::zeros<double>({ngroups_});
+  xt::xtensor<double, 2> Es1;
+  const bool has_P1 = xs_1->anisotropic() || xs_2->anisotropic();
+  if (has_P1) {
+    Es1 = xt::zeros<double>({ngroups_, ngroups_});
+  }
 
   double vEf_sum_1 = 0.;
   double vEf_sum_2 = 0.;
@@ -213,10 +218,11 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     Ea(g) = f1_g * xs_1->Ea(g) + f2_g * xs_2->Ea(g);
     Ef(g) = f1_g * xs_1->Ef(g) + f2_g * xs_2->Ef(g);
     for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
-      Es_tr(g, g_out) =
-          f1_g * xs_1->Es_tr(g, g_out) + f2_g * xs_2->Es_tr(g, g_out);
+      Es(g, g_out) = f1_g * xs_1->Es(g, g_out) + f2_g * xs_2->Es(g, g_out);
+
+      if (has_P1) Es1(g, g_out) = f1_g * xs_1->Es1(g, g_out) + f2_g * xs_2->Es1(g, g_out);
     }
-    Etr(g) = Ea(g) + xt::sum(xt::view(Es_tr, g, xt::all()))();
+    Et(g) = Ea(g) + xt::sum(xt::view(Es, g, xt::all()))();
 
     const double vEf1 = f1_g * xs_1->vEf(g);
     const double vEf2 = f2_g * xs_2->vEf(g);
@@ -234,8 +240,10 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     }
     if (chi_sum > 0.) chi /= chi_sum;
   }
+  
+  if (has_P1) return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
 
-  return std::make_shared<CrossSection>(Etr, Ea, Es_tr, Ef, vEf, chi);
+  return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
 }
 
 void NDLibrary::get_temp_interp_params(double temp, const NuclideHandle& nuc,

@@ -5,6 +5,7 @@
 
 #include <xtensor/xbuilder.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <sstream>
 
@@ -94,6 +95,99 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Et,
     Etr_(g) -= Es1_(g, g);
     Es_tr_(g, g) -= Es1_(g, g);
   }
+}
+
+std::shared_ptr<CrossSection> CrossSection::condense(const std::vector<std::pair<std::size_t, std::size_t>>& groups, const std::vector<double>& flux) const {
+  const std::size_t NG = ngroups();
+
+  // First, we need to check the condensation scheme
+  if (groups.size() == 0) {
+    auto mssg = "Empty energy condensation scheme provided.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (groups.front().first != 0) {
+    auto mssg = "The energy condensation scheme does not start with 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (groups.back().second != NG-1) {
+    std::stringstream mssg;
+    mssg << "The energy condensation scheme does not end with " << NG-1 << ".";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  for (std::size_t i = 0; i < NG-1; i++) {
+    if (groups[i].second + 1 != groups[i+1].first) {
+      std::stringstream mssg;
+      mssg << "Condensed groups " << i << " and " << i+1 << " are not continuous.";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+  }
+
+  if (flux.size() != NG) {
+    auto mssg = "The number of provided flux values diagrees with the number of energy groups.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  
+  // Everything checks out, we can start the condensation.
+
+  const std::size_t NGOUT = groups.size();
+  xt::xtensor<double, 1> Et  = xt::zeros<double>({NGOUT});
+  xt::xtensor<double, 1> Ea  = xt::zeros<double>({NGOUT});
+  xt::xtensor<double, 2> Es  = xt::zeros<double>({NGOUT, NGOUT});
+  xt::xtensor<double, 1> Ef  = xt::zeros<double>({NGOUT});
+  xt::xtensor<double, 1> vEf = xt::zeros<double>({NGOUT});
+  xt::xtensor<double, 1> chi = xt::zeros<double>({NGOUT});
+  xt::xtensor<double, 2> Es1;
+
+  const bool has_P1 = this->anisotropic();
+  if (has_P1) Es1 = xt::zeros<double>({NGOUT, NGOUT});
+
+  for (std::size_t G = 0; G < NGOUT; G++) { // Incoming macro groups
+    const std::size_t g_min = groups[G].first;
+    const std::size_t g_max = groups[G].second;
+
+    // First, we get the sum of all flux values in the macro group
+    const double flux_G = std::accumulate(flux.begin()+g_min, flux.begin()+g_max, 0.);
+    const double invs_flux_G = 1. / flux_G;
+
+    // First we do all of the 1D cross sections
+    for (std::size_t g = g_min; g <= g_max; g++) {
+      Et(G)  += invs_flux_G * flux[g] * this->Et(g);
+      Ea(G)  += invs_flux_G * flux[g] * this->Ea(g);
+      Ea(G)  += invs_flux_G * flux[g] * this->Ea(g);
+      Ef(G)  += invs_flux_G * flux[g] * this->Ef(g);
+      vEf(G) += invs_flux_G * flux[g] * this->vEf(g);
+      chi(G) += this->chi(g); // chi doesn't need to be weighted
+    }
+
+    // Next, we do all 2D cross sections
+    for (std::size_t GG = 0; GG < NGOUT; GG++) { // Outgoing macro groups
+      const std::size_t gg_min = groups[GG].first;
+      const std::size_t gg_max = groups[GG].second;
+      for (std::size_t g = g_min; g <= g_max; g++) { // Incoming micro groups
+        for (std::size_t gg = gg_min; gg <= gg_max; gg++) { // Outgoing micro groups
+          Es(G, GG) += invs_flux_G * this->Es(g, gg);
+
+          if (has_P1) Es1(G, GG) += invs_flux_G * this->Es1(g, gg);
+        }
+      }
+    }
+  }
+
+  if (has_P1) {
+    return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
+  }
+
+  // If we don't have a P1 matrix, then Et actually contains Etr and Es
+  // contains Es_tr. We can therefore use that constructor.
+  return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
 }
 
 CrossSection& CrossSection::operator+=(const CrossSection& R) {

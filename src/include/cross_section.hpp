@@ -6,6 +6,8 @@
 
 #include <cstdint>
 #include <string>
+#include <memory>
+#include <utility>
 
 namespace scarabee {
 
@@ -43,13 +45,15 @@ class CrossSection {
 
   bool fissile() const { return fissile_; }
 
+  bool anisotropic() const { return Es1_.size() > 0; }
+
   const xt::xtensor<double, 1>& Etr() const { return Etr_; }
 
   double Etr(std::size_t g) const { return Etr_(g); }
 
   double Et(std::size_t g) const {
     double Et = Etr_(g);
-    if (Es1_.size() > 0) {
+    if (anisotropic()) {
       Et += Es1_(g, g);
     }
     return Et;
@@ -78,13 +82,13 @@ class CrossSection {
   }
 
   double Es1(std::size_t gin, std::size_t gout) const {
-    if (Es1_.size() > 0) return Es1_(gin, gout);
+    if (anisotropic()) return Es1_(gin, gout);
     return 0.;
   }
 
   double Es(std::size_t gin, std::size_t gout) const {
     double Es_gin_gout = Es_tr_(gin, gout);
-    if (Es1_.size() > 0 && gin == gout) {
+    if (anisotropic() && gin == gout) {
       Es_gin_gout += Es1_(gin, gout);
     }
     return Es_gin_gout;
@@ -96,11 +100,13 @@ class CrossSection {
 
   double Es(std::size_t gin) const {
     double Es = xt::sum(xt::view(Es_tr_, gin, xt::all()))();
-    if (Es1_.size() > 0) {
+    if (anisotropic()) {
       Es += Es1_(gin, gin);
     }
     return Es;
   }
+
+  std::shared_ptr<CrossSection> condense(const std::vector<std::pair<std::size_t, std::size_t>>& groups, const std::vector<double>& flux) const;
 
   // Operators for constructing compound cross sections
   CrossSection operator+(const CrossSection& R) const;
