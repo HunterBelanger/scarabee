@@ -289,14 +289,14 @@ void load_loss_matrix(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M) {
   const std::size_t NGRPS = geom.ngroups();
 
   // Allocate M
-  M.resize(NGRPS*NMATS, NGRPS*NMATS);
+  M.resize(NGRPS * NMATS, NGRPS * NMATS);
 
   if (geom.ndims() == 1) {
-    M.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS*NMATS, 2 + NGRPS));
+    M.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS * NMATS, 2 + NGRPS));
   } else if (geom.ndims() == 2) {
-    M.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS*NMATS, 4 + NGRPS));
+    M.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS * NMATS, 4 + NGRPS));
   } else {
-    M.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS*NMATS, 6 + NGRPS));
+    M.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS * NMATS, 6 + NGRPS));
   }
 
   for (std::size_t m = 0; m < geom.nmats(); m++) {
@@ -551,6 +551,64 @@ FDDiffusionDriver::flux() const {
   }
 
   return {flux, x_bounds, y_bounds, z_bounds};
+}
+
+std::tuple<xt::xarray<double>, xt::xarray<double>,
+           std::optional<xt::xarray<double>>, std::optional<xt::xarray<double>>>
+FDDiffusionDriver::power() const {
+  // If problem isn't solved yet, we error
+  if (solved_ == false) {
+    auto mssg = "Cannot rasterize flux. Problem has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Initialize empty power array with zeros
+  xt::xarray<double> power;
+  if (geom_->ndims() == 1) {
+    power = xt::zeros<double>({geom_->nx()});
+  } else if (geom_->ndims() == 2) {
+    power = xt::zeros<double>({geom_->nx(), geom_->ny()});
+  } else {
+    power = xt::zeros<double>({geom_->nx(), geom_->ny(), geom_->nz()});
+  }
+
+  // Fill the power
+  for (std::size_t m = 0; m < geom_->nmats(); m++) {
+    auto inds = geom_->geom_indx(m);
+    const auto& xs = geom_->mat(m);
+
+    for (std::size_t g = 0; g < geom_->ngroups(); g++) {
+      power.element(inds.begin(), inds.end()) +=
+          flux_(m + g * geom_->nmats()) * xs->Ef(g);
+    }
+  }
+
+  // Create the arrays for the x, y, and z bounds
+  xt::xarray<double> x_bounds;
+  std::optional<xt::xarray<double>> y_bounds = std::nullopt;
+  std::optional<xt::xarray<double>> z_bounds = std::nullopt;
+
+  x_bounds = xt::zeros<double>({geom_->nx() + 1});
+  for (std::size_t i = 0; i < geom_->nx(); i++) {
+    x_bounds(i + 1) = x_bounds(i) + geom_->dx(i);
+  }
+
+  if (geom_->ndims() > 1) {
+    y_bounds = xt::zeros<double>({geom_->ny() + 1});
+    for (std::size_t j = 0; j < geom_->ny(); j++) {
+      y_bounds.value()(j + 1) = y_bounds.value()(j) + geom_->dy(j);
+    }
+  }
+
+  if (geom_->ndims() > 2) {
+    z_bounds = xt::zeros<double>({geom_->nz() + 1});
+    for (std::size_t k = 0; k < geom_->nz(); k++) {
+      z_bounds.value()(k + 1) = z_bounds.value()(k) + geom_->dz(k);
+    }
+  }
+
+  return {power, x_bounds, y_bounds, z_bounds};
 }
 
 }  // namespace scarabee

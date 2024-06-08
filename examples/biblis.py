@@ -103,10 +103,15 @@ solver = FDDiffusionDriver(geom)
 solver.solve()
 flux, x, y, _ = solver.flux()
 
-plt.pcolormesh(y, x, flux[0,:,:])
+plt.pcolormesh(y, x, flux[0,:,:], cmap='jet')
 plt.title("Group 1")
 plt.show()
 
-plt.pcolormesh(y, x, flux[1,:,:])
+plt.pcolormesh(y, x, flux[1,:,:], cmap='jet')
 plt.title("Group 2")
+plt.show()
+
+power, x, y, _ = solver.power()
+plt.pcolormesh(y, x, power, cmap='jet')
+plt.title("Power")
 plt.show()

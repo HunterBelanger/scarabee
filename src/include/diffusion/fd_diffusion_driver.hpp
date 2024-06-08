@@ -35,6 +35,11 @@ class FDDiffusionDriver {
              std::optional<xt::xarray<double>>>
   flux() const;
 
+  std::tuple<xt::xarray<double>, xt::xarray<double>,
+             std::optional<xt::xarray<double>>,
+             std::optional<xt::xarray<double>>>
+  power() const;
+
  private:
   std::shared_ptr<DiffusionGeometry> geom_;
   xt::xtensor<double, 1> flux_;  // Flux in each MAT tile in each group
