@@ -2,6 +2,7 @@
 #define SCARABEE_CYLINDRICAL_FLUX_SOLVER_H
 
 #include <cylindrical_cell.hpp>
+#include <cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 
@@ -27,7 +28,14 @@ class CylindricalFluxSolver {
   }
 
   std::shared_ptr<CrossSection> homogenize() const;
+  std::shared_ptr<CrossSection> homogenize(std::size_t i_max) const;
+  std::shared_ptr<CrossSection> homogenize(
+      const std::vector<std::size_t>& regions) const;
+
   std::vector<double> homogenize_flux_spectrum() const;
+  std::vector<double> homogenize_flux_spectrum(std::size_t i_max) const;
+  std::vector<double> homogenize_flux_spectrum(
+      const std::vector<std::size_t>& regions) const;
 
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);

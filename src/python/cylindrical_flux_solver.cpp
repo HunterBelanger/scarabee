@@ -144,21 +144,82 @@ void init_CylindricalFluxSolver(py::module& m) {
       .def("solve", &CylindricalFluxSolver::solve,
            "Solves the system for the flux and eigenvalue.")
 
-      .def("homogenize", &CylindricalFluxSolver::homogenize,
+      .def("homogenize",
+           py::overload_cast<>(&CylindricalFluxSolver::homogenize, py::const_),
            "Computes a homogenized set of cross sections for the problem.\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
            "            Homogenized cross section.")
 
+      .def("homogenize",
+           py::overload_cast<std::size_t>(&CylindricalFluxSolver::homogenize,
+                                          py::const_),
+           "Computes a homogenized set of cross sections for all regions up to "
+           "and including i_max.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "i_max : int\n"
+           "        Maximum region index (inclusive) for homogenization.\n"
+           "Returns\n"
+           "-------\n"
+           "CrossSection\n"
+           "            Homogenized cross section.",
+           py::arg("i_max"))
+
+      .def("homogenize",
+           py::overload_cast<const std::vector<std::size_t>&>(
+               &CylindricalFluxSolver::homogenize, py::const_),
+           "Computes a homogenized set of cross sections for all provided "
+           "regions.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "regions : list of int\n"
+           "        List of regions for homogenization.\n"
+           "Returns\n"
+           "-------\n"
+           "CrossSection\n"
+           "            Homogenized cross section.",
+           py::arg("regions"))
+
       .def("homogenize_flux_spectrum",
-           &CylindricalFluxSolver::homogenize_flux_spectrum,
+           py::overload_cast<>(&CylindricalFluxSolver::homogenize_flux_spectrum,
+                               py::const_),
            "Computes a homogenized flux spectrum which can be used for energy "
            "condensation.\n\n"
            "Returns\n"
            "-------\n"
            "list of floats\n"
            "               Homogenized flux spectrum.")
+
+      .def("homogenize_flux_spectrum",
+           py::overload_cast<std::size_t>(
+               &CylindricalFluxSolver::homogenize_flux_spectrum, py::const_),
+           "Computes a homogenized flux spectrum which can be used for energy "
+           "condensation for all regions up to an including i_max.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "i_max : int\n"
+           "        Maximum region index (inclusive) for homogenization.\n"
+           "Returns\n"
+           "-------\n"
+           "list of floats\n"
+           "               Homogenized flux spectrum.")
+
+      .def("homogenize_flux_spectrum",
+           py::overload_cast<const std::vector<std::size_t>&>(
+               &CylindricalFluxSolver::homogenize_flux_spectrum, py::const_),
+           "Computes a homogenized flux spectrum which can be used for energy "
+           "condensation for all provided regions.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "regions : list of int\n"
+           "        List of regions for homogenization.\n"
+           "Returns\n"
+           "-------\n"
+           "list of floats\n"
+           "               Homogenized flux spectrum.",
+           py::arg("regions"))
 
       .def_property_readonly(
           "solved", &CylindricalFluxSolver::solved,

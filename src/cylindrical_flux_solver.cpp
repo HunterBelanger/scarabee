@@ -244,6 +244,35 @@ void CylindricalFluxSolver::solve() {
 }
 
 std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize() const {
+  const std::size_t NR = this->nregions();
+  std::vector<std::size_t> regions(NR, 0);
+  for (std::size_t i = 0; i < NR; i++) {
+    regions[i] = i;
+  }
+
+  return this->homogenize(regions);
+}
+
+std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize(
+    std::size_t i_max) const {
+  if (i_max >= this->nregions()) {
+    std::stringstream mssg;
+    mssg << "Desired max region index " << i_max << " is invalid.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  const std::size_t NR = i_max;
+  std::vector<std::size_t> regions(NR, 0);
+  for (std::size_t i = 0; i <= NR; i++) {
+    regions[i] = i;
+  }
+
+  return this->homogenize(regions);
+}
+
+std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize(
+    const std::vector<std::size_t>& regions) const {
   // We can only perform a homogenization if we have a flux spectrum
   if (solved() == false) {
     auto mssg =
@@ -252,11 +281,28 @@ std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize() const {
     throw ScarabeeException(mssg);
   }
 
-  const std::size_t NR = this->nregions();
+  // Check all regions are valid
+  if (regions.size() > this->nregions()) {
+    auto mssg =
+        "The number of provided regions is greater than the number of regions.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  for (const auto m : regions) {
+    if (m >= this->nregions()) {
+      auto mssg = "Invalid region index in homogenization list.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+  }
+
+  // We now begin homogenization
+  const std::size_t NR = regions.size();
   const std::size_t NG = this->ngroups();
 
   bool has_P1 = false;
-  for (std::size_t m = 0; m < NR; m++) {
+  for (const auto m : regions) {
     if (this->xs(m)->anisotropic()) {
       has_P1 = true;
       break;
@@ -275,7 +321,7 @@ std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize() const {
   // We need to calculate the total fission production in each volume for
   // generating the homogenized fission spectrum.
   std::vector<double> fiss_prod(NR, 0.);
-  for (std::size_t i = 0; i < NR; i++) {
+  for (const auto i : regions) {
     const auto& mat = this->xs(i);
     const double V = this->volume(i);
     for (std::size_t g = 0; g < NG; g++) {
@@ -290,12 +336,12 @@ std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize() const {
   for (std::size_t g = 0; g < NG; g++) {
     // Get the sum of flux*volume for this group
     double sum_fluxV = 0.;
-    for (std::size_t i = 0; i < NR; i++) {
+    for (const auto i : regions) {
       sum_fluxV += this->flux(i, g) * this->volume(i);
     }
     const double invs_sum_fluxV = 1. / sum_fluxV;
 
-    for (std::size_t i = 0; i < NR; i++) {
+    for (const auto i : regions) {
       const auto& mat = this->xs(i);
       const double V = volume(i);
       const double flx = flux(i, g);
@@ -328,6 +374,35 @@ std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize() const {
 }
 
 std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum() const {
+  const std::size_t NR = this->nregions();
+  std::vector<std::size_t> regions(NR, 0);
+  for (std::size_t i = 0; i < NR; i++) {
+    regions[i] = i;
+  }
+
+  return this->homogenize_flux_spectrum(regions);
+}
+
+std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum(
+    std::size_t i_max) const {
+  if (i_max >= this->nregions()) {
+    std::stringstream mssg;
+    mssg << "Desired max region index " << i_max << " is invalid.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  const std::size_t NR = i_max;
+  std::vector<std::size_t> regions(NR, 0);
+  for (std::size_t i = 0; i <= NR; i++) {
+    regions[i] = i;
+  }
+
+  return this->homogenize_flux_spectrum(regions);
+}
+
+std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum(
+    const std::vector<std::size_t>& regions) const {
   // We can only perform a homogenization if we have a flux spectrum
   if (solved() == false) {
     auto mssg =
@@ -337,19 +412,34 @@ std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum() const {
     throw ScarabeeException(mssg);
   }
 
-  const std::size_t NR = this->nregions();
+  // Check all regions are valid
+  if (regions.size() > this->nregions()) {
+    auto mssg =
+        "The number of provided regions is greater than the number of regions.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  for (const auto m : regions) {
+    if (m >= this->nregions()) {
+      auto mssg = "Invalid region index in homogenization list.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+  }
+
   const std::size_t NG = this->ngroups();
 
   // First, calculate the sum of the volumes
   double sum_V = 0.;
-  for (std::size_t i = 0; i < NR; i++) {
+  for (const auto i : regions) {
     sum_V += this->volume(i);
   }
   const double invs_sum_V = 1. / sum_V;
 
   std::vector<double> spectrum(NG, 0.);
   for (std::size_t g = 0; g < NG; g++) {
-    for (std::size_t i = 0; i < NG; i++) {
+    for (const auto i : regions) {
       spectrum[g] += invs_sum_V * this->volume(i) * this->flux(i, g);
     }
   }
