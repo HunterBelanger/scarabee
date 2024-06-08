@@ -238,6 +238,54 @@ void init_MOCDriver(py::module& m) {
            "    g    group index",
            py::arg("i"), py::arg("g"))
 
+      .def("homogenize",
+           py::overload_cast<>(&MOCDriver::homogenize, py::const_),
+           "Computes a homogenized set of cross sections for the problem.\n\n"
+           "Returns\n"
+           "-------\n"
+           "CrossSection\n"
+           "            Homogenized cross section.")
+
+      .def("homogenize",
+           py::overload_cast<const std::vector<std::size_t>&>(
+               &MOCDriver::homogenize, py::const_),
+           "Computes a homogenized set of cross sections for all provided "
+           "regions.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "regions : list of int\n"
+           "        List of regions for homogenization.\n"
+           "Returns\n"
+           "-------\n"
+           "CrossSection\n"
+           "            Homogenized cross section.",
+           py::arg("regions"))
+
+      .def(
+          "homogenize_flux_spectrum",
+          py::overload_cast<>(&MOCDriver::homogenize_flux_spectrum, py::const_),
+          "Computes a homogenized flux spectrum which can be used for energy "
+          "condensation.\n\n"
+          "Returns\n"
+          "-------\n"
+          "list of floats\n"
+          "               Homogenized flux spectrum.")
+
+      .def("homogenize_flux_spectrum",
+           py::overload_cast<const std::vector<std::size_t>&>(
+               &MOCDriver::homogenize_flux_spectrum, py::const_),
+           "Computes a homogenized flux spectrum which can be used for energy "
+           "condensation for all provided regions.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "regions : list of int\n"
+           "        List of regions for homogenization.\n"
+           "Returns\n"
+           "-------\n"
+           "list of floats\n"
+           "               Homogenized flux spectrum.",
+           py::arg("regions"))
+
       .def("plot",
            [](const MOCDriver& md) {
              ImApp::App guiplotter(1920, 1080, "Scarabee MOC Plotter");

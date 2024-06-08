@@ -150,7 +150,7 @@ void init_CylindricalFluxSolver(py::module& m) {
            "Returns\n"
            "-------\n"
            "CrossSection\n"
-           "            Homogenized cross section.")
+           "            Homogenized cross section.\n\n")
 
       .def("homogenize",
            py::overload_cast<std::size_t>(&CylindricalFluxSolver::homogenize,
@@ -164,7 +164,7 @@ void init_CylindricalFluxSolver(py::module& m) {
            "Returns\n"
            "-------\n"
            "CrossSection\n"
-           "            Homogenized cross section.",
+           "            Homogenized cross section.\n\n",
            py::arg("i_max"))
 
       .def("homogenize",
@@ -179,7 +179,7 @@ void init_CylindricalFluxSolver(py::module& m) {
            "Returns\n"
            "-------\n"
            "CrossSection\n"
-           "            Homogenized cross section.",
+           "            Homogenized cross section.\n\n",
            py::arg("regions"))
 
       .def("homogenize_flux_spectrum",
@@ -190,7 +190,7 @@ void init_CylindricalFluxSolver(py::module& m) {
            "Returns\n"
            "-------\n"
            "list of floats\n"
-           "               Homogenized flux spectrum.")
+           "               Homogenized flux spectrum.\n\n")
 
       .def("homogenize_flux_spectrum",
            py::overload_cast<std::size_t>(
@@ -204,7 +204,7 @@ void init_CylindricalFluxSolver(py::module& m) {
            "Returns\n"
            "-------\n"
            "list of floats\n"
-           "               Homogenized flux spectrum.")
+           "               Homogenized flux spectrum.\n\n")
 
       .def("homogenize_flux_spectrum",
            py::overload_cast<const std::vector<std::size_t>&>(
@@ -218,7 +218,7 @@ void init_CylindricalFluxSolver(py::module& m) {
            "Returns\n"
            "-------\n"
            "list of floats\n"
-           "               Homogenized flux spectrum.",
+           "               Homogenized flux spectrum.\n\n",
            py::arg("regions"))
 
       .def_property_readonly(
