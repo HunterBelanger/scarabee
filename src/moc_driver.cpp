@@ -300,7 +300,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
                            polar_quad_.sin()[p] * delta_flx;
             angflux(p) -= delta_flx;
           }  // For all polar angles
-        }    // For all segments along forward direction of track
+        }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.exit_bc() == BoundaryCondition::Reflective) {
@@ -324,7 +324,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
                            polar_quad_.sin()[p] * delta_flx;
             angflux(p) -= delta_flx;
           }  // For all polar angles
-        }    // For all segments along forward direction of track
+        }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.entry_bc() == BoundaryCondition::Reflective) {
@@ -334,7 +334,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
           xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
         }
       }  // For all tracks
-    }    // For all azimuthal angles
+    }  // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
@@ -759,11 +759,11 @@ double MOCDriver::volume(std::size_t i) const {
   return fsrs_[i]->volume();
 }
 
-std::shared_ptr<CrossSection> MOCDriver::xs(const Vector& r,
-                                            const Direction& u) const {
+const std::shared_ptr<CrossSection>& MOCDriver::xs(const Vector& r,
+                                                   const Direction& u) const {
+  UniqueFSR fsr;
   try {
-    const auto& fsr = this->get_fsr(r, u);
-    return fsr.fsr->xs();
+    fsr = this->get_fsr(r, u);
   } catch (ScarabeeException& err) {
     std::stringstream mssg;
     mssg << "Could not find flat source region at r = " << r << " u = " << u
@@ -772,15 +772,10 @@ std::shared_ptr<CrossSection> MOCDriver::xs(const Vector& r,
     throw err;
   }
 
-  // SHOULD NEVER GET HERE
-  auto mssg = "How did I get here ?";
-  spdlog::error(mssg);
-  throw ScarabeeException(mssg);
-
-  return nullptr;
+  return fsr.fsr->xs();
 }
 
-std::shared_ptr<CrossSection> MOCDriver::xs(std::size_t i) const {
+const std::shared_ptr<CrossSection>& MOCDriver::xs(std::size_t i) const {
   if (i >= this->size()) {
     std::stringstream mssg;
     mssg << "FSR index i=" << i << " is out of range.";
@@ -890,6 +885,174 @@ double MOCDriver::extern_src(std::size_t i, std::size_t g) const {
   }
 
   return extern_src_(g, i);
+}
+
+std::shared_ptr<CrossSection> MOCDriver::homogenize() const {
+  const std::size_t NR = this->nfsr();
+  std::vector<std::size_t> regions(NR, 0);
+  for (std::size_t i = 0; i < NR; i++) {
+    regions[i] = i;
+  }
+
+  return this->homogenize(regions);
+}
+
+std::shared_ptr<CrossSection> MOCDriver::homogenize(
+    const std::vector<std::size_t>& regions) const {
+  // We can only perform a homogenization if we have a flux spectrum
+  if (solved() == false) {
+    auto mssg =
+        "Cannot perform homogenization when problem has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Check all regions are valid
+  if (regions.size() > this->nregions()) {
+    auto mssg =
+        "The number of provided regions is greater than the number of regions.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  for (const auto m : regions) {
+    if (m >= this->nfsr()) {
+      auto mssg = "Invalid region index in homogenization list.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+  }
+
+  // We now begin homogenization
+  const std::size_t NR = regions.size();
+  const std::size_t NG = this->ngroups();
+
+  bool has_P1 = false;
+  for (const auto m : regions) {
+    if (this->xs(m)->anisotropic()) {
+      has_P1 = true;
+      break;
+    }
+  }
+
+  xt::xtensor<double, 1> Et = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> Ea = xt::zeros<double>({NG});
+  xt::xtensor<double, 2> Es = xt::zeros<double>({NG, NG});
+  xt::xtensor<double, 1> Ef = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> vEf = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> chi = xt::zeros<double>({NG});
+  xt::xtensor<double, 2> Es1;
+  if (has_P1) Es1 = xt::zeros<double>({NG, NG});
+
+  // We need to calculate the total fission production in each volume for
+  // generating the homogenized fission spectrum.
+  std::vector<double> fiss_prod(NR, 0.);
+  for (const auto i : regions) {
+    const auto& mat = this->xs(i);
+    const double V = this->volume(i);
+    for (std::size_t g = 0; g < NG; g++) {
+      fiss_prod[i] += mat->vEf(g) * flux(i, g) * V;
+    }
+  }
+  const double sum_fiss_prod =
+      std::accumulate(fiss_prod.begin(), fiss_prod.end(), 0.);
+  const double invs_sum_fiss_prod =
+      sum_fiss_prod > 0. ? 1. / sum_fiss_prod : 0.;
+
+  for (std::size_t g = 0; g < NG; g++) {
+    // Get the sum of flux*volume for this group
+    double sum_fluxV = 0.;
+    for (const auto i : regions) {
+      sum_fluxV += this->flux(i, g) * this->volume(i);
+    }
+    const double invs_sum_fluxV = 1. / sum_fluxV;
+
+    for (const auto i : regions) {
+      const auto& mat = this->xs(i);
+      const double V = volume(i);
+      const double flx = flux(i, g);
+      const double coeff = invs_sum_fluxV * flx * V;
+      Ea(g) += coeff * mat->Ea(g);
+      Ea(g) += coeff * mat->Ea(g);
+      Ef(g) += coeff * mat->Ef(g);
+      vEf(g) += coeff * mat->vEf(g);
+
+      chi(g) += invs_sum_fiss_prod * fiss_prod[i] * mat->chi(g);
+
+      for (std::size_t gg = 0; gg < NG; gg++) {
+        Es(g, gg) += coeff * mat->Es(g, gg);
+
+        if (has_P1) Es1(g, gg) += coeff * mat->Es1(g, gg);
+      }
+    }
+
+    // Reconstruct total xs from absorption and scattering
+    Et(g) = Ea(g) + xt::sum(xt::view(Es, g, xt::all()))();
+  }
+
+  if (has_P1) {
+    return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
+  }
+
+  // If we don't have a P1 matrix, then Et actually contains Etr and Es
+  // contains Es_tr. We can therefore use that constructor.
+  return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
+}
+
+std::vector<double> MOCDriver::homogenize_flux_spectrum() const {
+  const std::size_t NR = this->nfsr();
+  std::vector<std::size_t> regions(NR, 0);
+  for (std::size_t i = 0; i < NR; i++) {
+    regions[i] = i;
+  }
+
+  return this->homogenize_flux_spectrum(regions);
+}
+
+std::vector<double> MOCDriver::homogenize_flux_spectrum(
+    const std::vector<std::size_t>& regions) const {
+  // We can only perform a homogenization if we have a flux spectrum
+  if (solved() == false) {
+    auto mssg =
+        "Cannot perform spectrum homogenization when problem has not been "
+        "solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Check all regions are valid
+  if (regions.size() > this->nfsr()) {
+    auto mssg =
+        "The number of provided regions is greater than the number of regions.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  for (const auto m : regions) {
+    if (m >= this->nregions()) {
+      auto mssg = "Invalid region index in homogenization list.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+  }
+
+  const std::size_t NG = this->ngroups();
+
+  // First, calculate the sum of the volumes
+  double sum_V = 0.;
+  for (const auto i : regions) {
+    sum_V += this->volume(i);
+  }
+  const double invs_sum_V = 1. / sum_V;
+
+  std::vector<double> spectrum(NG, 0.);
+  for (std::size_t g = 0; g < NG; g++) {
+    for (const auto i : regions) {
+      spectrum[g] += invs_sum_V * this->volume(i) * this->flux(i, g);
+    }
+  }
+
+  return spectrum;
 }
 
 }  // namespace scarabee

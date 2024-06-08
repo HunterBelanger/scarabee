@@ -47,6 +47,14 @@ class MOCDriver {
   void solve();
   bool solved() const { return solved_; }
 
+  std::shared_ptr<CrossSection> homogenize() const;
+  std::shared_ptr<CrossSection> homogenize(
+      const std::vector<std::size_t>& regions) const;
+
+  std::vector<double> homogenize_flux_spectrum() const;
+  std::vector<double> homogenize_flux_spectrum(
+      const std::vector<std::size_t>& regions) const;
+
   std::size_t size() const;
   std::size_t nfsr() const { return this->size(); }
   std::size_t nregions() const { return this->nfsr(); }
@@ -57,8 +65,9 @@ class MOCDriver {
   double volume(const Vector& r, const Direction& u) const;
   double volume(std::size_t i) const;
 
-  std::shared_ptr<CrossSection> xs(const Vector& r, const Direction& u) const;
-  std::shared_ptr<CrossSection> xs(std::size_t i) const;
+  const std::shared_ptr<CrossSection>& xs(const Vector& r,
+                                          const Direction& u) const;
+  const std::shared_ptr<CrossSection>& xs(std::size_t i) const;
 
   UniqueFSR get_fsr(const Vector& r, const Direction& u) const;
 
