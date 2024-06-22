@@ -11,24 +11,43 @@ using namespace scarabee;
 
 void init_Cartesian2D(py::module& m) {
   // Tile
-  py::class_<Cartesian2D::Tile>(m, "Tile")
-      .def_readwrite("c2d", &Cartesian2D::Tile::c2d)
-      .def_readwrite("cell", &Cartesian2D::Tile::cell)
-      .def("valid", &Cartesian2D::Tile::valid);
+  py::class_<Cartesian2D::Tile>(
+      m, "Tile",
+      "A Tile represents an elemnent of a :py:class:`Cartesian2D` geometry, "
+      "which can contain either a :py:class:`Cell` or another "
+      ":py:class:`Cartensian2D` geometry.")
+      .def_readwrite("c2d", &Cartesian2D::Tile::c2d,
+                     "The optional Cartesian2D which fills the tile.")
+      .def_readwrite("cell", &Cartesian2D::Tile::cell,
+                     "The optional Cell which fills the tile.")
+      .def_property_readonly(
+          "valid", &Cartesian2D::Tile::valid,
+          "True if the tile is completely filled with Cells, False otherwise.");
 
   // TileIndex
-  py::class_<Cartesian2D::TileIndex>(m, "TileIndex")
-      .def_readwrite("i", &Cartesian2D::TileIndex::i)
-      .def_readwrite("j", &Cartesian2D::TileIndex::j);
+  py::class_<Cartesian2D::TileIndex>(
+      m, "TileIndex",
+      "A TileIndex contains the x and y coordinates of a Tile within a "
+      "Cartesian2D geometry.")
+      .def_readwrite("i", &Cartesian2D::TileIndex::i, "Index along x axis.")
+      .def_readwrite("j", &Cartesian2D::TileIndex::j, "Index along y axis.");
 
   // Cartesian2D
-  py::class_<Cartesian2D, std::shared_ptr<Cartesian2D>>(m, "Cartesian2D")
+  py::class_<Cartesian2D, std::shared_ptr<Cartesian2D>>(
+      m, "Cartesian2D",
+      "A Cartesian2D represents a cartesian geometry, which is divided into "
+      ":py:class:`Tile` instances, each of which can contain either other "
+      "Cartesian2D geometries, or a :py:class:`Cell` which terminates the "
+      "geometry tree with materials.")
       .def(py::init<const std::vector<double>& /*dx*/,
                     const std::vector<double>& /*dy*/>(),
            "Creates a 2D cartesian geometry, with empty tiles.\n\n"
-           "Arguments:\n"
-           "    dx  List of all x widths\n"
-           "    dy  List of all y heights",
+           "Parameters\n"
+           "----------\n"
+           "dx : list of float\n"
+           "     List of all x widths.\n"
+           "dy : list of float\n"
+           "     List of all y heights.",
            py::arg("dx"), py::arg("dy"))
 
       .def_property_readonly("nx", &Cartesian2D::nx,
@@ -53,34 +72,46 @@ void init_Cartesian2D(py::module& m) {
       .def_property_readonly("y_max", &Cartesian2D::y_max,
                              "Maximum y coordinate.")
 
-      .def("num_fsrs", &Cartesian2D::num_fsrs, "Number of flat source regions.")
+      .def_property_readonly("num_fsrs", &Cartesian2D::num_fsrs,
+                             "Number of flat source regions.")
 
-      .def("tiles_valid", &Cartesian2D::tiles_valid,
-           "Returns true if all tiles are populated.")
+      .def_property_readonly("tiles_valid", &Cartesian2D::tiles_valid,
+                             "Returns True if all tiles are populated with a "
+                             "Cell, False otherwise.")
 
       .def("get_tile_index", &Cartesian2D::get_tile_index,
-           "Returns TileIndex for given position and direction.\n\n"
-           "Arguments:\n"
-           "    r  position Vector\n"
-           "    u  Direction",
+           "Returns the TileIndex for given position and direction.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "r : Vector\n"
+           "    Position of desired tile.\n"
+           "u : Direction\n"
+           "    Direction use in the case of geometry ambiguity.",
            py::arg("r"), py::arg("u"))
 
       .def("get_xs", &Cartesian2D::get_xs,
-           "Returns CrossSection for given position and direction.\n\n"
-           "Arguments:\n"
-           "    r  position Vector\n"
-           "    u  Direction",
+           "Returns the CrossSection for given position and direction.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "r : Vector\n"
+           "    Position of desired material.\n"
+           "u : Direction\n"
+           "    Direction use in the case of geometry ambiguity.",
            py::arg("r"), py::arg("u"))
 
       .def("tile", &Cartesian2D::tile,
            "Returns the Tile for the given TileIndex.\n\n"
-           "Arguments:\n"
-           "    ti  TileIndex for desired Tile.",
+           "Parameters\n"
+           "----------\n"
+           "ti : TileIndex\n"
+           "     Index of desired Tile.",
            py::arg("ti"))
 
       .def("set_tiles", &Cartesian2D::set_tiles,
            "Sets all tiles in the geometry.\n\n"
-           "Arguments:\n"
-           "    fills  List of Cartesian2D or Cell instances to fill all tiles",
+           "Parameters\n"
+           "----------\n"
+           "fills : list of Cartesian2D or Cell\n"
+           "        Fills for all tiles.",
            py::arg("fills"));
 }
