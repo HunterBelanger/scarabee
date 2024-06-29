@@ -53,7 +53,7 @@ void init_DiffusionGeometry(py::module& m) {
            "albedo_xp : float\n"
            "            Albedo at the positive x boundary.\n\n",
            py::arg("tiles"), py::arg("dx"), py::arg("xdivs"),
-           py::arg("albedo_xs"), py::arg("albedo_xp"))
+           py::arg("albedo_xn"), py::arg("albedo_xp"))
 
       .def(py::init<const std::vector<DiffusionGeometry::TileFill>& /*tiles*/,
                     const std::vector<double>& /*dx*/,
@@ -84,8 +84,52 @@ void init_DiffusionGeometry(py::module& m) {
            "albedo_yp : float\n"
            "            Albedo at the positive y boundary.\n\n",
            py::arg("tiles"), py::arg("dx"), py::arg("xdivs"), py::arg("dy"),
-           py::arg("ydivs"), py::arg("albedo_xs"), py::arg("albedo_xp"),
-           py::arg("albedo_ys"), py::arg("albedo_yp"))
+           py::arg("ydivs"), py::arg("albedo_xn"), py::arg("albedo_xp"),
+           py::arg("albedo_yn"), py::arg("albedo_yp"))
+
+      .def(py::init<const std::vector<DiffusionGeometry::TileFill>& /*tiles*/,
+                    const std::vector<double>& /*dx*/,
+                    const std::vector<std::size_t>& /*xdivs*/,
+                    const std::vector<double>& /*dy*/,
+                    const std::vector<std::size_t>& /*ydivs*/,
+                    const std::vector<double>& /*dz*/,
+                    const std::vector<std::size_t>& /*zdivs*/,
+                    double /*albedo_xn*/, double /*albedo_xp*/,
+                    double /*albedo_yn*/, double /*albedo_yp*/,
+                    double /*albedo_zn*/, double /*albedo_zp*/>(),
+           "Creates a 3D DiffusionGeometry.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "tiles : list of float or DiffusionCrossSection\n"
+           "        All tiles in the geometry."
+           "dx : list of float\n"
+           "     Width of each tile along x.\n"
+           "xdivs : list of int\n"
+           "        Number of x meshes in each tile.\n"
+           "dy : list of float\n"
+           "     Width of each tile along y.\n"
+           "ydivs : list of int\n"
+           "        Number of y meshes in each tile.\n"
+           "dz : list of float\n"
+           "     Width of each tile along z.\n"
+           "zdivs : list of int\n"
+           "        Number of z meshes in each tile.\n"
+           "albedo_xn : float\n"
+           "            Albedo at the negative x boundary.\n"
+           "albedo_xp : float\n"
+           "            Albedo at the positive x boundary.\n"
+           "albedo_yn : float\n"
+           "            Albedo at the negative y boundary.\n"
+           "albedo_yp : float\n"
+           "            Albedo at the positive y boundary.\n"
+           "albedo_zn : float\n"
+           "            Albedo at the negative z boundary.\n"
+           "albedo_zp : float\n"
+           "            Albedo at the positive z boundary.\n\n",
+           py::arg("tiles"), py::arg("dx"), py::arg("xdivs"), py::arg("dy"),
+           py::arg("ydivs"), py::arg("dz"), py::arg("zdivs"),
+           py::arg("albedo_xn"), py::arg("albedo_xp"), py::arg("albedo_yn"),
+           py::arg("albedo_yp"), py::arg("albedo_zn"), py::arg("albedo_zp"))
 
       .def(
           "neighbor", &DiffusionGeometry::neighbor,

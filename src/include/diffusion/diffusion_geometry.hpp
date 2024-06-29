@@ -36,6 +36,13 @@ class DiffusionGeometry {
                     const std::vector<std::size_t>& ydivs, double albedo_xn,
                     double albedo_xp, double albedo_yn, double albedo_yp);
 
+  DiffusionGeometry(
+      const std::vector<TileFill>& tiles, const std::vector<double>& dx,
+      const std::vector<std::size_t>& xdivs, const std::vector<double>& dy,
+      const std::vector<std::size_t>& ydivs, const std::vector<double>& dz,
+      const std::vector<std::size_t>& zdivs, double albedo_xn, double albedo_xp,
+      double albedo_yn, double albedo_yp, double albedo_zn, double albedo_zp);
+
   std::size_t ngroups() const;
   std::size_t ndims() const {
     return tiles_.shape().size();

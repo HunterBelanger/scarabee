@@ -4,14 +4,15 @@
 #include <utils/timer.hpp>
 
 #include <Eigen/Sparse>
-#include <Eigen/SparseLU>
+#include <Eigen/IterativeLinearSolvers>
 
 #include <cmath>
 #include <sstream>
 
 namespace scarabee {
 
-void set_x_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M,
+void set_x_current_diff(DiffusionGeometry& geom,
+                        Eigen::SparseMatrix<double, Eigen::RowMajor>& M,
                         const std::size_t g, const std::size_t m) {
   // Get material index
   const auto indxs = geom.geom_indx(m);
@@ -102,7 +103,8 @@ void set_x_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M,
   }
 }
 
-void set_y_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M,
+void set_y_current_diff(DiffusionGeometry& geom,
+                        Eigen::SparseMatrix<double, Eigen::RowMajor>& M,
                         const std::size_t g, const std::size_t m) {
   // Get material index
   const auto indxs = geom.geom_indx(m);
@@ -193,7 +195,8 @@ void set_y_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M,
   }
 }
 
-void set_z_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M,
+void set_z_current_diff(DiffusionGeometry& geom,
+                        Eigen::SparseMatrix<double, Eigen::RowMajor>& M,
                         const std::size_t g, const std::size_t m) {
   // Get material index
   const auto indxs = geom.geom_indx(m);
@@ -284,7 +287,8 @@ void set_z_current_diff(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M,
   }
 }
 
-void load_loss_matrix(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M) {
+void load_loss_matrix(DiffusionGeometry& geom,
+                      Eigen::SparseMatrix<double, Eigen::RowMajor>& M) {
   const std::size_t NMATS = geom.nmats();
   const std::size_t NGRPS = geom.ngroups();
 
@@ -327,7 +331,7 @@ void load_loss_matrix(DiffusionGeometry& geom, Eigen::SparseMatrix<double>& M) {
 }
 
 void load_source_matrix(const DiffusionGeometry& geom,
-                        Eigen::SparseMatrix<double>& QM) {
+                        Eigen::SparseMatrix<double, Eigen::RowMajor>& QM) {
   const std::size_t NMATS = geom.nmats();
   const std::size_t NGRPS = geom.ngroups();
 
@@ -399,20 +403,10 @@ void FDDiffusionDriver::solve() {
   spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
 
   // First, we create our loss matrix
-  Eigen::SparseMatrix<double> M;
+  Eigen::SparseMatrix<double, Eigen::RowMajor> M;
 
   // Load the loss matrix
   load_loss_matrix(*geom_, M);
-
-  // Create a solver for the problem
-  spdlog::info("Performing LU decomposition");
-  Eigen::SparseLU<Eigen::SparseMatrix<double>> solver(M);
-  if (solver.info() != Eigen::Success) {
-    std::stringstream mssg;
-    mssg << "Could not perform LU factorization on loss matrix.";
-    spdlog::error(mssg.str());
-    throw ScarabeeException(mssg.str());
-  }
 
   // Initialize flux and source vectors
   Eigen::VectorXd flux(geom_->ngroups() * geom_->nmats());
@@ -433,8 +427,20 @@ void FDDiffusionDriver::solve() {
   }
 
   // Initialize a vector for computing the source vector Q faster
-  Eigen::SparseMatrix<double> QM;
+  Eigen::SparseMatrix<double, Eigen::RowMajor> QM;
   load_source_matrix(*geom_, QM);
+
+  // Create a solver for the problem
+  spdlog::info("Initializing iterative solver");
+  Eigen::BiCGSTAB<Eigen::SparseMatrix<double, Eigen::RowMajor>> solver;
+  solver.compute(M);
+  solver.setTolerance(1.E-8);
+  if (solver.info() != Eigen::Success) {
+    std::stringstream mssg;
+    mssg << "Could not initialize iterative solver";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
 
   // Begin power iteration
   double keff_diff = 100.;
@@ -450,7 +456,7 @@ void FDDiffusionDriver::solve() {
     Q = (1. / keff_) * QM * flux;
 
     // Get new flux
-    new_flux = solver.solve(Q);
+    new_flux = solver.solveWithGuess(Q, flux);
     if (solver.info() != Eigen::Success) {
       spdlog::error("Solution impossible.");
       throw ScarabeeException("Solution impossible");
@@ -477,7 +483,7 @@ void FDDiffusionDriver::solve() {
     spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff_);
     spdlog::info("     keff difference:     {:.5E}", keff_diff);
     spdlog::info("     max flux difference: {:.5E}", flux_diff);
-    spdlog::info("     Iteration time: {:.5E} s",
+    spdlog::info("     iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
   }
 
