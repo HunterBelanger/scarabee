@@ -14,7 +14,7 @@ void init_FDDiffusionDriver(py::module& m) {
       m, "FDDiffusionDriver",
       "A FDDiffusionDriver solves a diffusion problem using the cell centered "
       "finite-difference method. It is capable of solving 1D, 2D, or 3D "
-      "problems which are dfined by providing a "
+      "problems which are defined by providing a "
       ":py:class:`DiffusionGeometry` instance.")
 
       .def(py::init<std::shared_ptr<DiffusionGeometry> /*geom*/>(),

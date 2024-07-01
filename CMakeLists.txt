@@ -136,6 +136,7 @@ pybind11_add_module(scarabee  src/logging.cpp
                               src/criticality_spectrum.cpp
                               src/diffusion_geometry.cpp
                               src/fd_diffusion_driver.cpp
+                              src/nem_diffusion_driver.cpp
                               #=================================================
                               src/python/scarabee.cpp
                               src/python/vector.cpp
@@ -160,6 +161,7 @@ pybind11_add_module(scarabee  src/logging.cpp
                               src/python/criticality_spectrum.cpp
                               src/python/diffusion_geometry.cpp
                               src/python/fd_diffusion_driver.cpp
+                              src/python/nem_diffusion_driver.cpp
                             )
 
 target_include_directories(scarabee PRIVATE include)
