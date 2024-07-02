@@ -26,6 +26,9 @@ DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
       y_divs_per_tile_(),
       tile_dz_(),
       z_divs_per_tile_(),
+      x_bounds_(),
+      y_bounds_(),
+      z_bounds_(),
       nmats_(0),
       mat_indx_to_flat_geom_indx_(),
       nx_(0),
@@ -121,6 +124,8 @@ DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
+
+  fill_x_bounds();
 }
 
 DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
@@ -143,6 +148,9 @@ DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
       y_divs_per_tile_(ydivs),
       tile_dz_(),
       z_divs_per_tile_(),
+      x_bounds_(),
+      y_bounds_(),
+      z_bounds_(),
       nmats_(0),
       mat_indx_to_flat_geom_indx_(),
       nx_(0),
@@ -316,6 +324,9 @@ DiffusionGeometry::DiffusionGeometry(const std::vector<TileFill>& tiles,
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
+
+  fill_x_bounds();
+  fill_y_bounds();
 }
 
 DiffusionGeometry::DiffusionGeometry(
@@ -337,6 +348,9 @@ DiffusionGeometry::DiffusionGeometry(
       y_divs_per_tile_(ydivs),
       tile_dz_(dz),
       z_divs_per_tile_(zdivs),
+      x_bounds_(),
+      y_bounds_(),
+      z_bounds_(),
       nmats_(0),
       mat_indx_to_flat_geom_indx_(),
       nx_(0),
@@ -558,6 +572,10 @@ DiffusionGeometry::DiffusionGeometry(
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
+
+  fill_x_bounds();
+  fill_y_bounds();
+  fill_z_bounds();
 }
 
 std::size_t DiffusionGeometry::ngroups() const {
@@ -611,7 +629,7 @@ DiffusionGeometry::neighbor_1d(std::size_t m, Neighbor n) const {
   if (tile.xs == nullptr) return {tile, std::nullopt};
 
   // Our tile is a material. We need to get the material index.
-  std::size_t mn = this->geom_to_mat_indx(geo_indx);
+  std::size_t mn = this->geom_to_mat_indx(geo_indx).value();
 
   return {tile, mn};
 }
@@ -654,7 +672,7 @@ DiffusionGeometry::neighbor_2d(std::size_t m, Neighbor n) const {
   if (tile.xs == nullptr) return {tile, std::nullopt};
 
   // Our tile is a material. We need to get the material index.
-  std::size_t mn = this->geom_to_mat_indx(geo_indx);
+  std::size_t mn = this->geom_to_mat_indx(geo_indx).value();
 
   return {tile, mn};
 }
@@ -699,7 +717,7 @@ DiffusionGeometry::neighbor_3d(std::size_t m, Neighbor n) const {
   if (tile.xs == nullptr) return {tile, std::nullopt};
 
   // Our tile is a material. We need to get the material index.
-  std::size_t mn = this->geom_to_mat_indx(geo_indx);
+  std::size_t mn = this->geom_to_mat_indx(geo_indx).value();
 
   return {tile, mn};
 }
@@ -745,7 +763,7 @@ xt::svector<std::size_t> DiffusionGeometry::geom_to_tile_indx(
   return {i, j, k};
 }
 
-std::size_t DiffusionGeometry::geom_to_mat_indx(
+std::optional<std::size_t> DiffusionGeometry::geom_to_mat_indx(
     const xt::svector<std::size_t>& geo_indx) const {
   // Get the flat geometry index that we can search for
   std::array<xt::svector<std::size_t>, 1> geo_indx_vec{geo_indx};
@@ -755,12 +773,11 @@ std::size_t DiffusionGeometry::geom_to_mat_indx(
   const auto it =
       std::lower_bound(mat_indx_to_flat_geom_indx_.begin(),
                        mat_indx_to_flat_geom_indx_.end(), geom_flat_indx);
-  return std::distance(mat_indx_to_flat_geom_indx_.begin(), it);
 
-  // Should never get here...
-  auto mssg = "Could not find material index.";
-  spdlog::error(mssg);
-  throw ScarabeeException(mssg);
+  if (it == mat_indx_to_flat_geom_indx_.end() || *it != geom_flat_indx)
+    return std::nullopt;
+
+  return std::distance(mat_indx_to_flat_geom_indx_.begin(), it);
 }
 
 double DiffusionGeometry::volume(std::size_t m) const {
@@ -779,6 +796,39 @@ double DiffusionGeometry::volume(std::size_t m) const {
   } else {
     return dx(indxs[0]) * dy(indxs[1]) * dz(indxs[2]);
   }
+}
+
+std::optional<std::size_t> DiffusionGeometry::x_to_i(double x) const {
+  if (x < x_bounds_.front() || x > x_bounds_.back()) return std::nullopt;
+
+  for (std::size_t i = 0; i < x_bounds_.size() - 1; i++) {
+    if (x_bounds_[i] <= x && x <= x_bounds_[i + 1]) return i;
+  }
+
+  // SHOULD NEVER GET HERE
+  return x_bounds_.size() - 1;
+}
+
+std::optional<std::size_t> DiffusionGeometry::y_to_j(double y) const {
+  if (y < y_bounds_.front() || y > y_bounds_.back()) return std::nullopt;
+
+  for (std::size_t j = 0; j < y_bounds_.size() - 1; j++) {
+    if (y_bounds_[j] <= y && y <= y_bounds_[j + 1]) return j;
+  }
+
+  // SHOULD NEVER GET HERE
+  return y_bounds_.size() - 1;
+}
+
+std::optional<std::size_t> DiffusionGeometry::z_to_k(double z) const {
+  if (z < z_bounds_.front() || z > z_bounds_.back()) return std::nullopt;
+
+  for (std::size_t k = 0; k < z_bounds_.size() - 1; k++) {
+    if (z_bounds_[k] <= z && z <= z_bounds_[k + 1]) return k;
+  }
+
+  // SHOULD NEVER GET HERE
+  return z_bounds_.size() - 1;
 }
 
 double DiffusionGeometry::dx(std::size_t i) const {
@@ -854,6 +904,75 @@ std::size_t DiffusionGeometry::geom_z_indx_to_tile_z_indx(std::size_t i) const {
   }
 
   return i_tile;
+}
+
+void DiffusionGeometry::fill_x_bounds() {
+  // Count the total number of x regions and allocate array
+  std::size_t nx =
+      std::accumulate(x_divs_per_tile_.begin(), x_divs_per_tile_.end(), 0);
+  x_bounds_.reserve(nx + 1);
+
+  // Add initial 0
+  x_bounds_.push_back(0.);
+
+  for (std::size_t t = 0; t < tile_dx_.size(); t++) {
+    const std::size_t nxt = x_divs_per_tile_[t];
+    const double dx = tile_dx_[t] / static_cast<double>(nxt);
+
+    for (std::size_t n = 0; n < nxt; n++) {
+      x_bounds_.push_back(x_bounds_.back() + dx);
+    }
+  }
+
+  if (x_bounds_.size() != nx + 1) {
+    throw ScarabeeException("HELP BAD X BOUNDS !");
+  }
+}
+
+void DiffusionGeometry::fill_y_bounds() {
+  // Count the total number of y regions and allocate array
+  std::size_t ny =
+      std::accumulate(y_divs_per_tile_.begin(), y_divs_per_tile_.end(), 0);
+  y_bounds_.reserve(ny + 1);
+
+  // Add initial 0
+  y_bounds_.push_back(0.);
+
+  for (std::size_t t = 0; t < tile_dy_.size(); t++) {
+    const std::size_t nyt = y_divs_per_tile_[t];
+    const double dy = tile_dy_[t] / static_cast<double>(nyt);
+
+    for (std::size_t n = 0; n < nyt; n++) {
+      y_bounds_.push_back(y_bounds_.back() + dy);
+    }
+  }
+
+  if (y_bounds_.size() != ny + 1) {
+    throw ScarabeeException("HELP BAD Y BOUNDS !");
+  }
+}
+
+void DiffusionGeometry::fill_z_bounds() {
+  // Count the total number of z regions and allocate array
+  std::size_t nz =
+      std::accumulate(z_divs_per_tile_.begin(), z_divs_per_tile_.end(), 0);
+  z_bounds_.reserve(nz + 1);
+
+  // Add initial 0
+  z_bounds_.push_back(0.);
+
+  for (std::size_t t = 0; t < tile_dz_.size(); t++) {
+    const std::size_t nzt = z_divs_per_tile_[t];
+    const double dz = tile_dz_[t] / static_cast<double>(nzt);
+
+    for (std::size_t n = 0; n < nzt; n++) {
+      z_bounds_.push_back(z_bounds_.back() + dz);
+    }
+  }
+
+  if (z_bounds_.size() != nz + 1) {
+    throw ScarabeeException("HELP BAD Z BOUNDS !");
+  }
 }
 
 }  // namespace scarabee

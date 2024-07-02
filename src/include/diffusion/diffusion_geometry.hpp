@@ -58,7 +58,17 @@ class DiffusionGeometry {
                                                        Neighbor n) const;
   const std::shared_ptr<DiffusionCrossSection>& mat(std::size_t m) const;
   xt::svector<std::size_t> geom_indx(std::size_t m) const;
+  std::optional<std::size_t> geom_to_mat_indx(
+      const xt::svector<std::size_t>& geo_indx) const;
   double volume(std::size_t m) const;
+
+  std::optional<std::size_t> x_to_i(double x) const;
+  std::optional<std::size_t> y_to_j(double y) const;
+  std::optional<std::size_t> z_to_k(double z) const;
+
+  const std::vector<double>& x_bounds() const { return x_bounds_; }
+  const std::vector<double>& y_bounds() const { return y_bounds_; }
+  const std::vector<double>& z_bounds() const { return z_bounds_; }
 
   double dx(std::size_t i) const;
   double dy(std::size_t j) const;
@@ -80,6 +90,8 @@ class DiffusionGeometry {
   std::vector<double> tile_dz_;
   std::vector<std::size_t> z_divs_per_tile_;
 
+  std::vector<double> x_bounds_, y_bounds_, z_bounds_;
+
   std::size_t nmats_;
   std::vector<std::size_t> mat_indx_to_flat_geom_indx_;
 
@@ -88,8 +100,6 @@ class DiffusionGeometry {
 
   xt::svector<std::size_t> geom_to_tile_indx(
       const xt::svector<std::size_t>& geo_indx) const;
-
-  std::size_t geom_to_mat_indx(const xt::svector<std::size_t>& geo_indx) const;
 
   std::pair<Tile, std::optional<std::size_t>> neighbor_1d(std::size_t m,
                                                           Neighbor n) const;
@@ -101,6 +111,10 @@ class DiffusionGeometry {
   std::size_t geom_x_indx_to_tile_x_indx(std::size_t i) const;
   std::size_t geom_y_indx_to_tile_y_indx(std::size_t i) const;
   std::size_t geom_z_indx_to_tile_z_indx(std::size_t i) const;
+
+  void fill_x_bounds();
+  void fill_y_bounds();
+  void fill_z_bounds();
 };
 
 }  // namespace scarabee
