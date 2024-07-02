@@ -8,6 +8,7 @@
 
 #include <xtensor/xtensor.hpp>
 
+#include <cmath>
 #include <memory>
 #include <tuple>
 
@@ -130,6 +131,71 @@ class NEMDiffusionDriver {
   inline double f4(double xi) const {
     return (xi * xi - 0.05) * (xi - 0.5) * (xi + 0.5);
   }
+
+  struct Unity {
+    double operator()(double /*k*/, double /*x*/) const { return 1.; }
+
+    double diff(double /*k*/, double /*x*/) const { return 0.; }
+
+    double intgr(double /*k*/, double del) const {
+      // Integrate from -del/2 to del/2
+      return del;
+    }
+  };
+
+  struct Cosh {
+    double operator()(double k, double x) const { return std::cosh(k * x); }
+
+    double diff(double k, double x) const { return k * std::sinh(k * x); }
+
+    double intgr(double k, double del) const {
+      // Integrate from -del/2 to del/2
+      return 2. * std::sinh(0.5 * k * del) / k;
+    }
+  };
+
+  struct Sinh {
+    double operator()(double k, double x) const { return std::sinh(k * x); }
+
+    double diff(double k, double x) const { return k * std::cosh(k * x); }
+
+    double intgr(double /*k*/, double /*del*/) const {
+      // Integrate from -del/2 to del/2
+      return 0.;
+    }
+  };
+
+  template <class Fx, class Fy>
+  struct F {
+    Fx fx;
+    Fy fy;
+
+    double operator()(double kx, double ky, double x, double y) const {
+      return fx(kx, x) * fy(ky, y);
+    }
+
+    double diffx_intgry(double kx, double ky, double dely, double x) const {
+      return fx.diff(kx, x) * fy.intgr(ky, dely);
+    }
+
+    double diffy_intgrx(double kx, double ky, double delx, double y) const {
+      return fx.intgr(kx, delx) * fy.diff(ky, y);
+    }
+
+    double intgr(double kx, double ky, double delx, double dely) const {
+      return fx.intgr(ky, delx) * fy.intgr(ky, dely);
+    }
+  };
+
+  using F00 = F<Unity, Unity>;
+  using F01 = F<Unity, Sinh>;
+  using F02 = F<Unity, Cosh>;
+  using F10 = F<Sinh, Unity>;
+  using F11 = F<Sinh, Sinh>;
+  using F12 = F<Sinh, Cosh>;
+  using F20 = F<Cosh, Unity>;
+  using F21 = F<Cosh, Sinh>;
+  using F22 = F<Cosh, Cosh>;
 };
 
 }  // namespace scarabee
