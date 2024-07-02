@@ -69,24 +69,24 @@ class NEMDiffusionDriver {
   //----------------------------------------------------------------------------
   // PRIVATE MEMBERS
   std::shared_ptr<DiffusionGeometry> geom_;
-  const std::size_t NG_; // Number of groups
-  const std::size_t NM_; // Number of regions
+  const std::size_t NG_;  // Number of groups
+  const std::size_t NM_;  // Number of regions
 
   // Quantities required for reconstructing the flux  (kept after solution)
-  xt::xtensor<double,  2> flux_avg_; // First index is group, second is node
-  xt::xtensor<double,  2> flux_x1_;
-  xt::xtensor<double,  2> flux_x2_;
-  xt::xtensor<double,  2> flux_y1_;
-  xt::xtensor<double,  2> flux_y2_;
-  xt::xtensor<double,  2> flux_z1_;
-  xt::xtensor<double,  2> flux_z2_;
+  xt::xtensor<double, 2> flux_avg_;  // First index is group, second is node
+  xt::xtensor<double, 2> flux_x1_;
+  xt::xtensor<double, 2> flux_x2_;
+  xt::xtensor<double, 2> flux_y1_;
+  xt::xtensor<double, 2> flux_y2_;
+  xt::xtensor<double, 2> flux_z1_;
+  xt::xtensor<double, 2> flux_z2_;
   xt::xtensor<Current, 2> j_outs_;
   xt::xtensor<Current, 2> j_ins_;
 
   // Quantites used for calculation (not needed for reconstruction)
   xt::xtensor<RMat, 2> Rmats_;  // First index is group, second is node
   xt::xtensor<PMat, 2> Pmats_;
-  xt::xtensor<MomentsVector, 2> Q_; // Source
+  xt::xtensor<MomentsVector, 2> Q_;  // Source
 
   double keff_ = 1.;
   double flux_tol_ = 1.E-5;
@@ -97,12 +97,25 @@ class NEMDiffusionDriver {
   // PRIVATE METHODS
   void fill_coupling_matrices();
   void fill_source();
-  static double calc_net_current(const Current& Jin, const Current& Jout, CurrentIndx indx);
   void update_Jin_from_Jout(std::size_t g, std::size_t m);
   MomentsVector calc_leakage_moments(std::size_t g, std::size_t m) const;
-  double calc_keff(double keff, const xt::xtensor<double, 2>& old_flux, const xt::xtensor<double, 2>& new_flux) const;
-  double calc_node(const std::size_t g, const std::size_t m, const xt::svector<std::size_t>& geom_indx, const double invs_dx, const double invs_dy, const double invs_dz, const DiffusionCrossSection& xs);
-  void inner_iteration(xt::xtensor<double, 2>& errors);
+  double calc_keff(double keff, const xt::xtensor<double, 2>& old_flux,
+                   const xt::xtensor<double, 2>& new_flux) const;
+  void calc_node(const std::size_t g, const std::size_t m,
+                 const xt::svector<std::size_t>& geom_indx,
+                 const double invs_dx, const double invs_dy,
+                 const double invs_dz, const DiffusionCrossSection& xs);
+  void inner_iteration();
+
+  inline double calc_net_current(const Current& Jin, const Current& Jout,
+                                 CurrentIndx indx) const {
+    if (indx == CurrentIndx::XP || indx == CurrentIndx::YP ||
+        indx == CurrentIndx::ZP) {
+      return Jout(indx) - Jin(indx);
+    } else {
+      return Jin(indx) - Jout(indx);
+    }
+  }
 };
 
 }  // namespace scarabee
