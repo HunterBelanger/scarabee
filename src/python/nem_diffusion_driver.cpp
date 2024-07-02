@@ -43,5 +43,57 @@ void init_NEMDiffusionDriver(py::module& m) {
       .def_property(
           "flux_tolerance", &NEMDiffusionDriver::flux_tolerance,
           &NEMDiffusionDriver::flux_tolerance,
-          "Maximum relative error in the flux for problem convergence.");
+          "Maximum relative error in the flux for problem convergence.")
+
+      .def("flux",
+           py::overload_cast<double /*x*/, double /*y*/, double /*z*/,
+                             std::size_t /*g*/>(&NEMDiffusionDriver::flux,
+                                                py::const_),
+           "Calculates the flux at the desired position and group. The "
+           "lowest value for any coordinates is 0.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "x : float\n"
+           "    Position along the x axis.\n"
+           "y : float\n"
+           "    Position along the y axis.\n"
+           "z : float\n"
+           "    Position along the z axis.\n"
+           "g : ing\n"
+           "    Energy group index.\n\n"
+           "Returns\n"
+           "-------\n"
+           "float\n"
+           "      Value of the flux.\n",
+           py::arg("x"), py::arg("y"), py::arg("z"), py::arg("g"))
+
+      .def("flux",
+           py::overload_cast<const xt::xtensor<double, 1>& /*x*/,
+                             const xt::xtensor<double, 1>& /*y*/,
+                             const xt::xtensor<double, 1>& /*z*/>(
+               &NEMDiffusionDriver::flux, py::const_),
+           "Constructs an array storing the flux at all desired (x,y,z) "
+           "points and at all energy groups. The first index is the group, "
+           "the second is x, the third is y, and the fourth is z.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "x : array of float\n"
+           "    Positions along the x axis.\n"
+           "y : array of float\n"
+           "    Positions along the y axis.\n"
+           "z : array of float\n"
+           "    Positions along the z axis.\n\n"
+           "Returns\n"
+           "-------\n"
+           "array of float\n"
+           "      Value of the flux at all (g,x,y,z).\n",
+           py::arg("x"), py::arg("y"), py::arg("z"))
+
+      .def("avg_flux", &NEMDiffusionDriver::avg_flux,
+           "Constructs an array storing the value of the average flux in "
+           "each node. The resulting array is indexed as (g, x, y, z).\n\n"
+           "Returns\n"
+           "-------\n"
+           "array of float\n"
+           "      Value of the average flux in each node.\n");
 }

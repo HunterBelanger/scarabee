@@ -31,8 +31,10 @@ class NEMDiffusionDriver {
   double keff() const { return keff_; }
 
   double flux(double x, double y, double z, std::size_t g) const;
-  xt::xarray<double> flux(xt::xarray<double> x, xt::xarray<double> y,
-                          xt::xarray<double> z) const;
+  xt::xtensor<double, 4> flux(const xt::xtensor<double, 1>& x,
+                              const xt::xtensor<double, 1>& y,
+                              const xt::xtensor<double, 1>& z) const;
+  xt::xtensor<double, 4> avg_flux() const;
 
   double power(double x, double y, double z) const;
   xt::xarray<double> power(xt::xarray<double> x, xt::xarray<double> y,
@@ -115,6 +117,18 @@ class NEMDiffusionDriver {
     } else {
       return Jin(indx) - Jout(indx);
     }
+  }
+
+  inline double f0(double xi) const { return 1.; }
+
+  inline double f1(double xi) const { return xi; }
+
+  inline double f2(double xi) const { return 3. * xi * xi - 0.25; }
+
+  inline double f3(double xi) const { return xi * (xi - 0.5) * (xi + 0.5); }
+
+  inline double f4(double xi) const {
+    return (xi * xi - 0.05) * (xi - 0.5) * (xi + 0.5);
   }
 };
 
