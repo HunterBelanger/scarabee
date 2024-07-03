@@ -104,6 +104,13 @@ class NEMDiffusionDriver {
   xt::xtensor<RMat, 2> Rmats_;  // First index is group, second is node
   xt::xtensor<PMat, 2> Pmats_;
   xt::xtensor<MomentsVector, 2> Q_;  // Source
+  
+  // Neighbors for each node
+  // XP = 0, XN = 1, YP = 2, YN = 3, ZP = 4, ZN = 5
+  using NeighborInfo = std::pair<DiffusionGeometry::Tile, std::optional<std::size_t>>;
+  xt::xtensor<NeighborInfo, 2> neighbors_; 
+
+  xt::xtensor<xt::svector<std::size_t>, 1> geom_inds_;
 
   double keff_ = 1.;
   double flux_tol_ = 1.E-5;
@@ -114,12 +121,12 @@ class NEMDiffusionDriver {
   // PRIVATE METHODS
   void fill_coupling_matrices();
   void fill_source();
+  void fill_neighbors_and_geom_inds();
   void update_Jin_from_Jout(std::size_t g, std::size_t m);
   MomentsVector calc_leakage_moments(std::size_t g, std::size_t m) const;
   double calc_keff(double keff, const xt::xtensor<double, 2>& old_flux,
                    const xt::xtensor<double, 2>& new_flux) const;
   void calc_node(const std::size_t g, const std::size_t m,
-                 const xt::svector<std::size_t>& geom_indx,
                  const double invs_dx, const double invs_dy,
                  const double invs_dz, const DiffusionCrossSection& xs);
   void inner_iteration();
@@ -176,6 +183,48 @@ class NEMDiffusionDriver {
     }
   };
 
+  struct K0 {
+    double operator()(double /*x*/) const {
+      return 1.;
+    }
+
+    double diff(double x) const {
+      return 0.;
+    }
+
+    double intgr(double del) const {
+      return del;
+    }
+  };
+
+  struct K1 {
+    double operator()(double x) const {
+      return x;
+    }
+
+    double diff(double /*x*/) const {
+      return 1.;
+    }
+
+    double intgr(double del) const {
+      return 0.;
+    }
+  };
+
+  struct K2 {
+    double operator()(double x) const {
+      return x*x;
+    }
+
+    double diff(double x) const {
+      return 2.*x;
+    }
+
+    double intgr(double del) const {
+      return del*del / 12.;
+    }
+  };
+
   template <class Fx, class Fy>
   struct F {
     Fx fx;
@@ -206,15 +255,15 @@ class NEMDiffusionDriver {
     }
   };
 
-  using F00 = F<P0, P0>;
-  using F01 = F<P0, P1>;
-  using F02 = F<P0, P2>;
-  using F10 = F<P1, P0>;
-  using F11 = F<P1, P1>;
-  using F12 = F<P1, P2>;
-  using F20 = F<P2, P0>;
-  using F21 = F<P2, P1>;
-  using F22 = F<P2, P2>;
+  using F00 = F<K0, K0>;
+  using F01 = F<K0, K1>;
+  using F02 = F<K0, K2>;
+  using F10 = F<K1, K0>;
+  using F11 = F<K1, K1>;
+  using F12 = F<K1, K2>;
+  using F20 = F<K2, K0>;
+  using F21 = F<K2, K1>;
+  using F22 = F<K2, K2>;
 
   struct FluxRecon {
     std::array<double, 9> radial;
@@ -226,9 +275,13 @@ class NEMDiffusionDriver {
     F20 f20; F21 f21; F22 f22;
 
     double operator()(double x, double y, double z) const {
-      const double xi_x = (x - 0.5*(x_low + x_hi)) / (0.5 * (x_hi - x_low));
-      const double xi_y = (y - 0.5*(y_low + y_hi)) / (0.5 * (y_hi - y_low));
+      //const double xi_x = (x - 0.5*(x_low + x_hi)) / (0.5 * (x_hi - x_low));
+      //const double xi_y = (y - 0.5*(y_low + y_hi)) / (0.5 * (y_hi - y_low));
+      //const double xi_z = (z - 0.5*(z_low + z_hi)) / (0.5 * (z_hi - z_low));
+      const double xi_x = x - 0.5*(x_low + x_hi);
+      const double xi_y = y - 0.5*(y_low + y_hi);
       const double xi_z = (z - 0.5*(z_low + z_hi)) / (0.5 * (z_hi - z_low));
+
 
       const double flx_z = axial[0] + axial[1]*f1(xi_z) + axial[2]*f2(xi_z) + axial[3]*f3(xi_z) + axial[4]*f4(xi_z);
       const double flx_xy = radial[0]*f00(xi_x, xi_y) + radial[1]*f01(xi_x, xi_y) + radial[2]*f02(xi_x, xi_y) + radial[3]*f10(xi_x, xi_y) + radial[4]*f11(xi_x, xi_y) + radial[5]*f12(xi_x, xi_y) + radial[6]*f20(xi_x, xi_y) + radial[7]*f21(xi_x, xi_y) + radial[8]*f22(xi_x, xi_y);

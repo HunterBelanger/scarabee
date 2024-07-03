@@ -831,21 +831,6 @@ std::optional<std::size_t> DiffusionGeometry::z_to_k(double z) const {
   return z_bounds_.size() - 1;
 }
 
-double DiffusionGeometry::dx(std::size_t i) const {
-  const std::size_t t = geom_x_indx_to_tile_x_indx(i);
-  return tile_dx_[t] / static_cast<double>(x_divs_per_tile_[t]);
-}
-
-double DiffusionGeometry::dy(std::size_t i) const {
-  const std::size_t t = geom_y_indx_to_tile_y_indx(i);
-  return tile_dy_[t] / static_cast<double>(y_divs_per_tile_[t]);
-}
-
-double DiffusionGeometry::dz(std::size_t i) const {
-  const std::size_t t = geom_z_indx_to_tile_z_indx(i);
-  return tile_dz_[t] / static_cast<double>(z_divs_per_tile_[t]);
-}
-
 std::size_t DiffusionGeometry::geom_x_indx_to_tile_x_indx(std::size_t i) const {
   if (i >= nx()) {
     auto mssg = "Index along x is out of range.";

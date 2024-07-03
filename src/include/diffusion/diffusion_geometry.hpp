@@ -70,9 +70,9 @@ class DiffusionGeometry {
   const std::vector<double>& y_bounds() const { return y_bounds_; }
   const std::vector<double>& z_bounds() const { return z_bounds_; }
 
-  double dx(std::size_t i) const;
-  double dy(std::size_t j) const;
-  double dz(std::size_t k) const;
+  double dx(std::size_t i) const {return x_bounds_[i+1] - x_bounds_[i];}
+  double dy(std::size_t j) const {return y_bounds_[j+1] - y_bounds_[j];}
+  double dz(std::size_t k) const {return z_bounds_[k+1] - z_bounds_[k];}
 
  private:
   xt::xarray<Tile> tiles_;
