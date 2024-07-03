@@ -5,14 +5,28 @@
 #include <diffusion/diffusion_geometry.hpp>
 
 #include <Eigen/Dense>
+#include <Eigen/LU>
 
 #include <xtensor/xtensor.hpp>
 
+#include <array>
 #include <cmath>
 #include <memory>
 #include <tuple>
 
 namespace scarabee {
+
+inline double f0(double xi) { return 1.; }
+
+inline double f1(double xi) { return xi; }
+
+inline double f2(double xi) { return 3. * xi * xi - 0.25; }
+
+inline double f3(double xi) { return xi * (xi - 0.5) * (xi + 0.5); }
+
+inline double f4(double xi) {
+  return (xi * xi - 0.05) * (xi - 0.5) * (xi + 0.5);
+}
 
 class NEMDiffusionDriver {
  public:
@@ -118,49 +132,46 @@ class NEMDiffusionDriver {
     } else {
       return Jin(indx) - Jout(indx);
     }
-  }
+  } 
 
-  inline double f0(double xi) const { return 1.; }
+  struct P0 {
+    double operator()(double /*x*/) const {
+      return 1.;
+    }
 
-  inline double f1(double xi) const { return xi; }
+    double diff(double x) const {
+      return 0.;
+    }
 
-  inline double f2(double xi) const { return 3. * xi * xi - 0.25; }
-
-  inline double f3(double xi) const { return xi * (xi - 0.5) * (xi + 0.5); }
-
-  inline double f4(double xi) const {
-    return (xi * xi - 0.05) * (xi - 0.5) * (xi + 0.5);
-  }
-
-  struct Unity {
-    double operator()(double /*k*/, double /*x*/) const { return 1.; }
-
-    double diff(double /*k*/, double /*x*/) const { return 0.; }
-
-    double intgr(double /*k*/, double del) const {
-      // Integrate from -del/2 to del/2
+    double intgr(double del) const {
       return del;
     }
   };
 
-  struct Cosh {
-    double operator()(double k, double x) const { return std::cosh(k * x); }
+  struct P1 {
+    double operator()(double x) const {
+      return x;
+    }
 
-    double diff(double k, double x) const { return k * std::sinh(k * x); }
+    double diff(double /*x*/) const {
+      return 1.;
+    }
 
-    double intgr(double k, double del) const {
-      // Integrate from -del/2 to del/2
-      return 2. * std::sinh(0.5 * k * del) / k;
+    double intgr(double del) const {
+      return 0.;
     }
   };
 
-  struct Sinh {
-    double operator()(double k, double x) const { return std::sinh(k * x); }
+  struct P2 {
+    double operator()(double x) const {
+      return 0.5*(3.*x*x - 1.);
+    }
 
-    double diff(double k, double x) const { return k * std::cosh(k * x); }
+    double diff(double x) const {
+      return 0.5*6.*x;
+    }
 
-    double intgr(double /*k*/, double /*del*/) const {
-      // Integrate from -del/2 to del/2
+    double intgr(double del) const {
       return 0.;
     }
   };
@@ -170,32 +181,68 @@ class NEMDiffusionDriver {
     Fx fx;
     Fy fy;
 
-    double operator()(double kx, double ky, double x, double y) const {
-      return fx(kx, x) * fy(ky, y);
+    double operator()(double x, double y) const {
+      return fx(x) * fy(y);
     }
 
-    double diffx_intgry(double kx, double ky, double dely, double x) const {
-      return fx.diff(kx, x) * fy.intgr(ky, dely);
+    double dxiy(double dely, double x) const {
+      return fx.diff(x) * fy.intgr(dely);
     }
 
-    double diffy_intgrx(double kx, double ky, double delx, double y) const {
-      return fx.intgr(kx, delx) * fy.diff(ky, y);
+    double dyix(double delx, double y) const {
+      return fx.intgr(delx) * fy.diff(y);
     }
 
-    double intgr(double kx, double ky, double delx, double dely) const {
-      return fx.intgr(ky, delx) * fy.intgr(ky, dely);
+    double ingr(double delx, double dely) const {
+      return fx.intgr(delx) * fy.intgr(dely);
+    }
+
+    double ix(double delx, double y) const {
+      return fx.intgr(delx) * fy(y);
+    }
+
+    double iy(double dely, double x) const {
+      return fx(x) * fy.intgr(dely);
     }
   };
 
-  using F00 = F<Unity, Unity>;
-  using F01 = F<Unity, Sinh>;
-  using F02 = F<Unity, Cosh>;
-  using F10 = F<Sinh, Unity>;
-  using F11 = F<Sinh, Sinh>;
-  using F12 = F<Sinh, Cosh>;
-  using F20 = F<Cosh, Unity>;
-  using F21 = F<Cosh, Sinh>;
-  using F22 = F<Cosh, Cosh>;
+  using F00 = F<P0, P0>;
+  using F01 = F<P0, P1>;
+  using F02 = F<P0, P2>;
+  using F10 = F<P1, P0>;
+  using F11 = F<P1, P1>;
+  using F12 = F<P1, P2>;
+  using F20 = F<P2, P0>;
+  using F21 = F<P2, P1>;
+  using F22 = F<P2, P2>;
+
+  struct FluxRecon {
+    std::array<double, 9> radial;
+    std::array<double, 5> axial;
+    double x_low, x_hi, y_low, y_hi, z_low, z_hi;
+
+    F00 f00; F01 f01; F02 f02;
+    F10 f10; F11 f11; F12 f12;
+    F20 f20; F21 f21; F22 f22;
+
+    double operator()(double x, double y, double z) const {
+      const double xi_x = (x - 0.5*(x_low + x_hi)) / (0.5 * (x_hi - x_low));
+      const double xi_y = (y - 0.5*(y_low + y_hi)) / (0.5 * (y_hi - y_low));
+      const double xi_z = (z - 0.5*(z_low + z_hi)) / (0.5 * (z_hi - z_low));
+
+      const double flx_z = axial[0] + axial[1]*f1(xi_z) + axial[2]*f2(xi_z) + axial[3]*f3(xi_z) + axial[4]*f4(xi_z);
+      const double flx_xy = radial[0]*f00(xi_x, xi_y) + radial[1]*f01(xi_x, xi_y) + radial[2]*f02(xi_x, xi_y) + radial[3]*f10(xi_x, xi_y) + radial[4]*f11(xi_x, xi_y) + radial[5]*f12(xi_x, xi_y) + radial[6]*f20(xi_x, xi_y) + radial[7]*f21(xi_x, xi_y) + radial[8]*f22(xi_x, xi_y);
+      return flx_xy * flx_z / axial[0];
+    }
+  };
+
+  xt::xtensor<FluxRecon, 2> recon_params;
+
+  FluxRecon fit_node_recon_params(std::size_t g, std::size_t m) const;
+
+  enum class Corner {PP, PM, MP, MM};
+  double eval_corner_flux(std::size_t g, std::size_t m, Corner c) const;
+  double avg_corner_flux(std::size_t g, std::size_t m, Corner c) const;
 };
 
 }  // namespace scarabee
