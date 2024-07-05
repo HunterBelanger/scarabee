@@ -141,157 +141,78 @@ class NEMDiffusionDriver {
     }
   } 
 
-  struct P0 {
-    double operator()(double /*x*/) const {
-      return 1.;
-    }
-
-    double diff(double x) const {
-      return 0.;
-    }
-
-    double intgr(double del) const {
-      return del;
-    }
-  };
-
-  struct P1 {
-    double operator()(double x) const {
-      return x;
-    }
-
-    double diff(double /*x*/) const {
-      return 1.;
-    }
-
-    double intgr(double del) const {
-      return 0.;
-    }
-  };
-
-  struct P2 {
-    double operator()(double x) const {
-      return 0.5*(3.*x*x - 1.);
-    }
-
-    double diff(double x) const {
-      return 0.5*6.*x;
-    }
-
-    double intgr(double del) const {
-      return 0.;
-    }
-  };
-
-  struct K0 {
-    double operator()(double /*x*/) const {
-      return 1.;
-    }
-
-    double diff(double x) const {
-      return 0.;
-    }
-
-    double intgr(double del) const {
-      return del;
-    }
-  };
-
-  struct K1 {
-    double operator()(double x) const {
-      return x;
-    }
-
-    double diff(double /*x*/) const {
-      return 1.;
-    }
-
-    double intgr(double del) const {
-      return 0.;
-    }
-  };
-
-  struct K2 {
-    double operator()(double x) const {
-      return x*x;
-    }
-
-    double diff(double x) const {
-      return 2.*x;
-    }
-
-    double intgr(double del) const {
-      return del*del / 12.;
-    }
-  };
-
-  template <class Fx, class Fy>
-  struct F {
-    Fx fx;
-    Fy fy;
-
-    double operator()(double x, double y) const {
-      return fx(x) * fy(y);
-    }
-
-    double dxiy(double dely, double x) const {
-      return fx.diff(x) * fy.intgr(dely);
-    }
-
-    double dyix(double delx, double y) const {
-      return fx.intgr(delx) * fy.diff(y);
-    }
-
-    double ingr(double delx, double dely) const {
-      return fx.intgr(delx) * fy.intgr(dely);
-    }
-
-    double ix(double delx, double y) const {
-      return fx.intgr(delx) * fy(y);
-    }
-
-    double iy(double dely, double x) const {
-      return fx(x) * fy.intgr(dely);
-    }
-  };
-
-  using F00 = F<K0, K0>;
-  using F01 = F<K0, K1>;
-  using F02 = F<K0, K2>;
-  using F10 = F<K1, K0>;
-  using F11 = F<K1, K1>;
-  using F12 = F<K1, K2>;
-  using F20 = F<K2, K0>;
-  using F21 = F<K2, K1>;
-  using F22 = F<K2, K2>;
-
-  struct FluxRecon {
-    std::array<double, 9> radial;
-    std::array<double, 5> axial;
-    double x_low, x_hi, y_low, y_hi, z_low, z_hi;
-
-    F00 f00; F01 f01; F02 f02;
-    F10 f10; F11 f11; F12 f12;
-    F20 f20; F21 f21; F22 f22;
+  struct NodeFlux {
+    double phi_0 = 0.; // f0
+    double eps = 0.;
+    double ax0 = 0., ax1 = 0., ax2 = 0., bx1 = 0., bx2 = 0.; // fx
+    double ay0 = 0., ay1 = 0., ay2 = 0., by1 = 0., by2 = 0.; // fy
+    double az0 = 0., az1 = 0., az2 = 0., bz1 = 0., bz2 = 0.; // fz
+    double c11 = 0., c12 = 0., c21 = 0., c22 = 0.;           // fxy
+    double invs_dx = 0., invs_dy = 0., invs_dz = 0.;
+    double zeta_x = 0., zeta_y = 0.;
+    double xm = 0., ym = 0., zm = 0.; // Mid point of node
 
     double operator()(double x, double y, double z) const {
-      //const double xi_x = (x - 0.5*(x_low + x_hi)) / (0.5 * (x_hi - x_low));
-      //const double xi_y = (y - 0.5*(y_low + y_hi)) / (0.5 * (y_hi - y_low));
-      //const double xi_z = (z - 0.5*(z_low + z_hi)) / (0.5 * (z_hi - z_low));
-      const double xi_x = x - 0.5*(x_low + x_hi);
-      const double xi_y = y - 0.5*(y_low + y_hi);
-      const double xi_z = (z - 0.5*(z_low + z_hi)) / (0.5 * (z_hi - z_low));
+      x -= xm;
+      y -= ym;
+      z -= zm;
 
-
-      const double flx_z = axial[0] + axial[1]*f1(xi_z) + axial[2]*f2(xi_z) + axial[3]*f3(xi_z) + axial[4]*f4(xi_z);
-      const double flx_xy = radial[0]*f00(xi_x, xi_y) + radial[1]*f01(xi_x, xi_y) + radial[2]*f02(xi_x, xi_y) + radial[3]*f10(xi_x, xi_y) + radial[4]*f11(xi_x, xi_y) + radial[5]*f12(xi_x, xi_y) + radial[6]*f20(xi_x, xi_y) + radial[7]*f21(xi_x, xi_y) + radial[8]*f22(xi_x, xi_y);
-      return flx_xy * flx_z / axial[0];
+      return phi_0 + fx(x) + fy(y) + fz(z) + fxy(x, y);
+      //return phi_0 + fx(x) + fy(y) + fz(z);
     }
+
+    double flux_no_cross(double x, double y) const {
+      x -= xm;
+      y -= ym;
+
+      return phi_0 + fx(x) + fy(y);
+    }
+
+    double fx(double x) const {
+      return ax0 + ax1*std::cosh(eps*x) + ax2*std::sinh(eps*x) + bx1*p1(2.*x*invs_dx) + bx2*p2(2.*x*invs_dx);
+    }
+
+    double fy(double y) const {
+      return ay0 + ay1*std::cosh(eps*y) + ay2*std::sinh(eps*y) + by1*p1(2.*y*invs_dy) + by2*p2(2.*y*invs_dy);
+    }
+
+    double fz(double z) const {
+      return az0 + az1*std::cosh(eps*z) + az2*std::sinh(eps*z) + bz1*p1(2.*z*invs_dz) + bz2*p2(2.*z*invs_dz);
+    }
+
+    double fxy(double x, double y) const {
+      x *= 2.*invs_dx;
+      y *= 2.*invs_dy;
+      const double p1x = p1(x);
+      const double p2x = p2(x);
+      const double p1y = p1(y);
+      const double p2y = p2(y);
+      return c11*p1x*p1y + c12*p1x*p2y + c21*p2x*p1y + c22*p2x*p2y;
+
+      /*
+      const double f1x = f1(zeta_x, x);
+      const double f2x = f2(zeta_x, x);
+      const double f1y = f1(zeta_y, y);
+      const double f2y = f2(zeta_y, y);
+      return c11*f1x*f1y + c12*f1x*f2y + c21*f2x*f1y + c22*f2x*f2y;
+      */
+    }
+
+    double p1(double xi) const { return xi; }
+    double p2(double xi) const { return 0.5*(3.*xi*xi - 1.); }
+
+    double f1(double z, double u) const { return std::sinh(eps*u) / std::sinh(z); }
+    double f2(double z, double u) const {
+      const double sinhcz = std::sinh(z) / z;
+      return (std::cosh(eps*u) - sinhcz) / (std::cosh(z) - sinhcz);
+    }
+
   };
 
-  xt::xtensor<FluxRecon, 2> recon_params;
+  xt::xtensor<NodeFlux, 2> recon_params;
 
-  FluxRecon fit_node_recon_params(std::size_t g, std::size_t m) const;
+  NodeFlux fit_node_recon_params(std::size_t g, std::size_t m) const;
+  void fit_node_recon_params_corners(std::size_t g, std::size_t m);
 
   enum class Corner {PP, PM, MP, MM};
   double eval_corner_flux(std::size_t g, std::size_t m, Corner c) const;

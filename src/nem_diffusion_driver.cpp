@@ -702,9 +702,16 @@ void NEMDiffusionDriver::solve() {
   // Calculate flux reconstruction parameters for each node
   spdlog::info("Fitting flux reconstruction parameters");
   recon_params.resize({NG_, NM_});
+#pragma omp parallel for
   for (std::size_t m = 0; m < NM_; m++) {
     for (std::size_t g = 0; g < NG_; g++) {
       recon_params(g, m) = fit_node_recon_params(g, m);
+    }
+  }
+#pragma omp parallel for
+  for (std::size_t m = 0; m < NM_; m++) {
+    for (std::size_t g = 0; g < NG_; g++) {
+      fit_node_recon_params_corners(g, m);
     }
   }
 }
@@ -736,7 +743,8 @@ double NEMDiffusionDriver::flux(double x, double y, double z,
   if (om.has_value() == false) return 0.;
   const std::size_t m = om.value();
 
-  //return recon_params(g, m)(x, y, z);
+  return recon_params(g, m)(x, y, z);
+  /*
   // Get the bounds and coordinates along each direction
   const double x_low = geom_->x_bounds()[i];
   const double x_hi = geom_->x_bounds()[i + 1];
@@ -789,6 +797,7 @@ double NEMDiffusionDriver::flux(double x, double y, double z,
 
   return flx_x * flx_y * flx_z / (flx_avg * flx_avg); 
   //return flx_x + flx_y + flx_z - 2.*flx_avg; 
+  */
 }
 
 xt::xtensor<double, 4> NEMDiffusionDriver::flux(
@@ -815,6 +824,7 @@ xt::xtensor<double, 4> NEMDiffusionDriver::flux(
   flux_out.resize({ngroups(), x.size(), y.size(), z.size()});
 
   for (std::size_t g = 0; g < ngroups(); g++) {
+#pragma omp paralle for
     for (std::size_t i = 0; i < x.size(); i++) {
       for (std::size_t j = 0; j < y.size(); j++) {
         for (std::size_t k = 0; k < z.size(); k++) {
@@ -853,7 +863,7 @@ xt::xtensor<double, 4> NEMDiffusionDriver::avg_flux() const {
   return flux_out;
 }
 
-NEMDiffusionDriver::FluxRecon NEMDiffusionDriver::fit_node_recon_params(std::size_t g, std::size_t m) const {
+NEMDiffusionDriver::NodeFlux NEMDiffusionDriver::fit_node_recon_params(std::size_t g, std::size_t m) const {
   // Get node parameters
   const auto geom_indx = geom_->geom_indx(m); 
   const double dx = geom_->dx(geom_indx[0]);
@@ -862,19 +872,30 @@ NEMDiffusionDriver::FluxRecon NEMDiffusionDriver::fit_node_recon_params(std::siz
   const auto& xs = *geom_->mat(m);
   const double D = xs.D(g);
   const double Er = xs.Er(g);
-
-  const double kx = std::sqrt(dx*dx*Er/D);
-  const double ky = std::sqrt(dy*dy*Er/D);
+  const double eps = std::sqrt(Er / D);
 
   const double x_low = geom_->x_bounds()[geom_indx[0]];
   const double x_hi = geom_->x_bounds()[geom_indx[0]+1];
   const double y_low = geom_->y_bounds()[geom_indx[1]];
   const double y_hi = geom_->y_bounds()[geom_indx[1]+1];
   const double z_low = geom_->z_bounds()[geom_indx[2]];
-  const double z_hi = geom_->z_bounds()[geom_indx[2]+1];
-
+  const double z_hi = geom_->z_bounds()[geom_indx[2]+1]; 
+  
+  const double xp = 0.5*dx;
+  const double xm = -xp;
+  const double yp = 0.5*dy;
+  const double ym = -yp;
+  
   const auto& Jout = j_outs_(g, m);
   const auto& Jin = j_ins_(g, m);
+
+  const double flx_xp = 2. * (Jout(CurrentIndx::XP) + Jin(CurrentIndx::XP));
+  const double flx_xm = 2. * (Jout(CurrentIndx::XM) + Jin(CurrentIndx::XM));
+  const double flx_yp = 2. * (Jout(CurrentIndx::YP) + Jin(CurrentIndx::YP));
+  const double flx_ym = 2. * (Jout(CurrentIndx::YM) + Jin(CurrentIndx::YM));
+  const double flx_zp = 2. * (Jout(CurrentIndx::ZP) + Jin(CurrentIndx::ZP));
+  const double flx_zm = 2. * (Jout(CurrentIndx::ZM) + Jin(CurrentIndx::ZM));
+  
   const double flx_avg = flux_avg_(g, m);
   const double Jxp = calc_net_current(Jin, Jout, CurrentIndx::XP);
   const double Jxm = calc_net_current(Jin, Jout, CurrentIndx::XM);
@@ -882,261 +903,275 @@ NEMDiffusionDriver::FluxRecon NEMDiffusionDriver::fit_node_recon_params(std::siz
   const double Jym = calc_net_current(Jin, Jout, CurrentIndx::YM);
   const double Jzp = calc_net_current(Jin, Jout, CurrentIndx::ZP);
   const double Jzm = calc_net_current(Jin, Jout, CurrentIndx::ZM);
+ 
+  auto sinhc = [](double x) {
+    return std::sinh(x) / x;
+  };
 
-  //const double xp = 1.; // Cooridnates in in scaled space
-  //const double xm = -1.;
-  //const double yp = 1.;
-  //const double ym = -1.;
-  const double xp = 0.5*dx;
-  const double xm = -xp;
-  const double yp = 0.5*dy;
-  const double ym = -yp;
+  NodeFlux nf = recon_params(g, m);
+  nf.phi_0 = flx_avg;
+  nf.eps = eps;
+  nf.xm = 0.5*(x_low + x_hi);
+  nf.ym = 0.5*(y_low + y_hi);
+  nf.zm = 0.5*(z_low + z_hi);
+  nf.invs_dx = 1. / dx;
+  nf.invs_dy = 1. / dy;
+  nf.invs_dz = 1. / dz;
 
-  const double flx_xp = 2. * (Jout(CurrentIndx::XP) + Jin(CurrentIndx::XP));
-  const double flx_xm = 2. * (Jout(CurrentIndx::XM) + Jin(CurrentIndx::XM));
-  const double flx_yp = 2. * (Jout(CurrentIndx::YP) + Jin(CurrentIndx::YP));
-  const double flx_ym = 2. * (Jout(CurrentIndx::YM) + Jin(CurrentIndx::YM));
+  // Initial base matrix for finding fx, fy, and fz coefficients
+  Eigen::Matrix<double, 4, 4> M {{0., 0.,  1.,  1.},
+                                 {0., 0., -1.,  1.},
+                                 {0., 0.,  1.,  3.},
+                                 {0., 0.,  1., -3.}};
+  Eigen::Matrix<double, 4, 1> b;
+  Eigen::Matrix<double, 4, 1> fu_coeffs;
 
+  // Determine fx coefficients
+  const double zeta_x = 0.5*eps*dx;
+  M(0, 0) = std::cosh(zeta_x) - sinhc(zeta_x);
+  M(0, 1) = std::sinh(zeta_x);
+  M(1, 0) =  M(0, 0);
+  M(1, 1) = -M(0, 1);
+  M(2, 0) = zeta_x * std::sinh(zeta_x);
+  M(2, 1) = zeta_x * std::cosh(zeta_x);
+  M(3, 0) = -M(2, 0);
+  M(3, 1) =  M(2, 1);
+  b(0) = flx_xp - flx_avg;
+  b(1) = flx_xm - flx_avg;
+  b(2) = -0.5*Jxp*dx/D;
+  b(3) = -0.5*Jxm*dx/D;
+  fu_coeffs = M.inverse()*b;
+  nf.ax1 = fu_coeffs(0);
+  nf.ax2 = fu_coeffs(1);
+  nf.bx1 = fu_coeffs(2);
+  nf.bx2 = fu_coeffs(3);
+  nf.ax0 = -nf.ax1*sinhc(zeta_x);
+  nf.zeta_x = zeta_x;
+  
+  // Determine fy coefficients
+  const double zeta_y = 0.5*eps*dy;
+  M(0, 0) = std::cosh(zeta_y) - sinhc(zeta_y);
+  M(0, 1) = std::sinh(zeta_y);
+  M(1, 0) =  M(0, 0);
+  M(1, 1) = -M(0, 1);
+  M(2, 0) = zeta_y * std::sinh(zeta_y);
+  M(2, 1) = zeta_y * std::cosh(zeta_y);
+  M(3, 0) = -M(2, 0);
+  M(3, 1) =  M(2, 1);
+  b(0) = flx_yp - flx_avg;
+  b(1) = flx_ym - flx_avg;
+  b(2) = -0.5*Jyp*dy/D;
+  b(3) = -0.5*Jym*dy/D;
+  fu_coeffs = M.inverse()*b;
+  nf.ay1 = fu_coeffs(0);
+  nf.ay2 = fu_coeffs(1);
+  nf.by1 = fu_coeffs(2);
+  nf.by2 = fu_coeffs(3);
+  nf.ay0 = -nf.ay1*sinhc(zeta_y);
+  nf.zeta_y = zeta_y;
+
+  // Determine fz coefficients
+  const double zeta_z = 0.5*eps*dz;
+  M(0, 0) = std::cosh(zeta_z) - sinhc(zeta_z);
+  M(0, 1) = std::sinh(zeta_z);
+  M(1, 0) =  M(0, 0);
+  M(1, 1) = -M(0, 1);
+  M(2, 0) = zeta_z * std::sinh(zeta_z);
+  M(2, 1) = zeta_z * std::cosh(zeta_z);
+  M(3, 0) = -M(2, 0);
+  M(3, 1) =  M(2, 1);
+  b(0) = flx_zp - flx_avg;
+  b(1) = flx_zm - flx_avg;
+  b(2) = -0.5*Jzp*dz/D;
+  b(3) = -0.5*Jzm*dz/D;
+  fu_coeffs = M.inverse()*b;
+  nf.az1 = fu_coeffs(0);
+  nf.az2 = fu_coeffs(1);
+  nf.bz1 = fu_coeffs(2);
+  nf.bz2 = fu_coeffs(3);
+  nf.az0 = -nf.az1*sinhc(zeta_z);
+
+  /*
   const double flx_pp = avg_corner_flux(g, m, Corner::PP);
   const double flx_pm = avg_corner_flux(g, m, Corner::PM);
   const double flx_mp = avg_corner_flux(g, m, Corner::MP);
   const double flx_mm = avg_corner_flux(g, m, Corner::MM);
 
-  // Define all functions
-  F00 f00; F01 f01; F02 f02;
-  F10 f10; F11 f11; F12 f12;
-  F20 f20; F21 f21; F22 f22;
+  const double pp = flx_pp - nf.fx(0.5*dx) - nf.fy(0.5*dx) - flx_avg;
+  const double pm = flx_pm - nf.fx(0.5*dx) - nf.fy(-0.5*dx) - flx_avg;
+  const double mp = flx_mp - nf.fx(-0.5*dx) - nf.fy(0.5*dx) - flx_avg;
+  const double mm = flx_mm - nf.fx(-0.5*dx) - nf.fy(-0.5*dx) - flx_avg;
 
-  //f01.fy.k = ky;
-  //f02.fy.k = ky;
+  // Determine fxy coefficients, which require the corner fluxes
+  nf.c11 = 0.25*(pp - pm + mm - mp);
+  nf.c12 = 0.25*(pp + pm - mm - mp);
+  nf.c21 = 0.25*(pp - pm - mm + mp); 
+  nf.c22 = 0.25*(pp + pm + mm + mp);
+  */
 
-  //f10.fx.k = kx;
-  //f11.fx.k = kx; f11.fy.k = ky;
-  //f12.fx.k = kx; f12.fy.k = ky;
+  return nf;
+}
 
-  //f20.fx.k = kx;
-  //f21.fx.k = kx; f21.fy.k = ky;
-  //f22.fx.k = kx; f22.fy.k = ky;
+void NEMDiffusionDriver::fit_node_recon_params_corners(std::size_t g, std::size_t m) {
+  const auto geom_indx = geom_->geom_indx(m); 
 
-  Eigen::Matrix<double, 9, 1> b;
-  b(0) = dx*dy*flx_avg; // Average flux
-
-  //b(1) = (-dy/D) * Jxp; // Current on +x
-  //b(2) = (-dy/D) * Jxm; // Current on -x
-  //b(3) = (-dx/D) * Jyp; // Current on +y
-  //b(4) = (-dx/D) * Jym; // Current on -y
-
-  b(1) = dy * flx_xp;
-  b(2) = dy * flx_xm;
-  b(3) = dx * flx_yp;
-  b(4) = dx * flx_ym;
-
-  b(5) = flx_pp; // Corner flux at (xp, yp)
-  b(6) = flx_pm; // Corner flux at (xp, ym)
-  b(7) = flx_mp; // Corner flux at (xm, yp)
-  b(8) = flx_mm; // Corner flux at (xm, ym)
-
-  Eigen::Matrix<double, 9, 9> A 
-      {{f00.ingr(dx, dy), f01.ingr(dx, dy), f02.ingr(dx, dy), f10.ingr(dx, dy), f11.ingr(dx, dy), f12.ingr(dx, dy), f20.ingr(dx, dy), f21.ingr(dx, dy), f22.ingr(dx, dy)},
-
-       //{f00.dxiy(dy, xp), f01.dxiy(dy, xp), f02.dxiy(dy, xp), f10.dxiy(dy, xp), f11.dxiy(dy, xp), f12.dxiy(dy, xp), f20.dxiy(dy, xp), f21.dxiy(dy, xp), f22.dxiy(dy, xp)},
-       //{f00.dxiy(dy, xm), f01.dxiy(dy, xm), f02.dxiy(dy, xm), f10.dxiy(dy, xm), f11.dxiy(dy, xm), f12.dxiy(dy, xm), f20.dxiy(dy, xm), f21.dxiy(dy, xm), f22.dxiy(dy, xm)},
-       //{f00.dyix(dx, yp), f01.dyix(dx, yp), f02.dyix(dx, yp), f10.dyix(dx, yp), f11.dyix(dx, yp), f12.dyix(dx, yp), f20.dyix(dx, yp), f21.dyix(dx, yp), f22.dyix(dx, yp)},
-       //{f00.dyix(dx, ym), f01.dyix(dx, ym), f02.dyix(dx, ym), f10.dyix(dx, ym), f11.dyix(dx, ym), f12.dyix(dx, ym), f20.dyix(dx, ym), f21.dyix(dx, ym), f22.dyix(dx, ym)},
-
-       {f00.iy(dy, xp),   f01.iy(dy, xp),   f02.iy(dy, xp),   f10.iy(dy, xp),   f11.iy(dy, xp),   f12.iy(dy, xp),   f20.iy(dy, xp),   f21.iy(dy, xp),   f22.iy(dy, xp)},
-       {f00.iy(dy, xm),   f01.iy(dy, xm),   f02.iy(dy, xm),   f10.iy(dy, xm),   f11.iy(dy, xm),   f12.iy(dy, xm),   f20.iy(dy, xm),   f21.iy(dy, xm),   f22.iy(dy, xm)},
-       {f00.ix(dx, yp),   f01.ix(dx, yp),   f02.ix(dx, yp),   f10.ix(dx, yp),   f11.ix(dx, yp),   f12.ix(dx, yp),   f20.ix(dx, yp),   f21.ix(dx, yp),   f22.ix(dx, yp)},
-       {f00.ix(dx, ym),   f01.ix(dx, ym),   f02.ix(dx, ym),   f10.ix(dx, ym),   f11.ix(dx, ym),   f12.ix(dx, ym),   f20.ix(dx, ym),   f21.ix(dx, ym),   f22.ix(dx, ym)},
-
-       {f00(xp, yp),      f01(xp, yp),      f02(xp, yp),      f10(xp, yp),      f11(xp, yp),      f12(xp, yp),      f20(xp, yp),      f21(xp, yp),      f22(xp, yp)},
-       {f00(xp, ym),      f01(xp, ym),      f02(xp, ym),      f10(xp, ym),      f11(xp, ym),      f12(xp, ym),      f20(xp, ym),      f21(xp, ym),      f22(xp, ym)},
-       {f00(xm, yp),      f01(xm, yp),      f02(xm, yp),      f10(xm, yp),      f11(xm, yp),      f12(xm, yp),      f20(xm, yp),      f21(xm, yp),      f22(xm, yp)},
-       {f00(xm, ym),      f01(xm, ym),      f02(xm, ym),      f10(xm, ym),      f11(xm, ym),      f12(xm, ym),      f20(xm, ym),      f21(xm, ym),      f22(xm, ym)}
-      };
-
-  // Calculate coefficients
-  
-  Eigen::FullPivLU<Eigen::Matrix<double, 9, 9>> lu(A);
-  if (lu.isInvertible() == false) {
-    spdlog::error("Could not invert coefficients matrix.");
-    std::cout << A << "\n\n";
-    std::cout << b << "\n\n";
-    std::cout << "det(A) = " << A.determinant() << "\n";
-    std::exit(1);
+  // DO NOT FIT CROSS TERMS FOR NODES ON BC !
+  // IDK why, but this seems to make reconstruction must better for now.
+  // I must be doing something wrong with adding the cross terms based on the
+  // corner fluxes, but I can't find it.
+  if (geom_indx[0] == 0 || geom_indx[0] == geom_->nx()-1 ||
+      geom_indx[1] == 0 || geom_indx[1] == geom_->ny()-1) {
+    return;
   }
-  Eigen::Matrix<double, 9, 1> c = lu.solve(b);
 
-  //Eigen::Matrix<double, 9, 1> c = A.colPivHouseholderQr().solve(b);
+  const double dx = geom_->dx(geom_indx[0]);
+  const double dy = geom_->dy(geom_indx[1]);
+  const double dz = geom_->dz(geom_indx[2]);
 
-  FluxRecon out;
-  out.radial[0] = c(0);
-  out.radial[1] = c(1);
-  out.radial[2] = c(2);
-  out.radial[3] = c(3);
-  out.radial[4] = c(4);
-  out.radial[5] = c(5);
-  out.radial[6] = c(6);
-  out.radial[7] = c(7);
-  out.radial[8] = c(8);
+  const double x_low = geom_->x_bounds()[geom_indx[0]];
+  const double x_hi = geom_->x_bounds()[geom_indx[0]+1];
+  const double y_low = geom_->y_bounds()[geom_indx[1]];
+  const double y_hi = geom_->y_bounds()[geom_indx[1]+1];
 
-  out.f00 = f00;
-  out.f01 = f01;
-  out.f02 = f02;
-  out.f10 = f10;
-  out.f11 = f11;
-  out.f12 = f12;
-  out.f20 = f20;
-  out.f21 = f21;
-  out.f22 = f22;
+  NodeFlux& nf = recon_params(g, m);
 
-  const double flx_zp = 2. * (Jout(CurrentIndx::ZP) + Jin(CurrentIndx::ZP));
-  const double flx_zm = 2. * (Jout(CurrentIndx::ZM) + Jin(CurrentIndx::ZM));
-  out.axial[0] = flx_avg;
-  out.axial[1] = flx_zp - flx_zm;
-  out.axial[2] = flx_zp + flx_zm - 2. * flx_avg;
-  out.axial[3] = -120. * flux_z1_(g, m) + 10. * out.axial[1];
-  out.axial[4] = -700. * flux_z2_(g, m) + 35. * out.axial[2];
+  const double flx_pp = avg_corner_flux(g, m, Corner::PP); 
+  const double flx_pm = avg_corner_flux(g, m, Corner::PM); 
+  const double flx_mp = avg_corner_flux(g, m, Corner::MP); 
+  const double flx_mm = avg_corner_flux(g, m, Corner::MM); 
 
-  out.x_low = x_low;
-  out.x_hi = x_hi;
-  out.y_low = y_low;
-  out.y_hi = y_hi;
-  out.z_low = z_low;
-  out.z_hi = z_hi;
+  const double pp = flx_pp - nf.flux_no_cross(x_hi, y_hi);
+  const double pm = flx_pm - nf.flux_no_cross(x_hi, y_low);
+  const double mp = flx_mp - nf.flux_no_cross(x_low, y_hi);
+  const double mm = flx_mm - nf.flux_no_cross(x_low, y_low);
 
-  return out;
+  // Determine fxy coefficients, which require the corner fluxes
+  nf.c11 = 0.25*(pp - pm + mm - mp);
+  nf.c12 = 0.25*(pp + pm - mm - mp);
+  nf.c21 = 0.25*(pp - pm - mm + mp); 
+  nf.c22 = 0.25*(pp + pm + mm + mp);
 }
 
 double NEMDiffusionDriver::eval_corner_flux(std::size_t g, std::size_t m, Corner c) const {
-  const auto geom_inds = geom_inds_(m);
-  const std::size_t i = geom_inds[0];
-  const std::size_t j = geom_inds[1];
-  const std::size_t k = geom_inds[2];
+  const auto geom_indx = geom_->geom_indx(m); 
+  const double dx = geom_->dx(geom_indx[0]);
+  const double dy = geom_->dy(geom_indx[1]);
+  const double dz = geom_->dz(geom_indx[2]);
 
-  // Get the bounds and coordinates along each direction
-  const double xi_x = (c == Corner::PP || c == Corner::PM) ? 0.5 : -0.5;
-  const double xi_y = (c == Corner::PP || c == Corner::MP) ? 0.5 : -0.5;
-  const double xi_z = 0.;
+  const double x_low = geom_->x_bounds()[geom_indx[0]];
+  const double x_hi = geom_->x_bounds()[geom_indx[0]+1];
+  const double y_low = geom_->y_bounds()[geom_indx[1]];
+  const double y_hi = geom_->y_bounds()[geom_indx[1]+1];
 
-  // Construct flux coefficients along each direction
-  const auto& Jout = j_outs_(g, m);
-  const auto& Jin = j_ins_(g, m);
-  const double flx_avg = flux_avg_(g, m);
+  const NodeFlux& nf = recon_params(g, m);
 
-  const double flx_xp = 2. * (Jout(CurrentIndx::XP) + Jin(CurrentIndx::XP));
-  const double flx_xm = 2. * (Jout(CurrentIndx::XM) + Jin(CurrentIndx::XM));
-  const double ax1 = flx_xp - flx_xm;
-  const double ax2 = flx_xp + flx_xm - 2. * flx_avg;
-  const double ax3 = -120. * flux_x1_(g, m) + 10. * ax1;
-  const double ax4 = -700. * flux_x2_(g, m) + 35. * ax2;
+  switch (c) {
+    case Corner::PP:
+      return nf.flux_no_cross(x_hi, y_hi);
+      break;
 
-  const double flx_yp = 2. * (Jout(CurrentIndx::YP) + Jin(CurrentIndx::YP));
-  const double flx_ym = 2. * (Jout(CurrentIndx::YM) + Jin(CurrentIndx::YM));
-  const double ay1 = flx_yp - flx_ym;
-  const double ay2 = flx_yp + flx_ym - 2. * flx_avg;
-  const double ay3 = -120. * flux_y1_(g, m) + 10. * ay1;
-  const double ay4 = -700. * flux_y2_(g, m) + 35. * ay2;
+    case Corner::PM:
+      return nf.flux_no_cross(x_hi, y_low);
+      break;
 
-  const double flx_zp = 2. * (Jout(CurrentIndx::ZP) + Jin(CurrentIndx::ZP));
-  const double flx_zm = 2. * (Jout(CurrentIndx::ZM) + Jin(CurrentIndx::ZM));
-  const double az1 = flx_zp - flx_zm;
-  const double az2 = flx_zp + flx_zm - 2. * flx_avg;
-  const double az3 = -120. * flux_z1_(g, m) + 10. * az1;
-  const double az4 = -700. * flux_z2_(g, m) + 35. * az2;
+    case Corner::MP:
+      return nf.flux_no_cross(x_low, y_hi);
+      break;
 
-  // Calculate flux
-  const double flx_x = flx_avg + ax1 * f1(xi_x) + ax2 * f2(xi_x) + ax3 * f3(xi_x) + ax4 * f4(xi_x);
-  const double flx_y = flx_avg + ay1 * f1(xi_y) + ay2 * f2(xi_y) + ay3 * f3(xi_y) + ay4 * f4(xi_y);
-  const double flx_z = flx_avg + az1 * f1(xi_z) + az2 * f2(xi_z) + az3 * f3(xi_z) + az4 * f4(xi_z);
-  return flx_x * flx_y * flx_z / (flx_avg * flx_avg);
+    case Corner::MM:
+      return nf.flux_no_cross(x_low, y_low);
+      break;
+  }
+
+  // NEVER GETS HERE
+  return 0.;
 }
 
 double NEMDiffusionDriver::avg_corner_flux(std::size_t g, std::size_t m, Corner c) const {
   const auto geom_inds = geom_inds_(m);
 
-  double flux_sum = 0.;
-  int npts = 0;
+  double num = 0.;
+  double denom = 0.;
 
   // First, we add our contribution to the corner flux estimation
-  flux_sum += eval_corner_flux(g, m, c);
-  npts++;
+  num += eval_corner_flux(g, m, c);
+  denom += 1.;
 
   if (c == Corner::PP) {
     const auto& n_xp = neighbors_(m, 0);
     const auto& n_yp = neighbors_(m, 2);
 
     if (n_xp.second) {
-      flux_sum += eval_corner_flux(g, n_xp.second.value(), Corner::MP);
-      npts++;
+      num += eval_corner_flux(g, n_xp.second.value(), Corner::MP);
+      denom += 1.;
     }
     if (n_yp.second) {
-      flux_sum += eval_corner_flux(g, n_yp.second.value(), Corner::PM);
-      npts++;
+      num += eval_corner_flux(g, n_yp.second.value(), Corner::PM);
+      denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx({geom_inds[0]+1, geom_inds[1]+1, geom_inds[2]});
     if (om) {
-      flux_sum += eval_corner_flux(g, om.value(), Corner::MM);
-      npts++;
+      num += eval_corner_flux(g, om.value(), Corner::MM);
+      denom += 1.;
     }
   } else if (c == Corner::PM) {
     const auto& n_xp = neighbors_(m, 0);
     const auto& n_ym = neighbors_(m, 3);
     
     if (n_xp.second) {
-      flux_sum += eval_corner_flux(g, n_xp.second.value(), Corner::MM);
-      npts++;
+      num += eval_corner_flux(g, n_xp.second.value(), Corner::MM);
+      denom += 1.;
     }
     if (n_ym.second) {
-      flux_sum += eval_corner_flux(g, n_ym.second.value(), Corner::PP);
-      npts++;
+      num += eval_corner_flux(g, n_ym.second.value(), Corner::PP);
+      denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx({geom_inds[0]+1, geom_inds[1]-1, geom_inds[2]});
     if (om) {
-      flux_sum += eval_corner_flux(g, om.value(), Corner::MP);
-      npts++;
+      num += eval_corner_flux(g, om.value(), Corner::MP);
+      denom += 1.;
     }
   } else if (c == Corner::MM) {
     const auto& n_xm = neighbors_(m, 1);
     const auto& n_ym = neighbors_(m, 3);
     
     if (n_xm.second) {
-      flux_sum += eval_corner_flux(g, n_xm.second.value(), Corner::PM);
-      npts++;
+      num += eval_corner_flux(g, n_xm.second.value(), Corner::PM);
+      denom += 1.;
     }
     if (n_ym.second) {
-      flux_sum += eval_corner_flux(g, n_ym.second.value(), Corner::MP);
-      npts++;
+      num += eval_corner_flux(g, n_ym.second.value(), Corner::MP);
+      denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx({geom_inds[0]-1, geom_inds[1]-1, geom_inds[2]});
     if (om) {
-      flux_sum += eval_corner_flux(g, om.value(), Corner::PP);
-      npts++;
+      num += eval_corner_flux(g, om.value(), Corner::PP);
+      denom += 1.;
     }
   } else { // c = Corner::MP
     const auto& n_xm = neighbors_(m, 1);
     const auto& n_yp = neighbors_(m, 2);
     
     if (n_xm.second) {
-      flux_sum += eval_corner_flux(g, n_xm.second.value(), Corner::PP);
-      npts++;
+      num += eval_corner_flux(g, n_xm.second.value(), Corner::PP);
+      denom += 1.;
     }
     if (n_yp.second) {
-      flux_sum += eval_corner_flux(g, n_yp.second.value(), Corner::MM);
-      npts++;
+      num += eval_corner_flux(g, n_yp.second.value(), Corner::MM);
+      denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx({geom_inds[0]-1, geom_inds[1]+1, geom_inds[2]});
     if (om) {
-      flux_sum += eval_corner_flux(g, om.value(), Corner::PM);
-      npts++;
+      num += eval_corner_flux(g, om.value(), Corner::PM);
+      denom += 1.;
     }
   }
 
-  return flux_sum / static_cast<double>(npts);
+  return 0.25*num;
 }
 
 }  // namespace scarabee
