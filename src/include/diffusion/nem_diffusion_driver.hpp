@@ -141,6 +141,8 @@ class NEMDiffusionDriver {
     }
   } 
 
+  // The method used for intranodal flux reconstruction is based on ANOVA-HDMR
+  // decomposition, as outlined by Bokov et al. [1]. 
   struct NodeFlux {
     double phi_0 = 0.; // f0
     double eps = 0.;
@@ -220,5 +222,12 @@ class NEMDiffusionDriver {
 };
 
 }  // namespace scarabee
+
+// References
+// ----------
+// [1] P. M. Bokov, D. Botes, R. H. Prinsloo, and D. I. Tomašević, “A
+//     Multigroup Homogeneous Flux Reconstruction Method Based on the
+//     ANOVA-HDMR Decomposition,” Nucl. Sci. Eng., vol. 197, no. 2,
+//     pp. 308–332, 2023, doi: 10.1080/00295639.2022.2108654.
 
 #endif

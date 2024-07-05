@@ -824,7 +824,7 @@ xt::xtensor<double, 4> NEMDiffusionDriver::flux(
   flux_out.resize({ngroups(), x.size(), y.size(), z.size()});
 
   for (std::size_t g = 0; g < ngroups(); g++) {
-#pragma omp paralle for
+#pragma omp parallel for
     for (std::size_t i = 0; i < x.size(); i++) {
       for (std::size_t j = 0; j < y.size(); j++) {
         for (std::size_t k = 0; k < z.size(); k++) {
