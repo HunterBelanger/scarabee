@@ -96,8 +96,10 @@ void init_NEMDiffusionDriver(py::module& m) {
            "-------\n"
            "array of float\n"
            "      Value of the average flux in each node.\n")
-           
-      .def("power", py::overload_cast<double /*x*/, double /*y*/, double /*z*/>(&NEMDiffusionDriver::power, py::const_),
+
+      .def("power",
+           py::overload_cast<double /*x*/, double /*y*/, double /*z*/>(
+               &NEMDiffusionDriver::power, py::const_),
            "Calculates the power density at the desired position. The lowest "
            "value for any coordinate is 0.\n\n"
            "Parameters\n"

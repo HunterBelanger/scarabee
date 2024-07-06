@@ -300,7 +300,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
                            polar_quad_.sin()[p] * delta_flx;
             angflux(p) -= delta_flx;
           }  // For all polar angles
-        }  // For all segments along forward direction of track
+        }    // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.exit_bc() == BoundaryCondition::Reflective) {
@@ -324,7 +324,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
                            polar_quad_.sin()[p] * delta_flx;
             angflux(p) -= delta_flx;
           }  // For all polar angles
-        }  // For all segments along forward direction of track
+        }    // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.entry_bc() == BoundaryCondition::Reflective) {
@@ -334,7 +334,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
           xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
         }
       }  // For all tracks
-    }  // For all azimuthal angles
+    }    // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
