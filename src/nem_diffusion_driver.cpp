@@ -700,6 +700,8 @@ void NEMDiffusionDriver::solve() {
   Q_.resize({0, 0});
 
   // Calculate flux reconstruction parameters for each node
+  Timer fitting_timer;
+  fitting_timer.start();
   spdlog::info("Fitting flux reconstruction parameters");
   recon_params.resize({NG_, NM_});
 #pragma omp parallel for
@@ -714,10 +716,19 @@ void NEMDiffusionDriver::solve() {
       fit_node_recon_params_corners(g, m);
     }
   }
+  fitting_timer.stop();
+  spdlog::info("Fitting Time: {:.5E} s", fitting_timer.elapsed_time());
 }
 
 double NEMDiffusionDriver::flux(double x, double y, double z,
                                 std::size_t g) const {
+  // If problem isn't solved yet, we error
+  if (solved_ == false) {
+    auto mssg = "Cannot compute flux. Problem has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Check group index
   if (g >= ngroups()) {
     std::stringstream mssg;
@@ -744,65 +755,18 @@ double NEMDiffusionDriver::flux(double x, double y, double z,
   const std::size_t m = om.value();
 
   return recon_params(g, m)(x, y, z);
-  /*
-  // Get the bounds and coordinates along each direction
-  const double x_low = geom_->x_bounds()[i];
-  const double x_hi = geom_->x_bounds()[i + 1];
-  const double x_mid = 0.5 * (x_low + x_hi);
-  const double xi_x = (x - x_mid) / (x_hi - x_low);
-
-  const double y_low = geom_->y_bounds()[j];
-  const double y_hi = geom_->y_bounds()[j + 1];
-  const double y_mid = 0.5 * (y_low + y_hi);
-  const double xi_y = (y - y_mid) / (y_hi - y_low);
-
-  const double z_low = geom_->z_bounds()[k];
-  const double z_hi = geom_->z_bounds()[k + 1];
-  const double z_mid = 0.5 * (z_low + z_hi);
-  const double xi_z = (z - z_mid) / (z_hi - z_low);
-
-  // Construct flux coefficients along each direction
-  const auto& Jout = j_outs_(g, m);
-  const auto& Jin = j_ins_(g, m);
-  const double flx_avg = flux_avg_(g, m);
-
-  const double flx_xp = 2. * (Jout(CurrentIndx::XP) + Jin(CurrentIndx::XP));
-  const double flx_xm = 2. * (Jout(CurrentIndx::XM) + Jin(CurrentIndx::XM));
-  const double ax1 = flx_xp - flx_xm;
-  const double ax2 = flx_xp + flx_xm - 2. * flx_avg;
-  const double ax3 = -120. * flux_x1_(g, m) + 10. * ax1;
-  const double ax4 = -700. * flux_x2_(g, m) + 35. * ax2;
-
-  const double flx_yp = 2. * (Jout(CurrentIndx::YP) + Jin(CurrentIndx::YP));
-  const double flx_ym = 2. * (Jout(CurrentIndx::YM) + Jin(CurrentIndx::YM));
-  const double ay1 = flx_yp - flx_ym;
-  const double ay2 = flx_yp + flx_ym - 2. * flx_avg;
-  const double ay3 = -120. * flux_y1_(g, m) + 10. * ay1;
-  const double ay4 = -700. * flux_y2_(g, m) + 35. * ay2;
-
-  const double flx_zp = 2. * (Jout(CurrentIndx::ZP) + Jin(CurrentIndx::ZP));
-  const double flx_zm = 2. * (Jout(CurrentIndx::ZM) + Jin(CurrentIndx::ZM));
-  const double az1 = flx_zp - flx_zm;
-  const double az2 = flx_zp + flx_zm - 2. * flx_avg;
-  const double az3 = -120. * flux_z1_(g, m) + 10. * az1;
-  const double az4 = -700. * flux_z2_(g, m) + 35. * az2;
-
-  // Calculate flux
-  const double flx_x = flx_avg + ax1 * f1(xi_x) + ax2 * f2(xi_x) +
-                       ax3 * f3(xi_x) + ax4 * f4(xi_x);
-  const double flx_y = flx_avg + ay1 * f1(xi_y) + ay2 * f2(xi_y) +
-                       ay3 * f3(xi_y) + ay4 * f4(xi_y);
-  const double flx_z = flx_avg + az1 * f1(xi_z) + az2 * f2(xi_z) +
-                       az3 * f3(xi_z) + az4 * f4(xi_z);
-
-  return flx_x * flx_y * flx_z / (flx_avg * flx_avg); 
-  //return flx_x + flx_y + flx_z - 2.*flx_avg; 
-  */
 }
 
 xt::xtensor<double, 4> NEMDiffusionDriver::flux(
     const xt::xtensor<double, 1>& x, const xt::xtensor<double, 1>& y,
     const xt::xtensor<double, 1>& z) const {
+  // If problem isn't solved yet, we error
+  if (solved_ == false) {
+    auto mssg = "Cannot compute flux. Problem has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Make sure x, y, and z have at least 1 coordinate
   if (x.size() == 0) {
     auto mssg = "Array of x coordinates must have at least one entry.";
@@ -822,13 +786,32 @@ xt::xtensor<double, 4> NEMDiffusionDriver::flux(
 
   xt::xtensor<double, 4> flux_out;
   flux_out.resize({ngroups(), x.size(), y.size(), z.size()});
+  flux_out.fill(0.);
 
   for (std::size_t g = 0; g < ngroups(); g++) {
 #pragma omp parallel for
     for (std::size_t i = 0; i < x.size(); i++) {
       for (std::size_t j = 0; j < y.size(); j++) {
         for (std::size_t k = 0; k < z.size(); k++) {
-          flux_out(g, i, j, k) = this->flux(x(i), y(j), z(k), g);
+          // Get geometry index
+          const auto oi = geom_->x_to_i(x[i]);
+          const auto oj = geom_->y_to_j(y[j]);
+          const auto ok = geom_->z_to_k(z[k]);
+          if (oi.has_value() == false || oj.has_value() == false ||
+              ok.has_value() == false) {
+            continue;
+          }
+          const std::size_t gi = oi.value();
+          const std::size_t gj = oj.value();
+          const std::size_t gk = ok.value();
+          const xt::svector<std::size_t> geom_inds{gi, gj, gk};
+
+          // Get material index
+          const auto om = geom_->geom_to_mat_indx(geom_inds);
+          if (om.has_value() == false) continue;
+          const std::size_t m = om.value();
+
+          flux_out(g, i, j, k) = recon_params(g, m)(x[i], y[j], z[k]);
         }
       }
     }
@@ -838,6 +821,13 @@ xt::xtensor<double, 4> NEMDiffusionDriver::flux(
 }
 
 xt::xtensor<double, 4> NEMDiffusionDriver::avg_flux() const {
+  // If problem isn't solved yet, we error
+  if (solved_ == false) {
+    auto mssg = "Cannot compute flux. Problem has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   const std::size_t nx = geom_->nx();
   const std::size_t ny = geom_->ny();
   const std::size_t nz = geom_->nz();
@@ -861,6 +851,144 @@ xt::xtensor<double, 4> NEMDiffusionDriver::avg_flux() const {
   }
 
   return flux_out;
+}
+
+double NEMDiffusionDriver::power(double x, double y, double z) const {
+  // If problem isn't solved yet, we error
+  if (solved_ == false) {
+    auto mssg = "Cannot compute power. Problem has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Get geometry index
+  const auto oi = geom_->x_to_i(x);
+  const auto oj = geom_->y_to_j(y);
+  const auto ok = geom_->z_to_k(z);
+  if (oi.has_value() == false || oj.has_value() == false ||
+      ok.has_value() == false)
+    return 0.;
+  const std::size_t i = oi.value();
+  const std::size_t j = oj.value();
+  const std::size_t k = ok.value();
+  const xt::svector<std::size_t> geom_inds{i, j, k};
+
+  // Get material index
+  const auto om = geom_->geom_to_mat_indx(geom_inds);
+  if (om.has_value() == false) return 0.;
+  const std::size_t m = om.value();
+
+  const auto& xs = *geom_->mat(m);
+
+  double pwr = 0.;
+
+  for (std::size_t g = 0; g < NG_; g++) {
+    pwr += recon_params(g, m)(x, y, z) * xs.Ef(g);
+  }
+
+  return pwr;
+}
+
+xt::xtensor<double, 3> NEMDiffusionDriver::power(const xt::xtensor<double, 1>& x, const xt::xtensor<double, 1>& y, const xt::xtensor<double, 1>& z) const {
+  // If problem isn't solved yet, we error
+  if (solved_ == false) {
+    auto mssg = "Cannot compute power. Problem has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Make sure x, y, and z have at least 1 coordinate
+  if (x.size() == 0) {
+    auto mssg = "Array of x coordinates must have at least one entry.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (y.size() == 0) {
+    auto mssg = "Array of y coordinates must have at least one entry.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (z.size() == 0) {
+    auto mssg = "Array of z coordinates must have at least one entry.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  xt::xtensor<double, 3> pwr_out;
+  pwr_out.resize({x.size(), y.size(), z.size()});
+  pwr_out.fill(0.);
+
+#pragma omp parallel for
+  for (std::size_t i = 0; i < x.size(); i++) {
+    for (std::size_t j = 0; j < y.size(); j++) {
+      for (std::size_t k = 0; k < z.size(); k++) {
+        // Get geometry index
+        const auto oi = geom_->x_to_i(x[i]);
+        const auto oj = geom_->y_to_j(y[j]);
+        const auto ok = geom_->z_to_k(z[k]);
+        if (oi.has_value() == false || oj.has_value() == false ||
+            ok.has_value() == false) {
+          continue;
+        }
+        const std::size_t gi = oi.value();
+        const std::size_t gj = oj.value();
+        const std::size_t gk = ok.value();
+        const xt::svector<std::size_t> geom_inds{gi, gj, gk};
+
+        // Get material index
+        const auto om = geom_->geom_to_mat_indx(geom_inds);
+        if (om.has_value() == false) {
+          continue;
+        }
+        const std::size_t m = om.value();
+
+        const auto& xs = *geom_->mat(m);
+
+        for (std::size_t g = 0; g < NG_; g++) {
+          pwr_out(i, j, k) += recon_params(g, m)(x[i], y[j], z[k]) * xs.Ef(g);
+        }
+      }
+    }
+  }
+
+  return pwr_out;
+}
+
+xt::xtensor<double, 3> NEMDiffusionDriver::avg_power() const {
+  // If problem isn't solved yet, we error
+  if (solved_ == false) {
+    auto mssg = "Cannot compute power. Problem has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  const std::size_t nx = geom_->nx();
+  const std::size_t ny = geom_->ny();
+  const std::size_t nz = geom_->nz();
+
+  xt::xtensor<double, 3> pwr_out;
+  pwr_out.resize({nx, ny, nz});
+  pwr_out.fill(0.);
+
+  for (std::size_t i = 0; i < nx; i++) {
+    for (std::size_t j = 0; j < ny; j++) {
+      for (std::size_t k = 0; k < nz; k++) {
+        const auto om = geom_->geom_to_mat_indx({i, j, k});
+
+        if (om.has_value() == false) {
+          continue;
+        }
+        const std::size_t m = om.value();
+        const auto& xs = *geom_->mat(m);
+
+        for (std::size_t g = 0; g < NG_; g++) {
+          pwr_out(i, j, k) += flux_avg_(g, m) * xs.Ef(g);
+        }
+      }
+    }
+  }
+
+  return pwr_out;
 }
 
 NEMDiffusionDriver::NodeFlux NEMDiffusionDriver::fit_node_recon_params(std::size_t g, std::size_t m) const {
@@ -991,95 +1119,89 @@ NEMDiffusionDriver::NodeFlux NEMDiffusionDriver::fit_node_recon_params(std::size
   nf.bz2 = fu_coeffs(3);
   nf.az0 = -nf.az1*sinhc(zeta_z);
 
-  /*
-  const double flx_pp = avg_corner_flux(g, m, Corner::PP);
-  const double flx_pm = avg_corner_flux(g, m, Corner::PM);
-  const double flx_mp = avg_corner_flux(g, m, Corner::MP);
-  const double flx_mm = avg_corner_flux(g, m, Corner::MM);
-
-  const double pp = flx_pp - nf.fx(0.5*dx) - nf.fy(0.5*dx) - flx_avg;
-  const double pm = flx_pm - nf.fx(0.5*dx) - nf.fy(-0.5*dx) - flx_avg;
-  const double mp = flx_mp - nf.fx(-0.5*dx) - nf.fy(0.5*dx) - flx_avg;
-  const double mm = flx_mm - nf.fx(-0.5*dx) - nf.fy(-0.5*dx) - flx_avg;
-
-  // Determine fxy coefficients, which require the corner fluxes
-  nf.c11 = 0.25*(pp - pm + mm - mp);
-  nf.c12 = 0.25*(pp + pm - mm - mp);
-  nf.c21 = 0.25*(pp - pm - mm + mp); 
-  nf.c22 = 0.25*(pp + pm + mm + mp);
-  */
-
   return nf;
 }
 
 void NEMDiffusionDriver::fit_node_recon_params_corners(std::size_t g, std::size_t m) {
   const auto geom_indx = geom_->geom_indx(m); 
 
-  // DO NOT FIT CROSS TERMS FOR NODES ON BC !
-  // IDK why, but this seems to make reconstruction must better for now.
-  // I must be doing something wrong with adding the cross terms based on the
-  // corner fluxes, but I can't find it.
-  if (geom_indx[0] == 0 || geom_indx[0] == geom_->nx()-1 ||
-      geom_indx[1] == 0 || geom_indx[1] == geom_->ny()-1) {
-    return;
-  }
-
-  const double dx = geom_->dx(geom_indx[0]);
-  const double dy = geom_->dy(geom_indx[1]);
-  const double dz = geom_->dz(geom_indx[2]);
-
   const double x_low = geom_->x_bounds()[geom_indx[0]];
   const double x_hi = geom_->x_bounds()[geom_indx[0]+1];
   const double y_low = geom_->y_bounds()[geom_indx[1]];
   const double y_hi = geom_->y_bounds()[geom_indx[1]+1];
+  const double z_low = geom_->y_bounds()[geom_indx[2]];
+  const double z_hi = geom_->y_bounds()[geom_indx[2]+1];
 
   NodeFlux& nf = recon_params(g, m);
 
-  const double flx_pp = avg_corner_flux(g, m, Corner::PP); 
-  const double flx_pm = avg_corner_flux(g, m, Corner::PM); 
-  const double flx_mp = avg_corner_flux(g, m, Corner::MP); 
-  const double flx_mm = avg_corner_flux(g, m, Corner::MM); 
+  // If the corner point we are looking at is along an outer boundary,
+  // we do not compute the average value of the flux, but instead use
+  // the value estimate by the previous node reconstruction, without
+  // any cross terms. This allows the use of and f(x,y) term in the flux
+  // reconstruction on boundary nodes, without leading to the cusps that
+  // would occur when trying to take the average.
 
-  const double pp = flx_pp - nf.flux_no_cross(x_hi, y_hi);
-  const double pm = flx_pm - nf.flux_no_cross(x_hi, y_low);
-  const double mp = flx_mp - nf.flux_no_cross(x_low, y_hi);
-  const double mm = flx_mm - nf.flux_no_cross(x_low, y_low);
+  // Determine fxy coefficients
+  double flx_pp, flx_pm, flx_mp, flx_mm;
+  if (geom_indx[0] != geom_->nx()-1 && geom_indx[1] != geom_->ny()-1) {
+    flx_pp = avg_xy_corner_flux(g, m, Corner::PP); 
+  } else {
+    flx_pp = nf.flux_xy_no_cross(x_hi, y_hi);
+  }
 
-  // Determine fxy coefficients, which require the corner fluxes
-  nf.c11 = 0.25*(pp - pm + mm - mp);
-  nf.c12 = 0.25*(pp + pm - mm - mp);
-  nf.c21 = 0.25*(pp - pm - mm + mp); 
-  nf.c22 = 0.25*(pp + pm + mm + mp);
+  if (geom_indx[0] != geom_->nx()-1 && geom_indx[1] != 0) {
+    flx_pm = avg_xy_corner_flux(g, m, Corner::PM); 
+  } else {
+    flx_pm = nf.flux_xy_no_cross(x_hi, y_low);
+  }
+
+  if (geom_indx[0] != 0 && geom_indx[1] != geom_->ny()-1) {
+    flx_mp = avg_xy_corner_flux(g, m, Corner::MP);
+  } else {
+    flx_mp = nf.flux_xy_no_cross(x_low, y_hi);
+  }
+
+  if (geom_indx[0] != 0 && geom_indx[1] != 0) {
+    flx_mm = avg_xy_corner_flux(g, m, Corner::MM);
+  } else {
+    flx_mm = nf.flux_xy_no_cross(x_low, y_low);
+  }
+
+  double pp = flx_pp - nf.flux_xy_no_cross(x_hi, y_hi);
+  double pm = flx_pm - nf.flux_xy_no_cross(x_hi, y_low);
+  double mp = flx_mp - nf.flux_xy_no_cross(x_low, y_hi);
+  double mm = flx_mm - nf.flux_xy_no_cross(x_low, y_low);
+
+  nf.cxy11 = 0.25*(pp - pm + mm - mp);
+  nf.cxy12 = 0.25*(pp + pm - mm - mp);
+  nf.cxy21 = 0.25*(pp - pm - mm + mp); 
+  nf.cxy22 = 0.25*(pp + pm + mm + mp);
 }
 
-double NEMDiffusionDriver::eval_corner_flux(std::size_t g, std::size_t m, Corner c) const {
-  const auto geom_indx = geom_->geom_indx(m); 
-  const double dx = geom_->dx(geom_indx[0]);
-  const double dy = geom_->dy(geom_indx[1]);
-  const double dz = geom_->dz(geom_indx[2]);
-
-  const double x_low = geom_->x_bounds()[geom_indx[0]];
-  const double x_hi = geom_->x_bounds()[geom_indx[0]+1];
-  const double y_low = geom_->y_bounds()[geom_indx[1]];
-  const double y_hi = geom_->y_bounds()[geom_indx[1]+1];
-
+double NEMDiffusionDriver::eval_xy_corner_flux(std::size_t g, std::size_t m, Corner c) const {
   const NodeFlux& nf = recon_params(g, m);
+  const double dx = 1. / nf.invs_dx;
+  const double x_hi =  nf.xm + 0.5*dx;
+  const double x_low = nf.xm - 0.5*dx;
+  const double dy = 1. / nf.invs_dy;
+  const double y_hi =  nf.ym + 0.5*dy;
+  const double y_low = nf.ym - 0.5*dy;
 
   switch (c) {
     case Corner::PP:
-      return nf.flux_no_cross(x_hi, y_hi);
+      return nf.flux_xy_no_cross(x_hi, y_hi);
       break;
 
     case Corner::PM:
-      return nf.flux_no_cross(x_hi, y_low);
+      return nf.flux_xy_no_cross(x_hi, y_low);
       break;
 
     case Corner::MP:
-      return nf.flux_no_cross(x_low, y_hi);
+      return nf.flux_xy_no_cross(x_low, y_hi);
       break;
 
     case Corner::MM:
-      return nf.flux_no_cross(x_low, y_low);
+      return nf.flux_xy_no_cross(x_low, y_low);
       break;
   }
 
@@ -1087,14 +1209,14 @@ double NEMDiffusionDriver::eval_corner_flux(std::size_t g, std::size_t m, Corner
   return 0.;
 }
 
-double NEMDiffusionDriver::avg_corner_flux(std::size_t g, std::size_t m, Corner c) const {
+double NEMDiffusionDriver::avg_xy_corner_flux(std::size_t g, std::size_t m, Corner c) const {
   const auto geom_inds = geom_inds_(m);
 
   double num = 0.;
   double denom = 0.;
 
   // First, we add our contribution to the corner flux estimation
-  num += eval_corner_flux(g, m, c);
+  num += eval_xy_corner_flux(g, m, c);
   denom += 1.;
 
   if (c == Corner::PP) {
@@ -1102,17 +1224,17 @@ double NEMDiffusionDriver::avg_corner_flux(std::size_t g, std::size_t m, Corner 
     const auto& n_yp = neighbors_(m, 2);
 
     if (n_xp.second) {
-      num += eval_corner_flux(g, n_xp.second.value(), Corner::MP);
+      num += eval_xy_corner_flux(g, n_xp.second.value(), Corner::MP);
       denom += 1.;
     }
     if (n_yp.second) {
-      num += eval_corner_flux(g, n_yp.second.value(), Corner::PM);
+      num += eval_xy_corner_flux(g, n_yp.second.value(), Corner::PM);
       denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx({geom_inds[0]+1, geom_inds[1]+1, geom_inds[2]});
     if (om) {
-      num += eval_corner_flux(g, om.value(), Corner::MM);
+      num += eval_xy_corner_flux(g, om.value(), Corner::MM);
       denom += 1.;
     }
   } else if (c == Corner::PM) {
@@ -1120,17 +1242,17 @@ double NEMDiffusionDriver::avg_corner_flux(std::size_t g, std::size_t m, Corner 
     const auto& n_ym = neighbors_(m, 3);
     
     if (n_xp.second) {
-      num += eval_corner_flux(g, n_xp.second.value(), Corner::MM);
+      num += eval_xy_corner_flux(g, n_xp.second.value(), Corner::MM);
       denom += 1.;
     }
     if (n_ym.second) {
-      num += eval_corner_flux(g, n_ym.second.value(), Corner::PP);
+      num += eval_xy_corner_flux(g, n_ym.second.value(), Corner::PP);
       denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx({geom_inds[0]+1, geom_inds[1]-1, geom_inds[2]});
     if (om) {
-      num += eval_corner_flux(g, om.value(), Corner::MP);
+      num += eval_xy_corner_flux(g, om.value(), Corner::MP);
       denom += 1.;
     }
   } else if (c == Corner::MM) {
@@ -1138,17 +1260,17 @@ double NEMDiffusionDriver::avg_corner_flux(std::size_t g, std::size_t m, Corner 
     const auto& n_ym = neighbors_(m, 3);
     
     if (n_xm.second) {
-      num += eval_corner_flux(g, n_xm.second.value(), Corner::PM);
+      num += eval_xy_corner_flux(g, n_xm.second.value(), Corner::PM);
       denom += 1.;
     }
     if (n_ym.second) {
-      num += eval_corner_flux(g, n_ym.second.value(), Corner::MP);
+      num += eval_xy_corner_flux(g, n_ym.second.value(), Corner::MP);
       denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx({geom_inds[0]-1, geom_inds[1]-1, geom_inds[2]});
     if (om) {
-      num += eval_corner_flux(g, om.value(), Corner::PP);
+      num += eval_xy_corner_flux(g, om.value(), Corner::PP);
       denom += 1.;
     }
   } else { // c = Corner::MP
@@ -1156,22 +1278,22 @@ double NEMDiffusionDriver::avg_corner_flux(std::size_t g, std::size_t m, Corner 
     const auto& n_yp = neighbors_(m, 2);
     
     if (n_xm.second) {
-      num += eval_corner_flux(g, n_xm.second.value(), Corner::PP);
+      num += eval_xy_corner_flux(g, n_xm.second.value(), Corner::PP);
       denom += 1.;
     }
     if (n_yp.second) {
-      num += eval_corner_flux(g, n_yp.second.value(), Corner::MM);
+      num += eval_xy_corner_flux(g, n_yp.second.value(), Corner::MM);
       denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx({geom_inds[0]-1, geom_inds[1]+1, geom_inds[2]});
     if (om) {
-      num += eval_corner_flux(g, om.value(), Corner::PM);
+      num += eval_xy_corner_flux(g, om.value(), Corner::PM);
       denom += 1.;
     }
   }
 
-  return 0.25*num;
+  return num / denom;
 }
 
 }  // namespace scarabee

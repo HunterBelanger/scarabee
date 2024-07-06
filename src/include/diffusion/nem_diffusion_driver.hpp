@@ -52,8 +52,10 @@ class NEMDiffusionDriver {
   xt::xtensor<double, 4> avg_flux() const;
 
   double power(double x, double y, double z) const;
-  xt::xarray<double> power(xt::xarray<double> x, xt::xarray<double> y,
-                           xt::xarray<double> z) const;
+  xt::xtensor<double, 3> power(const xt::xtensor<double, 1>& x,
+                               const xt::xtensor<double, 1>& y,
+                               const xt::xtensor<double, 1>& z) const;
+  xt::xtensor<double, 3> avg_power() const;
 
  private:
   //----------------------------------------------------------------------------
@@ -149,7 +151,7 @@ class NEMDiffusionDriver {
     double ax0 = 0., ax1 = 0., ax2 = 0., bx1 = 0., bx2 = 0.; // fx
     double ay0 = 0., ay1 = 0., ay2 = 0., by1 = 0., by2 = 0.; // fy
     double az0 = 0., az1 = 0., az2 = 0., bz1 = 0., bz2 = 0.; // fz
-    double c11 = 0., c12 = 0., c21 = 0., c22 = 0.;           // fxy
+    double cxy11 = 0., cxy12 = 0., cxy21 = 0., cxy22 = 0.;   // fxy
     double invs_dx = 0., invs_dy = 0., invs_dz = 0.;
     double zeta_x = 0., zeta_y = 0.;
     double xm = 0., ym = 0., zm = 0.; // Mid point of node
@@ -160,10 +162,9 @@ class NEMDiffusionDriver {
       z -= zm;
 
       return phi_0 + fx(x) + fy(y) + fz(z) + fxy(x, y);
-      //return phi_0 + fx(x) + fy(y) + fz(z);
     }
 
-    double flux_no_cross(double x, double y) const {
+    double flux_xy_no_cross(double x, double y) const {
       x -= xm;
       y -= ym;
 
@@ -189,26 +190,11 @@ class NEMDiffusionDriver {
       const double p2x = p2(x);
       const double p1y = p1(y);
       const double p2y = p2(y);
-      return c11*p1x*p1y + c12*p1x*p2y + c21*p2x*p1y + c22*p2x*p2y;
-
-      /*
-      const double f1x = f1(zeta_x, x);
-      const double f2x = f2(zeta_x, x);
-      const double f1y = f1(zeta_y, y);
-      const double f2y = f2(zeta_y, y);
-      return c11*f1x*f1y + c12*f1x*f2y + c21*f2x*f1y + c22*f2x*f2y;
-      */
+      return cxy11*p1x*p1y + cxy12*p1x*p2y + cxy21*p2x*p1y + cxy22*p2x*p2y;
     }
 
     double p1(double xi) const { return xi; }
     double p2(double xi) const { return 0.5*(3.*xi*xi - 1.); }
-
-    double f1(double z, double u) const { return std::sinh(eps*u) / std::sinh(z); }
-    double f2(double z, double u) const {
-      const double sinhcz = std::sinh(z) / z;
-      return (std::cosh(eps*u) - sinhcz) / (std::cosh(z) - sinhcz);
-    }
-
   };
 
   xt::xtensor<NodeFlux, 2> recon_params;
@@ -217,8 +203,8 @@ class NEMDiffusionDriver {
   void fit_node_recon_params_corners(std::size_t g, std::size_t m);
 
   enum class Corner {PP, PM, MP, MM};
-  double eval_corner_flux(std::size_t g, std::size_t m, Corner c) const;
-  double avg_corner_flux(std::size_t g, std::size_t m, Corner c) const;
+  double eval_xy_corner_flux(std::size_t g, std::size_t m, Corner c) const;
+  double avg_xy_corner_flux(std::size_t g, std::size_t m, Corner c) const;
 };
 
 }  // namespace scarabee

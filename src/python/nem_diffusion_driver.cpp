@@ -50,7 +50,7 @@ void init_NEMDiffusionDriver(py::module& m) {
                              std::size_t /*g*/>(&NEMDiffusionDriver::flux,
                                                 py::const_),
            "Calculates the flux at the desired position and group. The "
-           "lowest value for any coordinates is 0.\n\n"
+           "lowest value for any coordinate is 0.\n\n"
            "Parameters\n"
            "----------\n"
            "x : float\n"
@@ -95,5 +95,53 @@ void init_NEMDiffusionDriver(py::module& m) {
            "Returns\n"
            "-------\n"
            "array of float\n"
-           "      Value of the average flux in each node.\n");
+           "      Value of the average flux in each node.\n")
+           
+      .def("power", py::overload_cast<double /*x*/, double /*y*/, double /*z*/>(&NEMDiffusionDriver::power, py::const_),
+           "Calculates the power density at the desired position. The lowest "
+           "value for any coordinate is 0.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "x : float\n"
+           "    Position along the x axis.\n"
+           "y : float\n"
+           "    Position along the y axis.\n"
+           "z : float\n"
+           "    Position along the z axis.\n\n"
+           "Returns\n"
+           "-------\n"
+           "float\n"
+           "      Value of the power density.\n",
+           py::arg("x"), py::arg("y"), py::arg("z"))
+
+      .def("power",
+           py::overload_cast<const xt::xtensor<double, 1>& /*x*/,
+                             const xt::xtensor<double, 1>& /*y*/,
+                             const xt::xtensor<double, 1>& /*z*/>(
+               &NEMDiffusionDriver::power, py::const_),
+           "Constructs an array storing the power density at all desired "
+           "(x,y,z) points. The first index is x, the second is y, and the "
+           "third is z.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "x : array of float\n"
+           "    Positions along the x axis.\n"
+           "y : array of float\n"
+           "    Positions along the y axis.\n"
+           "z : array of float\n"
+           "    Positions along the z axis.\n\n"
+           "Returns\n"
+           "-------\n"
+           "array of float\n"
+           "      Value of the power density at all (x,y,z).\n",
+           py::arg("x"), py::arg("y"), py::arg("z"))
+
+      .def("avg_power", &NEMDiffusionDriver::avg_power,
+           "Constructs an array storing the value of the average power "
+           "density in each node. The resulting array is indexed as "
+           "(x, y, z).\n\n"
+           "Returns\n"
+           "-------\n"
+           "array of float\n"
+           "      Value of the average power density in each node.\n");
 }

@@ -16,3 +16,7 @@ Diffusion
 .. autoclass:: FDDiffusionDriver
    :members:
    :special-members: __init__
+
+.. autoclass:: NEMDiffusionDriver
+   :members:
+   :special-members: __init__

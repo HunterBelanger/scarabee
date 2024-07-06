@@ -75,6 +75,12 @@ FetchContent_Declare(pybind11
 )
 FetchContent_MakeAvailable(pybind11)
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/get_numpy_includes.py
+                OUTPUT_VARIABLE NUMPY_INCLUDE_DIRS
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+               )
+
 #===============================================================================
 # Get XTENSOR-PYTHON
 message(STATUS "Downloading xtensor-python v0.27.0")
@@ -83,6 +89,7 @@ FetchContent_Declare(xtensor-python
   GIT_TAG        0.27.0
 )
 FetchContent_MakeAvailable(xtensor-python)
+message(STATUS "Numpy includes: ${NUMPY_INCLUDE_DIRS}")
 
 #===============================================================================
 # Get HighFive
@@ -169,6 +176,7 @@ target_compile_features(scarabee PRIVATE cxx_std_20)
 target_link_libraries(scarabee PUBLIC xtl xtensor xtensor-python htl HighFive Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
 target_include_directories(scarabee PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/include>
+  $<BUILD_INTERFACE:${NUMPY_INCLUDE_DIRS}>
 )
 
 # Find OpenMP if desired

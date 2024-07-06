@@ -564,7 +564,7 @@ std::tuple<xt::xarray<double>, xt::xarray<double>,
 FDDiffusionDriver::power() const {
   // If problem isn't solved yet, we error
   if (solved_ == false) {
-    auto mssg = "Cannot rasterize flux. Problem has not been solved.";
+    auto mssg = "Cannot rasterize power. Problem has not been solved.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
