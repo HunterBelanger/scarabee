@@ -92,18 +92,36 @@ FetchContent_MakeAvailable(xtensor-python)
 message(STATUS "Numpy includes: ${NUMPY_INCLUDE_DIRS}")
 
 #===============================================================================
+# Get HDF5
+message(STATUS "Downloading HDF5 v1.14.3")
+find_package(ZLIB)
+if(ZLIB_FOUND)
+  set(HDF5_ENABLE_Z_LIB_SUPPORT ON)
+else()
+  set(HDF5_ENABLE_Z_LIB_SUPPORT OFF)
+endif()
+set(HDF5_EXTERNALLY_CONFIGURED  1)
+set(HDF5_ENABLE_SZIP_SUPPORT  OFF)
+set(HDF5_BUILD_EXAMPLES       OFF)
+set(HDF5_BUILD_TOOLS          OFF)
+set(HDF5_BUILD_UTILS          OFF)
+set(HDF5_BUILD_HL_LIB         OFF)
+set(BUILD_SHARED_LIBS         OFF)
+FetchContent_Declare(hdf5
+  GIT_REPOSITORY https://github.com/HDFGroup/hdf5.git
+  GIT_TAG        hdf5-1_14_3
+)
+FetchContent_MakeAvailable(hdf5)
+
+#===============================================================================
 # Get HighFive
 message(STATUS "Downloading HighFive")
-set(HDF5_USE_STATIC_LIBRARIES ON)
-set(HIGHFIVE_STATIC_HDF5 ON)
 set(HIGHFIVE_EXAMPLES OFF)
 set(HIGHFIVE_BUILD_DOCS OFF)
-set(HIGHFIVE_USE_BOOST OFF)
-set(HIGHFIVE_USE_XTENSOR OFF)
-set(HighFive_FIND_QUIETLY ON)
+set(HIGHFIVE_FIND_HDF5 OFF)
 FetchContent_Declare(HighFive
   GIT_REPOSITORY https://github.com/BlueBrain/HighFive.git
-  GIT_TAG        v2.9.0
+  GIT_TAG        master
 )
 FetchContent_MakeAvailable(HighFive)
 
@@ -173,7 +191,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
 
 target_include_directories(_scarabee PRIVATE include)
 target_compile_features(_scarabee PRIVATE cxx_std_20)
-target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-python htl HighFive Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
+target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-python htl HighFive hdf5-static Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
 target_include_directories(_scarabee PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/scarabee/_scarabee/include>
   $<BUILD_INTERFACE:${NUMPY_INCLUDE_DIRS}>

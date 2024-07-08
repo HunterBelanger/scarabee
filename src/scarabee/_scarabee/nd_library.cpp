@@ -35,13 +35,13 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
   }
 
   // Read in data
-  grp.getDataSet("absorption").read<double>(absorption->data());
-  grp.getDataSet("scatter").read<double>(scatter->data());
-  grp.getDataSet("p1-scatter").read<double>(p1_scatter->data());
+  grp.getDataSet("absorption").read_raw<double>(absorption->data());
+  grp.getDataSet("scatter").read_raw<double>(scatter->data());
+  grp.getDataSet("p1-scatter").read_raw<double>(p1_scatter->data());
   if (this->fissile) {
-    grp.getDataSet("fission").read<double>(fission->data());
-    grp.getDataSet("nu").read<double>(nu->data());
-    grp.getDataSet("chi").read<double>(chi->data());
+    grp.getDataSet("fission").read_raw<double>(fission->data());
+    grp.getDataSet("nu").read_raw<double>(nu->data());
+    grp.getDataSet("chi").read_raw<double>(chi->data());
   }
 }
 
