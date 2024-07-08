@@ -34,7 +34,7 @@ extern void init_DiffusionGeometry(py::module& m);
 extern void init_FDDiffusionDriver(py::module& m);
 extern void init_NEMDiffusionDriver(py::module& m);
 
-PYBIND11_MODULE(scarabee, m) {
+PYBIND11_MODULE(_scarabee, m) {
   xt::import_numpy();
 
   init_Logging(m);

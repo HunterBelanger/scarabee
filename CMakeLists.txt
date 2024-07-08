@@ -118,64 +118,64 @@ FetchContent_MakeAvailable(ImApp)
 
 #===============================================================================
 # Make python library
-pybind11_add_module(scarabee  src/logging.cpp
-                              src/gauss_kronrod.cpp
-                              src/chebyshev.cpp
-                              src/math.cpp
-                              src/cross_section.cpp
-                              src/diffusion_cross_section.cpp
-                              src/material.cpp
-                              src/nd_library.cpp
-                              src/cylindrical_cell.cpp
-                              src/cylindrical_flux_solver.cpp
-                              src/surface.cpp
-                              src/flat_source_region.cpp
-                              src/cell.cpp
-                              src/empty_cell.cpp
-                              src/simple_pin_cell.cpp
-                              src/pin_cell.cpp
-                              src/cartesian_2d.cpp
-                              src/track.cpp
-                              src/legendre.cpp
-                              src/yamamoto_tabuchi.cpp
-                              src/moc_driver.cpp
-                              src/moc_plotter.cpp
-                              src/criticality_spectrum.cpp
-                              src/diffusion_geometry.cpp
-                              src/fd_diffusion_driver.cpp
-                              src/nem_diffusion_driver.cpp
+pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
+                              src/scarabee/_scarabee/gauss_kronrod.cpp
+                              src/scarabee/_scarabee/chebyshev.cpp
+                              src/scarabee/_scarabee/math.cpp
+                              src/scarabee/_scarabee/cross_section.cpp
+                              src/scarabee/_scarabee/diffusion_cross_section.cpp
+                              src/scarabee/_scarabee/material.cpp
+                              src/scarabee/_scarabee/nd_library.cpp
+                              src/scarabee/_scarabee/cylindrical_cell.cpp
+                              src/scarabee/_scarabee/cylindrical_flux_solver.cpp
+                              src/scarabee/_scarabee/surface.cpp
+                              src/scarabee/_scarabee/flat_source_region.cpp
+                              src/scarabee/_scarabee/cell.cpp
+                              src/scarabee/_scarabee/empty_cell.cpp
+                              src/scarabee/_scarabee/simple_pin_cell.cpp
+                              src/scarabee/_scarabee/pin_cell.cpp
+                              src/scarabee/_scarabee/cartesian_2d.cpp
+                              src/scarabee/_scarabee/track.cpp
+                              src/scarabee/_scarabee/legendre.cpp
+                              src/scarabee/_scarabee/yamamoto_tabuchi.cpp
+                              src/scarabee/_scarabee/moc_driver.cpp
+                              src/scarabee/_scarabee/moc_plotter.cpp
+                              src/scarabee/_scarabee/criticality_spectrum.cpp
+                              src/scarabee/_scarabee/diffusion_geometry.cpp
+                              src/scarabee/_scarabee/fd_diffusion_driver.cpp
+                              src/scarabee/_scarabee/nem_diffusion_driver.cpp
                               #=================================================
-                              src/python/scarabee.cpp
-                              src/python/vector.cpp
-                              src/python/direction.cpp
-                              src/python/logging.cpp
-                              src/python/cross_section.cpp
-                              src/python/diffusion_cross_section.cpp
-                              src/python/material.cpp
-                              src/python/nd_library.cpp
-                              src/python/cylindrical_cell.cpp
-                              src/python/cylindrical_flux_solver.cpp
-                              src/python/polar_quadrature.cpp
-                              src/python/boundary_condition.cpp
-                              src/python/simulation_mode.cpp
-                              src/python/track.cpp 
-                              src/python/cell.cpp
-                              src/python/empty_cell.cpp
-                              src/python/simple_pin_cell.cpp
-                              src/python/pin_cell.cpp
-                              src/python/cartesian_2d.cpp
-                              src/python/moc_driver.cpp
-                              src/python/criticality_spectrum.cpp
-                              src/python/diffusion_geometry.cpp
-                              src/python/fd_diffusion_driver.cpp
-                              src/python/nem_diffusion_driver.cpp
+                              src/scarabee/_scarabee/python/scarabee.cpp
+                              src/scarabee/_scarabee/python/vector.cpp
+                              src/scarabee/_scarabee/python/direction.cpp
+                              src/scarabee/_scarabee/python/logging.cpp
+                              src/scarabee/_scarabee/python/cross_section.cpp
+                              src/scarabee/_scarabee/python/diffusion_cross_section.cpp
+                              src/scarabee/_scarabee/python/material.cpp
+                              src/scarabee/_scarabee/python/nd_library.cpp
+                              src/scarabee/_scarabee/python/cylindrical_cell.cpp
+                              src/scarabee/_scarabee/python/cylindrical_flux_solver.cpp
+                              src/scarabee/_scarabee/python/polar_quadrature.cpp
+                              src/scarabee/_scarabee/python/boundary_condition.cpp
+                              src/scarabee/_scarabee/python/simulation_mode.cpp
+                              src/scarabee/_scarabee/python/track.cpp 
+                              src/scarabee/_scarabee/python/cell.cpp
+                              src/scarabee/_scarabee/python/empty_cell.cpp
+                              src/scarabee/_scarabee/python/simple_pin_cell.cpp
+                              src/scarabee/_scarabee/python/pin_cell.cpp
+                              src/scarabee/_scarabee/python/cartesian_2d.cpp
+                              src/scarabee/_scarabee/python/moc_driver.cpp
+                              src/scarabee/_scarabee/python/criticality_spectrum.cpp
+                              src/scarabee/_scarabee/python/diffusion_geometry.cpp
+                              src/scarabee/_scarabee/python/fd_diffusion_driver.cpp
+                              src/scarabee/_scarabee/python/nem_diffusion_driver.cpp
                             )
 
-target_include_directories(scarabee PRIVATE include)
-target_compile_features(scarabee PRIVATE cxx_std_20)
-target_link_libraries(scarabee PUBLIC xtl xtensor xtensor-python htl HighFive Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
-target_include_directories(scarabee PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/include>
+target_include_directories(_scarabee PRIVATE include)
+target_compile_features(_scarabee PRIVATE cxx_std_20)
+target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-python htl HighFive Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
+target_include_directories(_scarabee PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/scarabee/_scarabee/include>
   $<BUILD_INTERFACE:${NUMPY_INCLUDE_DIRS}>
 )
 
@@ -184,10 +184,10 @@ if(SCARABEE_USE_OMP)
   find_package(OpenMP)
   if(OpenMP_CXX_FOUND)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # Compile options for Windows
-      target_compile_options(scarabee PRIVATE /openmp:llvm) 
+      target_compile_options(_scarabee PRIVATE /openmp:llvm) 
     else()
-      target_link_libraries(scarabee PUBLIC OpenMP::OpenMP_CXX)
+      target_link_libraries(_scarabee PUBLIC OpenMP::OpenMP_CXX)
     endif()
-    target_compile_definitions(scarabee PUBLIC SCARABEE_USE_OMP)
+    target_compile_definitions(_scarabee PUBLIC SCARABEE_USE_OMP)
   endif()
 endif()

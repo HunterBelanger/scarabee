@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from setuptools import Extension, setup
+from setuptools import Extension, setup, find_packages
 from setuptools.command.build_ext import build_ext
 
 import numpy as np
@@ -136,9 +136,11 @@ setup(
     author_email="hunter.belanger@gmail.com",
     description="A lattice physics code for LWR analysis.",
     long_description="",
-    ext_modules=[CMakeExtension("cmake_example")],
+    ext_modules=[CMakeExtension("_scarabee")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
     python_requires=">=3.7",
+    package_dir = {"": "src"},
+    packages=find_packages(where='src')
 )
