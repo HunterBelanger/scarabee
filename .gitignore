@@ -6,3 +6,4 @@ compile_commands.json
 scarabee.egg-info
 data/*.h5
 docs/_build
+_scarabee.*
