@@ -973,7 +973,6 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
       const double flx = flux(i, g);
       const double coeff = invs_sum_fluxV * flx * V;
       Ea(g) += coeff * mat->Ea(g);
-      Ea(g) += coeff * mat->Ea(g);
       Ef(g) += coeff * mat->Ef(g);
       vEf(g) += coeff * mat->vEf(g);
 

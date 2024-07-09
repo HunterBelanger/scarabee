@@ -167,7 +167,6 @@ std::shared_ptr<CrossSection> CrossSection::condense(
     // First we do all of the 1D cross sections
     for (std::size_t g = g_min; g <= g_max; g++) {
       Ea(G) += invs_flux_G * flux[g] * this->Ea(g);
-      Ea(G) += invs_flux_G * flux[g] * this->Ea(g);
       Ef(G) += invs_flux_G * flux[g] * this->Ef(g);
       vEf(G) += invs_flux_G * flux[g] * this->vEf(g);
       chi(G) += this->chi(g);  // chi doesn't need to be weighted

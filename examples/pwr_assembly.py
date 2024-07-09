@@ -4,8 +4,20 @@ np.set_printoptions(threshold=np.inf)
 np.set_printoptions(linewidth=np.inf)
 np.set_printoptions(4)
 
-ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/scarabee/endf8_shem281.h5')
+#ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/scarabee/endf8_shem281.h5')
 #ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/scarabee/endf8_xmas172.h5')
+ndl = NDLibrary('C:\\Users\\hunte\\Documents\\nuclear_data\\endf8_shem281.h5')
+
+cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
+             [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],
+             [56, 58], [59, 60], [61, 64], [65, 67], [68, 70], [71, 73], [74, 76],
+             [77, 80], [81, 82], [83, 84], [85, 88], [89, 92], [93, 128], [129, 148],
+             [149, 195], [196, 249], [250, 264], [265, 280]]
+
+cond_spec = [[0, 22], [23, 58], [59, 195], [196, 225],
+             [226, 229], [230, 233], [234, 236], [237, 240],
+             [241, 244], [245, 246], [247, 253], [254, 256],
+             [257, 262], [263, 268], [269, 272], [273, 280]]
 
 UO2comp = MaterialComposition()
 UO2comp.fractions = Fraction.Atoms
@@ -29,10 +41,10 @@ Watercomp.add_nuclide("H1_H2O", 6.6630E-2)
 Watercomp.add_nuclide("O16",    3.3315E-2)
 Water = Material(Watercomp, 293.6, ndl)
 
-fp = FuelPin(fuel=UO2, fuel_radius=0.4095, clad=Zirc, clad_width=(0.475-0.3095))
+fp = FuelPin(fuel=UO2, fuel_radius=0.4095, clad=Zirc, clad_width=(0.475-0.4095))
 gt = GuideTube(inner_radius=0.57, outer_radius=0.61, clad=Zirc)
 
-asmbly = PWRAssembly(pitch=1.26, gap=0., moderator=Water, shape=(17, 17))
+asmbly = PWRAssembly(pitch=1.26, gap=0., moderator=Water, shape=(17, 17), ndl=ndl)
 asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, fp, fp, fp,
@@ -50,17 +62,26 @@ asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, f
                fp, fp, fp, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp]
+#asmbly.pins = [fp]
 
-asmbly.get_fuel_dancoff_corrections()
-asmbly.get_clad_dancoff_corrections()
+asmbly.condensation_scheme = cond_spec
 
-tmp = np.array(asmbly.fuel_dancoff_corrections)
-tmp = tmp.reshape((17, 17))
-print(tmp)
+asmbly.solve()
+
 print()
+c = 0
+for i in range(asmbly.shape[0]):
+  for j in range(asmbly.shape[1]):
+    if asmbly.pin_1d_fluxes[c] is not None:
+      print("{:.5f}  ".format(asmbly.pin_1d_fluxes[c].keff), end='')
+    else:
+      print("         ", end='')
+    c += 1
+  print()
 
-#tmp = np.array(asmbly.clad_dancoff_corrections)
-#tmp = tmp.reshape((17, 17))
-#print(tmp)
-#print()
+flux, x, y = asmbly.moc.rasterize_flux(250, 250)
+for g in range(asmbly.moc.ngroups):
+  plt.title("Flux in group {}".format(g+1))
+  plt.pcolormesh(x, y, flux[g,:,:], cmap='jet')
+  plt.show()
 
