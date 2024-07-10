@@ -1,7 +1,7 @@
 from _scarabee import *
 import numpy as np
 from typing import Tuple, List, Optional
-from enum import Enum
+from copy import copy
 
 class FuelPin:
     def __init__(self, fuel: Material, fuel_radius: float, clad: Material, clad_width: float, gap: Optional[Material] = None, gap_width: Optional[float] = None):
@@ -265,7 +265,7 @@ class PWRAssembly:
         self.iso_dancoff = 20.0
 
         # MOC parameters for assembly calculation
-        self.dt = 0.05
+        self.dt = 0.03
         self.na = 32
         self.keff_tolerance = 1.E-5
         self.flux_tolerance = 1.E-5
@@ -274,22 +274,18 @@ class PWRAssembly:
         self.moc = None
 
     def solve(self):
+        # First, need a copy of pins, as we will add condensed cross sections
+        # and other info to them.
+        tmp = []
+        for i in range(len(self.pins)):
+            tmp.append(copy(self.pins[i]))
+        self.pins = tmp
+
         self._get_fuel_dancoff_corrections()
         self._get_clad_dancoff_corrections()
         self._pin_cell_calc()
         self._condense_xs()
         self._moc()
-
-        #print()
-        #print()
-        #print(self.pin_1d_cells[0].radius(self.pin_1d_cells[0].nregions-1))
-        #homog_xs = self.pin_1d_fluxes[0].homogenize()
-        #rad = np.sqrt(self.pitch*self.pitch/np.pi)
-        #print(rad)
-        #homo_cell = CylindricalCell([0.25*rad, 0.5*rad, 0.75*rad, rad], [homog_xs, homog_xs, homog_xs, homog_xs])
-        #homo_cell.solve()
-        #homo_flux = CylindricalFluxSolver(homo_cell)
-        #homo_flux.solve()
 
     def _get_fuel_dancoff_corrections(self):
         # We first make the system for an isolated fuel pin.
