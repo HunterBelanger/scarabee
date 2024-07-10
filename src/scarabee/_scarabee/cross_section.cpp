@@ -160,15 +160,16 @@ std::shared_ptr<CrossSection> CrossSection::condense(
     const std::size_t g_max = groups[G].second;
 
     // First, we get the sum of all flux values in the macro group
-    const double flux_G =
-        std::accumulate(flux.begin() + g_min, flux.begin() + g_max, 0.);
+    double flux_G = 0.;
+    for (std::size_t g = g_min; g <= g_max; g++) flux_G += flux[g];
     const double invs_flux_G = 1. / flux_G;
 
     // First we do all of the 1D cross sections
     for (std::size_t g = g_min; g <= g_max; g++) {
-      Ea(G) += invs_flux_G * flux[g] * this->Ea(g);
-      Ef(G) += invs_flux_G * flux[g] * this->Ef(g);
-      vEf(G) += invs_flux_G * flux[g] * this->vEf(g);
+      const double fluxg_fluxG = flux[g] * invs_flux_G;
+      Ea(G) += fluxg_fluxG * this->Ea(g);
+      Ef(G) += fluxg_fluxG * this->Ef(g);
+      vEf(G) += fluxg_fluxG * this->vEf(g);
       chi(G) += this->chi(g);  // chi doesn't need to be weighted
     }
 
@@ -176,12 +177,13 @@ std::shared_ptr<CrossSection> CrossSection::condense(
     for (std::size_t GG = 0; GG < NGOUT; GG++) {  // Outgoing macro groups
       const std::size_t gg_min = groups[GG].first;
       const std::size_t gg_max = groups[GG].second;
-      for (std::size_t g = g_min; g <= g_max; g++) {  // Incoming micro groups
-        for (std::size_t gg = gg_min; gg <= gg_max;
-             gg++) {  // Outgoing micro groups
-          Es(G, GG) += invs_flux_G * this->Es(g, gg);
 
-          if (has_P1) Es1(G, GG) += invs_flux_G * this->Es1(g, gg);
+      for (std::size_t g = g_min; g <= g_max; g++) {  // Incoming micro groups
+        const double fluxg_fluxG = flux[g] * invs_flux_G;
+        for (std::size_t gg = gg_min; gg <= gg_max; gg++) {  // Outgoing micro groups
+          Es(G, GG) += fluxg_fluxG * this->Es(g, gg);
+
+          if (has_P1) Es1(G, GG) += fluxg_fluxG * this->Es1(g, gg);
         }
       }
     }
