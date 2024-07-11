@@ -1,4 +1,4 @@
-#ifndef SCARABEE_GUASSKRONROD_H
+#ifndef SCARABEE_GAUSSKRONROD_H
 #define SCARABEE_GAUSSKRONROD_H
 
 #include <algorithm>

@@ -197,15 +197,33 @@ target_include_directories(_scarabee PUBLIC
   $<BUILD_INTERFACE:${NUMPY_INCLUDE_DIRS}>
 )
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # Comile options for Windows
+  target_compile_options(_scarabee PRIVATE /W3)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU") # Compile options for GCC
+  target_compile_options(_scarabee PRIVATE -W -Wall -Wextra -Wconversion -Wpedantic)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # Compile options for Clang
+  target_compile_options(_scarabee PRIVATE -W -Wall -Wextra -Wconversion -Wpedantic)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Intel") # Compile options for Intel
+  target_compile_options(_scarabee PRIVATE -W -Wall -Wextra -Wconversion -Wpedantic)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # Comile options for Windows
+    target_compile_options(_scarabee PRIVATE /O2)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU") # Compile options for GCC
+    target_compile_options(_scarabee PRIVATE -O3)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # Compile options for Clang
+    target_compile_options(_scarabee PRIVATE -O3)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Intel") # Compile options for Intel
+    target_compile_options(_scarabee PRIVATE -O3)
+  endif()
+endif()
+
 # Find OpenMP if desired
 if(SCARABEE_USE_OMP)
   find_package(OpenMP)
   if(OpenMP_CXX_FOUND)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # Compile options for Windows
-      target_compile_options(_scarabee PRIVATE /openmp:llvm) 
-    else()
-      target_link_libraries(_scarabee PUBLIC OpenMP::OpenMP_CXX)
-    endif()
+    target_link_libraries(_scarabee PUBLIC OpenMP::OpenMP_CXX)
     target_compile_definitions(_scarabee PUBLIC SCARABEE_USE_OMP)
   endif()
 endif()

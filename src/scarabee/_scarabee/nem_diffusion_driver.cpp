@@ -706,13 +706,15 @@ void NEMDiffusionDriver::solve() {
   spdlog::info("Fitting flux reconstruction parameters");
   recon_params.resize({NG_, NM_});
 #pragma omp parallel for
-  for (std::size_t m = 0; m < NM_; m++) {
+  for (int im = 0; im < static_cast<int>(NM_); im++) {
+    std::size_t m = static_cast<std::size_t>(im);
     for (std::size_t g = 0; g < NG_; g++) {
       recon_params(g, m) = fit_node_recon_params(g, m);
     }
   }
 #pragma omp parallel for
-  for (std::size_t m = 0; m < NM_; m++) {
+  for (int im = 0; im < static_cast<int>(NM_); im++)  {
+    std::size_t m = static_cast<std::size_t>(im);
     for (std::size_t g = 0; g < NG_; g++) {
       fit_node_recon_params_corners(g, m);
     }
@@ -791,7 +793,8 @@ xt::xtensor<double, 4> NEMDiffusionDriver::flux(
 
   for (std::size_t g = 0; g < ngroups(); g++) {
 #pragma omp parallel for
-    for (std::size_t i = 0; i < x.size(); i++) {
+    for (int ii = 0; ii < static_cast<int>(x.size()); ii++) {
+      std::size_t i = static_cast<std::size_t>(ii);
       for (std::size_t j = 0; j < y.size(); j++) {
         for (std::size_t k = 0; k < z.size(); k++) {
           // Get geometry index
@@ -922,7 +925,8 @@ xt::xtensor<double, 3> NEMDiffusionDriver::power(
   pwr_out.fill(0.);
 
 #pragma omp parallel for
-  for (std::size_t i = 0; i < x.size(); i++) {
+  for (int ii = 0; ii < static_cast<int>(x.size()); ii++) {
+    std::size_t i = static_cast<std::size_t>(ii);
     for (std::size_t j = 0; j < y.size(); j++) {
       for (std::size_t k = 0; k < z.size(); k++) {
         // Get geometry index

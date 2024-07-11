@@ -281,7 +281,8 @@ void MOCDriver::solve() {
 void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
                       const xt::xtensor<double, 2>& src) {
 #pragma omp parallel for
-  for (std::size_t g = 0; g < ngroups_; g++) {
+  for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
+    std::size_t g = static_cast<std::size_t>(ig);
     for (auto& tracks : tracks_) {
       for (std::size_t t = 0; t < tracks.size(); t++) {
         auto& track = tracks[t];
