@@ -38,7 +38,7 @@ Water = Material(Watercomp, 293.6, ndl)
 fp = FuelPin(fuel=UO2, fuel_radius=0.4095, clad=Zirc, clad_width=(0.475-0.4095))
 gt = GuideTube(inner_radius=0.57, outer_radius=0.61, clad=Zirc)
 
-asmbly = PWRAssembly(pitch=1.26, gap=0., moderator=Water, shape=(17, 17), ndl=ndl)
+asmbly = PWRAssembly(pitch=1.26, moderator=Water, shape=(17, 17), ndl=ndl)
 asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, fp, fp, fp,
@@ -66,4 +66,3 @@ for g in range(asmbly.moc.ngroups):
   plt.title("Flux in group {}".format(g+1))
   plt.pcolormesh(x, y, flux[g,:,:], cmap='jet')
   plt.show()
-
