@@ -9,8 +9,8 @@ namespace scarabee {
 Cell::Cell(double dx, double dy)
     : fsrs_(),
       x_min_(nullptr),
-      x_max_(nullptr),
       y_min_(nullptr),
+      x_max_(nullptr),
       y_max_(nullptr) {
   // Check delta's
   if (dx <= 0.) {

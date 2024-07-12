@@ -5,6 +5,7 @@
 #include <xtensor/xview.hpp>
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 namespace scarabee {
@@ -56,6 +57,10 @@ class DiffusionCrossSection {
   double Es(std::size_t gin) const {
     return xt::sum(xt::view(Es_, gin, xt::all()))();
   }
+
+  std::shared_ptr<DiffusionCrossSection> condense(
+      const std::vector<std::pair<std::size_t, std::size_t>>& groups,
+      const xt::xtensor<double, 1>& flux) const;
 
  private:
   xt::xtensor<double, 2> Es_;   // Scattering matrix

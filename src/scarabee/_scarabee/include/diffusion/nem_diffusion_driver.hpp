@@ -16,7 +16,7 @@
 
 namespace scarabee {
 
-inline double f0(double xi) { return 1.; }
+inline double f0(double /*xi*/) { return 1.; }
 
 inline double f1(double xi) { return xi; }
 

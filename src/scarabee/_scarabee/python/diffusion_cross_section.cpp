@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <xtensor-python/pytensor.hpp>
 
 #include <diffusion_cross_section.hpp>
@@ -144,5 +145,23 @@ void init_DiffusionCrossSection(py::module& m) {
            "      Incoming energy group.\n"
            "gout : int\n"
            "       Outgoing energy group.",
-           py::arg("gin"), py::arg("gout"));
+           py::arg("gin"), py::arg("gout"))
+
+      .def("condense", &DiffusionCrossSection::condense,
+           "Condenses the cross sections to a new energy group structure. The "
+           "condensation group structure is provided as a list of pairs "
+           "(2D tuples), indicating the lower and upper bounds (inclusive) of "
+           "a macro energy group. \n\n"
+           "Parameters\n"
+           "----------\n"
+           "groups : list of 2D tuples of ints.\n"
+           "         The scheme for condensing energy groups.\n"
+           "flux : ndarray of floats.\n"
+           "       The weighting flux spectrum of the original group "
+           "structure.\n\n"
+           "Returns\n"
+           "-------\n"
+           "DiffusionsCrossSection\n"
+           "                      Condensed set of diffusion cross sections.\n",
+           py::arg("groups"), py::arg("flux"));
 }

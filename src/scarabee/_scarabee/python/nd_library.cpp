@@ -102,10 +102,6 @@ void init_NDLibrary(py::module& m) {
           "       Name of the nuclide to be treated.\n"
           "temp : float\n"
           "       Temperature of the material (in kelvin).\n"
-          "a1 : float\n"
-          "     :math:`\\alpha_1`.\n"
-          "a2 : float\n"
-          "     :math:`\\alpha_2`.\n"
           "b1 : float\n"
           "     :math:`\\beta_1`.\n"
           "b2 : float\n"
@@ -114,8 +110,8 @@ void init_NDLibrary(py::module& m) {
           "      Background cross section for first term (:math:`\\sigma_1`).\n"
           "xs2 : float\n"
           "      Background cross section for second term (:math:`\\sigma_2`).",
-          py::arg("name"), py::arg("temp"), py::arg("a1"), py::arg("a2"),
-          py::arg("b1"), py::arg("b2"), py::arg("xs1"), py::arg("xs2"))
+          py::arg("name"), py::arg("temp"), py::arg("b1"), py::arg("b2"),
+          py::arg("xs1"), py::arg("xs2"))
 
       .def_property_readonly("library", &NDLibrary::library,
                              "Name of the nuclear data library (if provided).")

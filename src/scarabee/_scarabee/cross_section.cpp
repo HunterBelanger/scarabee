@@ -99,7 +99,7 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Et,
 
 std::shared_ptr<CrossSection> CrossSection::condense(
     const std::vector<std::pair<std::size_t, std::size_t>>& groups,
-    const std::vector<double>& flux) const {
+    const xt::xtensor<double, 1>& flux) const {
   const std::size_t NGOUT = groups.size();
   const std::size_t NG = ngroups();
 
@@ -161,12 +161,12 @@ std::shared_ptr<CrossSection> CrossSection::condense(
 
     // First, we get the sum of all flux values in the macro group
     double flux_G = 0.;
-    for (std::size_t g = g_min; g <= g_max; g++) flux_G += flux[g];
+    for (std::size_t g = g_min; g <= g_max; g++) flux_G += flux(g);
     const double invs_flux_G = 1. / flux_G;
 
     // First we do all of the 1D cross sections
     for (std::size_t g = g_min; g <= g_max; g++) {
-      const double fluxg_fluxG = flux[g] * invs_flux_G;
+      const double fluxg_fluxG = flux(g) * invs_flux_G;
       Ea(G) += fluxg_fluxG * this->Ea(g);
       Ef(G) += fluxg_fluxG * this->Ef(g);
       vEf(G) += fluxg_fluxG * this->vEf(g);
@@ -179,8 +179,9 @@ std::shared_ptr<CrossSection> CrossSection::condense(
       const std::size_t gg_max = groups[GG].second;
 
       for (std::size_t g = g_min; g <= g_max; g++) {  // Incoming micro groups
-        const double fluxg_fluxG = flux[g] * invs_flux_G;
-        for (std::size_t gg = gg_min; gg <= gg_max; gg++) {  // Outgoing micro groups
+        const double fluxg_fluxG = flux(g) * invs_flux_G;
+        for (std::size_t gg = gg_min; gg <= gg_max;
+             gg++) {  // Outgoing micro groups
           Es(G, GG) += fluxg_fluxG * this->Es(g, gg);
 
           if (has_P1) Es1(G, GG) += fluxg_fluxG * this->Es1(g, gg);

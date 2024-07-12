@@ -160,4 +160,95 @@ void DiffusionCrossSection::check_xs() {
   }
 }
 
+std::shared_ptr<DiffusionCrossSection> DiffusionCrossSection::condense(
+    const std::vector<std::pair<std::size_t, std::size_t>>& groups,
+    const xt::xtensor<double, 1>& flux) const {
+  const std::size_t NGOUT = groups.size();
+  const std::size_t NG = ngroups();
+
+  // First, we need to check the condensation scheme
+  if (groups.size() == 0) {
+    auto mssg = "Empty energy condensation scheme provided.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (groups.front().first != 0) {
+    auto mssg = "The energy condensation scheme does not start with 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (groups.back().second != NG - 1) {
+    std::stringstream mssg;
+    mssg << "The energy condensation scheme does not end with " << NG - 1
+         << ".";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  for (std::size_t i = 0; i < NGOUT - 1; i++) {
+    if (groups[i].second + 1 != groups[i + 1].first) {
+      std::stringstream mssg;
+      mssg << "Condensed groups " << i << " and " << i + 1
+           << " are not continuous.";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+  }
+
+  if (flux.size() != NG) {
+    auto mssg =
+        "The number of provided flux values diagrees with the number of energy "
+        "groups.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Everything checks out, we can start the condensation.
+
+  xt::xtensor<double, 1> D = xt::zeros<double>({NGOUT});
+  xt::xtensor<double, 1> Ea = xt::zeros<double>({NGOUT});
+  xt::xtensor<double, 2> Es = xt::zeros<double>({NGOUT, NGOUT});
+  xt::xtensor<double, 1> Ef = xt::zeros<double>({NGOUT});
+  xt::xtensor<double, 1> vEf = xt::zeros<double>({NGOUT});
+  xt::xtensor<double, 1> chi = xt::zeros<double>({NGOUT});
+
+  for (std::size_t G = 0; G < NGOUT; G++) {  // Incoming macro groups
+    const std::size_t g_min = groups[G].first;
+    const std::size_t g_max = groups[G].second;
+
+    // First, we get the sum of all flux values in the macro group
+    double flux_G = 0.;
+    for (std::size_t g = g_min; g <= g_max; g++) flux_G += flux(g);
+    const double invs_flux_G = 1. / flux_G;
+
+    // First we do all of the 1D cross sections
+    for (std::size_t g = g_min; g <= g_max; g++) {
+      const double fluxg_fluxG = flux(g) * invs_flux_G;
+      D(G) += fluxg_fluxG * this->D(g);
+      Ea(G) += fluxg_fluxG * this->Ea(g);
+      Ef(G) += fluxg_fluxG * this->Ef(g);
+      vEf(G) += fluxg_fluxG * this->vEf(g);
+      chi(G) += this->chi(g);  // chi doesn't need to be weighted
+    }
+
+    // Next, we do all 2D cross sections
+    for (std::size_t GG = 0; GG < NGOUT; GG++) {  // Outgoing macro groups
+      const std::size_t gg_min = groups[GG].first;
+      const std::size_t gg_max = groups[GG].second;
+
+      for (std::size_t g = g_min; g <= g_max; g++) {  // Incoming micro groups
+        const double fluxg_fluxG = flux(g) * invs_flux_G;
+        for (std::size_t gg = gg_min; gg <= gg_max;
+             gg++) {  // Outgoing micro groups
+          Es(G, GG) += fluxg_fluxG * this->Es(g, gg);
+        }
+      }
+    }
+  }
+
+  return std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi);
+}
+
 }  // namespace scarabee

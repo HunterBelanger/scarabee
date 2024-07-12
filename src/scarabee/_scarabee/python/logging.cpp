@@ -1,9 +1,39 @@
 #include <pybind11/pybind11.h>
 #include <utils/logging.hpp>
 
+#include <string>
+
 namespace py = pybind11;
 
 using namespace scarabee;
+
+void scarabee_log(LogLevel lvl, const std::string& mssg) {
+  switch (lvl) {
+    case LogLevel::critical:
+      spdlog::critical(mssg);
+      break;
+
+    case LogLevel::debug:
+      spdlog::debug(mssg);
+      break;
+
+    case LogLevel::err:
+      spdlog::error(mssg);
+      break;
+
+    case LogLevel::info:
+      spdlog::info(mssg);
+      break;
+
+    case LogLevel::warn:
+      spdlog::warn(mssg);
+      break;
+
+    default:
+      spdlog::info(mssg);
+      break;
+  }
+}
 
 void init_Logging(py::module& m) {
   py::enum_<LogLevel>(m, "LogLevel")
@@ -34,4 +64,14 @@ fname : str
         Name of the output file.
     )",
         py::arg("fname"));
+
+  m.def("scarabee_log", &scarabee_log,
+        "Logs program information.\n\n"
+        "Parameters\n"
+        "----------\n"
+        "level : LogLevel\n"
+        "        Type of information to be logged.\n"
+        "mssg : str\n"
+        "       Message to be logged.\n",
+        py::arg("level"), py::arg("mssg"));
 }

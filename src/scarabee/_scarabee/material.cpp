@@ -328,8 +328,7 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
     const double bg_xs_1 = (potential_xs() - macro_pot_xs + a1 * Ee) / Ni;
     const double bg_xs_2 = (potential_xs() - macro_pot_xs + a2 * Ee) / Ni;
 
-    auto xsi = ndl->two_term_xs(namei, temperature(), a1, a2, b1, b2, bg_xs_1,
-                                bg_xs_2);
+    auto xsi = ndl->two_term_xs(namei, temperature(), b1, b2, bg_xs_1, bg_xs_2);
     *xsi *= Ni;
 
     if (xsout) {

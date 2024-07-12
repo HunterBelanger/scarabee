@@ -461,7 +461,7 @@ std::set<std::size_t> Cartesian2D::get_all_fsr_ids() const {
 
 void Cartesian2D::fill_fsrs(
     std::map<std::size_t, const FlatSourceRegion*>& fsrs) const {
-  for (const auto t : tiles_) {
+  for (const auto& t : tiles_) {
     if (t.c2d) {
       t.c2d->fill_fsrs(fsrs);
     } else if (t.cell) {

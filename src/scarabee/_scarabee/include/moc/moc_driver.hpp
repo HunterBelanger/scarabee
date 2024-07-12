@@ -8,6 +8,8 @@
 #include <moc/track.hpp>
 #include <moc/quadrature/polar_quadrature.hpp>
 
+#include <xtensor/xtensor.hpp>
+
 #include <map>
 #include <memory>
 #include <vector>
@@ -51,9 +53,11 @@ class MOCDriver {
   std::shared_ptr<CrossSection> homogenize(
       const std::vector<std::size_t>& regions) const;
 
-  std::vector<double> homogenize_flux_spectrum() const;
-  std::vector<double> homogenize_flux_spectrum(
+  xt::xtensor<double, 1> homogenize_flux_spectrum() const;
+  xt::xtensor<double, 1> homogenize_flux_spectrum(
       const std::vector<std::size_t>& regions) const;
+
+  void apply_criticality_spectrum(const xt::xtensor<double, 1>& flux);
 
   std::size_t size() const;
   std::size_t nfsr() const { return this->size(); }

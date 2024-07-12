@@ -377,7 +377,6 @@ void MOCDriver::fill_source(xt::xtensor<double, 2>& scat_src,
       const auto& mat = *fsrs_[i]->xs();
       const double chi_g = mat.chi(g);
       double Qout = 0.;
-      double fiss_rate_i = 0;
 
       for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
         // Sccatter source
@@ -808,7 +807,7 @@ std::size_t MOCDriver::get_fsr_indx(const UniqueFSR& fsr) const {
 
 void MOCDriver::set_extern_src(const Vector& r, const Direction& u,
                                std::size_t g, double src) {
-  std::size_t i;
+  std::size_t i = 0;
 
   try {
     i = this->get_fsr_indx(this->get_fsr(r, u));
@@ -833,7 +832,7 @@ void MOCDriver::set_extern_src(const Vector& r, const Direction& u,
 
 double MOCDriver::extern_src(const Vector& r, const Direction& u,
                              std::size_t g) const {
-  std::size_t i;
+  std::size_t i = 0;
 
   try {
     i = this->get_fsr_indx(this->get_fsr(r, u));
@@ -999,7 +998,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
   return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
 }
 
-std::vector<double> MOCDriver::homogenize_flux_spectrum() const {
+xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum() const {
   const std::size_t NR = this->nfsr();
   std::vector<std::size_t> regions(NR, 0);
   for (std::size_t i = 0; i < NR; i++) {
@@ -1009,7 +1008,7 @@ std::vector<double> MOCDriver::homogenize_flux_spectrum() const {
   return this->homogenize_flux_spectrum(regions);
 }
 
-std::vector<double> MOCDriver::homogenize_flux_spectrum(
+xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum(
     const std::vector<std::size_t>& regions) const {
   // We can only perform a homogenization if we have a flux spectrum
   if (solved() == false) {
@@ -1045,14 +1044,41 @@ std::vector<double> MOCDriver::homogenize_flux_spectrum(
   }
   const double invs_sum_V = 1. / sum_V;
 
-  std::vector<double> spectrum(NG, 0.);
+  xt::xtensor<double, 1> spectrum = xt::zeros<double>({NG});
   for (std::size_t g = 0; g < NG; g++) {
     for (const auto i : regions) {
-      spectrum[g] += invs_sum_V * this->volume(i) * this->flux(i, g);
+      spectrum(g) += invs_sum_V * this->volume(i) * this->flux(i, g);
     }
   }
 
   return spectrum;
+}
+
+void MOCDriver::apply_criticality_spectrum(const xt::xtensor<double, 1>& flux) {
+  if (this->solved() == false) {
+    auto mssg =
+        "Cannot apply criticality spectrum when problem has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (flux.size() != this->ngroups()) {
+    auto mssg =
+        "Length of criticality flux spectrum does not agree with the number of "
+        "groups.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  xt::xtensor<double, 1> group_mult = this->homogenize_flux_spectrum();
+  group_mult = 1. / group_mult;
+  group_mult *= flux;
+
+  for (std::size_t g = 0; g < this->ngroups(); g++) {
+    for (std::size_t i = 0; i < this->nfsr(); i++) {
+      flux_(g, i) *= group_mult(g);
+    }
+  }
 }
 
 }  // namespace scarabee

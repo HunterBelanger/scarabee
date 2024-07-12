@@ -76,7 +76,7 @@ double NEMDiffusionDriver::calc_keff(
     }
   }
 
-  return keff_ * num / denom;
+  return keff * num / denom;
 }
 
 void NEMDiffusionDriver::fill_coupling_matrices() {
@@ -470,8 +470,8 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
     const double Lyz1 = rho1yz / 12.;
     const double Lyz2 = rho2yz / 20.;
 
-    L(MomentIndx::Z1) = invs_dx * Lxz1 + invs_dy * Lxz1;
-    L(MomentIndx::Z2) = invs_dx * Lxz2 + invs_dy * Lxz2;
+    L(MomentIndx::Z1) = invs_dx * Lxz1 + invs_dy * Lyz1;
+    L(MomentIndx::Z2) = invs_dx * Lxz2 + invs_dy * Lyz2;
   }
 
   // Return the transverse leakage moments vector
@@ -713,7 +713,7 @@ void NEMDiffusionDriver::solve() {
     }
   }
 #pragma omp parallel for
-  for (int im = 0; im < static_cast<int>(NM_); im++)  {
+  for (int im = 0; im < static_cast<int>(NM_); im++) {
     std::size_t m = static_cast<std::size_t>(im);
     for (std::size_t g = 0; g < NG_; g++) {
       fit_node_recon_params_corners(g, m);
@@ -1017,11 +1017,6 @@ NEMDiffusionDriver::NodeFlux NEMDiffusionDriver::fit_node_recon_params(
   const double z_low = geom_->z_bounds()[geom_indx[2]];
   const double z_hi = geom_->z_bounds()[geom_indx[2] + 1];
 
-  const double xp = 0.5 * dx;
-  const double xm = -xp;
-  const double yp = 0.5 * dy;
-  const double ym = -yp;
-
   const auto& Jout = j_outs_(g, m);
   const auto& Jin = j_ins_(g, m);
 
@@ -1134,8 +1129,6 @@ void NEMDiffusionDriver::fit_node_recon_params_corners(std::size_t g,
   const double x_hi = geom_->x_bounds()[geom_indx[0] + 1];
   const double y_low = geom_->y_bounds()[geom_indx[1]];
   const double y_hi = geom_->y_bounds()[geom_indx[1] + 1];
-  const double z_low = geom_->y_bounds()[geom_indx[2]];
-  const double z_hi = geom_->y_bounds()[geom_indx[2] + 1];
 
   NodeFlux& nf = recon_params(g, m);
 

@@ -386,7 +386,6 @@ void MOCPlotter::render_image() {
       Vector strt = get_comp_start_position(i);
 
       auto ufsr_r = geom_->get_fsr_r_local(strt, u);
-      ImApp::Pixel pixel_color = this->get_color(ufsr_r.first);
 
       uint32_t j = 0;
       while (j < image.height()) {

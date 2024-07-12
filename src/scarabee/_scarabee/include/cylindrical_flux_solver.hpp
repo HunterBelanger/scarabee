@@ -32,9 +32,9 @@ class CylindricalFluxSolver {
   std::shared_ptr<CrossSection> homogenize(
       const std::vector<std::size_t>& regions) const;
 
-  std::vector<double> homogenize_flux_spectrum() const;
-  std::vector<double> homogenize_flux_spectrum(std::size_t i_max) const;
-  std::vector<double> homogenize_flux_spectrum(
+  xt::xtensor<double, 1> homogenize_flux_spectrum() const;
+  xt::xtensor<double, 1> homogenize_flux_spectrum(std::size_t i_max) const;
+  xt::xtensor<double, 1> homogenize_flux_spectrum(
       const std::vector<std::size_t>& regions) const;
 
   double flux_tolerance() const { return flux_tol_; }

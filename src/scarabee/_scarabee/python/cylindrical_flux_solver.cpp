@@ -189,8 +189,8 @@ void init_CylindricalFluxSolver(py::module& m) {
            "condensation.\n\n"
            "Returns\n"
            "-------\n"
-           "list of floats\n"
-           "               Homogenized flux spectrum.\n\n")
+           "ndarray of floats\n"
+           "                 Homogenized flux spectrum.\n\n")
 
       .def("homogenize_flux_spectrum",
            py::overload_cast<std::size_t>(
@@ -203,8 +203,8 @@ void init_CylindricalFluxSolver(py::module& m) {
            "        Maximum region index (inclusive) for homogenization.\n"
            "Returns\n"
            "-------\n"
-           "list of floats\n"
-           "               Homogenized flux spectrum.\n\n")
+           "ndarray of floats\n"
+           "                 Homogenized flux spectrum.\n\n")
 
       .def("homogenize_flux_spectrum",
            py::overload_cast<const std::vector<std::size_t>&>(
@@ -217,8 +217,8 @@ void init_CylindricalFluxSolver(py::module& m) {
            "        List of regions for homogenization.\n"
            "Returns\n"
            "-------\n"
-           "list of floats\n"
-           "               Homogenized flux spectrum.\n\n",
+           "ndarray of floats\n"
+           "                 Homogenized flux spectrum.\n\n",
            py::arg("regions"))
 
       .def_property_readonly(

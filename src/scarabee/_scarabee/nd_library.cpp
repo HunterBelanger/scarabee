@@ -177,9 +177,8 @@ std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
 }
 
 std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
-    const std::string& name, const double temp, const double a1,
-    const double a2, const double b1, const double b2, const double bg_xs_1,
-    const double bg_xs_2) {
+    const std::string& name, const double temp, const double b1,
+    const double b2, const double bg_xs_1, const double bg_xs_2) {
   // See reference [1] to understand this interpolation scheme, in addition to
   // the calculation of the flux based on the pot_xs and sig_a.
 

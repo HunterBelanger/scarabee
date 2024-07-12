@@ -268,8 +268,8 @@ void init_MOCDriver(py::module& m) {
           "condensation.\n\n"
           "Returns\n"
           "-------\n"
-          "list of floats\n"
-          "               Homogenized flux spectrum.")
+          "ndarray of floats\n"
+          "                 Homogenized flux spectrum.")
 
       .def("homogenize_flux_spectrum",
            py::overload_cast<const std::vector<std::size_t>&>(
@@ -282,9 +282,19 @@ void init_MOCDriver(py::module& m) {
            "        List of regions for homogenization.\n"
            "Returns\n"
            "-------\n"
-           "list of floats\n"
-           "               Homogenized flux spectrum.",
+           "ndarray of floats\n"
+           "                 Homogenized flux spectrum.",
            py::arg("regions"))
+
+      .def("apply_criticality_spectrum", &MOCDriver::apply_criticality_spectrum,
+           "Modifies the flux spectrum of the solved problem by multiplying "
+           "the value of the flux by the ratio of the provided criticality "
+           "spectrum to homogenized flux spectrum.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "flux : ndarray of floats\n"
+           "       Criticality spectrum from a P1 or B1 calculation.\n",
+           py::arg("flux"))
 
       .def("plot",
            [](const MOCDriver& md) {

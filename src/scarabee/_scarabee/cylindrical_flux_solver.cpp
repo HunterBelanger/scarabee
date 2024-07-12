@@ -372,7 +372,7 @@ std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize(
   return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
 }
 
-std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum() const {
+xt::xtensor<double, 1> CylindricalFluxSolver::homogenize_flux_spectrum() const {
   const std::size_t NR = this->nregions();
   std::vector<std::size_t> regions(NR, 0);
   for (std::size_t i = 0; i < NR; i++) {
@@ -382,7 +382,7 @@ std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum() const {
   return this->homogenize_flux_spectrum(regions);
 }
 
-std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum(
+xt::xtensor<double, 1> CylindricalFluxSolver::homogenize_flux_spectrum(
     std::size_t i_max) const {
   if (i_max >= this->nregions()) {
     std::stringstream mssg;
@@ -400,7 +400,7 @@ std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum(
   return this->homogenize_flux_spectrum(regions);
 }
 
-std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum(
+xt::xtensor<double, 1> CylindricalFluxSolver::homogenize_flux_spectrum(
     const std::vector<std::size_t>& regions) const {
   // We can only perform a homogenization if we have a flux spectrum
   if (solved() == false) {
@@ -436,10 +436,10 @@ std::vector<double> CylindricalFluxSolver::homogenize_flux_spectrum(
   }
   const double invs_sum_V = 1. / sum_V;
 
-  std::vector<double> spectrum(NG, 0.);
+  xt::xtensor<double, 1> spectrum = xt::zeros<double>({NG});
   for (std::size_t g = 0; g < NG; g++) {
     for (const auto i : regions) {
-      spectrum[g] += invs_sum_V * this->volume(i) * this->flux(i, g);
+      spectrum(g) += invs_sum_V * this->volume(i) * this->flux(i, g);
     }
   }
 
