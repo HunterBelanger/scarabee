@@ -4,14 +4,16 @@ np.set_printoptions(threshold=np.inf)
 np.set_printoptions(linewidth=np.inf)
 np.set_printoptions(4)
 
-ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/endf8_shem281.h5')
-#ndl = NDLibrary('C:\\Users\\hunte\\Documents\\nuclear_data\\endf8_shem281.h5')
+#ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/scarabee/endf8_shem281.h5')
+ndl = NDLibrary('C:\\Users\\hunte\\Documents\\nuclear_data\\endf8_shem281.h5')
 
 cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
              [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],
              [56, 58], [59, 60], [61, 64], [65, 67], [68, 70], [71, 73], [74, 76],
              [77, 80], [81, 82], [83, 84], [85, 88], [89, 92], [93, 128], [129, 148],
              [149, 195], [196, 249], [250, 264], [265, 280]]
+
+few_grp_cond_spec = [[0, 30], [31, 32]]
 
 UO2comp = MaterialComposition()
 UO2comp.fractions = Fraction.Atoms
@@ -58,6 +60,7 @@ asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, f
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp]
 
 asmbly.condensation_scheme = cond_spec
+asmbly.few_group_condensation_scheme = few_grp_cond_spec
 
 asmbly.solve()
 
