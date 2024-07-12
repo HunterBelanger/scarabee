@@ -24,20 +24,23 @@ class PolarQuadrature {
   }
 
   PolarQuadrature(PolarQuadratureType pq)
-      : pq_(pq), sin_(), invs_sin_(), wgt_() {
-    sin_ = std::visit([](const auto& pq) { return pq.sin(); }, pq_);
+      : pq_(pq), invs_sin_(), wsin_(), sin_(), wgt_() {
     invs_sin_ = std::visit([](const auto& pq) { return pq.invs_sin(); }, pq_);
+    wsin_ = std::visit([](const auto& pq) { return pq.wsin(); }, pq_);
+    sin_ = std::visit([](const auto& pq) { return pq.sin(); }, pq_);
     wgt_ = std::visit([](const auto& pq) { return pq.wgt(); }, pq_);
   }
 
-  const std::span<const double>& sin() const { return sin_; }
   const std::span<const double>& invs_sin() const { return invs_sin_; }
+  const std::span<const double>& wsin() const { return wsin_; }
+  const std::span<const double>& sin() const { return sin_; }
   const std::span<const double>& wgt() const { return wgt_; }
 
  private:
   PolarQuadratureType pq_;
-  std::span<const double> sin_;
   std::span<const double> invs_sin_;
+  std::span<const double> wsin_;
+  std::span<const double> sin_;
   std::span<const double> wgt_;
 };
 

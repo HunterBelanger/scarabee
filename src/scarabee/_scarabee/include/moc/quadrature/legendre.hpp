@@ -19,9 +19,12 @@ class Legendre {
 
   std::span<const double> wgt() const { return {wgt_.begin(), wgt_.end()}; }
 
+  std::span<const double> wsin() const { return {wsin_.begin(), wsin_.end()}; }
+
  private:
-  static const std::array<double, N / 2> sin_;
   static const std::array<double, N / 2> invs_sin_;
+  static const std::array<double, N / 2> wsin_;
+  static const std::array<double, N / 2> sin_;
   static const std::array<double, N / 2> wgt_;
 };
 

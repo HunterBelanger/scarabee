@@ -286,50 +286,62 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
     for (auto& tracks : tracks_) {
       for (std::size_t t = 0; t < tracks.size(); t++) {
         auto& track = tracks[t];
-        auto angflux = xt::view(track.entry_flux(), g, xt::all());
-        const double tw = track.weight();  // Azimuthal weight * track width
+        htl::static_vector<double, 6> angflux;
+        for (std::size_t p = 0; p < n_pol_angles_; p++)
+          angflux.push_back(track.entry_flux()(g, p));
+        const double tw = 4. * PI * track.weight();  // Azimuthal weight * track width
 
         // Follow track in forward direction
         for (auto& seg : track) {
           const std::size_t i = seg.fsr_indx();
+          const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
+          const double lEt = l * Et;
           const double Q = src(g, i);
+          double delta_sum = 0.;
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            double exp_m1 = mexp(Et * seg.length() * polar_quad_.invs_sin()[p]);
-            const double delta_flx = (angflux(p) - (Q / Et)) * exp_m1;
-            sflux(g, i) += 4. * PI * tw * polar_quad_.wgt()[p] *
-                           polar_quad_.sin()[p] * delta_flx;
-            angflux(p) -= delta_flx;
+            double exp_m1 = mexp(lEt * polar_quad_.invs_sin()[p]);
+            const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
+            angflux[p] -= delta_flx;
+            delta_sum += polar_quad_.wsin()[p] * delta_flx;
           }  // For all polar angles
+          sflux(g, i) += tw * delta_sum;
         }    // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.exit_bc() == BoundaryCondition::Reflective) {
-          xt::view(track.exit_track_flux(), g, xt::all()) = angflux;
+          for (std::size_t p = 0; p < n_pol_angles_; p++)
+            track.exit_track_flux()(g, p) = angflux[p];
         } else {
           // Vacuum
           xt::view(track.exit_track_flux(), g, xt::all()).fill(0.);
         }
 
         // Follow track in backwards direction
-        angflux = xt::view(track.exit_flux(), g, xt::all());
+        for (std::size_t p = 0; p < n_pol_angles_; p++)
+          angflux[p] = track.exit_flux()(g, p);
         for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
           auto& seg = *seg_it;
           const std::size_t i = seg.fsr_indx();
+          const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
+          const double lEt = l * Et;
           const double Q = src(g, i);
+          double delta_sum = 0.;
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            double exp_m1 = mexp(Et * seg.length() * polar_quad_.invs_sin()[p]);
-            const double delta_flx = (angflux(p) - (Q / Et)) * exp_m1;
-            sflux(g, i) += 4. * PI * tw * polar_quad_.wgt()[p] *
-                           polar_quad_.sin()[p] * delta_flx;
-            angflux(p) -= delta_flx;
+            double exp_m1 = mexp(lEt * polar_quad_.invs_sin()[p]);
+            const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
+            angflux[p] -= delta_flx;
+            delta_sum += polar_quad_.wsin()[p] * delta_flx;
           }  // For all polar angles
+          sflux(g, i) += tw * delta_sum;
         }    // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.entry_bc() == BoundaryCondition::Reflective) {
-          xt::view(track.entry_track_flux(), g, xt::all()) = angflux;
+          for (std::size_t p = 0; p < n_pol_angles_; p++) {
+            track.entry_track_flux()(g, p) = angflux[p];
+          }
         } else {
           // Vacuum
           xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
