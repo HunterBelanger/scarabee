@@ -254,6 +254,7 @@ class PWRAssembly:
         self.moderator = moderator
         self._shape = shape
         self.condensation_scheme = []
+        self.few_group_condensation_scheme = []
         
         # MOC parameters for computing dancoff corrections
         self.dancoff_track_spacing = 0.05
@@ -282,7 +283,11 @@ class PWRAssembly:
     def criticality_spectrum_method(self, csm):
         if csm not in ['B1', 'b1', 'P1', 'p1', None]:
             raise RuntimeError("Unknown criticality spectrum method.")
-        self._criticality_spectrum_method = csm
+
+        if csm in ['B1', 'b1']:
+            self._criticality_spectrum_method = 'B1'
+        else:
+            self._criticality_spectrum_method = 'P1'
 
     @property
     def pins(self):
@@ -402,17 +407,18 @@ class PWRAssembly:
         self._dancoff_polar_quadrature = value
 
     def solve(self):
-        set_logging_level(LogLevel.Warning)
         self._get_fuel_dancoff_corrections()
         self._get_clad_dancoff_corrections()
         self._pin_cell_calc()
         self._condense_xs()
         self._moc()
         self._criticality_spectrum_calc()
-        set_logging_level(LogLevel.Info)
+        self._few_group_xs()
 
     def _get_fuel_dancoff_corrections(self):
-        print("Computing Dancoff factors for fuel...")
+        scarabee_log(LogLevel.Info, '')
+        scarabee_log(LogLevel.Info, "Computing Dancoff factors for fuel")
+        set_logging_level(LogLevel.Warning)
         # We first make the system for an isolated fuel pin.
         # We isolate it by multiplying the pitch by 20.
         isolated_fp = None
@@ -482,8 +488,12 @@ class PWRAssembly:
                 else:
                     self.fuel_dancoff_corrections.append(0.)
 
+        set_logging_level(LogLevel.Info)
+
     def _get_clad_dancoff_corrections(self):
-        print("Computing Dancoff factors for cladding...")
+        scarabee_log(LogLevel.Info, '')
+        scarabee_log(LogLevel.Info, "Computing Dancoff factors for cladding")
+        set_logging_level(LogLevel.Warning)
         #----------------------------------------------------------
         # ISOLATED FUEL PIN
         # We first make the system for an isolated fuel pin.
@@ -607,8 +617,12 @@ class PWRAssembly:
 
                 i_pin += 1
 
+        set_logging_level(LogLevel.Info)
+
     def _pin_cell_calc(self):
-        print("Performing micro-group pin cell calcuations...")
+        scarabee_log(LogLevel.Info, '')
+        scarabee_log(LogLevel.Info, "Performing micro-group pin cell calcuations")
+        set_logging_level(LogLevel.Warning)
         self.pin_1d_cells = len(self.pins) * [None]
         self.pin_1d_fluxes = len(self.pins) * [None]
 
@@ -617,6 +631,10 @@ class PWRAssembly:
         avg_fp = None
         for i in range(len(self.pins)):
             if isinstance(self.pins[i], FuelPin):
+                set_logging_level(LogLevel.Info)
+                scarabee_log(LogLevel.Info, "  Calculating fuel pin at index {:}".format(i))
+                set_logging_level(LogLevel.Warning)
+
                 fuel_dancoff = self.fuel_dancoff_corrections[i]
                 clad_dancoff = self.clad_dancoff_corrections[i]
                 self.pin_1d_cells[i] = self.pins[i].make_cylindrical_cell(pitch=self.pitch, dancoff_fuel=fuel_dancoff, moderator=self.moderator_xs, ndl=self.ndl, dancoff_clad=clad_dancoff)
@@ -636,6 +654,10 @@ class PWRAssembly:
         buffer_rad = np.sqrt(9.*self.pitch*self.pitch / np.pi)
         for i in range(len(self.pins)):
             if not isinstance(self.pins[i], FuelPin):
+                set_logging_level(LogLevel.Info)
+                scarabee_log(LogLevel.Info, "  Calculating cell at index {:}".format(i))
+                set_logging_level(LogLevel.Warning)
+
                 clad_dancoff = self.clad_dancoff_corrections[i]
                 self.pin_1d_cells[i] = self.pins[i].make_cylindrical_cell(pitch=self.pitch, moderator=self.moderator_xs, ndl=self.ndl, dancoff_clad=clad_dancoff, buffer=avg_fp, buffer_radius=buffer_rad)
                 
@@ -643,8 +665,12 @@ class PWRAssembly:
                 self.pin_1d_fluxes[i] = CylindricalFluxSolver(self.pin_1d_cells[i])
                 self.pin_1d_fluxes[i].solve()
 
+        set_logging_level(LogLevel.Info)
+
     def _condense_xs(self):
-        print("Performing pin cell energy condensation...")
+        scarabee_log(LogLevel.Info, '')
+        scarabee_log(LogLevel.Info, "Performing pin cell energy condensation")
+        set_logging_level(LogLevel.Warning)
         for i in range(len(self.pins)):
             pin = self.pins[i]
             cell_flux = self.pin_1d_fluxes[i]
@@ -659,10 +685,11 @@ class PWRAssembly:
                 flux_spectrum = cell_flux.homogenize_flux_spectrum([r])
                 pin.condensed_xs.append(xs.condense(self.condensation_scheme, flux_spectrum))
                 pin.condensed_xs[-1].name = xs.name
+        set_logging_level(LogLevel.Info)
 
     def _moc(self):
-        print("Performing macrogroup assembly calculation...")
-        set_logging_level(LogLevel.Info)
+        scarabee_log(LogLevel.Info, '')
+        scarabee_log(LogLevel.Info, "Performing macrogroup assembly calculation")
         moc_pins = len(self.pins) * [None]
         for i in range(len(self.pins)):
             moc_pins[i] = self.pins[i].make_moc_cell(self.pitch)
@@ -679,12 +706,14 @@ class PWRAssembly:
         self.moc.keff_tolerance = self.keff_tolerance
         self.moc.flux_tolerance = self.flux_tolerance
         self.moc.solve()
-        set_logging_level(LogLevel.Warning)
 
     def _criticality_spectrum_calc(self):
         if self.criticality_spectrum_method is None:
+            self._criticality_spectrum = None
             return
-        
+
+        scarabee_log(LogLevel.Info, '') 
+        scarabee_log(LogLevel.Info, "Performing {:} criticality spectrum calculation".format(self.criticality_spectrum_method))
         homogenized_moc = self.moc.homogenize()
 
         if self.criticality_spectrum_method in ['P1', 'p1']:
@@ -692,4 +721,92 @@ class PWRAssembly:
         else:
             self._criticality_spectrum = B1CriticalitySpectrum(homogenized_moc)
 
-        print("Buckling: {:.5f}".format(self._criticality_spectrum.B2))
+        self.moc.apply_criticality_spectrum(self._criticality_spectrum.flux)
+
+        scarabee_log(LogLevel.Info, "Kinf    : {:.5f}".format(self._criticality_spectrum.k_inf))
+        scarabee_log(LogLevel.Info, "Buckling: {:.5f}".format(self._criticality_spectrum.B2))
+
+    def _few_group_xs(self):
+        scarabee_log(LogLevel.Info, '')
+        scarabee_log(LogLevel.Info, "Generating few group cross sections")
+
+        homog_xs = self.moc.homogenize()
+        flux_spectrum = self.moc.homogenize_flux_spectrum()
+        NG = homog_xs.ngroups
+        fissile = homog_xs.fissile
+        
+        if self._criticality_spectrum is not None:
+            D = self._criticality_spectrum.diff_coeff
+        else:
+            D = np.zeros(NG)
+        Ea = np.zeros(NG)
+        Es = np.zeros((NG, NG))
+        if fissile:
+            Ef = np.zeros(NG)
+            vEf = np.zeros(NG)
+            chi = np.zeros(NG)
+
+        for g in range(NG):
+            if self._criticality_spectrum is None:
+                D[g] = 1. / (3. * homog_xs.Etr(g))
+
+            Ea[g] = homog_xs.Ea(g)
+
+            if fissile:
+                Ef[g] = homog_xs.Ef(g)
+                vEf[g] = homog_xs.vEf(g)
+                chi[g] = homog_xs.chi(g)
+
+            for gg in range(NG):
+                Es[g, gg] = homog_xs.Es_tr(g, gg)
+
+        if fissile:
+            diff_xs = DiffusionCrossSection(D, Ea, Es, Ef, vEf, chi)
+        else:
+            diff_xs = DiffusionCrossSection(D, Ea, Es)
+
+        self.diffusion_xs = diff_xs.condense(self.few_group_condensation_scheme, flux_spectrum)
+
+        NG = self.diffusion_xs.ngroups
+
+        D = []
+        Ea = []
+        Ef = []
+        vEf = []
+        chi = []
+        for g in range(NG):
+            D.append(self.diffusion_xs.D(g))
+            Ea.append(self.diffusion_xs.Ea(g))
+            Ef.append(self.diffusion_xs.Ef(g))
+            vEf.append(self.diffusion_xs.vEf(g))
+            chi.append(self.diffusion_xs.chi(g))
+
+        D_str   = "  D: "
+        Ea_str  = " Ea: "
+        Ef_str  = " Ef: "
+        vEf_str = "vEf: "
+        chi_str = "chi: "
+        Es_strs = []
+        for g in range(NG):
+            D_str += "{:.4E}  ".format(D[g])
+            Ea_str += "{:.4E}  ".format(D[g])
+
+            if self.diffusion_xs.fissile:
+                Ef_str += "{:.4E}  ".format(Ef[g])
+                vEf_str += "{:.4E}  ".format(vEf[g])
+                chi_str += "{:.4E}  ".format(chi[g])
+
+            Es_strs.append("{:} -> g: ".format(g+1))
+
+            for gg in range(NG):
+                Es_strs[-1] += "{:.4E}  ".format(self.diffusion_xs.Es(g, gg))
+        
+        scarabee_log(LogLevel.Info, D_str)
+        scarabee_log(LogLevel.Info, Ea_str)
+        if self.diffusion_xs.fissile:
+            scarabee_log(LogLevel.Info, Ef_str)
+            scarabee_log(LogLevel.Info, vEf_str)
+            scarabee_log(LogLevel.Info, chi_str)
+        scarabee_log(LogLevel.Info, "Es:  outgoing group ->")
+        for g in range(NG):
+            scarabee_log(LogLevel.Info, Es_strs[g])
