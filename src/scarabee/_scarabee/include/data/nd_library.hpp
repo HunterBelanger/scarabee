@@ -61,7 +61,11 @@ class NDLibrary {
   std::shared_ptr<CrossSection> interp_xs(const std::string& name,
                                           const double temp, const double dil);
 
-  std::shared_ptr<CrossSection> two_term_xs(const std::string& name, const double temp, const double b1, const double b2, const double bg_xs_1, const double bg_xs_2);
+  std::shared_ptr<CrossSection> two_term_xs(const std::string& name,
+                                            const double temp, const double b1,
+                                            const double b2,
+                                            const double bg_xs_1,
+                                            const double bg_xs_2);
 
   const std::shared_ptr<H5::File>& h5() const { return h5_; }
 

@@ -14,7 +14,7 @@ template <>
 const std::array<double, 1> Legendre<2>::wgt_ = {
     1.00000000000000000000000000000000000e+00};
 template <>
-const std::array<double, 1> Legendre<2>::wsin_ = {wgt_[0]*sin_[0]};
+const std::array<double, 1> Legendre<2>::wsin_ = {wgt_[0] * sin_[0]};
 
 // N = 4
 template <>
@@ -29,7 +29,8 @@ const std::array<double, 2> Legendre<4>::wgt_ = {
     6.52145154862546142626936050778000593e-01,
     3.47854845137453857373063949221999407e-01};
 template <>
-const std::array<double, 2> Legendre<4>::wsin_ = {wgt_[0]*sin_[0], wgt_[1]*sin_[1]};
+const std::array<double, 2> Legendre<4>::wsin_ = {wgt_[0] * sin_[0],
+                                                  wgt_[1] * sin_[1]};
 
 // N = 6
 template <>
@@ -46,7 +47,8 @@ const std::array<double, 3> Legendre<6>::wgt_ = {
     3.60761573048138607569833513837716112e-01,
     1.71324492379170345040296142172732894e-01};
 template <>
-const std::array<double, 3> Legendre<6>::wsin_ = {wgt_[0]*sin_[0], wgt_[1]*sin_[1], wgt_[2]*sin_[2]};
+const std::array<double, 3> Legendre<6>::wsin_ = {
+    wgt_[0] * sin_[0], wgt_[1] * sin_[1], wgt_[2] * sin_[2]};
 
 // N = 8
 template <>
@@ -65,7 +67,8 @@ const std::array<double, 4> Legendre<8>::wgt_ = {
     2.22381034453374470544355994426240884e-01,
     1.01228536290376259152531354309962190e-01};
 template <>
-const std::array<double, 4> Legendre<8>::wsin_ = {wgt_[0]*sin_[0], wgt_[1]*sin_[1], wgt_[2]*sin_[2], wgt_[3]*sin_[3]};
+const std::array<double, 4> Legendre<8>::wsin_ = {
+    wgt_[0] * sin_[0], wgt_[1] * sin_[1], wgt_[2] * sin_[2], wgt_[3] * sin_[3]};
 
 // N = 10
 template <>
@@ -86,7 +89,9 @@ const std::array<double, 5> Legendre<10>::wgt_ = {
     1.49451349150580593145776339657697332e-01,
     6.66713443086881375935688098933317929e-02};
 template <>
-const std::array<double, 5> Legendre<10>::wsin_ = {wgt_[0]*sin_[0], wgt_[1]*sin_[1], wgt_[2]*sin_[2], wgt_[3]*sin_[3], wgt_[4]*sin_[4]};
+const std::array<double, 5> Legendre<10>::wsin_ = {
+    wgt_[0] * sin_[0], wgt_[1] * sin_[1], wgt_[2] * sin_[2], wgt_[3] * sin_[3],
+    wgt_[4] * sin_[4]};
 
 // N = 12
 template <>
@@ -110,6 +115,8 @@ const std::array<double, 6> Legendre<12>::wgt_ = {
     1.06939325995318430960254718193996224e-01,
     4.71753363865118271946159614850170603e-02};
 template <>
-const std::array<double, 6> Legendre<12>::wsin_ = {wgt_[0]*sin_[0], wgt_[1]*sin_[1], wgt_[2]*sin_[2], wgt_[3]*sin_[3], wgt_[4]*sin_[4], wgt_[5]*sin_[5]};
+const std::array<double, 6> Legendre<12>::wsin_ = {
+    wgt_[0] * sin_[0], wgt_[1] * sin_[1], wgt_[2] * sin_[2],
+    wgt_[3] * sin_[3], wgt_[4] * sin_[4], wgt_[5] * sin_[5]};
 
 }  // namespace scarabee

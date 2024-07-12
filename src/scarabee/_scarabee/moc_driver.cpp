@@ -289,7 +289,8 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
         htl::static_vector<double, 6> angflux;
         for (std::size_t p = 0; p < n_pol_angles_; p++)
           angflux.push_back(track.entry_flux()(g, p));
-        const double tw = 4. * PI * track.weight();  // Azimuthal weight * track width
+        const double tw =
+            4. * PI * track.weight();  // Azimuthal weight * track width
 
         // Follow track in forward direction
         for (auto& seg : track) {
@@ -306,7 +307,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
           }  // For all polar angles
           sflux(g, i) += tw * delta_sum;
-        }    // For all segments along forward direction of track
+        }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.exit_bc() == BoundaryCondition::Reflective) {
@@ -335,7 +336,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
           }  // For all polar angles
           sflux(g, i) += tw * delta_sum;
-        }    // For all segments along forward direction of track
+        }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.entry_bc() == BoundaryCondition::Reflective) {
