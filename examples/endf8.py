@@ -1,4 +1,4 @@
-import frendy as fdy
+from scarabee.data import frendy as fdy
 import h5py
 
 base = "/mnt/c/Users/hunte/Documents/nuclear_data/ENDF-B-VIII.0/neutrons/"
