@@ -7,6 +7,7 @@ neutronics calculations. It currently has the following features:
 * 1D Annular pin cell collision probabilities solver for k-eigenvalue problems
 * 2D Method of characteristics solver for fixed-source and k-eigenvalue problems
 * Finite difference diffusion solver for 1D, 2D, and 3D k-eigenvalue problems
+* Nodal expansion method diffusion solver for 3D k-eigenvalue problems
 
 This project closely follows the methods outlined in *Methods of Steady-State
 Reactor Physics in Nuclear Design* by Stamm'ler and Abbate, and *Lattice
