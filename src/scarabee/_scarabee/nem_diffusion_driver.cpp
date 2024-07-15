@@ -64,8 +64,9 @@ double NEMDiffusionDriver::calc_keff(
   double denom = 0.;
 
   for (std::size_t m = 0; m < NM_; m++) {
-    const double Vr = geom_->volume(m);
-    const auto& mat = geom_->mat(m);
+    const auto geom_indx = geom_inds_[m];
+    const double Vr = geom_->dx(geom_indx[0]) * geom_->dy(geom_indx[1]) * geom_->dz(geom_indx[2]);
+    const auto& mat = mats_[m];
     for (std::size_t g = 0; g < NG_; g++) {
       const double VvEf = Vr * mat->vEf(g);
       const double nflx = new_flux(g, m);
@@ -87,7 +88,7 @@ void NEMDiffusionDriver::fill_coupling_matrices() {
     const double del_x = geom_->dx(geom_indx[0]);
     const double del_y = geom_->dy(geom_indx[1]);
     const double del_z = geom_->dz(geom_indx[2]);
-    const auto& xs = *geom_->mat(m);
+    const auto& xs = *mats_[m];
 
     for (std::size_t g = 0; g < NG_; g++) {
       const double D = xs.D(g);
@@ -164,9 +165,18 @@ void NEMDiffusionDriver::fill_coupling_matrices() {
   }
 }
 
+void NEMDiffusionDriver::fill_mats() {
+  mats_.reserve(NM_);
+  for (std::size_t m = 0; m < NM_; m++) {
+    const auto geom_indx = geom_inds_[m];
+    const auto& mat = geom_->mat(geom_indx);
+    mats_.push_back(mat);
+  }
+}
+
 void NEMDiffusionDriver::fill_source() {
   for (std::size_t m = 0; m < NM_; m++) {
-    const auto& mat = geom_->mat(m);
+    const auto& mat = mats_[m];
     for (std::size_t g = 0; g < NG_; g++) {
       auto& Q = Q_(g, m);
       Q.fill(0.);
@@ -327,6 +337,9 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
   const double invs_dy = 1. / dy;
   const double invs_dz = 1. / dz;
 
+  constexpr double invs_12 = 1. / 12.;
+  constexpr double invs_20 = 1. / 20.;
+
   // This returns the average transverse leakage moments for a given node
   auto comp_avg_trans_lks = [this](std::size_t g, std::size_t m) {
     const auto& Jin = j_ins_(g, m);
@@ -341,7 +354,7 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
 
     const double Lx = Jxp - Jxm;
     const double Ly = Jyp - Jym;
-    const double Lz = Jzp - Jzm;
+    const double Lz = Jzp - Jzm; 
 
     return std::array<double, 3>{Lx, Ly, Lz};
   };
@@ -383,10 +396,10 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
         (p1xm * Lz_xp + p1xp * Lz_xm - (eta_xp + eta_xm + 2.) * Lz) /
         (p1xp * p1xm * (eta_xp + eta_xm + 1.));
 
-    const double Lyx1 = rho1yx / 12.;
-    const double Lyx2 = rho2yx / 20.;
-    const double Lzx1 = rho1zx / 12.;
-    const double Lzx2 = rho2zx / 20.;
+    const double Lyx1 = invs_12 * rho1yx;
+    const double Lyx2 = invs_20 * rho2yx;
+    const double Lzx1 = invs_12 * rho1zx;
+    const double Lzx2 = invs_20 * rho2zx;
 
     L(MomentIndx::X1) = invs_dy * Lyx1 + invs_dz * Lzx1;
     L(MomentIndx::X2) = invs_dy * Lyx2 + invs_dz * Lzx2;
@@ -424,10 +437,10 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
         (p1ym * Lz_yp + p1yp * Lz_ym - (eta_yp + eta_ym + 2.) * Lz) /
         (p1yp * p1ym * (eta_yp + eta_ym + 1.));
 
-    const double Lxy1 = rho1xy / 12.;
-    const double Lxy2 = rho2xy / 20.;
-    const double Lzy1 = rho1zy / 12.;
-    const double Lzy2 = rho2zy / 20.;
+    const double Lxy1 = invs_12 * rho1xy;
+    const double Lxy2 = invs_20 * rho2xy;
+    const double Lzy1 = invs_12 * rho1zy;
+    const double Lzy2 = invs_20 * rho2zy;
 
     L(MomentIndx::Y1) = invs_dx * Lxy1 + invs_dz * Lzy1;
     L(MomentIndx::Y2) = invs_dx * Lxy2 + invs_dz * Lzy2;
@@ -465,10 +478,10 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
         (p1zm * Ly_zp + p1zp * Ly_zm - (eta_zp + eta_zm + 2.) * Ly) /
         (p1zp * p1zm * (eta_zp + eta_zm + 1.));
 
-    const double Lxz1 = rho1xz / 12.;
-    const double Lxz2 = rho2xz / 20.;
-    const double Lyz1 = rho1yz / 12.;
-    const double Lyz2 = rho2yz / 20.;
+    const double Lxz1 = invs_12 * rho1xz;
+    const double Lxz2 = invs_20 * rho2xz;
+    const double Lyz1 = invs_12 * rho1yz;
+    const double Lyz2 = invs_20 * rho2yz;
 
     L(MomentIndx::Z1) = invs_dx * Lxz1 + invs_dy * Lyz1;
     L(MomentIndx::Z2) = invs_dx * Lxz2 + invs_dy * Lyz2;
@@ -489,8 +502,9 @@ void NEMDiffusionDriver::calc_node(const std::size_t g, const std::size_t m,
   const auto& P = Pmats_(g, m);
   auto& Jout = j_outs_(g, m);  // Not const as we update this here
   auto& Jin = j_ins_(g, m);
-  const double Er = xs.Er(g);  // Removal cross section
   const double D = xs.D(g);    // Diffusion coefficient
+  const double Er = xs.Er(g);  // Removal cross section
+  const double invs_Er = 1. / Er;
 
   //----------------------------------------------------------------------------
   // CALCULATE TRANSVERSE LEAKAGES AND THEIR MOMENTS
@@ -552,38 +566,23 @@ void NEMDiffusionDriver::calc_node(const std::size_t g, const std::size_t m,
   const double az2 = flx_zp + flx_zm - 2. * flx_avg;
 
   // Calculate the first flux moments
-  const double flx_x1 = (Q(MomentIndx::X1) - L(MomentIndx::X1) -
-                         0.5 * invs_dx * Tx - invs_dx * invs_dx * D * ax1) /
-                        Er;
+  const double flx_x1 = (Q(MomentIndx::X1) - L(MomentIndx::X1) - 0.5 * invs_dx * Tx - invs_dx * invs_dx * D * ax1) * invs_Er;
   flux_x1_(g, m) = flx_x1;
 
-  const double flx_y1 = (Q(MomentIndx::Y1) - L(MomentIndx::Y1) -
-                         0.5 * invs_dy * Ty - invs_dy * invs_dy * D * ay1) /
-                        Er;
+  const double flx_y1 = (Q(MomentIndx::Y1) - L(MomentIndx::Y1) - 0.5 * invs_dy * Ty - invs_dy * invs_dy * D * ay1) * invs_Er;
   flux_y1_(g, m) = flx_y1;
 
-  const double flx_z1 = (Q(MomentIndx::Z1) - L(MomentIndx::Z1) -
-                         0.5 * invs_dz * Tz - invs_dz * invs_dz * D * az1) /
-                        Er;
+  const double flx_z1 = (Q(MomentIndx::Z1) - L(MomentIndx::Z1) - 0.5 * invs_dz * Tz - invs_dz * invs_dz * D * az1) * invs_Er;
   flux_z1_(g, m) = flx_z1;
 
   // Calculate the second flux moments
-  const double flx_x2 =
-      (Q(MomentIndx::X2) - L(MomentIndx::X2) - 0.5 * invs_dx * Lx -
-       3. * invs_dx * invs_dx * D * ax2) /
-      Er;
+  const double flx_x2 = (Q(MomentIndx::X2) - L(MomentIndx::X2) - 0.5 * invs_dx * Lx - 3. * invs_dx * invs_dx * D * ax2) * invs_Er;
   flux_x2_(g, m) = flx_x2;
 
-  const double flx_y2 =
-      (Q(MomentIndx::Y2) - L(MomentIndx::Y2) - 0.5 * invs_dy * Ly -
-       3. * invs_dy * invs_dy * D * ay2) /
-      Er;
+  const double flx_y2 = (Q(MomentIndx::Y2) - L(MomentIndx::Y2) - 0.5 * invs_dy * Ly - 3. * invs_dy * invs_dy * D * ay2) * invs_Er;
   flux_y2_(g, m) = flx_y2;
 
-  const double flx_z2 =
-      (Q(MomentIndx::Z2) - L(MomentIndx::Z2) - 0.5 * invs_dz * Lz -
-       3. * invs_dz * invs_dz * D * az2) /
-      Er;
+  const double flx_z2 = (Q(MomentIndx::Z2) - L(MomentIndx::Z2) - 0.5 * invs_dz * Lz - 3. * invs_dz * invs_dz * D * az2) * invs_Er;
   flux_z2_(g, m) = flx_z2;
 
   //----------------------------------------------------------------------------
@@ -598,10 +597,10 @@ void NEMDiffusionDriver::inner_iteration() {
     const double dx = geom_->dx(geom_indx[0]);
     const double dy = geom_->dy(geom_indx[1]);
     const double dz = geom_->dz(geom_indx[2]);
+    const auto& xs = *mats_[m];
     const double invs_dx = 1. / dx;
     const double invs_dy = 1. / dy;
     const double invs_dz = 1. / dz;
-    const auto& xs = *geom_->mat(m);
 
     for (std::size_t g = 0; g < NG_; g++) {
       calc_node(g, m, invs_dx, invs_dy, invs_dz, xs);
@@ -650,6 +649,7 @@ void NEMDiffusionDriver::solve() {
 
   // Fill the coupling matrices
   fill_neighbors_and_geom_inds();
+  fill_mats();
   fill_coupling_matrices();
 
   // Begin power iteration
@@ -882,7 +882,7 @@ double NEMDiffusionDriver::power(double x, double y, double z) const {
   if (om.has_value() == false) return 0.;
   const std::size_t m = om.value();
 
-  const auto& xs = *geom_->mat(m);
+  const auto& xs = *mats_[m];
 
   double pwr = 0.;
 
@@ -949,7 +949,7 @@ xt::xtensor<double, 3> NEMDiffusionDriver::power(
         }
         const std::size_t m = om.value();
 
-        const auto& xs = *geom_->mat(m);
+        const auto& xs = *mats_[m];
 
         for (std::size_t g = 0; g < NG_; g++) {
           pwr_out(i, j, k) += recon_params(g, m)(x[i], y[j], z[k]) * xs.Ef(g);
@@ -986,7 +986,7 @@ xt::xtensor<double, 3> NEMDiffusionDriver::avg_power() const {
           continue;
         }
         const std::size_t m = om.value();
-        const auto& xs = *geom_->mat(m);
+        const auto& xs = *mats_[m];
 
         for (std::size_t g = 0; g < NG_; g++) {
           pwr_out(i, j, k) += flux_avg_(g, m) * xs.Ef(g);
@@ -1005,7 +1005,7 @@ NEMDiffusionDriver::NodeFlux NEMDiffusionDriver::fit_node_recon_params(
   const double dx = geom_->dx(geom_indx[0]);
   const double dy = geom_->dy(geom_indx[1]);
   const double dz = geom_->dz(geom_indx[2]);
-  const auto& xs = *geom_->mat(m);
+  const auto& xs = *mats_[m];
   const double D = xs.D(g);
   const double Er = xs.Er(g);
   const double eps = std::sqrt(Er / D);

@@ -114,6 +114,7 @@ class NEMDiffusionDriver {
   xt::xtensor<NeighborInfo, 2> neighbors_;
 
   xt::xtensor<xt::svector<std::size_t>, 1> geom_inds_;
+  std::vector<std::shared_ptr<DiffusionCrossSection>> mats_;
 
   double keff_ = 1.;
   double flux_tol_ = 1.E-5;
@@ -123,6 +124,7 @@ class NEMDiffusionDriver {
   //----------------------------------------------------------------------------
   // PRIVATE METHODS
   void fill_coupling_matrices();
+  void fill_mats();
   void fill_source();
   void fill_neighbors_and_geom_inds();
   void update_Jin_from_Jout(std::size_t g, std::size_t m);
