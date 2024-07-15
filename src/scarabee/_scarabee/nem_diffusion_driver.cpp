@@ -58,8 +58,8 @@ void NEMDiffusionDriver::set_keff_tolerance(double ktol) {
 }
 
 double NEMDiffusionDriver::calc_keff(
-    double keff, const xt::xtensor<double, 2>& old_flux,
-    const xt::xtensor<double, 2>& new_flux) const {
+    double keff, const xt::xtensor<double, 3>& old_flux,
+    const xt::xtensor<double, 3>& new_flux) const {
   double num = 0.;
   double denom = 0.;
 
@@ -69,8 +69,8 @@ double NEMDiffusionDriver::calc_keff(
     const auto& mat = mats_[m];
     for (std::size_t g = 0; g < NG_; g++) {
       const double VvEf = Vr * mat->vEf(g);
-      const double nflx = new_flux(g, m);
-      const double oflx = old_flux(g, m);
+      const double nflx = new_flux(g, m, MomentIndx::AVG);
+      const double oflx = old_flux(g, m, MomentIndx::AVG);
 
       num += VvEf * nflx;
       denom += VvEf * oflx;
@@ -78,6 +78,19 @@ double NEMDiffusionDriver::calc_keff(
   }
 
   return keff * num / denom;
+}
+
+double NEMDiffusionDriver::calc_flux_error(const xt::xtensor<double, 3>& old_flux, const xt::xtensor<double, 3>& new_flux) const {
+  double max_diff = 0.;
+  for (std::size_t g = 0; g < NG_; g++) {
+    for (std::size_t m = 0; m < NM_; m++) {
+      const double rel_diff = std::abs((old_flux(g, m, MomentIndx::AVG) - new_flux(g, m, MomentIndx::AVG)) / new_flux(g, m, MomentIndx::AVG));
+
+      if (rel_diff > max_diff) max_diff = rel_diff;
+    }
+  }
+
+  return max_diff;
 }
 
 void NEMDiffusionDriver::fill_coupling_matrices() {
@@ -187,13 +200,13 @@ void NEMDiffusionDriver::fill_source() {
       for (std::size_t gg = 0; gg < NG_; gg++) {
         const double vEf_gg = mat->vEf(gg);
         const double Es_gg_g = mat->Es(gg, g);
-        const double flx_avg = flux_avg_(gg, m);
-        const double flx_x1 = flux_x1_(gg, m);
-        const double flx_x2 = flux_x2_(gg, m);
-        const double flx_y1 = flux_y1_(gg, m);
-        const double flx_y2 = flux_y2_(gg, m);
-        const double flx_z1 = flux_z1_(gg, m);
-        const double flx_z2 = flux_z2_(gg, m);
+        const double flx_avg = flux_(gg, m, MomentIndx::AVG);
+        const double flx_x1 = flux_(gg, m, MomentIndx::X1);
+        const double flx_x2 = flux_(gg, m, MomentIndx::X2);
+        const double flx_y1 = flux_(gg, m, MomentIndx::Y1);
+        const double flx_y2 = flux_(gg, m, MomentIndx::Y2);
+        const double flx_z1 = flux_(gg, m, MomentIndx::Z1);
+        const double flx_z2 = flux_(gg, m, MomentIndx::Z2);
 
         Q(MomentIndx::AVG) += invs_keff * chi_g * vEf_gg * flx_avg;
         if (gg != g) Q(MomentIndx::AVG) += Es_gg_g * flx_avg;
@@ -249,63 +262,57 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
   // UPDATE INCOMING CURRENTS IN NEIGHBORING NODES / B.C.
   // x+ surface
   if (n_xp.second) {
-    j_ins_(g, n_xp.second.value())(CurrentIndx::XM) =
-        j_outs_(g, m)(CurrentIndx::XP);
+    j_in_out_(g, n_xp.second.value(), 0)(CurrentIndx::XM) = j_in_out_(g, m, 1)(CurrentIndx::XP);
   } else {
     const double albedo = n_xp.first.albedo.value();
-    j_ins_(g, m)(CurrentIndx::XP) = albedo * j_outs_(g, m)(CurrentIndx::XP);
+    j_in_out_(g, m, 0)(CurrentIndx::XP) = albedo * j_in_out_(g, m, 1)(CurrentIndx::XP);
   }
 
   // x- surface
   if (n_xm.second) {
-    j_ins_(g, n_xm.second.value())(CurrentIndx::XP) =
-        j_outs_(g, m)(CurrentIndx::XM);
+    j_in_out_(g, n_xm.second.value(), 0)(CurrentIndx::XP) = j_in_out_(g, m, 1)(CurrentIndx::XM);
   } else {
     const double albedo = n_xm.first.albedo.value();
-    j_ins_(g, m)(CurrentIndx::XM) = albedo * j_outs_(g, m)(CurrentIndx::XM);
+    j_in_out_(g, m, 0)(CurrentIndx::XM) = albedo * j_in_out_(g, m, 1)(CurrentIndx::XM);
   }
 
   // y+ surface
   if (n_yp.second) {
-    j_ins_(g, n_yp.second.value())(CurrentIndx::YM) =
-        j_outs_(g, m)(CurrentIndx::YP);
+    j_in_out_(g, n_yp.second.value(), 0)(CurrentIndx::YM) = j_in_out_(g, m, 1)(CurrentIndx::YP);
   } else {
     const double albedo = n_yp.first.albedo.value();
-    j_ins_(g, m)(CurrentIndx::YP) = albedo * j_outs_(g, m)(CurrentIndx::YP);
+    j_in_out_(g, m, 0)(CurrentIndx::YP) = albedo * j_in_out_(g, m, 1)(CurrentIndx::YP);
   }
 
   // y- surface
   if (n_ym.second) {
-    j_ins_(g, n_ym.second.value())(CurrentIndx::YP) =
-        j_outs_(g, m)(CurrentIndx::YM);
+    j_in_out_(g, n_ym.second.value(), 0)(CurrentIndx::YP) = j_in_out_(g, m, 1)(CurrentIndx::YM);
   } else {
     const double albedo = n_ym.first.albedo.value();
-    j_ins_(g, m)(CurrentIndx::YM) = albedo * j_outs_(g, m)(CurrentIndx::YM);
+    j_in_out_(g, m, 0)(CurrentIndx::YM) = albedo * j_in_out_(g, m, 1)(CurrentIndx::YM);
   }
 
   // z+ surface
   if (n_zp.second) {
-    j_ins_(g, n_zp.second.value())(CurrentIndx::ZM) =
-        j_outs_(g, m)(CurrentIndx::ZP);
+    j_in_out_(g, n_zp.second.value(), 0)(CurrentIndx::ZM) = j_in_out_(g, m, 1)(CurrentIndx::ZP);
   } else {
     const double albedo = n_zp.first.albedo.value();
-    j_ins_(g, m)(CurrentIndx::ZP) = albedo * j_outs_(g, m)(CurrentIndx::ZP);
+    j_in_out_(g, m, 0)(CurrentIndx::ZP) = albedo * j_in_out_(g, m, 1)(CurrentIndx::ZP);
   }
 
   // z- surface
   if (n_zm.second) {
-    j_ins_(g, n_zm.second.value())(CurrentIndx::ZP) =
-        j_outs_(g, m)(CurrentIndx::ZM);
+    j_in_out_(g, n_zm.second.value(), 0)(CurrentIndx::ZP) = j_in_out_(g, m, 1)(CurrentIndx::ZM);
   } else {
     const double albedo = n_zm.first.albedo.value();
-    j_ins_(g, m)(CurrentIndx::ZM) = albedo * j_outs_(g, m)(CurrentIndx::ZM);
+    j_in_out_(g, m, 0)(CurrentIndx::ZM) = albedo * j_in_out_(g, m, 1)(CurrentIndx::ZM);
   }
 }
 
 NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
     std::size_t g, std::size_t m) const {
-  const auto& Jout = j_outs_(g, m);
-  const auto& Jin = j_ins_(g, m);
+  const auto& Jin = j_in_out_(g, m, 0);
+  const auto& Jout = j_in_out_(g, m, 1);
 
   // Get the currents along each axis at the positive and negative bounds
   const double Jxp = calc_net_current(Jin, Jout, CurrentIndx::XP);
@@ -342,8 +349,8 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
 
   // This returns the average transverse leakage moments for a given node
   auto comp_avg_trans_lks = [this](std::size_t g, std::size_t m) {
-    const auto& Jin = j_ins_(g, m);
-    const auto& Jout = j_outs_(g, m);
+    const auto& Jin = j_in_out_(g, m, 0);
+    const auto& Jout = j_in_out_(g, m, 1);
 
     const double Jxp = calc_net_current(Jin, Jout, CurrentIndx::XP);
     const double Jxm = calc_net_current(Jin, Jout, CurrentIndx::XM);
@@ -374,6 +381,7 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
     const double p2xm = 2. * eta_xm + 1.;
     const double p1xp = eta_xp + 1.;
     const double p2xp = 2. * eta_xp + 1.;
+    const double invs_denom = 1. / (p1xp * p1xm * (eta_xp + eta_xm + 1.));
 
     tmp = comp_avg_trans_lks(g, n_xp.second.value());
     const double Ly_xp = n_xp.second ? tmp[1] : 0.;
@@ -383,18 +391,10 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
     const double Ly_xm = n_xm.second ? tmp[1] : 0.;
     const double Lz_xm = n_xm.second ? tmp[2] : 0.;
 
-    const double rho1yx = (p1xm * p2xm * Ly_xp - p1xp * p2xp * Ly_xm +
-                           (p1xp * p2xp - p1xm * p2xm) * Ly) /
-                          (p1xp * p1xm * (eta_xp + eta_xm + 1.));
-    const double rho2yx =
-        (p1xm * Ly_xp + p1xp * Ly_xm - (eta_xp + eta_xm + 2.) * Ly) /
-        (p1xp * p1xm * (eta_xp + eta_xm + 1.));
-    const double rho1zx = (p1xm * p2xm * Lz_xp - p1xp * p2xp * Lz_xm +
-                           (p1xp * p2xp - p1xm * p2xm) * Lz) /
-                          (p1xp * p1xm * (eta_xp + eta_xm + 1.));
-    const double rho2zx =
-        (p1xm * Lz_xp + p1xp * Lz_xm - (eta_xp + eta_xm + 2.) * Lz) /
-        (p1xp * p1xm * (eta_xp + eta_xm + 1.));
+    const double rho1yx = (p1xm * p2xm * Ly_xp - p1xp * p2xp * Ly_xm + (p1xp * p2xp - p1xm * p2xm) * Ly) * invs_denom;
+    const double rho2yx = (p1xm * Ly_xp + p1xp * Ly_xm - (eta_xp + eta_xm + 2.) * Ly) * invs_denom;
+    const double rho1zx = (p1xm * p2xm * Lz_xp - p1xp * p2xp * Lz_xm + (p1xp * p2xp - p1xm * p2xm) * Lz) * invs_denom;
+    const double rho2zx = (p1xm * Lz_xp + p1xp * Lz_xm - (eta_xp + eta_xm + 2.) * Lz) * invs_denom;
 
     const double Lyx1 = invs_12 * rho1yx;
     const double Lyx2 = invs_20 * rho2yx;
@@ -415,6 +415,7 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
     const double p2ym = 2. * eta_ym + 1.;
     const double p1yp = eta_yp + 1.;
     const double p2yp = 2. * eta_yp + 1.;
+    const double invs_denom = 1. / (p1yp * p1ym * (eta_yp + eta_ym + 1.));
 
     tmp = comp_avg_trans_lks(g, n_yp.second.value());
     const double Lx_yp = n_yp.second ? tmp[0] : 0.;
@@ -424,18 +425,10 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
     const double Lx_ym = n_ym.second ? tmp[0] : 0.;
     const double Lz_ym = n_ym.second ? tmp[2] : 0.;
 
-    const double rho1xy = (p1ym * p2ym * Lx_yp - p1yp * p2yp * Lx_ym +
-                           (p1yp * p2yp - p1ym * p2ym) * Lx) /
-                          (p1yp * p1ym * (eta_yp + eta_ym + 1.));
-    const double rho2xy =
-        (p1ym * Lx_yp + p1yp * Lx_ym - (eta_yp + eta_ym + 2.) * Lx) /
-        (p1yp * p1ym * (eta_yp + eta_ym + 1.));
-    const double rho1zy = (p1ym * p2ym * Lz_yp - p1yp * p2yp * Lz_ym +
-                           (p1yp * p2yp - p1ym * p2ym) * Lz) /
-                          (p1yp * p1ym * (eta_yp + eta_ym + 1.));
-    const double rho2zy =
-        (p1ym * Lz_yp + p1yp * Lz_ym - (eta_yp + eta_ym + 2.) * Lz) /
-        (p1yp * p1ym * (eta_yp + eta_ym + 1.));
+    const double rho1xy = (p1ym * p2ym * Lx_yp - p1yp * p2yp * Lx_ym + (p1yp * p2yp - p1ym * p2ym) * Lx) * invs_denom;
+    const double rho2xy = (p1ym * Lx_yp + p1yp * Lx_ym - (eta_yp + eta_ym + 2.) * Lx) * invs_denom;
+    const double rho1zy = (p1ym * p2ym * Lz_yp - p1yp * p2yp * Lz_ym + (p1yp * p2yp - p1ym * p2ym) * Lz) * invs_denom;
+    const double rho2zy = (p1ym * Lz_yp + p1yp * Lz_ym - (eta_yp + eta_ym + 2.) * Lz) * invs_denom;
 
     const double Lxy1 = invs_12 * rho1xy;
     const double Lxy2 = invs_20 * rho2xy;
@@ -456,6 +449,7 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
     const double p2zm = 2. * eta_zm + 1.;
     const double p1zp = eta_zp + 1.;
     const double p2zp = 2. * eta_zp + 1.;
+    const double invs_denom = 1. / (p1zp * p1zm * (eta_zp + eta_zm + 1.));
 
     tmp = comp_avg_trans_lks(g, n_zp.second.value());
     const double Lx_zp = n_zp.second ? tmp[0] : 0.;
@@ -465,18 +459,10 @@ NEMDiffusionDriver::MomentsVector NEMDiffusionDriver::calc_leakage_moments(
     const double Lx_zm = n_zm.second ? tmp[0] : 0.;
     const double Ly_zm = n_zm.second ? tmp[1] : 0.;
 
-    const double rho1xz = (p1zm * p2zm * Lx_zp - p1zp * p2zp * Lx_zm +
-                           (p1zp * p2zp - p1zm * p2zm) * Lx) /
-                          (p1zp * p1zm * (eta_zp + eta_zm + 1.));
-    const double rho2xz =
-        (p1zm * Lx_zp + p1zp * Lx_zm - (eta_zp + eta_zm + 2.) * Lx) /
-        (p1zp * p1zm * (eta_zp + eta_zm + 1.));
-    const double rho1yz = (p1zm * p2zm * Ly_zp - p1zp * p2zp * Ly_zm +
-                           (p1zp * p2zp - p1zm * p2zm) * Ly) /
-                          (p1zp * p1zm * (eta_zp + eta_zm + 1.));
-    const double rho2yz =
-        (p1zm * Ly_zp + p1zp * Ly_zm - (eta_zp + eta_zm + 2.) * Ly) /
-        (p1zp * p1zm * (eta_zp + eta_zm + 1.));
+    const double rho1xz = (p1zm * p2zm * Lx_zp - p1zp * p2zp * Lx_zm + (p1zp * p2zp - p1zm * p2zm) * Lx) * invs_denom;
+    const double rho2xz = (p1zm * Lx_zp + p1zp * Lx_zm - (eta_zp + eta_zm + 2.) * Lx) * invs_denom;
+    const double rho1yz = (p1zm * p2zm * Ly_zp - p1zp * p2zp * Ly_zm + (p1zp * p2zp - p1zm * p2zm) * Ly) * invs_denom;
+    const double rho2yz = (p1zm * Ly_zp + p1zp * Ly_zm - (eta_zp + eta_zm + 2.) * Ly) * invs_denom;
 
     const double Lxz1 = invs_12 * rho1xz;
     const double Lxz2 = invs_20 * rho2xz;
@@ -500,8 +486,8 @@ void NEMDiffusionDriver::calc_node(const std::size_t g, const std::size_t m,
   const auto& Q = Q_(g, m);
   const auto& R = Rmats_(g, m);
   const auto& P = Pmats_(g, m);
-  auto& Jout = j_outs_(g, m);  // Not const as we update this here
-  auto& Jin = j_ins_(g, m);
+  auto& Jin = j_in_out_(g, m, 0); // Not const as we update this here
+  auto& Jout = j_in_out_(g, m, 1);  
   const double D = xs.D(g);    // Diffusion coefficient
   const double Er = xs.Er(g);  // Removal cross section
   const double invs_Er = 1. / Er;
@@ -553,9 +539,8 @@ void NEMDiffusionDriver::calc_node(const std::size_t g, const std::size_t m,
   const double flx_zm = 2. * (Jout(CurrentIndx::ZM) + Jin(CurrentIndx::ZM));
 
   // Compute the new average flux
-  const double flx_avg =
-      (Q(MomentIndx::AVG) - invs_dx * Lx - invs_dy * Ly - invs_dz * Lz) / Er;
-  flux_avg_(g, m) = flx_avg;
+  const double flx_avg = (Q(MomentIndx::AVG) - invs_dx * Lx - invs_dy * Ly - invs_dz * Lz) / Er;
+  flux_(g, m, MomentIndx::AVG) = flx_avg;
 
   // Calculate the first two polynomial coefficients along each direction
   const double ax1 = flx_xp - flx_xm;
@@ -567,23 +552,23 @@ void NEMDiffusionDriver::calc_node(const std::size_t g, const std::size_t m,
 
   // Calculate the first flux moments
   const double flx_x1 = (Q(MomentIndx::X1) - L(MomentIndx::X1) - 0.5 * invs_dx * Tx - invs_dx * invs_dx * D * ax1) * invs_Er;
-  flux_x1_(g, m) = flx_x1;
+  flux_(g, m, MomentIndx::X1) = flx_x1;
 
   const double flx_y1 = (Q(MomentIndx::Y1) - L(MomentIndx::Y1) - 0.5 * invs_dy * Ty - invs_dy * invs_dy * D * ay1) * invs_Er;
-  flux_y1_(g, m) = flx_y1;
+  flux_(g, m, MomentIndx::Y1) = flx_y1;
 
   const double flx_z1 = (Q(MomentIndx::Z1) - L(MomentIndx::Z1) - 0.5 * invs_dz * Tz - invs_dz * invs_dz * D * az1) * invs_Er;
-  flux_z1_(g, m) = flx_z1;
+  flux_(g, m, MomentIndx::Z1) = flx_z1;
 
   // Calculate the second flux moments
   const double flx_x2 = (Q(MomentIndx::X2) - L(MomentIndx::X2) - 0.5 * invs_dx * Lx - 3. * invs_dx * invs_dx * D * ax2) * invs_Er;
-  flux_x2_(g, m) = flx_x2;
+  flux_(g, m, MomentIndx::X2) = flx_x2;
 
   const double flx_y2 = (Q(MomentIndx::Y2) - L(MomentIndx::Y2) - 0.5 * invs_dy * Ly - 3. * invs_dy * invs_dy * D * ay2) * invs_Er;
-  flux_y2_(g, m) = flx_y2;
+  flux_(g, m, MomentIndx::Y2) = flx_y2;
 
   const double flx_z2 = (Q(MomentIndx::Z2) - L(MomentIndx::Z2) - 0.5 * invs_dz * Lz - 3. * invs_dz * invs_dz * D * az2) * invs_Er;
-  flux_z2_(g, m) = flx_z2;
+  flux_(g, m, MomentIndx::Z2) = flx_z2;
 
   //----------------------------------------------------------------------------
   // UPDATE INCOMING CURRENTS IN NEIGHBORING NODES / B.C.
@@ -617,33 +602,20 @@ void NEMDiffusionDriver::solve() {
   spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
 
   // Allocate all arrays
-  flux_avg_.resize({NG_, NM_});
-  xt::xtensor<double, 2> old_flux_avg = flux_avg_;
-  flux_x1_.resize({NG_, NM_});
-  flux_x2_.resize({NG_, NM_});
-  flux_y1_.resize({NG_, NM_});
-  flux_y2_.resize({NG_, NM_});
-  flux_z1_.resize({NG_, NM_});
-  flux_z2_.resize({NG_, NM_});
-  j_outs_.resize({NG_, NM_});
-  j_ins_.resize({NG_, NM_});
+  flux_.resize({NG_, NM_, 7});
+  xt::xtensor<double, 3> old_flux = flux_;
+  j_in_out_.resize({NG_, NM_, 2});
   Rmats_.resize({NG_, NM_});
   Pmats_.resize({NG_, NM_});
   Q_.resize({NG_, NM_});
 
   // Load the flux and current values with an initial guess
-  flux_avg_ = xt::ones<double>({NG_, NM_});
-  old_flux_avg = xt::ones<double>({NG_, NM_});
-  flux_x1_ = xt::ones<double>({NG_, NM_});
-  flux_x2_ = xt::ones<double>({NG_, NM_});
-  flux_y1_ = xt::ones<double>({NG_, NM_});
-  flux_y2_ = xt::ones<double>({NG_, NM_});
-  flux_z1_ = xt::ones<double>({NG_, NM_});
-  flux_z2_ = xt::ones<double>({NG_, NM_});
+  flux_.fill(1.);
+  old_flux.fill(1.);
   for (std::size_t g = 0; g < NG_; g++) {
     for (std::size_t m = 0; m < NM_; m++) {
-      j_outs_(g, m).fill(1.);
-      j_ins_(g, m).fill(1.);
+      j_in_out_(g, m, 0).fill(1.);
+      j_in_out_(g, m, 1).fill(1.);
     }
   }
 
@@ -663,7 +635,7 @@ void NEMDiffusionDriver::solve() {
     iteration++;
 
     // Copy current flux into old flux
-    old_flux_avg = flux_avg_;
+    old_flux = flux_;
 
     // Calculating the source
     fill_source();
@@ -674,11 +646,12 @@ void NEMDiffusionDriver::solve() {
 
     // Compute new keff
     double prev_keff = keff_;
-    keff_ = calc_keff(prev_keff, old_flux_avg, flux_avg_);
+    keff_ = calc_keff(prev_keff, old_flux, flux_);
     keff_diff = std::abs(keff_ - prev_keff) / keff_;
 
     // Find the max flux error
-    flux_diff = xt::amax(xt::abs(flux_avg_ - old_flux_avg) / flux_avg_)();
+    //flux_diff = xt::amax(xt::abs(flux_ - old_flux) / flux_)();
+    flux_diff = calc_flux_error(old_flux, flux_);
 
     // Write information
     spdlog::info("-------------------------------------");
@@ -848,7 +821,7 @@ xt::xtensor<double, 4> NEMDiffusionDriver::avg_flux() const {
           if (om.has_value() == false)
             flux_out(g, i, j, k) = 0.;
           else
-            flux_out(g, i, j, k) = flux_avg_(g, om.value());
+            flux_out(g, i, j, k) = flux_(g, om.value(), MomentIndx::AVG);
         }
       }
     }
@@ -989,7 +962,7 @@ xt::xtensor<double, 3> NEMDiffusionDriver::avg_power() const {
         const auto& xs = *mats_[m];
 
         for (std::size_t g = 0; g < NG_; g++) {
-          pwr_out(i, j, k) += flux_avg_(g, m) * xs.Ef(g);
+          pwr_out(i, j, k) += flux_(g, m, MomentIndx::AVG) * xs.Ef(g);
         }
       }
     }
@@ -1017,8 +990,8 @@ NEMDiffusionDriver::NodeFlux NEMDiffusionDriver::fit_node_recon_params(
   const double z_low = geom_->z_bounds()[geom_indx[2]];
   const double z_hi = geom_->z_bounds()[geom_indx[2] + 1];
 
-  const auto& Jout = j_outs_(g, m);
-  const auto& Jin = j_ins_(g, m);
+  const auto& Jin = j_in_out_(g, m, 0);
+  const auto& Jout = j_in_out_(g, m, 1);
 
   const double flx_xp = 2. * (Jout(CurrentIndx::XP) + Jin(CurrentIndx::XP));
   const double flx_xm = 2. * (Jout(CurrentIndx::XM) + Jin(CurrentIndx::XM));
@@ -1027,7 +1000,7 @@ NEMDiffusionDriver::NodeFlux NEMDiffusionDriver::fit_node_recon_params(
   const double flx_zp = 2. * (Jout(CurrentIndx::ZP) + Jin(CurrentIndx::ZP));
   const double flx_zm = 2. * (Jout(CurrentIndx::ZM) + Jin(CurrentIndx::ZM));
 
-  const double flx_avg = flux_avg_(g, m);
+  const double flx_avg = flux_(g, m, MomentIndx::AVG);
   const double Jxp = calc_net_current(Jin, Jout, CurrentIndx::XP);
   const double Jxm = calc_net_current(Jin, Jout, CurrentIndx::XM);
   const double Jyp = calc_net_current(Jin, Jout, CurrentIndx::YP);
