@@ -92,8 +92,10 @@ class NEMDiffusionDriver {
   const std::size_t NM_;  // Number of regions
 
   // Quantities required for reconstructing the flux  (kept after solution)
-  xt::xtensor<double, 3> flux_;  // First index is group, second is node, third is moments
-  xt::xtensor<Current, 3> j_in_out_; // First index is group, second is node, third is in/out
+  xt::xtensor<double, 3>
+      flux_;  // First index is group, second is node, third is moments
+  xt::xtensor<Current, 3>
+      j_in_out_;  // First index is group, second is node, third is in/out
 
   // Quantites used for calculation (not needed for reconstruction)
   xt::xtensor<RMat, 2> Rmats_;  // First index is group, second is node
@@ -124,7 +126,8 @@ class NEMDiffusionDriver {
   MomentsVector calc_leakage_moments(std::size_t g, std::size_t m) const;
   double calc_keff(double keff, const xt::xtensor<double, 3>& old_flux,
                    const xt::xtensor<double, 3>& new_flux) const;
-  double calc_flux_error(const xt::xtensor<double, 3>& old_flux, const xt::xtensor<double, 3>& new_flux) const;
+  double calc_flux_error(const xt::xtensor<double, 3>& old_flux,
+                         const xt::xtensor<double, 3>& new_flux) const;
   void calc_node(const std::size_t g, const std::size_t m, const double invs_dx,
                  const double invs_dy, const double invs_dz,
                  const DiffusionCrossSection& xs);

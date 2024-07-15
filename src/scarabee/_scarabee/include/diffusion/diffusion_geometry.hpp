@@ -57,9 +57,11 @@ class DiffusionGeometry {
   std::pair<Tile, std::optional<std::size_t>> neighbor(std::size_t m,
                                                        Neighbor n) const;
   const std::shared_ptr<DiffusionCrossSection>& mat(std::size_t m) const;
-  const std::shared_ptr<DiffusionCrossSection>& mat(const xt::svector<std::size_t>& geo_indx) const;
+  const std::shared_ptr<DiffusionCrossSection>& mat(
+      const xt::svector<std::size_t>& geo_indx) const;
   xt::svector<std::size_t> geom_indx(std::size_t m) const;
-  std::optional<std::size_t> geom_to_mat_indx(const xt::svector<std::size_t>& geo_indx) const;
+  std::optional<std::size_t> geom_to_mat_indx(
+      const xt::svector<std::size_t>& geo_indx) const;
   double volume(std::size_t m) const;
 
   std::optional<std::size_t> x_to_i(double x) const;

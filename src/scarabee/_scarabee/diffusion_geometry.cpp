@@ -735,7 +735,8 @@ const std::shared_ptr<DiffusionCrossSection>& DiffusionGeometry::mat(
   return tiles_.element(tile_indx.begin(), tile_indx.end()).xs;
 }
 
-const std::shared_ptr<DiffusionCrossSection>& DiffusionGeometry::mat(const xt::svector<std::size_t>& geo_indx) const {
+const std::shared_ptr<DiffusionCrossSection>& DiffusionGeometry::mat(
+    const xt::svector<std::size_t>& geo_indx) const {
   const auto tile_indx = geom_to_tile_indx(geo_indx);
   return tiles_.element(tile_indx.begin(), tile_indx.end()).xs;
 }

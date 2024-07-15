@@ -152,7 +152,8 @@ void init_DiffusionGeometry(py::module& m) {
           "material).\n",
           py::arg("m"), py::arg("n"))
 
-      .def("mat", py::overload_cast<std::size_t>(&DiffusionGeometry::mat, py::const_),
+      .def("mat",
+           py::overload_cast<std::size_t>(&DiffusionGeometry::mat, py::const_),
            "Obtains the :py:class:`DiffusionCrossSection` for material m.\n\n"
            "Parameters\n"
            "----------\n"
