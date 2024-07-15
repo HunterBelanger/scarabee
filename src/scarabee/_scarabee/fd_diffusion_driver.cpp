@@ -523,8 +523,12 @@ FDDiffusionDriver::flux() const {
 
   // Fill the flux
   for (std::size_t m = 0; m < geom_->nmats(); m++) {
-    auto inds = geom_->geom_indx(m);
-    inds.insert(inds.begin(), 0);  // Add entry for group index
+    auto tmp_inds = geom_->geom_indx(m);
+    xt::svector<std::size_t> inds;
+    inds.push_back(0);
+    for (std::size_t i = 0; i < tmp_inds.size(); i++) {
+      inds.push_back(tmp_inds[i]);
+    }
 
     for (std::size_t g = 0; g < geom_->ngroups(); g++) {
       inds[0] = g;
