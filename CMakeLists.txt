@@ -116,6 +116,8 @@ FetchContent_MakeAvailable(hdf5)
 #===============================================================================
 # Get HighFive
 message(STATUS "Downloading HighFive")
+set(HIGHFIVE_UNIT_TESTS OFF)
+set(HIGHFIVE_TEST_SPAN OFF)
 set(HIGHFIVE_EXAMPLES OFF)
 set(HIGHFIVE_BUILD_DOCS OFF)
 set(HIGHFIVE_FIND_HDF5 OFF)
