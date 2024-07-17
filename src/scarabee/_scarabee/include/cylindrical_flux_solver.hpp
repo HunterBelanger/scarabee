@@ -18,7 +18,7 @@ class CylindricalFluxSolver {
   std::size_t ngroups() const { return cell_->ngroups(); }
   std::size_t nregions() const { return cell_->nregions(); }
 
-  void solve();
+  void solve(bool parallel = false);
   bool solved() const { return solved_; }
 
   double flux(std::size_t i, std::size_t g) const { return flux_(g, i); }
@@ -89,6 +89,9 @@ class CylindricalFluxSolver {
                const xt::xtensor<double, 2>& flux) const;
   double Qfiss(std::uint32_t g, std::size_t i,
                const xt::xtensor<double, 2>& flux) const;
+
+  void solve_single_thread();
+  void solve_parallel();
 };
 
 }  // namespace scarabee

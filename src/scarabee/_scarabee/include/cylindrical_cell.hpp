@@ -30,27 +30,27 @@ class CylindricalCell {
   // Outer radius of region i
   double radius(std::size_t i) const { return radii_[i]; }
 
-  double Y(double a, std::uint32_t g, std::size_t i) const {
+  double Y(double a, std::size_t g, std::size_t i) const {
     const double Yi = Y_(g, i);
     const double Gamma = Gamma_(g);
 
     return Yi / (1. - a * (1. - Gamma));
   }
 
-  double x(std::uint32_t g, std::size_t i) const {
+  double x(std::size_t g, std::size_t i) const {
     return 0.25 * Sb() * volume(i) * Y_(g, i);
   }
 
-  double X(double a, std::uint32_t g, std::size_t i, std::size_t k) const {
+  double X(double a, std::size_t g, std::size_t i, std::size_t k) const {
     const double xk = x(g, k);
     const double Xik = X_(g, i, k);
 
     return Xik + a * xk * Y(a, g, i);
   }
 
-  double Gamma(std::uint32_t g) const { return Gamma_(g); }
+  double Gamma(std::size_t g) const { return Gamma_(g); }
 
-  double p(std::uint32_t g, std::size_t i, std::size_t j) const {
+  double p(std::size_t g, std::size_t i, std::size_t j) const {
     return p_(g, i, j);
   }
 

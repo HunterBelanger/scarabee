@@ -5,6 +5,55 @@ from copy import copy
 
 
 class Reflector:
+    """
+    A Reflector instance is responsible for performing transport calculations
+    necessary to produce few-group cross sections for the reflector of an LWR.
+    The core baffle cross sections are self-shielded as an infinite slab,
+    using the Roman two-term approximation.
+
+    Parameters
+    ----------
+    fuel : CrossSection
+        Homogenized cross section which is representative of a pin cell.
+        This is typically obtained from a previous lattice calcualtion.
+    moderator : CrossSection
+        Material cross sections for the moderator at desired temperature
+        and density.
+    assembly_width : float
+        Width of a single fuel assembly (and the reflector to be modeled).
+    gap_width : float
+        Width of the moderator gap between the assembly and the core baffle.
+    baffle_width : float
+        Width of the core baffle.
+    baffle : Material
+        Material for the core baffle at desired temperature and density.
+    ndl : NDLibrary
+        Nuclear data library for constructing the baffle cross sections.
+
+    Attributes
+    ----------
+    condensation_scheme : list of pairs of ints
+        Defines how the energy groups will be condensed from the microgroup
+        structure of the nuclear data library, to the few-group structure
+        used in the nodal calculation.
+    fuel : CrossSection
+        Cross sections for a homogenized fuel assembly.
+    moderator : CrossSection
+        Cross sections for the moderator.
+    assembly_width : float
+        Width of fuel assembly and reflector.
+    gap_width : float
+        Width of the moderator gap between a fuel assembly and the core baffle.
+    baffle_width : float
+        Width of the core baffle.
+    baffle : CrossSection
+        Self-shielded cross sections for the core baffle.
+    keff_tolerance : float
+        Convergence criteria for keff. Default is 1.E-5.
+    flux_tolerance : float
+        Convergence criteria for the flux. Default is 1.E-5.
+    """
+
     def __init__(
         self,
         fuel: CrossSection,
@@ -26,13 +75,9 @@ class Reflector:
 
         # No Dancoff correction, as looking at 1D isolated slab for baffle
         Ee = 1.0 / (2.0 * self.baffle_width)
-        self.baffle = baffle.roman_xs(0., Ee, ndl)
+        self.baffle = baffle.roman_xs(0.0, Ee, ndl)
         self.baffle.name = "Baffle"
 
-        # MOC parameters for assembly calculation
-        self.track_spacing = 0.02
-        self.num_azimuthal_angles = 32
-        self.polar_quadrature = YamamotoTabuchi6()
         self.keff_tolerance = 1.0e-5
         self.flux_tolerance = 1.0e-5
 
@@ -40,8 +85,6 @@ class Reflector:
             raise RuntimeError(
                 "The assembly width is smaller than the sum of the gap and baffle widths."
             )
-
-        self._fuel_name = self.fuel.name
 
     @property
     def track_spacing(self):
@@ -72,6 +115,9 @@ class Reflector:
         self._num_azimuthal_angles = value
 
     def solve(self):
+        """
+        Runs a 1D annular problem to generate few group cross sections for the reflector.
+        """
         # We start by making a cylindrical cell. This is just for condensation.
         radii = []
         mats = []
@@ -115,12 +161,9 @@ class Reflector:
         cell.solve(parallel=True)
         cell_flux = CylindricalFluxSolver(cell)
         cell_flux.albedo = 0.0
-        cell_flux.solve()
-
-        fuel_xs = cell_flux.homogenize(list(range(NF)))
-        fuel_spec = cell_flux.homogenize_flux_spectrum(list(range(NF)))
-        self.condensed_fuel_xs = fuel_xs.condense(self.condensation_scheme, fuel_spec)
-        self.condensed_fuel_xs.name = "Fuel"
+        cell_flux.keff_tolerance = self.keff_tolerance
+        cell_flux.flux_tolerance = self.flux_tolerance
+        cell_flux.solve(parallel=True)
 
         homog_xs = cell_flux.homogenize(list(range(NF, len(radii))))
         homog_spec = cell_flux.homogenize_flux_spectrum(list(range(NF, len(radii))))
@@ -153,9 +196,7 @@ class Reflector:
         else:
             diff_xs = DiffusionCrossSection(D, Ea, Es)
 
-        self.diffusion_xs = diff_xs.condense(
-            self.condensation_scheme, homog_spec
-        )
+        self.diffusion_xs = diff_xs.condense(self.condensation_scheme, homog_spec)
 
         NG = self.diffusion_xs.ngroups
 

@@ -142,7 +142,12 @@ void init_CylindricalFluxSolver(py::module& m) {
            py::arg("g"))
 
       .def("solve", &CylindricalFluxSolver::solve,
-           "Solves the system for the flux and eigenvalue.")
+           "Solves the system for the flux and eigenvalue.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "parallel : bool\n"
+           "  If True, solves the cell in parallel. Default is False.\n",
+           py::arg("parallel") = false)
 
       .def("homogenize",
            py::overload_cast<>(&CylindricalFluxSolver::homogenize, py::const_),

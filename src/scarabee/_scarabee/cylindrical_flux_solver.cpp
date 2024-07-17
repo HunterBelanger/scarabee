@@ -157,7 +157,15 @@ void CylindricalFluxSolver::fill_scatter_source(
   }
 }
 
-void CylindricalFluxSolver::solve() {
+void CylindricalFluxSolver::solve(bool parallel) {
+  if (parallel == false) {
+    solve_single_thread();
+  } else {
+    solve_parallel();
+  }
+}
+
+void CylindricalFluxSolver::solve_single_thread() {
   spdlog::info("Solving for keff.");
   spdlog::info("keff tolerance: {:.5E}", k_tol_);
   spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
@@ -173,14 +181,18 @@ void CylindricalFluxSolver::solve() {
   xt::xtensor<double, 2> scat_source(flux_.shape());
   xt::xtensor<double, 2> fiss_source(flux_.shape());
   xt::xtensor<double, 2> next_flux(flux_.shape());
+  xt::xtensor<double, 2> old_outer_flux(flux_.shape());
   k_ = calc_keff(flux_);
   double old_keff = 100.;
   spdlog::info("Initial keff {:.5f}", k_);
 
   std::size_t outer_iter = 0;
+
   // Outer Generations
-  while (std::abs(old_keff - k_) > k_tol_) {
+  double max_outer_flux_diff = 100.;
+  while (std::abs((old_keff - k_)/k_) > k_tol_ || max_outer_flux_diff > flux_tol_) {
     outer_iter++;
+    old_outer_flux = flux_;
 
     // At the begining of a generation, we calculate the fission source
     fill_fission_source(fiss_source, flux_);
@@ -189,10 +201,10 @@ void CylindricalFluxSolver::solve() {
     // in the inner iterations for the scattering source.
     next_flux = flux_;
 
-    double max_flux_diff = 100.;
+    double max_inner_flux_diff = 100.;
     std::size_t inner_iter = 0;
     // Inner Iterations
-    while (max_flux_diff > flux_tol_) {
+    while (max_inner_flux_diff > flux_tol_) {
       inner_iter++;
 
       // At the begining of an inner iteration, we calculate the fission source
@@ -214,13 +226,13 @@ void CylindricalFluxSolver::solve() {
       }
 
       // Calculate the max difference in the flux
-      max_flux_diff = calc_flux_rel_diff(flux_, next_flux);
-      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter,
-                    max_flux_diff);
+      max_inner_flux_diff = calc_flux_rel_diff(flux_, next_flux);
+      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter, max_inner_flux_diff);
 
       // Copy next_flux into flux for calculating next relative difference
       flux_ = next_flux;
     }  // End of Inner Iterations
+    max_outer_flux_diff = calc_flux_rel_diff(old_outer_flux, flux_);
 
     // Calculate keff
     old_keff = k_;
@@ -229,7 +241,99 @@ void CylindricalFluxSolver::solve() {
 
     // Assign next_flux to be the flux
     std::swap(next_flux, flux_);
-  }  // End of Outer Generations
+  } // End of Outer Generations
+
+  // Now that we have the solution, we need to get the number of source
+  // neutrons reaching the boundary, x, from Stamm'ler and Abbate.
+  // These are used when calculating the currents.
+  for (std::uint32_t g = 0; g < ngroups(); g++) {
+    for (std::size_t r = 0; r < nregions(); r++) {
+      x_[g] += (Qfiss(g, r, flux_) + Qscat(g, r, flux_)) * cell_->x(g, r);
+    }
+  }
+
+  solved_ = true;
+}
+
+void CylindricalFluxSolver::solve_parallel() {
+  spdlog::info("Solving for keff.");
+  spdlog::info("keff tolerance: {:.5E}", k_tol_);
+  spdlog::info("Flux tolerance: {:.5E}", flux_tol_);
+
+  // Make sure the cell is solved
+  if (cell_->solved() == false) {
+    auto mssg = "Cannot solve for flux if cell is not solved.";
+    throw ScarabeeException(mssg);
+  }
+
+  // Create a new array to hold the source according to the current flux, and
+  // another for the next generation flux.
+  xt::xtensor<double, 2> scat_source(flux_.shape());
+  xt::xtensor<double, 2> fiss_source(flux_.shape());
+  xt::xtensor<double, 2> next_flux(flux_.shape());
+  xt::xtensor<double, 2> old_outer_flux(flux_.shape());
+  k_ = calc_keff(flux_);
+  double old_keff = 100.;
+  spdlog::info("Initial keff {:.5f}", k_);
+
+  std::size_t outer_iter = 0;
+
+  // Outer Generations
+  double max_outer_flux_diff = 100.;
+  while (std::abs((old_keff - k_)/k_) > k_tol_ || max_outer_flux_diff > flux_tol_) {
+    outer_iter++;
+    old_outer_flux = flux_;
+
+    // At the begining of a generation, we calculate the fission source
+    fill_fission_source(fiss_source, flux_);
+
+    // Copy flux into next_flux, so that we can continually use next_flux
+    // in the inner iterations for the scattering source.
+    next_flux = flux_;
+
+    double max_inner_flux_diff = 100.;
+    std::size_t inner_iter = 0;
+    // Inner Iterations
+    while (max_inner_flux_diff > flux_tol_) {
+      inner_iter++;
+
+      // At the begining of an inner iteration, we calculate the fission source
+      fill_scatter_source(scat_source, next_flux);
+
+      // From the sources, we calculate the new flux values
+#pragma omp parallel for
+      for (int ig = 0; ig < static_cast<int>(ngroups()); ig++) {
+        std::size_t g = static_cast<std::size_t>(ig);
+        for (std::size_t r = 0; r < nregions(); r++) {
+          const double Yr = cell_->Y(a_, g, r);
+
+          double Xr = 0.;
+          for (std::size_t k = 0; k < nregions(); k++) {
+            Xr +=
+                (fiss_source(g, k) + scat_source(g, k)) * cell_->X(a_, g, r, k);
+          }
+
+          next_flux(g, r) = Xr + j_ext_[g] * Yr;
+        }
+      }
+
+      // Calculate the max difference in the flux
+      max_inner_flux_diff = calc_flux_rel_diff(flux_, next_flux);
+      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter, max_inner_flux_diff);
+
+      // Copy next_flux into flux for calculating next relative difference
+      flux_ = next_flux;
+    }  // End of Inner Iterations
+    max_outer_flux_diff = calc_flux_rel_diff(old_outer_flux, flux_);
+
+    // Calculate keff
+    old_keff = k_;
+    k_ = calc_keff(next_flux);
+    spdlog::info("Iteration {} keff {:.5f}", outer_iter, k_);
+
+    // Assign next_flux to be the flux
+    std::swap(next_flux, flux_);
+  } // End of Outer Generations
 
   // Now that we have the solution, we need to get the number of source
   // neutrons reaching the boundary, x, from Stamm'ler and Abbate.

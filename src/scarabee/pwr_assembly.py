@@ -4,9 +4,10 @@ import numpy as np
 from typing import Tuple
 from copy import copy
 
+
 class PWRAssembly:
     """
-    A PWRAssembly instance is presponsible for performing all the lattice
+    A PWRAssembly instance is responsible for performing all the lattice
     calculations necessary to produce few-group cross sections for a single
     PWR assembly.
 

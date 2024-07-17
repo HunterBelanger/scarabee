@@ -11,3 +11,6 @@ Lattice Tool Chains
 
 .. autoclass:: PWRAssembly
     :members:
+
+.. autoclass:: Reflector
+    :members:
