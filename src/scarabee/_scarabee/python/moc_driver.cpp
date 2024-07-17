@@ -24,12 +24,18 @@ void init_MOCDriver(py::module& m) {
                BoundaryCondition /*ymin = BoundaryCondition::Reflective*/,
                BoundaryCondition /*ymax = BoundaryCondition::Reflective*/>(),
            "Initializes a Method of Characteristics problem.\n\n"
-           "Arguments:\n"
-           "    geometry  a Cartesian2D instance for the problem\n"
-           "    xminbc    BoundaryCondition for minimmum x value\n"
-           "    xmaxbc    BoundaryCondition for maximum x value\n"
-           "    yminbc    BoundaryCondition for minimmum y value\n"
-           "    ymaxbc    BoundaryCondition for maximum y value",
+           "Parameters\n"
+           "----------\n"
+           "geometry : :py:class:`Cartesian2D`\n"
+           "           Geometry for the problem.\n"
+           "xminbc : BoundaryCondition\n"
+           "         Boundary condition at the lower x boundary.\n"
+           "xmaxbc : BoundaryCondition\n"
+           "         Boundary condition at the upper x boundary.\n"
+           "yminbc : BoundaryCondition\n"
+           "         Boundary condition at the lower y boundary.\n"
+           "ymaxbc : BoundaryCondition\n"
+           "         Boundary condition at the upper y boundary.\n",
            py::arg("geometry"),
            py::arg("xminbc") = BoundaryCondition::Reflective,
            py::arg("xmaxbc") = BoundaryCondition::Reflective,
@@ -39,104 +45,150 @@ void init_MOCDriver(py::module& m) {
       .def("generate_tracks",
            py::overload_cast<std::uint32_t, double, PolarQuadrature>(
                &MOCDriver::generate_tracks),
-           "Traces tracks for the calculation across the geometry.\n\n"
-           "Arguments:\n"
-           "    nangles       number of azimuthal angles (even)\n"
-           "    d             max spacing between tracks of a given angle\n"
-           "    polar_quad    polar quadrature for generating segment lengths",
+           "Traces tracks across the geometry for the calculation.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "nangles : int\n"
+           "          Number of azimuthal angles (must be even).\n"
+           "d : float\n"
+           "    Max spacing between tracks of a given angle (in cm).\n"
+           "polar_quad : PolarQuadrature\n"
+           "             Polar quadrature for generating segment lengths.",
            py::arg("nangles"), py::arg("d"), py::arg("polar_quad"))
 
       .def(
           "generate_tracks",
           [](MOCDriver& md, std::uint32_t na, double d,
              PolarQuadratureType pq) { return md.generate_tracks(na, d, pq); },
-          "Traces tracks for the calculation across the geometry.\n\n"
-          "Arguments:\n"
-          "    nangles       number of azimuthal angles (even)\n"
-          "    d             max spacing between tracks of a given angle\n"
-          "    polar_quad    polar quadrature for generating segment lengths",
+           "Traces tracks across the geometry for the calculation.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "nangles : int\n"
+           "          Number of azimuthal angles (must be even).\n"
+           "d : float\n"
+           "    Max spacing between tracks of a given angle (in cm).\n"
+           "polar_quad : PolarQuadrature\n"
+           "             Polar quadrature for generating segment lengths.",
           py::arg("nangles"), py::arg("d"), py::arg("polar_quad"))
 
-      .def("drawn", &MOCDriver::drawn,
-           "return True if geometry has been traced")
+      .def_property_readonly("drawn", &MOCDriver::drawn, "True if geometry has been traced, False otherwise.")
 
       .def_property(
           "keff_tolerance", &MOCDriver::keff_tolerance,
           &MOCDriver::set_keff_tolerance,
-          "maximum relative absolute difference in keff for convergence")
+          "Maximum relative absolute difference in keff for convergence")
 
       .def_property(
           "flux_tolerance", &MOCDriver::flux_tolerance,
           &MOCDriver::set_flux_tolerance,
-          "maximum relative absolute difference in flux for convergence")
+          "Maximum relative absolute difference in flux for convergence")
 
       .def("flux",
            py::overload_cast<const Vector&, const Direction&, std::size_t>(
                &MOCDriver::flux, py::const_),
            "Returns the scalar flux in group g at position r.\n\n"
-           "Arguments:\n"
-           "    r  position\n"
-           "    u  direction\n"
-           "    g  group index",
+           "Parameters\n"
+           "----------\n"
+           "r : Vector\n"
+           "    Position at which to obtain flux.\n"
+           "u : Direction\n"
+           "    Direction vector for disambiguating the cell region.\n"
+           "g : int\n"
+           "    Energy group index.\n\n",
+           "Returns\n"
+           "-------\n"
+           "float\n"
+           "     Flux at position r and in group g.\n",
            py::arg("r"), py::arg("u"), py::arg("g"))
 
       .def("flux",
            py::overload_cast<std::size_t, std::size_t>(&MOCDriver::flux,
                                                        py::const_),
-           "Returns the scalar flux in group g in FSR i.\n\n"
-           "Arguments:\n"
-           "    i  FSR index\n"
-           "    g  group index",
+           "Returns the scalar flux in group g in Flat Source Region i.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "i : int\n"
+           "    Flat Source Region index.\n"
+           "g : int\n"
+           "    Energy group index.\n\n"
+           "Returns\n"
+           "-------\n"
+           "float\n"
+           "     Flux FSR i and in group g.\n",
            py::arg("i"), py::arg("g"))
 
       .def("volume",
            py::overload_cast<const Vector&, const Direction&>(
                &MOCDriver::volume, py::const_),
-           "Returns the volume of the flat source region at position r.\n\n"
-           "Arguments:\n"
-           "    r  position\n"
-           "    u  direction",
+           "Returns the volume of the Flat Source Region at position r.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "r : Vector\n"
+           "    Position at which to obtain flux.\n"
+           "u : Direction\n"
+           "    Direction vector for disambiguating the cell region.\n\n"
+           "Returns\n"
+           "float\n"
+           "     Volume of the FSR at r.",
            py::arg("r"), py::arg("u"))
 
       .def("volume",
            py::overload_cast<std::size_t>(&MOCDriver::volume, py::const_),
            "Returns the volume of Flat Source Region i.\n\n"
-           "Arguments:\n"
-           "    i  FSR index",
+           "Parameters\n"
+           "----------\n"
+           "i : int\n"
+           "    Flat Source Region index.\n\n"
+           "Returns\n"
+           "-------\n"
+           "float\n"
+           "     Volume of FSR i.\n",
            py::arg("i"))
 
       .def("xs",
            py::overload_cast<const Vector&, const Direction&>(&MOCDriver::xs,
                                                               py::const_),
            "Returns the CrossSection at position r.\n\n"
-           "Arguments:\n"
-           "    r  position\n"
-           "    u  direction",
+           "Parameters\n"
+           "----------\n"
+           "r : Vector\n"
+           "    Position at which to obtain flux.\n"
+           "u : Direction\n"
+           "    Direction vector for disambiguating the cell region.\n\n"
+           "Returns\n"
+           "-------\n"
+           "CrossSection\n"
+           "            Material cross sections at r.\n",
            py::arg("r"), py::arg("u"))
 
       .def("xs", py::overload_cast<std::size_t>(&MOCDriver::xs, py::const_),
-           "Returns the CrossSection in FSR i.\n\n"
-           "Arguments:\n"
-           "    i  FSR index",
+           "Returns the CrossSection in Flat Source Region i.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "i : int\n"
+           "    Flat Source Region index.\n\n"
+           "Returns\n"
+           "-------\n"
+           "CrossSection\n"
+           "            Material cross sections at r.\n",
            py::arg("i"))
 
       .def_property_readonly("keff", &MOCDriver::keff,
-                             "value of keff  estimated by solver (1 by default "
-                             "if no solution has been obtained)")
+                             "Value of keff estimated by solver (1 by default if no solution has been obtained).")
 
       .def_property_readonly("ngroups", &MOCDriver::ngroups,
-                             "number of energy groups")
+                             "Number of energy groups.")
 
       .def_property_readonly("polar_quadrature", &MOCDriver::polar_quadrature,
-                             "quadrature used for polar angle integration")
+                             "Quadrature used for polar angle integration.")
 
-      .def("solve", &MOCDriver::solve, "begins iterations to solve problem")
+      .def("solve", &MOCDriver::solve, "Begins iterations to solve problem.")
 
       .def_property(
           "sim_mode",
           [](const MOCDriver& md) -> SimulationMode { return md.sim_mode(); },
           [](MOCDriver& md, SimulationMode& m) { md.sim_mode() = m; },
-          "simulation mode (fixed-source, keff)")
+          ":py:class:`SimulationMode` describing type of simulation (fixed-source or keff).")
 
       .def_property(
           "x_min_bc",
@@ -144,7 +196,7 @@ void init_MOCDriver(py::module& m) {
             return md.x_min_bc();
           },
           [](MOCDriver& md, BoundaryCondition& bc) { md.x_min_bc() = bc; },
-          "boundadary condition at x_min")
+          ":py:class:`BoundadaryCondition` at x_min.")
 
       .def_property(
           "x_max_bc",
@@ -152,7 +204,7 @@ void init_MOCDriver(py::module& m) {
             return md.x_max_bc();
           },
           [](MOCDriver& md, BoundaryCondition& bc) { md.x_max_bc() = bc; },
-          "boundadary condition at x_max")
+          ":py:class:`BoundadaryCondition` at x_max.")
 
       .def_property(
           "y_min_bc",
@@ -160,7 +212,7 @@ void init_MOCDriver(py::module& m) {
             return md.y_min_bc();
           },
           [](MOCDriver& md, BoundaryCondition& bc) { md.y_min_bc() = bc; },
-          "boundadary condition at y_min")
+          ":py:class:`BoundadaryCondition` at y_min.")
 
       .def_property(
           "y_max_bc",
@@ -168,118 +220,146 @@ void init_MOCDriver(py::module& m) {
             return md.y_max_bc();
           },
           [](MOCDriver& md, BoundaryCondition& bc) { md.y_max_bc() = bc; },
-          "boundadary condition at y_max")
+          ":py:class:`BoundadaryCondition` at y_max.")
 
       .def_property_readonly("geometry", &MOCDriver::geometry,
-                             "the Cartesian2D geometry for the problem")
+                             "The :py:class:`Cartesian2D` geometry for the problem.")
 
       .def_property_readonly("size", &MOCDriver::size,
-                             "number of flat source regions")
+                             "Number of flat source regions.")
 
       .def_property_readonly("nfsr", &MOCDriver::nfsr,
-                             "number of flat source regions")
+                             "Number of flat source regions.")
 
       .def_property_readonly("nregions", &MOCDriver::nregions,
-                             "number of flat source regions")
+                             "Number of flat source regions.")
 
       .def_property_readonly("x_min", &MOCDriver::x_min,
-                             "minimum value of x in problem domain")
+                             "Minimum value of x in problem domain.")
 
       .def_property_readonly("x_max", &MOCDriver::x_max,
-                             "maximum value of x in problem domain")
+                             "Maximum value of x in problem domain.")
 
       .def_property_readonly("y_min", &MOCDriver::y_min,
-                             "minimum value of y in problem domain")
+                             "Minimum value of y in problem domain.")
 
       .def_property_readonly("y_max", &MOCDriver::y_max,
-                             "maximum value of y in problem domain")
+                             "Maximum value of y in problem domain.")
 
-      .def_property_readonly("solved", &MOCDriver::solved,
-                             "returns true if solve_keff has been run "
-                             "sucessfully (reset to false on generate_tracks)")
+      .def_property_readonly("solved", &MOCDriver::solved, "True if solve has been run sucessfully (reset to false on generate_tracks).")
 
       .def("set_extern_src",
            py::overload_cast<const Vector&, const Direction&, std::size_t,
                              double>(&MOCDriver::set_extern_src),
-           "Sets the external source in the flat source region at r.\n\n"
-           "Arguments:\n"
-           "    r    position\n"
-           "    u    direction\n"
-           "    g    group index\n"
-           "    src  value of source",
+           "Sets the external source in the Flat Source Region at r.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "r : Vector\n"
+           "    Position at which to set the source.\n"
+           "u : Direction\n"
+           "    Direction vector used to disambiguate the FSR.\n"
+           "g : int\n"
+           "    Energy group index.\n"
+           "src : float\n"
+           "      Value of source in the FSR.\n",
            py::arg("r"), py::arg("u"), py::arg("g"), py::arg("src"))
 
       .def("set_extern_src",
            py::overload_cast<std::size_t, std::size_t, double>(
                &MOCDriver::set_extern_src),
-           "Sets the external source in flat source region i.\n\n"
-           "Arguments:\n"
-           "    i    flat source region index\n"
-           "    g    group index\n"
-           "    src  value of source",
+           "Sets the external source in Flat Source Region with index i.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "i : int\n"
+           "    Flat Source Region index.\n"
+           "g : int\n"
+           "    Energy group index.\n"
+           "src : float\n"
+           "      Value of source in the FSR.\n",
            py::arg("i"), py::arg("g"), py::arg("src"))
 
       .def("extern_src",
            py::overload_cast<const Vector&, const Direction&, std::size_t>(
                &MOCDriver::extern_src, py::const_),
-           "Returns the external source in the flat source region at r.\n\n"
-           "Arguments:\n"
-           "    r    position\n"
-           "    u    direction\n"
-           "    g    group index",
+           "Returns the external source in the Flat Source Region at r.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "r : Vector\n"
+           "    Position at which to set the source.\n"
+           "u : Direction\n"
+           "    Direction vector used to disambiguate the FSR.\n"
+           "g : int\n"
+           "    Energy group index.\n\n"
+           "Returns\n"
+           "-------\n"
+           "float\n"
+           "     Value of the external source at position r.\n",
            py::arg("r"), py::arg("u"), py::arg("g"))
 
       .def("extern_src",
            py::overload_cast<std::size_t, std::size_t>(&MOCDriver::extern_src,
                                                        py::const_),
-           "Returns the external source in flat source region i.\n\n"
-           "Arguments:\n"
-           "    i    flat source region index\n"
-           "    g    group index",
+           "Returns the external source in Flat Source Region i.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "i : int\n"
+           "    Flat Source Region index.\n"
+           "g : int\n"
+           "    Energy group index.\n\n"
+           "Returns\n"
+           "-------\n"
+           "float\n"
+           "     Value of the external source at position r.\n",
            py::arg("i"), py::arg("g"))
 
       .def("homogenize",
            py::overload_cast<>(&MOCDriver::homogenize, py::const_),
-           "Computes a homogenized set of cross sections for the problem.\n\n"
+           "Computes a homogenized set of cross sections for the problem "
+           "based on the previously computed flux and reaction rates. This "
+           "method raises an exception if the problem has not yet been "
+           "solved.\n\n"
            "Returns\n"
            "-------\n"
-           "CrossSection\n"
-           "            Homogenized cross section.")
+           ":py:class:`CrossSection`\n"
+           "            Homogenized cross section.\n")
 
       .def("homogenize",
            py::overload_cast<const std::vector<std::size_t>&>(
                &MOCDriver::homogenize, py::const_),
-           "Computes a homogenized set of cross sections for all provided "
-           "regions.\n\n"
+           "Computes a homogenized set of cross sections for the set of "
+           "provided region indices.\n\n"
            "Parameters\n"
            "----------\n"
            "regions : list of int\n"
-           "        List of regions for homogenization.\n"
+           "          List of regions for homogenization.\n"
            "Returns\n"
            "-------\n"
-           "CrossSection\n"
-           "            Homogenized cross section.",
+           ":py:class:`CrossSection`\n"
+           "                        Homogenized cross section.\n",
            py::arg("regions"))
 
       .def(
           "homogenize_flux_spectrum",
           py::overload_cast<>(&MOCDriver::homogenize_flux_spectrum, py::const_),
-          "Computes a homogenized flux spectrum which can be used for energy "
-          "condensation.\n\n"
+          "Computes a homogenized flux spectrum based on the previously "
+          "computed flux, which can be used for energy condensation. This "
+          "method will raise an exception if the problem has not yet been "
+          "solved.\n\n"
           "Returns\n"
           "-------\n"
           "ndarray of floats\n"
-          "                 Homogenized flux spectrum.")
+          "                 Homogenized flux spectrum.\n")
 
       .def("homogenize_flux_spectrum",
            py::overload_cast<const std::vector<std::size_t>&>(
                &MOCDriver::homogenize_flux_spectrum, py::const_),
-           "Computes a homogenized flux spectrum which can be used for energy "
-           "condensation for all provided regions.\n\n"
+           "Computes a homogenized flux spectrum based on the list of "
+           "provided region indices. This method will raise an exception if "
+           "the problem has not yet been solved.\n\n"
            "Parameters\n"
            "----------\n"
            "regions : list of int\n"
-           "        List of regions for homogenization.\n"
+           "          List of regions for homogenization.\n"
            "Returns\n"
            "-------\n"
            "ndarray of floats\n"
@@ -302,7 +382,8 @@ void init_MOCDriver(py::module& m) {
              guiplotter.enable_docking();
              guiplotter.push_layer(std::make_unique<MOCPlotter>(&md));
              guiplotter.run();
-           })
+           },
+           "Open the graphical MOC geometry plotting window.")
 
       .def(
           "rasterize_flux",
@@ -365,7 +446,18 @@ void init_MOCDriver(py::module& m) {
                               xt::pytensor<double, 1>>{flux, x_bnds, y_bnds};
           },
           "Rasterizes the flux in all energy groups for easy plotting.\n\n"
-          "Arguments:\n"
-          "    nx  number of mesh bins along x\n"
-          "    ny  number of mesh bins along y");
+          "Parameters\n"
+          "----------\n"
+          "nx : int\n"
+          "     Number of mesh bins along x.\n"
+          "ny : int\n"
+          "     Number of mesh bins along y.\n\n"
+          "Returns\n"
+          "-------\n"
+          "flux : ndarray\n"
+          "       Values of the flux. First index is group, second is y, third is x.\n"
+          "x : ndarray\n"
+          "    Array of bounding x values.\n"
+          "y : ndarray\n"
+          "    Array of bounding y values.\n", py::arg("nx"), py::arg("ny"));
 }

@@ -13,19 +13,34 @@ void init_Cell(py::module& m) {
 
       .def("inside", &Cell::inside,
            "Checks if a position - direction pair are inside the cell.\n\n"
-           "Arguments:\n"
-           "    r  Vector of position\n"
-           "    u  Direction at r for boundary",
+           "Parameters\n"
+           "----------\n"
+           "r : Vector\n"
+           "    Position to test.\n"
+           "u : Direction\n"
+           "    Direction vector for disambiguating a the region.\n\n"
+           "Returns\n"
+           "-------\n"
+           "bool\n"
+           "     True is r and u are in the cell, False otherwise.\n",
            py::arg("r"), py::arg("u"))
 
       .def("distance", &Cell::distance,
-           "Distance within cell for given position and direction.\n\n"
-           "Arguments:\n"
-           "    r  starting position\n"
-           "    u  direction of travel",
+           "Distance that can be traveled within cell for given position and "
+           "direction.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "r : Vector\n"
+           "    Starting position.\n"
+           "u : Direction\n"
+           "    Direction of travel in the cell.\n\n"
+           "Returns\n"
+           "-------\n"
+           "float\n"
+           "     Distance that can be traveled.\n",
            py::arg("r"), py::arg("u"))
 
-      .def("dx", &Cell::dx, "Width of Cell in x.")
+      .def_property_readonly("dx", &Cell::dx, "Width of cell along x.")
 
-      .def("dy", &Cell::dy, "Width of Cell in y.");
+      .def_property_readonly("dy", &Cell::dy, "Width of cell along y.");
 }

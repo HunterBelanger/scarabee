@@ -447,10 +447,10 @@ std::set<std::size_t> Cartesian2D::get_all_fsr_ids() const {
 
   for (std::size_t t = 0; t < tiles_.size(); t++) {
     std::set<std::size_t> tile_ids;
-    if (tiles_[t].c2d) {
-      tile_ids = tiles_[t].c2d->get_all_fsr_ids();
-    } else if (tiles_[t].cell) {
-      tile_ids = tiles_[t].cell->get_all_fsr_ids();
+    if (tiles_.flat(t).c2d) {
+      tile_ids = tiles_.flat(t).c2d->get_all_fsr_ids();
+    } else if (tiles_.flat(t).cell) {
+      tile_ids = tiles_.flat(t).cell->get_all_fsr_ids();
     }
 
     for (const auto fsr : tile_ids) fsr_ids.insert(fsr);
@@ -482,7 +482,7 @@ void Cartesian2D::make_offset_map() {
 
   // Now go through and build all offsets
   for (std::size_t i = 1; i < tiles_.size(); i++) {
-    const auto& t = tiles_[i - 1];
+    const auto& t = tiles_.flat(i - 1);
 
     for (std::size_t fsr_id : fsr_ids) {
       fsr_offset_map_.flat(i)[fsr_id] = fsr_offset_map_.flat(i - 1)[fsr_id];

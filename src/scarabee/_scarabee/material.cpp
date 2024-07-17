@@ -261,18 +261,23 @@ std::shared_ptr<CrossSection> Material::roman_xs(
   constexpr double a2_base = 5.4;
   constexpr double b1_base = 1.1;
   constexpr double b2_base = 0.1;
-  const double A = (1. - C) / C;
-  const double g = A + (b1_base * a1_base) + (b2_base * a2_base);
-  const double t = A * (a1_base + a2_base) + a1_base * a2_base;
-  const double a1 =
-      (t - std::sqrt(t * t - (4. * g * A * a1_base * a2_base))) / (2. * g);
-  const double a2 =
-      (t + std::sqrt(t * t - (4. * g * A * a1_base * a2_base))) / (2. * g);
-  const double b1 = (a2 - ((A * (b1_base * a1_base + b2_base * a2_base)) / g)) *
-                    (1. / (a2 - a1));
-  const double b2 = 1. - b1;
 
-  return this->two_term_xs(a1, a2, b1, b2, Ee, ndl);
+  if (C > 0.) {
+    const double A = (1. - C) / C;
+    const double g = A + (b1_base * a1_base) + (b2_base * a2_base);
+    const double t = A * (a1_base + a2_base) + a1_base * a2_base;
+    const double a1 =
+        (t - std::sqrt(t * t - (4. * g * A * a1_base * a2_base))) / (2. * g);
+    const double a2 =
+        (t + std::sqrt(t * t - (4. * g * A * a1_base * a2_base))) / (2. * g);
+    const double b1 = (a2 - ((A * (b1_base * a1_base + b2_base * a2_base)) / g)) *
+                      (1. / (a2 - a1));
+    const double b2 = 1. - b1;
+
+    return this->two_term_xs(a1, a2, b1, b2, Ee, ndl);
+  } else {
+    return this->two_term_xs(a1_base, a2_base, b1_base, b2_base, Ee, ndl);
+  }
 }
 
 std::shared_ptr<CrossSection> Material::dilution_xs(

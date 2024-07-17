@@ -5,8 +5,8 @@ np.set_printoptions(threshold=np.inf)
 np.set_printoptions(linewidth=np.inf)
 np.set_printoptions(4)
 
-#ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/scarabee/endf8_shem281.h5')
-ndl = NDLibrary('C:\\Users\\hunte\\Documents\\nuclear_data\\scarabee\\endf8_shem281.h5')
+ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/endf8_shem281.h5')
+#ndl = NDLibrary('C:\\Users\\hunte\\Documents\\nuclear_data\\scarabee\\endf8_shem281.h5')
 
 cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
              [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],
@@ -62,11 +62,44 @@ asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, f
 
 asmbly.condensation_scheme = cond_spec
 asmbly.few_group_condensation_scheme = few_grp_cond_spec
+asmbly.num_azimuthal_angles = 64
 
 asmbly.solve()
 
-flux, x, y = asmbly.moc.rasterize_flux(500, 500)
-for g in range(asmbly.moc.ngroups):
-  plt.title("Flux in group {}".format(g+1))
-  plt.pcolormesh(x, y, flux[g,:,:], cmap='jet')
-  plt.show()
+#flux, x, y = asmbly.moc.rasterize_flux(500, 500)
+#for g in range(asmbly.moc.ngroups):
+#  plt.title("Flux in group {}".format(g+1))
+#  plt.pcolormesh(x, y, flux[g,:,:], cmap='jet')
+#  plt.show()
+
+print()
+print("Performing Reflector Calculation")
+print()
+
+Bafflecomp = MaterialComposition()
+Bafflecomp.fractions = Fraction.Atoms
+Bafflecomp.add_nuclide("Cr50", 7.6778E-4)
+Bafflecomp.add_nuclide("Cr52", 1.4806E-2)
+Bafflecomp.add_nuclide("Cr53", 1.6789E-3)
+Bafflecomp.add_nuclide("Cr54", 4.1791E-4)
+Bafflecomp.add_nuclide("Fe54", 3.4620E-3)
+Bafflecomp.add_nuclide("Fe56", 5.4345E-2)
+Bafflecomp.add_nuclide("Fe57", 1.2551E-3)
+Bafflecomp.add_nuclide("Fe58", 1.6703E-4)
+Bafflecomp.add_nuclide("Mn55", 1.7604E-3)
+Bafflecomp.add_nuclide("Ni58", 5.6089E-3)
+Bafflecomp.add_nuclide("Ni60", 2.1605E-3)
+Bafflecomp.add_nuclide("Ni61", 9.3917E-5)
+Bafflecomp.add_nuclide("Ni62", 2.9945E-4)
+Bafflecomp.add_nuclide("Ni64", 7.6261E-5)
+Bafflecomp.add_nuclide("Si28", 9.5281E-4)
+Bafflecomp.add_nuclide("Si29", 4.8381E-5)
+Bafflecomp.add_nuclide("Si30", 3.1893E-5)
+Baffle = Material(Bafflecomp, 293.6, ndl)
+
+asmbly.average_fuel_pin.name = "Fuel Assembly"
+
+refl = Reflector(asmbly.average_fuel_pin, moderator=asmbly.moderator_xs, assembly_width=21.50364, gap_width=0.1627, baffle_width=2.2225, baffle=Baffle, ndl=ndl)
+refl.condensation_scheme = cond_spec
+refl.few_group_condensation_scheme = few_grp_cond_spec
+refl.solve()

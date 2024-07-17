@@ -11,10 +11,14 @@ void init_EmptyCell(py::module& m) {
   py::class_<EmptyCell, Cell, std::shared_ptr<EmptyCell>>(m, "EmptyCell")
       .def(py::init<const std::shared_ptr<CrossSection>& /*mat*/, double /*dx*/,
                     double /*dy*/>(),
-           "An empty cell with one flat source region.\n\n"
-           "Arguments:\n"
-           "    mat    CrossSection for cell\n"
-           "    dx     Width of cell in x\n"
-           "    dy     Height of cell in y",
+           "An empty cell with only one flat source region.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "mat : CrossSection\n"
+           "      The material cross sections for the cell.\n"
+           "dx : float\n"
+           "     Width of the cell along x.\n"
+           "dy : float\n"
+           "     Width of the cell along y.\n",
            py::arg("mat"), py::arg("dx"), py::arg("dy"));
 }

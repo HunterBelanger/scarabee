@@ -1,7 +1,9 @@
 from _scarabee import *
 import _scarabee
 
+from .pins import *
 from .pwr_assembly import *
+from .reflector import *
 
 __author__     = _scarabee.__author__
 __copyright__  = _scarabee.__copyright__

@@ -40,19 +40,23 @@ void init_CriticalitySpectrum(py::module& m) {
 
   py::class_<P1CriticalitySpectrum, CriticalitySpectrum>(
       m, "P1CriticalitySpectrum")
-      .def(py::init<std::shared_ptr<CrossSection>>(),
-           "Computes the criticality energy spectrum using the P1 leakage "
-           "approximation.\n\n"
-           "Arguments:\n"
-           "    xs  Homogenized set of cross sections for the system",
-           py::arg("xs"));
+      .def(py::init<std::shared_ptr<CrossSection>>(), 
+      "Computes the criticality energy spectrum using the P1 leakage "
+      "approximation.\n\n"
+      "Parameters\n"
+      "----------\n"
+      "xs : CrossSection\n"
+      "     Homogenized set of cross sections for the system.\n"
+      , py::arg("xs"));
 
   py::class_<B1CriticalitySpectrum, CriticalitySpectrum>(
       m, "B1CriticalitySpectrum")
       .def(py::init<std::shared_ptr<CrossSection>>(),
-           "Computes the criticality energy spectrum using the B1 leakage "
-           "approximation.\n\n"
-           "Arguments:\n"
-           "    xs  Homogenized set of cross sections for the system",
-           py::arg("xs"));
+      "Computes the criticality energy spectrum using the B1 leakage "
+      "approximation.\n\n"
+      "Parameters\n"
+      "----------\n"
+      "xs : CrossSection\n"
+      "     Homogenized set of cross sections for the system.\n"
+      ,py::arg("xs"));
 }

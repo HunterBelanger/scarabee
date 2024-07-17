@@ -1,283 +1,77 @@
 from _scarabee import *
+from .pins import *
 import numpy as np
-from typing import Tuple, List, Optional
+from typing import Tuple
 from copy import copy
-from multiprocessing import Pool
-
-
-class FuelPin:
-    def __init__(
-        self,
-        fuel: Material,
-        fuel_radius: float,
-        clad: Material,
-        clad_width: float,
-        gap: Optional[Material] = None,
-        gap_width: Optional[float] = None,
-    ):
-        self.fuel = fuel
-        self.fuel_radius = fuel_radius
-        self.clad = clad
-        self.clad_width = clad_width
-        self.gap = gap
-        self.gap_width = gap_width
-        self.condensed_xs = []
-
-        if self.gap is not None and self.gap_width is None:
-            raise RuntimeError("Fuel gap material is provided, but no gap width.")
-        elif self.gap_width is not None and self.gap is None:
-            raise RuntimeError("Fuel gap width provided, but no gap material.")
-
-    def clad_offset(self):
-        if self.gap_width is not None:
-            return Vector(
-                self.fuel_radius + self.gap_width + 0.5 * self.clad_width, 0.0
-            )
-        else:
-            return Vector(self.fuel_radius + 0.5 * self.clad_width, 0.0)
-
-    def make_fuel_dancoff_cell(self, pitch: float, moderator: Material):
-        # We first determine all the radii
-        radii = []
-        radii.append(self.fuel_radius)
-        if self.gap is not None:
-            radii.append(radii[-1] + self.gap_width)
-        radii.append(radii[-1] + self.clad_width)
-
-        mats = []
-
-        # This returns a cell for calculating the fuel pin Dancoff factor.
-        # As such, the fuel XS has infinite values.
-        Et = np.array([1.0e5])
-        Ea = np.array([1.0e5])
-        Es = np.array([[0.0]])
-        Fuel = CrossSection(Et, Ea, Es, "Fuel")
-        mats.append(Fuel)
-
-        if self.gap is not None:
-            Et[0] = self.gap.potential_xs
-            Ea[0] = self.gap.potential_xs
-            gap = CrossSection(Et, Ea, Es, "Gap")
-            mats.append(Gap)
-
-        Et[0] = self.clad.potential_xs
-        Ea[0] = self.clad.potential_xs
-        Clad = CrossSection(Et, Ea, Es, "Clad")
-        mats.append(Clad)
-
-        Et[0] = moderator.potential_xs
-        Ea[0] = moderator.potential_xs
-        Mod = CrossSection(Et, Ea, Es, "Moderator")
-        mats.append(Mod)
-
-        return SimplePinCell(radii, mats, pitch, pitch)
-
-    def make_clad_dancoff_cell(self, pitch: float, moderator: Material):
-        # We first determine all the radii
-        radii = []
-        radii.append(self.fuel_radius)
-        if self.gap is not None:
-            radii.append(radii[-1] + self.gap_width)
-        radii.append(radii[-1] + self.clad_width)
-
-        mats = []
-
-        Et = np.array([self.fuel.potential_xs])
-        Ea = np.array([self.fuel.potential_xs])
-        Es = np.array([[0.0]])
-        Fuel = CrossSection(Et, Ea, Es, "Fuel")
-        mats.append(Fuel)
-
-        if self.gap is not None:
-            Et[0] = self.gap.potential_xs
-            Ea[0] = self.gap.potential_xs
-            gap = CrossSection(Et, Ea, Es, "Gap")
-            mats.append(Gap)
-
-        # This returns a cell for calculating the fuel pin Dancoff factor.
-        # As such, the clad XS has infinite values.
-        Et[0] = 1.0e5
-        Ea[0] = 1.0e5
-        Clad = CrossSection(Et, Ea, Es, "Clad")
-        mats.append(Clad)
-
-        Et[0] = moderator.potential_xs
-        Ea[0] = moderator.potential_xs
-        Mod = CrossSection(Et, Ea, Es, "Moderator")
-        mats.append(Mod)
-
-        return SimplePinCell(radii, mats, pitch, pitch)
-
-    def make_cylindrical_cell(
-        self,
-        pitch: float,
-        dancoff_fuel: float,
-        moderator: CrossSection,
-        ndl: NDLibrary,
-        dancoff_clad: Optional[float] = None,
-        clad_dilution=1.0e10,
-    ):
-        # We first determine all the radii
-        radii = []
-        radii.append(self.fuel_radius)
-        if self.gap is not None:
-            radii.append(radii[-1] + self.gap_width)
-        radii.append(radii[-1] + self.clad_width)
-        radii.append(np.sqrt(pitch * pitch / np.pi))
-
-        # Next, we determine all the materials.
-        # This requires applying self shielding to the fuel and cladding
-        mats = []
-
-        # First, treat the fuel
-        Ee = 1.0 / (2.0 * self.fuel_radius)  # Fuel escape xs
-        mats.append(self.fuel.carlvik_xs(dancoff_fuel, Ee, ndl))
-        mats[-1].name = "Fuel"
-
-        # Next, add the gap (if present)
-        if self.gap is not None:
-            mats.append(self.gap.dilution_xs(self.gap.size * [1.0e10], ndl))
-            mats[-1].name = "Gap"
-
-        # Add the cladding
-        if dancoff_clad is not None:
-            Ee = 1.0 / (2.0 * self.clad_width)
-            mats.append(self.clad.roman_xs(dancoff_clad, Ee, ndl))
-        else:
-            mats.append(self.clad.dilution_xs(self.clad.size * [clad_dilution], ndl))
-        mats[-1].name = "Clad"
-
-        # Finally, add moderator
-        mats.append(moderator)
-
-        return CylindricalCell(radii, mats)
-
-    def make_moc_cell(self, pitch: float):
-        radii = []
-        radii.append(self.fuel_radius)
-        if self.gap is not None:
-            radii.append(radii[-1] + self.gap_width)
-        radii.append(radii[-1] + self.clad_width)
-
-        mod_width = 0.5 * pitch - radii[-1]
-        radii.append(radii[-1] + 0.8 * mod_width)
-
-        mats = self.condensed_xs.copy()
-        mats.append(self.condensed_xs[-1])
-
-        return PinCell(radii, mats, pitch, pitch)
-
-
-class GuideTube:
-    def __init__(self, inner_radius: float, outer_radius: float, clad: Material):
-        self.inner_radius = inner_radius
-        self.outer_radius = outer_radius
-        self.clad = clad
-        self.condensed_xs = []
-
-        if self.outer_radius <= self.inner_radius:
-            raise RuntimeError("Outer radius must be > inner radius.")
-
-    def clad_offset(self):
-        return Vector(0.5 * (self.inner_radius + self.outer_radius), 0.0)
-
-    def make_clad_dancoff_cell(self, pitch: float, moderator: Material):
-        # We first determine all the radii
-        radii = []
-        radii.append(self.inner_radius)
-        radii.append(self.outer_radius)
-
-        mats = []
-
-        Et = np.array([moderator.potential_xs])
-        Ea = np.array([moderator.potential_xs])
-        Es = np.array([[0.0]])
-        Mod = CrossSection(Et, Ea, Es, "Moderator")
-        mats.append(Mod)
-
-        # This returns a cell for calculating the fuel pin Dancoff factor.
-        # As such, the clad XS has infinite values.
-        Et[0] = 1.0e5
-        Ea[0] = 1.0e5
-        Clad = CrossSection(Et, Ea, Es, "Clad")
-        mats.append(Clad)
-
-        mats.append(Mod)
-
-        return SimplePinCell(radii, mats, pitch, pitch)
-
-    def make_fuel_dancoff_cell(self, pitch: float, moderator: Material):
-        # We first determine all the radii
-        radii = []
-        radii.append(self.inner_radius)
-        radii.append(self.outer_radius)
-
-        mats = []
-
-        Et = np.array([moderator.potential_xs])
-        Ea = np.array([moderator.potential_xs])
-        Es = np.array([[0.0]])
-        Mod = CrossSection(Et, Ea, Es, "Moderator")
-        mats.append(Mod)
-
-        Et[0] = self.clad.potential_xs
-        Ea[0] = self.clad.potential_xs
-        Clad = CrossSection(Et, Ea, Es, "Clad")
-        mats.append(Clad)
-
-        mats.append(Mod)
-
-        return SimplePinCell(radii, mats, pitch, pitch)
-
-    def make_cylindrical_cell(
-        self,
-        pitch: float,
-        moderator: CrossSection,
-        buffer_radius: float,
-        buffer: CrossSection,
-        ndl: NDLibrary,
-        dancoff_clad: Optional[float] = None,
-        clad_dilution: float = 1.0e10,
-    ):
-        # We first determine all the radii
-        radii = []
-        radii.append(self.inner_radius)
-        radii.append(self.outer_radius)
-        radii.append(np.sqrt(pitch * pitch / np.pi))
-        if radii[-1] >= buffer_radius:
-            raise RuntimeError("Buffer radius is smaller than the radius of the cell.")
-        radii.append(buffer_radius)
-
-        # Next, we determine all the materials.
-        # This requires applying self shielding to the fuel and cladding
-        mats = []
-
-        mats.append(moderator)
-
-        # Add the cladding
-        if dancoff_clad is not None:
-            Ee = 1.0 / (2.0 * (self.outer_radius - self.inner_radius))
-            mats.append(self.clad.roman_xs(dancoff_clad, Ee, ndl))
-        else:
-            mats.append(self.clad.dilution_xs(self.clad.size * [clad_dilution], ndl))
-        mats[-1].name = "Clad"
-
-        # Add outer moderator
-        mats.append(moderator)
-
-        # Add the buffer
-        mats.append(buffer)
-
-        return CylindricalCell(radii, mats)
-
-    def make_moc_cell(self, pitch: float):
-        r_inner_inner_mod = np.sqrt(0.5 * self.inner_radius * self.inner_radius)
-        radii = [r_inner_inner_mod, self.inner_radius, self.outer_radius]
-        mats = [self.condensed_xs[0]] + self.condensed_xs.copy()
-        return PinCell(radii, mats, pitch, pitch)
-
 
 class PWRAssembly:
+    """
+    A PWRAssembly instance is presponsible for performing all the lattice
+    calculations necessary to produce few-group cross sections for a single
+    PWR assembly.
+
+    Parameters
+    ----------
+    pitch : float
+        Regular spacing between fuel pins.
+    moderator : Material
+        Material representing the moderator composition, temperature, and
+        density. This is used for all of the moderator in the assembly.
+    shape : (int, int)
+        A tuple containing the number of pins across and down for the fuel
+        assembly.
+    ndl : NDLibrary
+        The nuclear data library to be used in the calculations.
+
+    Attributes
+    ----------
+    condensation_scheme : list of pairs of ints
+        Defines how the energy groups will be condensed from the microgroup
+        structure of the nuclear data library, to the macrogroup structure
+        used in the full assembly calculation.
+    few_group_condensation_scheme : list of pairs of ints
+        Defines how the energy groups will be condensed from the macrogroup
+        structure of the assembly calculation to the few group structure for
+        the nodal diffusion calculation.
+    pins : list of FuelPin or GuideTube
+        Description of the pins which make up the assembly geometry.
+    dancoff_track_spacing : float
+        Spacing between tracks when calculating Dancoff factors.
+        Default is 0.05.
+    dancoff_num_azimuthal_angles : int
+        Number of azimuthal angles when calculating Dancoff factors.
+        Default is 64.
+    dancoff_polar_quadrature: PolarQuadrature
+        The polar quadrature used when calculating Dancoff factors.
+        Default is YamamotoTabuchi6.
+    dancoff_isolation_factor : float
+        The factor used to multiply the pitch when calculating the flux in an
+        isolated pin. Default is 20.
+    track_spacing : float
+        Spacing between tracks in the assembly calculation. Default is 0.02.
+    num_azimuthal_angles : int
+        Number of azimuthal angles in the assembly calculation. Default is 32.
+    polar_quadrature: PolarQuadrature
+        The polar quadrature used in the assembly calculation.
+        Default is YamamotoTabuchi6.
+    keff_tolerance : float
+        Convergence criteria for keff. Default is 1.E-5.
+    flux_tolerance : float
+        Convergence criteria for the flux. Default is 1.E-5.
+    plot_assembly : bool
+        Indicates wether the GUI plotter for the assembly geometry will be
+        activated before performing the calcualtion.
+    criticality_spectrum_method : str or None
+        The type of leakage approximation used to modify the assembly flux
+        spectrum. Acceptable values are "B1", "P1", or None.
+    moc_geom : Cartesian2D
+        Geometry used in the assembly calculation. Is None until solve has
+        been called.
+    moc : MOCDriver
+        The method of characteristics solver for the assembly calculation.
+        Is None until solve has been called.
+    """
+
     def __init__(
         self, pitch: float, moderator: Material, shape: Tuple[int, int], ndl: NDLibrary
     ):
@@ -287,6 +81,7 @@ class PWRAssembly:
         self._shape = shape
         self.condensation_scheme = []
         self.few_group_condensation_scheme = []
+        self._pins = []
 
         # MOC parameters for computing dancoff corrections
         self.dancoff_track_spacing = 0.05
@@ -456,6 +251,22 @@ class PWRAssembly:
         self._dancoff_polar_quadrature = value
 
     def solve(self):
+        """
+        Runs the entire assembly calculation chain, resulting in few group cross sections.
+        """
+        if len(self.pins) == 0:
+            raise RuntimeError("Cannot solve PWR assembly problem. No pins provided.")
+
+        if len(self.condensation_scheme) == 0:
+            raise RuntimeError(
+                "Cannot solve PWR assembly problem. No energy condensation scheme provided."
+            )
+
+        if len(self.few_group_condensation_scheme) == 0:
+            raise RuntimeError(
+                "Cannot solve PWR assembly problem. No few group energy condensation scheme provided."
+            )
+
         self._get_fuel_dancoff_corrections()
         self._get_clad_dancoff_corrections()
         self._pin_cell_calc()
@@ -748,6 +559,7 @@ class PWRAssembly:
                 else:
                     avg_fp += self.pin_1d_fluxes[i].homogenize()
         avg_fp *= 1.0 / float(nfp)
+        self.average_fuel_pin = avg_fp
 
         # Now we do all the non fuel pin cells
         buffer_rad = np.sqrt(9.0 * self.pitch * self.pitch / np.pi)
@@ -884,6 +696,13 @@ class PWRAssembly:
         else:
             diff_xs = DiffusionCrossSection(D, Ea, Es)
 
+        # According to Smith, one should do energy condensation on the
+        # diffusion coefficients, and not on the transport cross sections which
+        # one could then use to make diffusion coefficients [1]. This is in
+        # contradiction to Lattice Physics Computations which states that
+        # either method is acceptable [2]. In light of these comments, I have
+        # chosen to go with Smith's recommendation of performing energy
+        # condensation on the diffusion coefficients.
         self.diffusion_xs = diff_xs.condense(
             self.few_group_condensation_scheme, flux_spectrum
         )
@@ -910,7 +729,7 @@ class PWRAssembly:
         Es_strs = []
         for g in range(NG):
             D_str += "{:.4E}  ".format(D[g])
-            Ea_str += "{:.4E}  ".format(D[g])
+            Ea_str += "{:.4E}  ".format(Ea[g])
 
             if self.diffusion_xs.fissile:
                 Ef_str += "{:.4E}  ".format(Ef[g])
@@ -931,3 +750,11 @@ class PWRAssembly:
         scarabee_log(LogLevel.Info, "Es:  outgoing group ->")
         for g in range(NG):
             scarabee_log(LogLevel.Info, Es_strs[g])
+
+
+# REFERENCES
+# [1] K. S. Smith, “Nodal diffusion methods and lattice physics data in LWR
+#     analyses: Understanding numerous subtle details,” Prog Nucl Energ,
+#     vol. 101, pp. 360–369, 2017, doi: 10.1016/j.pnucene.2017.06.013.
+# [2] D. Knott and A. Yamamoto, "Lattice Physics Computations" in
+#     Handbook of Nuclear Engineering, 2010, p 1226.

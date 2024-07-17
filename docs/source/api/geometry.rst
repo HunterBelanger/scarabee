@@ -12,6 +12,21 @@ Geometry
     :inherited-members:
     :special-members: __init__
 
+.. autoclass:: EmptyCell
+    :members:
+    :inherited-members:
+    :special-members: __init__
+
+.. autoclass:: SimplePinCell
+    :members:
+    :inherited-members:
+    :special-members: __init__
+
+.. autoclass:: PinCell
+    :members:
+    :inherited-members:
+    :special-members: __init__
+
 .. autoclass:: Tile
     :members:
     :inherited-members:
