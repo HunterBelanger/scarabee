@@ -34,7 +34,12 @@ void init_CylindricalCell(py::module& m) {
           "True is the system has been solved, False otherwise.")
 
       .def("solve", &CylindricalCell::solve,
-           "Solves the system for partial flux responses.")
+           "Solves the system for partial flux responses.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "parallel : bool\n"
+           "  If True, solves the cell in parallel. Default is False.\n",
+           py::arg("parallel") = false)
 
       .def_property_readonly("ngroups", &CylindricalCell::ngroups,
                              "Number of energy groups.")

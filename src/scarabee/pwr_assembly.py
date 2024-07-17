@@ -666,10 +666,7 @@ class PWRAssembly:
         NG = homog_xs.ngroups
         fissile = homog_xs.fissile
 
-        if self._criticality_spectrum is not None:
-            D = self._criticality_spectrum.diff_coeff
-        else:
-            D = np.zeros(NG)
+        D = np.zeros(NG)
         Ea = np.zeros(NG)
         Es = np.zeros((NG, NG))
         if fissile:
@@ -678,9 +675,7 @@ class PWRAssembly:
             chi = np.zeros(NG)
 
         for g in range(NG):
-            if self._criticality_spectrum is None:
-                D[g] = 1.0 / (3.0 * homog_xs.Etr(g))
-
+            D[g] = 1.0 / (3.0 * homog_xs.Etr(g))
             Ea[g] = homog_xs.Ea(g)
 
             if fissile:

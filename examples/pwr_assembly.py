@@ -97,9 +97,6 @@ Bafflecomp.add_nuclide("Si29", 4.8381E-5)
 Bafflecomp.add_nuclide("Si30", 3.1893E-5)
 Baffle = Material(Bafflecomp, 293.6, ndl)
 
-asmbly.average_fuel_pin.name = "Fuel Assembly"
-
 refl = Reflector(asmbly.average_fuel_pin, moderator=asmbly.moderator_xs, assembly_width=21.50364, gap_width=0.1627, baffle_width=2.2225, baffle=Baffle, ndl=ndl)
-refl.condensation_scheme = cond_spec
-refl.few_group_condensation_scheme = few_grp_cond_spec
+refl.condensation_scheme = [[0, 249], [250, 280]]
 refl.solve()

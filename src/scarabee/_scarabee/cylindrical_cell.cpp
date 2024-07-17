@@ -85,19 +85,26 @@ CylindricalCell::CylindricalCell(
   }
 }
 
-void CylindricalCell::solve() {
+void CylindricalCell::solve(bool parallel) {
   spdlog::info("Solving cylindrical cell.");
-  this->calculate_collision_probabilities();
-  this->solve_systems();
+
+  if (parallel == false) {
+    this->calculate_collision_probabilities();
+    this->solve_systems();
+  } else {
+    this->parallel_calculate_collision_probabilities();
+    this->parallel_solve_systems();
+  }
+
   solved_ = true;
 }
 
 void CylindricalCell::calculate_collision_probabilities() {
-  spdlog::debug("Calculating collision probabilities.");
+  spdlog::info("Calculating collision probabilities.");
 
   // First, ensure we have a matrix of the proper size
-  p_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
-
+  p_ = xt::zeros<double>({ngroups(), nregions(), nregions()}); 
+  
   // Create a matrix to temporarily hold the S_ij factors. We do one group at
   // a time, so we don't need a third axis
   xt::xtensor<double, 2> S = xt::zeros<double>({nregions(), nregions()});
@@ -133,8 +140,207 @@ void CylindricalCell::calculate_collision_probabilities() {
   }  // for groups
 }
 
+void CylindricalCell::parallel_calculate_collision_probabilities() {
+  spdlog::info("Calculating collision probabilities.");
+
+  // First, ensure we have a matrix of the proper size
+  p_ = xt::zeros<double>({ngroups(), nregions(), nregions()}); 
+
+  // Calculate the matrix for each energy group
+#pragma omp parallel for
+  for (int ig = 0; ig < static_cast<int>(ngroups()); ig++) {
+    std::size_t g = static_cast<std::size_t>(ig);
+    // Create a matrix to temporarily hold the S_ij factors. We do one group at
+    // a time, so we don't need a third axis
+    xt::xtensor<double, 2> S = xt::zeros<double>({nregions(), nregions()});
+
+    // Load S
+    for (std::size_t i = 0; i < nregions(); i++) {
+      for (std::size_t j = i; j < nregions(); j++) {
+        S(i, j) = calculate_S_ij(i, j, g);
+
+        // These are symmetric, so we can assign the diagonal term too
+        if (j != i) S(j, i) = S(i, j);
+      }
+    }
+
+    // S has now been filled. We can now load p
+    for (std::size_t i = 0; i < nregions(); i++) {
+      for (std::size_t j = i; j < nregions(); j++) {
+        p_(g, i, j) = 0.;
+        if (i == j) p_(g, i, j) += vols_[i] * mats_[i]->Etr(g);
+
+        p_(g, i, j) += 2. * S(i, j);
+        if (i > 0 && j > 0) p_(g, i, j) += 2. * S(i - 1, j - 1);
+        if (i > 0) p_(g, i, j) -= 2. * S(i - 1, j);
+        if (j > 0) p_(g, i, j) -= 2. * S(i, j - 1);
+
+        if (i != j) p_(g, j, i) = p_(g, i, j);
+      }
+    }
+  }  // for groups
+}
+
+void CylindricalCell::solve_systems() {
+  spdlog::info("Solving system of equations for cylindrical cell.");
+
+  // First, we allocate the needed memory to hold all of the X and Y terms
+  X_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
+  Y_ = xt::zeros<double>({ngroups(), nregions()});
+  Gamma_ = xt::zeros<double>({ngroups()});
+
+  // The Y and X terms all depend on the energy group, and are described by
+  // the same matrix. We therefore load the matrix once, and solve it for
+  // all equations.
+  for (std::size_t g = 0; g < ngroups(); g++) {
+    // Initialize and fill matrix for group g
+    Eigen::MatrixXd M(nregions(), nregions());
+    for (long i = 0; i < static_cast<long>(nregions()); i++) {
+      for (long j = 0; j < static_cast<long>(nregions()); j++) {
+        const auto& mat = mats_[static_cast<std::size_t>(j)];
+        const double Etr = mat->Etr(g);
+        const double Es_tr = mat->Es_tr(g, g);
+        const double c_j = Es_tr / Etr;
+
+        M(i, j) = -c_j * p_(g, j, i);
+
+        if (j == i) {
+          M(i, j) += Etr * vols_[static_cast<std::size_t>(i)];
+        }
+      }
+    }
+
+    // Now that the matrix has been loaded for this group, we need to
+    // initialize a solver for it.
+    const auto solver = M.colPivHouseholderQr();
+
+    // There are nregions systems for solve for X
+    for (long k = 0; k < static_cast<long>(nregions()); k++) {
+      // Load the b vector
+      Eigen::VectorXd b(nregions());
+      const double Etr_k = mats_[static_cast<std::size_t>(k)]->Etr(g);
+      for (long i = 0; i < static_cast<long>(nregions()); i++) {
+        b(i) = p_(g, k, i) / Etr_k;
+      }
+
+      // Solve for this set of X_ik
+      auto X_k = solver.solve(b);
+
+      // Save the X_ik in the array
+      for (long i = 0; i < static_cast<long>(nregions()); i++) {
+        X_(g, i, k) = X_k(i);
+      }
+    }
+
+    // We can now solve the equation for Y_i
+    Eigen::VectorXd b(nregions());
+    const double coeff = 4. / Sb();
+    for (long i = 0; i < static_cast<long>(nregions()); i++) {
+      const std::size_t indx = static_cast<std::size_t>(i);
+      const double Etr_i = mats_[indx]->Etr(g);
+      const double Vol_i = vols_[indx];
+      double sum_p = 0.;
+      for (std::size_t j = 0; j < nregions(); j++) {
+        sum_p += p_(g, i, j);
+      }
+
+      b(i) = coeff * (Etr_i * Vol_i - sum_p);
+    }
+    auto Y_i = solver.solve(b);
+    for (long i = 0; i < static_cast<long>(nregions()); i++) {
+      Y_(g, i) = Y_i(i);
+    }
+
+    // Calculate multicollision blackness for this group
+    Gamma_(g) = 0.;
+    for (std::size_t i = 0; i < nregions(); i++) {
+      Gamma_(g) += mats_[i]->Er(g) * vols_[i] * Y_(g, i);
+    }
+  }  // For all groups
+}
+
+void CylindricalCell::parallel_solve_systems() {
+  spdlog::info("Solving system of equations for cylindrical cell.");
+
+  // First, we allocate the needed memory to hold all of the X and Y terms
+  X_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
+  Y_ = xt::zeros<double>({ngroups(), nregions()});
+  Gamma_ = xt::zeros<double>({ngroups()});
+
+  // The Y and X terms all depend on the energy group, and are described by
+  // the same matrix. We therefore load the matrix once, and solve it for
+  // all equations.
+#pragma omp parallel for
+  for (int ig = 0; ig < static_cast<int>(ngroups()); ig++) {
+    std::size_t g = static_cast<std::size_t>(ig);
+    // Initialize and fill matrix for group g
+    Eigen::MatrixXd M(nregions(), nregions());
+    for (long i = 0; i < static_cast<long>(nregions()); i++) {
+      for (long j = 0; j < static_cast<long>(nregions()); j++) {
+        const auto& mat = mats_[static_cast<std::size_t>(j)];
+        const double Etr = mat->Etr(g);
+        const double Es_tr = mat->Es_tr(g, g);
+        const double c_j = Es_tr / Etr;
+
+        M(i, j) = -c_j * p_(g, j, i);
+
+        if (j == i) {
+          M(i, j) += Etr * vols_[static_cast<std::size_t>(i)];
+        }
+      }
+    }
+
+    // Now that the matrix has been loaded for this group, we need to
+    // initialize a solver for it.
+    const auto solver = M.colPivHouseholderQr();
+
+    // There are nregions systems for solve for X
+    for (long k = 0; k < static_cast<long>(nregions()); k++) {
+      // Load the b vector
+      Eigen::VectorXd b(nregions());
+      const double Etr_k = mats_[static_cast<std::size_t>(k)]->Etr(g);
+      for (long i = 0; i < static_cast<long>(nregions()); i++) {
+        b(i) = p_(g, k, i) / Etr_k;
+      }
+
+      // Solve for this set of X_ik
+      auto X_k = solver.solve(b);
+
+      // Save the X_ik in the array
+      for (long i = 0; i < static_cast<long>(nregions()); i++) {
+        X_(g, i, k) = X_k(i);
+      }
+    }
+
+    // We can now solve the equation for Y_i
+    Eigen::VectorXd b(nregions());
+    const double coeff = 4. / Sb();
+    for (long i = 0; i < static_cast<long>(nregions()); i++) {
+      const std::size_t indx = static_cast<std::size_t>(i);
+      const double Etr_i = mats_[indx]->Etr(g);
+      const double Vol_i = vols_[indx];
+      double sum_p = 0.;
+      for (std::size_t j = 0; j < nregions(); j++) {
+        sum_p += p_(g, i, j);
+      }
+
+      b(i) = coeff * (Etr_i * Vol_i - sum_p);
+    }
+    auto Y_i = solver.solve(b);
+    for (long i = 0; i < static_cast<long>(nregions()); i++) {
+      Y_(g, i) = Y_i(i);
+    }
+
+    // Calculate multicollision blackness for this group
+    Gamma_(g) = 0.;
+    for (std::size_t i = 0; i < nregions(); i++) {
+      Gamma_(g) += mats_[i]->Er(g) * vols_[i] * Y_(g, i);
+    }
+  }  // For all groups
+}
+
 double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
-                                       std::uint32_t g) const {
+                                       std::size_t g) const {
   if (i > j) std::swap(i, j);
 
   /*
@@ -200,84 +406,6 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
   }
 
   return S_ij;
-}
-
-void CylindricalCell::solve_systems() {
-  spdlog::debug("Solving system of equations for cylindrical cell.");
-
-  // First, we allocate the needed memory to hold all of the X and Y terms
-  X_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
-  Y_ = xt::zeros<double>({ngroups(), nregions()});
-  Gamma_ = xt::zeros<double>({ngroups()});
-
-  // The Y and X terms all depend on the energy group, and are described by
-  // the same matrix. We therefore load the matrix once, and solve it for
-  // all equations.
-  for (std::uint32_t g = 0; g < ngroups(); g++) {
-    // Initialize and fill matrix for group g
-    Eigen::MatrixXd M(nregions(), nregions());
-    for (long i = 0; i < static_cast<long>(nregions()); i++) {
-      for (long j = 0; j < static_cast<long>(nregions()); j++) {
-        const auto& mat = mats_[static_cast<std::size_t>(j)];
-        const double Etr = mat->Etr(g);
-        const double Es_tr = mat->Es_tr(g, g);
-        const double c_j = Es_tr / Etr;
-
-        M(i, j) = -c_j * p_(g, j, i);
-
-        if (j == i) {
-          M(i, j) += Etr * vols_[static_cast<std::size_t>(i)];
-        }
-      }
-    }
-
-    // Now that the matrix has been loaded for this group, we need to
-    // initialize a solver for it.
-    const auto solver = M.colPivHouseholderQr();
-
-    // There are nregions systems for solve for X
-    for (long k = 0; k < static_cast<long>(nregions()); k++) {
-      // Load the b vector
-      Eigen::VectorXd b(nregions());
-      const double Etr_k = mats_[static_cast<std::size_t>(k)]->Etr(g);
-      for (long i = 0; i < static_cast<long>(nregions()); i++) {
-        b(i) = p_(g, k, i) / Etr_k;
-      }
-
-      // Solve for this set of X_ik
-      auto X_k = solver.solve(b);
-
-      // Save the X_ik in the array
-      for (long i = 0; i < static_cast<long>(nregions()); i++) {
-        X_(g, i, k) = X_k(i);
-      }
-    }
-
-    // We can now solve the equation for Y_i
-    Eigen::VectorXd b(nregions());
-    const double coeff = 4. / Sb();
-    for (long i = 0; i < static_cast<long>(nregions()); i++) {
-      const std::size_t indx = static_cast<std::size_t>(i);
-      const double Etr_i = mats_[indx]->Etr(g);
-      const double Vol_i = vols_[indx];
-      double sum_p = 0.;
-      for (std::size_t j = 0; j < nregions(); j++) {
-        sum_p += p_(g, i, j);
-      }
-
-      b(i) = coeff * (Etr_i * Vol_i - sum_p);
-    }
-    auto Y_i = solver.solve(b);
-    for (long i = 0; i < static_cast<long>(nregions()); i++) {
-      Y_(g, i) = Y_i(i);
-    }
-
-    // Calculate multicollision blackness for this group
-    Gamma_(g) = 0.;
-    for (std::size_t i = 0; i < nregions(); i++) {
-      Gamma_(g) += mats_[i]->Er(g) * vols_[i] * Y_(g, i);
-    }
-  }  // For all groups
 }
 
 }  // namespace scarabee

@@ -16,7 +16,7 @@ class CylindricalCell {
   CylindricalCell(const std::vector<double>& radii,
                   const std::vector<std::shared_ptr<CrossSection>>& mats);
   bool solved() const { return solved_; }
-  void solve();
+  void solve(bool parallel = false);
 
   std::size_t ngroups() const { return ngroups_; }
   std::size_t nregions() const { return radii_.size(); }
@@ -70,8 +70,12 @@ class CylindricalCell {
   bool solved_;
 
   void calculate_collision_probabilities();
-  double calculate_S_ij(std::size_t i, std::size_t j, std::uint32_t g) const;
   void solve_systems();
+
+  void parallel_calculate_collision_probabilities();
+  void parallel_solve_systems();
+
+  double calculate_S_ij(std::size_t i, std::size_t j, std::size_t g) const;
 };
 
 }  // namespace scarabee
