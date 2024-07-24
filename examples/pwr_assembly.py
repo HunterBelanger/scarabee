@@ -5,8 +5,8 @@ np.set_printoptions(threshold=np.inf)
 np.set_printoptions(linewidth=np.inf)
 np.set_printoptions(4)
 
-ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/endf8_shem281.h5')
-#ndl = NDLibrary('C:\\Users\\hunte\\Documents\\nuclear_data\\scarabee\\endf8_shem281.h5')
+#ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/endf8_shem281.h5')
+ndl = NDLibrary('C:\\Users\\hunte\\Documents\\nuclear_data\\endf8_shem281.h5')
 
 cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
              [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],
@@ -39,11 +39,12 @@ Watercomp.add_nuclide("O16",    3.3315E-2)
 Water = Material(Watercomp, 293.6, ndl)
 
 fp = FuelPin(fuel=UO2, fuel_radius=0.4095, clad=Zirc, clad_width=(0.475-0.4095))
+gp = FuelPin(fuel=UO2, fuel_radius=0.4095, clad=Zirc, clad_width=(0.475-0.4095), fuel_rings=8)
 gt = GuideTube(inner_radius=0.57, outer_radius=0.61, clad=Zirc)
 
 asmbly = PWRAssembly(pitch=1.26, moderator=Water, shape=(17, 17), ndl=ndl)
 asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
+               fp, gp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, gp, fp,
                fp, fp, fp, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, fp, fp, fp,
                fp, fp, fp, gt, fp, fp, fp, fp, fp, fp, fp, fp, fp, gt, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
@@ -57,20 +58,21 @@ asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, f
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, gt, fp, fp, fp, fp, fp, fp, fp, fp, fp, gt, fp, fp, fp,
                fp, fp, fp, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, fp, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
+               fp, gp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, gp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp]
 
 asmbly.condensation_scheme = cond_spec
 asmbly.few_group_condensation_scheme = few_grp_cond_spec
 asmbly.num_azimuthal_angles = 64
+asmbly.plot_assembly = True
 
 asmbly.solve()
 
-#flux, x, y = asmbly.moc.rasterize_flux(500, 500)
-#for g in range(asmbly.moc.ngroups):
-#  plt.title("Flux in group {}".format(g+1))
-#  plt.pcolormesh(x, y, flux[g,:,:], cmap='jet')
-#  plt.show()
+flux, x, y = asmbly.moc.rasterize_flux(500, 500)
+for g in range(asmbly.moc.ngroups):
+  plt.title("Flux in group {}".format(g+1))
+  plt.pcolormesh(x, y, flux[g,:,:], cmap='jet')
+  plt.show()
 
 print()
 print("Performing Reflector Calculation")

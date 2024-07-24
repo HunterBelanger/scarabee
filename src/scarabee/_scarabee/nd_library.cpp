@@ -250,6 +250,24 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
     const std::string& name, const double temp, const double a1,
     const double a2, const double b1, const double b2, const double mat_pot_xs,
     const double N, const double Rfuel, const double Rin, const double Rout) {
+  if (Rin == 0.) {
+    auto mssg = "Rin must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (Rin >= Rout) {
+    auto mssg = "Rin must be < Rout.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (Rout > Rfuel) {
+    auto mssg = "Rout must be < Rfuel.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   const auto& nuclide = get_nuclide(name);
   const double pot_xs = nuclide.potential_xs;
   const double macro_pot_xs = N * pot_xs;
@@ -274,9 +292,15 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
     const double eta_m = eta_lm.first;
     const double l_m = eta_lm.second;
 
+    std::cout << "eta_m = " << eta_m << "\n";
+    std::cout << "l_m = " << l_m << "\n";
+
     // Calculate the background xs
     const double bg_xs_1 = (mat_pot_xs - macro_pot_xs + a1 / l_m) / N;
     const double bg_xs_2 = (mat_pot_xs - macro_pot_xs + a2 / l_m) / N;
+
+    std::cout << "bg_xs_1 = " << bg_xs_1 << "\n";
+    std::cout << "bg_xs_2 = " << bg_xs_2 << "\n";
 
     // Get the two cross section sets
     auto xs_1 = interp_xs(name, temp, bg_xs_1);
@@ -457,32 +481,25 @@ std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
   const double p_i = Rout / Rfuel;
   const double p_im = Rin / Rfuel;
 
-  const double p = [&m, &p_i, &p_im]() {
-    if (m == 1 || m == 2) return p_i;
-    return p_im;
-  }();
+  double p = p_i;
+  if (m == 3 || m == 4)
+    p = p_im;
 
-  const double theta = [&m, &p]() {
-    const double val = PI * p * 0.5;
-
-    if (m == 1 || m == 3) return val;
-
-    return -val;
-  }();
+  double theta = PI * p * 0.5;
+  if (m == 2 || m == 4)
+    theta = -theta;
 
   // l = 4V_ring / S_pin = 4 pi (Rout^2 - Rin^2) / (2 pi Rfuel)
   const double l = 2. * (Rout * Rout - Rin * Rin) / Rfuel;
 
-  const double lm =
-      (2. * Rfuel / PI) * (std::sqrt(1. - p * p) + std::asin(p) / p + theta);
+  const double T1 = std::sqrt(1. - p * p);
+  const double T2 = Rin > 0. ? std::asin(p) / p : 1.;
 
-  const double eta = [&m, &lm, &l, &p]() {
-    const double val = p * lm / l;
+  const double lm = (2. * Rfuel / PI) * (T1 + T2 + theta);
 
-    if (m == 1 || m == 4) return val;
-
-    return -val;
-  }();
+  double eta =  p * lm / l;
+  if (m == 2 || m == 3)
+    eta = -eta;
 
   return {eta, lm};
 }

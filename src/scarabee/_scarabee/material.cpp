@@ -323,6 +323,24 @@ std::shared_ptr<CrossSection> Material::dilution_xs(
 std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
     double C, double Rfuel, double Rin, double Rout,
     std::shared_ptr<NDLibrary> ndl) const {
+  if (Rin == 0.) {
+    auto mssg = "Rin must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (Rin >= Rout) {
+    auto mssg = "Rin must be < Rout.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (Rout > Rfuel) {
+    auto mssg = "Rout must be < Rfuel.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   const double a1 = 0.5 * (C + 5. - std::sqrt(C * C + 34. * C + 1.));
   const double a2 = 0.5 * (C + 5. + std::sqrt(C * C + 34. * C + 1.));
   const double b1 = (a2 - (1. - C)) / (a2 - a1);

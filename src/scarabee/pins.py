@@ -22,6 +22,9 @@ class FuelPin:
     gap_width: float, optional
         Thickness of the gap between the fuel pellet and the cladding
         (if modeled).
+    fuel_rings: int
+        The number of rings into which the fuel pellet will be divided.
+        Default value is 1.
     """
 
     def __init__(
@@ -32,6 +35,7 @@ class FuelPin:
         clad_width: float,
         gap: Optional[Material] = None,
         gap_width: Optional[float] = None,
+        fuel_rings: int = 1
     ):
         self.fuel = fuel
         self.fuel_radius = fuel_radius
@@ -39,12 +43,16 @@ class FuelPin:
         self.clad_width = clad_width
         self.gap = gap
         self.gap_width = gap_width
+        self.fuel_rings = fuel_rings
         self.condensed_xs = []
 
         if self.gap is not None and self.gap_width is None:
             raise RuntimeError("Fuel gap material is provided, but no gap width.")
         elif self.gap_width is not None and self.gap is None:
             raise RuntimeError("Fuel gap width provided, but no gap material.")
+
+        if fuel_rings <= 0:
+            raise RuntimeError("The number of fuel rings must be >= 1.")
 
     def clad_offset(self):
         if self.gap_width is not None:
@@ -137,10 +145,30 @@ class FuelPin:
     ):
         # We first determine all the radii
         radii = []
-        radii.append(self.fuel_radius)
+
+        # Add the fuel radius
+        if self.fuel_rings == 1:
+            radii.append(self.fuel_radius)
+        else:
+            # We need to subdivide the pellet into rings. We start be getting
+            # the fuel pellet volume
+            V = np.pi * self.fuel_radius * self.fuel_radius
+            Vring = V / float(self.fuel_rings)
+            for r in range(self.fuel_rings):
+                Rin = 0.
+                if r > 0:
+                    Rin = radii[-1]
+                Rout = np.sqrt((Vring - np.pi*Rin*Rin)/np.pi)
+                radii.append(Rout)
+
+        # Add gap radius
         if self.gap is not None:
             radii.append(radii[-1] + self.gap_width)
+
+        # Add clad radius
         radii.append(radii[-1] + self.clad_width)
+
+        # Add water radius
         radii.append(np.sqrt(pitch * pitch / np.pi))
 
         # Next, we determine all the materials.
@@ -148,9 +176,22 @@ class FuelPin:
         mats = []
 
         # First, treat the fuel
-        Ee = 1.0 / (2.0 * self.fuel_radius)  # Fuel escape xs
-        mats.append(self.fuel.carlvik_xs(dancoff_fuel, Ee, ndl))
-        mats[-1].name = "Fuel"
+        if self.fuel_rings == 1:
+            # For a single pellet, use the standard Carlvik two-term
+            Ee = 1.0 / (2.0 * self.fuel_radius)  # Fuel escape xs
+            mats.append(self.fuel.carlvik_xs(dancoff_fuel, Ee, ndl))
+            mats[-1].name = "Fuel"
+        else:
+            # We need to apply spatial self shielding.
+            for r in range(self.fuel_rings):
+                if r == 0:
+                    Ee = 1.0 / (2.0 * radii[0])  # Fuel escape xs
+                    mats.append(self.fuel.carlvik_xs(dancoff_fuel, Ee, ndl))
+                else:
+                    Rin = radii[r-1]
+                    Rout = radii[r]
+                    mats.append(self.fuel.ring_carlvik_xs(dancoff_fuel, self.fuel_radius, Rin, Rout, ndl))
+                mats[-1].name = "Fuel"
 
         # Next, add the gap (if present)
         if self.gap is not None:
@@ -172,9 +213,24 @@ class FuelPin:
 
     def make_moc_cell(self, pitch: float):
         radii = []
-        radii.append(self.fuel_radius)
+
+        if self.fuel_rings == 1:
+            radii.append(self.fuel_radius)
+        else:
+            # We need to subdivide the pellet into rings. We start be getting
+            # the fuel pellet volume
+            V = np.pi * self.fuel_radius * self.fuel_radius
+            Vring = V / float(self.fuel_rings)
+            for r in range(self.fuel_rings):
+                Rin = 0.
+                if r > 0:
+                    Rin = radii[-1]
+                Rout = np.sqrt((Vring - np.pi*Rin*Rin)/np.pi)
+                radii.append(Rout)
+
         if self.gap is not None:
             radii.append(radii[-1] + self.gap_width)
+
         radii.append(radii[-1] + self.clad_width)
 
         mod_width = 0.5 * pitch - radii[-1]
