@@ -270,8 +270,9 @@ std::shared_ptr<CrossSection> Material::roman_xs(
         (t - std::sqrt(t * t - (4. * g * A * a1_base * a2_base))) / (2. * g);
     const double a2 =
         (t + std::sqrt(t * t - (4. * g * A * a1_base * a2_base))) / (2. * g);
-    const double b1 = (a2 - ((A * (b1_base * a1_base + b2_base * a2_base)) / g)) *
-                      (1. / (a2 - a1));
+    const double b1 =
+        (a2 - ((A * (b1_base * a1_base + b2_base * a2_base)) / g)) *
+        (1. / (a2 - a1));
     const double b2 = 1. - b1;
 
     return this->two_term_xs(a1, a2, b1, b2, Ee, ndl);
@@ -319,7 +320,9 @@ std::shared_ptr<CrossSection> Material::dilution_xs(
   return xsout;
 }
 
-std::shared_ptr<CrossSection> Material::ring_carlvik_xs(double C, double Rpin, double Rin, double Rout, std::shared_ptr<NDLibrary> ndl) const {
+std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
+    double C, double Rpin, double Rin, double Rout,
+    std::shared_ptr<NDLibrary> ndl) const {
   const double a1 = 0.5 * (C + 5. - std::sqrt(C * C + 34. * C + 1.));
   const double a2 = 0.5 * (C + 5. + std::sqrt(C * C + 34. * C + 1.));
   const double b1 = (a2 - (1. - C)) / (a2 - a1);
@@ -331,8 +334,9 @@ std::shared_ptr<CrossSection> Material::ring_carlvik_xs(double C, double Rpin, d
   for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
     const std::string& namei = composition_.nuclides[i].name;
     const double Ni = this->atom_density(namei);
-    
-    auto xsi = ndl->ring_two_term_xs(namei, temperature(), a1, a2, b1, b2, mat_pot_xs, Ni, Rpin, Rin, Rout);
+
+    auto xsi = ndl->ring_two_term_xs(namei, temperature(), a1, a2, b1, b2,
+                                     mat_pot_xs, Ni, Rpin, Rin, Rout);
     *xsi *= Ni;
 
     if (xsout) {

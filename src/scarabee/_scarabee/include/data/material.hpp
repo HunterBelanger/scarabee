@@ -61,7 +61,9 @@ class Material {
   std::shared_ptr<CrossSection> dilution_xs(
       const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl) const;
 
-  std::shared_ptr<CrossSection> ring_carlvik_xs(double C, double Rpin, double Rin, double Rout, std::shared_ptr<NDLibrary> ndl) const;
+  std::shared_ptr<CrossSection> ring_carlvik_xs(
+      double C, double Rpin, double Rin, double Rout,
+      std::shared_ptr<NDLibrary> ndl) const;
 
  private:
   MaterialComposition composition_;
