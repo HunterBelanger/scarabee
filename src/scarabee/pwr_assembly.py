@@ -2,7 +2,7 @@ from _scarabee import *
 from .pins import *
 import numpy as np
 from typing import Tuple
-from copy import copy
+from copy import copy, deepcopy
 
 
 class PWRAssembly:
@@ -133,6 +133,18 @@ class PWRAssembly:
         self._pins = []
         for i in range(len(pins)):
             self._pins.append(copy(pins[i]))
+            self._pins[-1].condensed_xs  = deepcopy(pins[i].condensed_xs)
+            self._pins[-1].clad_xs_vals  = deepcopy(pins[i].clad_xs_vals)
+            self._pins[-1].clad_flux_vals  = deepcopy(pins[i].clad_flux_vals)
+            self._pins[-1].clad_a = deepcopy(pins[i].clad_a)
+            self._pins[-1].clad_b = deepcopy(pins[i].clad_b)
+
+            if isinstance(pins[i], FuelPin):
+                self._pins[-1].fuel_xs_vals  = deepcopy(pins[i].fuel_xs_vals)
+                self._pins[-1].fuel_flux_vals  = deepcopy(pins[i].fuel_flux_vals)
+                self._pins[-1].fuel_a = deepcopy(pins[i].fuel_a)
+                self._pins[-1].fuel_b = deepcopy(pins[i].fuel_b)
+
 
     @property
     def shape(self):
@@ -268,13 +280,76 @@ class PWRAssembly:
                 "Cannot solve PWR assembly problem. No few group energy condensation scheme provided."
             )
 
-        self._get_fuel_dancoff_corrections()
-        self._get_clad_dancoff_corrections()
-        self._pin_cell_calc()
-        self._condense_xs()
-        self._moc()
-        self._criticality_spectrum_calc()
-        self._few_group_xs()
+        #self._get_fuel_dancoff_corrections()
+        self._self_shield_fuel()
+        #self._get_clad_dancoff_corrections()
+        #self._self_shield_clad()
+        #self._pin_cell_calc()
+        #self._condense_xs()
+        #self._moc()
+        #self._criticality_spectrum_calc()
+        #self._few_group_xs()
+    
+    def _self_shield_fuel(self):
+        scarabee_log(LogLevel.Info, "")
+        scarabee_log(LogLevel.Info, "Performing self-shielding for fuel")
+        set_logging_level(LogLevel.Warning)
+
+        Ets = [1.E-5, 1.E-4, 1.E-3, 1.E-2, 1.E-1, 1.E0, 1.E1, 1.E2, 1.E3, 1.E4, 1.E5]
+
+        for Et in Ets:
+            set_logging_level(LogLevel.Info)
+            scarabee_log(LogLevel.Info, "  Performing XS simulation")
+            set_logging_level(LogLevel.Warning)   
+            # Now we setup the lattice problem
+            fuel_df_pins = []
+            for pin in self.pins:
+                fuel_df_pins.append(
+                    pin.make_fuel_dancoff_cell(pitch=self.pitch, xs=Et, moderator=self.moderator)
+                )
+            geom = Cartesian2D(self.shape[0] * [self.pitch], self.shape[1] * [self.pitch])
+            geom.set_tiles(fuel_df_pins)
+            moc = MOCDriver(geom)
+
+            # Set the source
+            for i in range(moc.nfsr):
+                i_xs = moc.xs(i)
+                if i_xs.name != "Fuel":
+                    # If we aren't in the fuel, set the source to be the value of
+                    # the potential xs (should be Et).
+                    moc.set_extern_src(i, 0, i_xs.Et(0))
+
+            # Solve the lattice problem
+            moc.generate_tracks(
+                self.dancoff_num_azimuthal_angles,
+                self.dancoff_track_spacing,
+                self.dancoff_polar_quadrature,
+            )
+            moc.sim_mode = SimulationMode.FixedSource
+            moc.flux_tolerance = 1.0e-5
+            moc.solve()
+
+            # Now we need to save the flux for each pin
+            u = Direction(1.0, 0.0)
+            pin_i = 0
+            for j in range(self.shape[1]):
+                y = moc.y_max - (j + 0.5) * self.pitch
+                for i in range(self.shape[0]):
+                    x = moc.x_min + (i + 0.5) * self.pitch
+                    r = Vector(x, y)
+                    xs = moc.xs(r, u)
+                    if xs.name == "Fuel":
+                        flux = moc.flux(r, u, 0)
+                        self.pins[pin_i].fuel_xs_vals.append(Et)
+                        self.pins[pin_i].fuel_flux_vals.append(flux)
+                    pin_i += 1
+            
+        for i in range(len(self.pins)):
+            if isinstance(self.pins[i], FuelPin):
+                self.pins[i].determine_fuel_self_shielding_params()
+                print(self.pins[i].fuel_a + self.pins[i].fuel_b)
+                self.pins[i].plot_fuel_ss()
+ 
 
     def _get_fuel_dancoff_corrections(self):
         scarabee_log(LogLevel.Info, "")
@@ -366,6 +441,11 @@ class PWRAssembly:
                     self.fuel_dancoff_corrections.append(0.0)
 
         set_logging_level(LogLevel.Info)
+    
+    def _self_shield_clad(self):
+        scarabee_log(LogLevel.Info, "")
+        scarabee_log(LogLevel.Info, "Performing self-shielding for cladding")
+        set_logging_level(LogLevel.Warning)
 
     def _get_clad_dancoff_corrections(self):
         scarabee_log(LogLevel.Info, "")

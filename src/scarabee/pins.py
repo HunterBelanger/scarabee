@@ -1,6 +1,54 @@
 from _scarabee import *
 import numpy as np
+from scipy.optimize import curve_fit
 from typing import Optional
+
+import matplotlib.pyplot as plt
+
+
+def _loss_func_n2(x, Ep, l, Et, flx):
+    """
+    x is an array with [a1, a2, b1]
+    Ep is macroscopic potential xs of material
+    l is mean chord length
+    Et is array of xs values used in transport
+    flx is array of flux values from transport
+    """
+    a1 = x[0]
+    a2 = x[1]
+    b1 = x[2]
+    b2 = 1. - b1
+    val = 0.
+    for p in range(len(Et)):
+        tmp = b1*((Ep*l + a1) / (Et[p]*l + a1)) + b2*((Ep*l + a2) / (Et[p]*l + a2))
+        tmp = flx[p] - tmp
+        val += tmp*tmp
+
+    return val
+
+def _loss_func_n3(x, Ep, l, Et, flx):
+    """
+    x is an array with [a1, a2, a3, b1, b2]
+    Ep is macroscopic potential xs of material
+    l is mean chord length
+    Et is array of xs values used in transport
+    flx is array of flux values from transport
+    """
+    a1 = x[0]
+    a2 = x[1]
+    a3 = x[2]
+    b1 = x[3]
+    b2 = x[4]
+    b3 = 1. - b1 - b2
+    val = 0.
+    for p in range(len(Et)):
+        tmp = b1*((Ep*l + a1) / (Et[p]*l + a1)) + b2*((Ep*l + a2) / (Et[p]*l + a2)) + b3*((Ep*l + a3) / (Et[p]*l + a3))
+        tmp = flx[p] - tmp
+        val += tmp*tmp
+
+    return val
+
+
 
 class FuelPin:
     """
@@ -45,6 +93,18 @@ class FuelPin:
         self.gap_width = gap_width
         self.fuel_rings = fuel_rings
         self.condensed_xs = []
+        
+        # Arrays which will hold the values used in the least square fitting
+        # for determining self shielding terms
+        self.fuel_xs_vals = []
+        self.fuel_flux_vals = []
+        self.clad_xs_vals = []
+        self.clad_flux_vals = []
+        
+        self.fuel_a = []
+        self.fuel_b = []
+        self.clad_a = []
+        self.clad_b = []
 
         if self.gap is not None and self.gap_width is None:
             raise RuntimeError("Fuel gap material is provided, but no gap width.")
@@ -54,6 +114,47 @@ class FuelPin:
         if fuel_rings <= 0:
             raise RuntimeError("The number of fuel rings must be >= 1.")
 
+    def determine_fuel_self_shielding_params(self):
+        l = 2.*self.fuel_radius
+        Ep = self.fuel.potential_xs
+        def P(Et, a1, a2, b1):
+            b2 = 1. - b1
+            return b1*((Ep*l + a1)/(Et*l + a1)) + b2*((Ep*l + a2)/(Et*l + a2))
+
+        def J(Et, a1, a2, b1):
+            return np.array([b1*((l*(Et - Ep))/((Et*l + a1)*(Et*l + a1))), (1.-b1)*((l*(Et - Ep))/((Et*l + a2)*(Et*l + a2))), ((Ep*l + a1)/(Et*l + a1)) - ((Ep*l + a2)/(Et*l + a2))]).transpose()
+
+        #params, _ = curve_fit(P, self.fuel_xs_vals, self.fuel_flux_vals, p0=[0.9464645261188415, -0.3640756671729957, 9.173046260907686], maxfev=100000)
+        params, _ = curve_fit(P, self.fuel_xs_vals, self.fuel_flux_vals, bounds=([-5., -5., -20.], [5., 5., 20.]), method='trf', jac=J, maxfev=200000)
+        self.fuel_a = params[:2].tolist()
+        self.fuel_b = params[2:].tolist()
+        self.fuel_b.append(1. - np.sum(params[2:]))
+
+    def plot_fuel_ss(self):
+        l = 2.*self.fuel_radius
+        Ep = self.fuel.potential_xs
+
+        def P(Et):
+            val = 0.
+            for i in range(len(self.fuel_a)):
+                a = self.fuel_a[i]
+                b = self.fuel_b[i]
+                val += b*((Ep*l + a)/(Et*l + a))
+            return val
+
+        plt.plot(self.fuel_xs_vals, P(np.array(self.fuel_xs_vals)))
+        plt.scatter(self.fuel_xs_vals, self.fuel_flux_vals)
+        plt.xscale('log')
+        plt.show()
+
+    def determine_clad_self_shielding_params(self):
+        Rin = self.fuel_radius + self.gap_width
+        Rout = Rin + self.clad_width
+        l = 2.*(Rout - Rin)
+        Ep = self.clad.potential_xs
+        opt_args = least_squares(_loss_func_n3, self.clad_ss_params, args=(Ep, l, np.array(self.clad_xs_vals), np.array(self.clad_flux_vals)))
+        self.fuel_ss_params = [opt_args.x[0], opt_args.x[1], opt_args.x[2], opt_args.x[3], opt_args.x[4], 1. - opt_args.x[3] - opt_args.x[4]]
+
     def clad_offset(self):
         if self.gap_width is not None:
             return Vector(
@@ -62,7 +163,7 @@ class FuelPin:
         else:
             return Vector(self.fuel_radius + 0.5 * self.clad_width, 0.0)
 
-    def make_fuel_dancoff_cell(self, pitch: float, moderator: Material):
+    def make_fuel_dancoff_cell(self, pitch: float, xs: float, moderator: Material):
         # We first determine all the radii
         radii = []
         radii.append(self.fuel_radius)
@@ -74,8 +175,8 @@ class FuelPin:
 
         # This returns a cell for calculating the fuel pin Dancoff factor.
         # As such, the fuel XS has infinite values.
-        Et = np.array([1.0e5])
-        Ea = np.array([1.0e5])
+        Et = np.array([xs])
+        Ea = np.array([xs])
         Es = np.array([[0.0]])
         Fuel = CrossSection(Et, Ea, Es, "Fuel")
         mats.append(Fuel)
@@ -84,7 +185,7 @@ class FuelPin:
             Et[0] = self.gap.potential_xs
             Ea[0] = self.gap.potential_xs
             gap = CrossSection(Et, Ea, Es, "Gap")
-            mats.append(Gap)
+            mats.append(gap)
 
         Et[0] = self.clad.potential_xs
         Ea[0] = self.clad.potential_xs
@@ -98,7 +199,7 @@ class FuelPin:
 
         return SimplePinCell(radii, mats, pitch, pitch)
 
-    def make_clad_dancoff_cell(self, pitch: float, moderator: Material):
+    def make_clad_dancoff_cell(self, pitch: float, xs: float, moderator: Material):
         # We first determine all the radii
         radii = []
         radii.append(self.fuel_radius)
@@ -118,12 +219,12 @@ class FuelPin:
             Et[0] = self.gap.potential_xs
             Ea[0] = self.gap.potential_xs
             gap = CrossSection(Et, Ea, Es, "Gap")
-            mats.append(Gap)
+            mats.append(gap)
 
         # This returns a cell for calculating the fuel pin Dancoff factor.
         # As such, the clad XS has infinite values.
-        Et[0] = 1.0e5
-        Ea[0] = 1.0e5
+        Et[0] = xs 
+        Ea[0] = xs 
         Clad = CrossSection(Et, Ea, Es, "Clad")
         mats.append(Clad)
 
@@ -263,14 +364,29 @@ class GuideTube:
         self.outer_radius = outer_radius
         self.clad = clad
         self.condensed_xs = []
+        
+        # Arrays which will hold the values used in the least square fitting
+        # for determining self shielding terms
+        self.clad_xs_vals = []
+        self.clad_flux_vals = []
+
+        self.clad_a = []
+        self.clad_b = []
+
 
         if self.outer_radius <= self.inner_radius:
             raise RuntimeError("Outer radius must be > inner radius.")
+    
+    def determine_clad_self_shielding_params(self):
+        l = 2.*(self.outer_radius - self.inner_radius)
+        Ep = self.clad.potential_xs
+        opt_args = least_squares(_loss_func_n3, self.clad_ss_params, args=(Ep, l, np.array(self.clad_xs_vals), np.array(self.clad_flux_vals)))
+        self.fuel_ss_params = [opt_args.x[0], opt_args.x[1], opt_args.x[2], opt_args.x[3], opt_args.x[4], 1. - opt_args.x[3] - opt_args.x[4]]
 
     def clad_offset(self):
         return Vector(0.5 * (self.inner_radius + self.outer_radius), 0.0)
 
-    def make_clad_dancoff_cell(self, pitch: float, moderator: Material):
+    def make_clad_dancoff_cell(self, pitch: float, xs: float, moderator: Material):
         # We first determine all the radii
         radii = []
         radii.append(self.inner_radius)
@@ -286,8 +402,8 @@ class GuideTube:
 
         # This returns a cell for calculating the fuel pin Dancoff factor.
         # As such, the clad XS has infinite values.
-        Et[0] = 1.0e5
-        Ea[0] = 1.0e5
+        Et[0] = xs 
+        Ea[0] = xs 
         Clad = CrossSection(Et, Ea, Es, "Clad")
         mats.append(Clad)
 
@@ -295,7 +411,7 @@ class GuideTube:
 
         return SimplePinCell(radii, mats, pitch, pitch)
 
-    def make_fuel_dancoff_cell(self, pitch: float, moderator: Material):
+    def make_fuel_dancoff_cell(self, pitch: float, xs: float, moderator: Material):
         # We first determine all the radii
         radii = []
         radii.append(self.inner_radius)
