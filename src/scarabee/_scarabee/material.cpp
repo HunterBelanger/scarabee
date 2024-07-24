@@ -321,7 +321,7 @@ std::shared_ptr<CrossSection> Material::dilution_xs(
 }
 
 std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
-    double C, double Rpin, double Rin, double Rout,
+    double C, double Rfuel, double Rin, double Rout,
     std::shared_ptr<NDLibrary> ndl) const {
   const double a1 = 0.5 * (C + 5. - std::sqrt(C * C + 34. * C + 1.));
   const double a2 = 0.5 * (C + 5. + std::sqrt(C * C + 34. * C + 1.));
@@ -336,7 +336,7 @@ std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
     const double Ni = this->atom_density(namei);
 
     auto xsi = ndl->ring_two_term_xs(namei, temperature(), a1, a2, b1, b2,
-                                     mat_pot_xs, Ni, Rpin, Rin, Rout);
+                                     mat_pot_xs, Ni, Rfuel, Rin, Rout);
     *xsi *= Ni;
 
     if (xsout) {

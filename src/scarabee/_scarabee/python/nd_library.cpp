@@ -74,7 +74,11 @@ void init_NDLibrary(py::module& m) {
            "temp : str\n"
            "       Desired temperature in kelvin.\n"
            "dil : str\n"
-           "      Desired dilution in barns.",
+           "      Desired dilution in barns.\n"
+           "Returns\n"
+           "-------\n"
+           "CrossSection\n"
+           "  Interpolated cross sections.",
            py::arg("name"), py::arg("temp"), py::arg("dil"))
 
       .def(
@@ -109,9 +113,50 @@ void init_NDLibrary(py::module& m) {
           "xs1 : float\n"
           "      Background cross section for first term (:math:`\\sigma_1`).\n"
           "xs2 : float\n"
-          "      Background cross section for second term (:math:`\\sigma_2`).",
+          "      Background cross section for second term "
+          "(:math:`\\sigma_2`).\n\n"
+          "Returns\n"
+          "-------\n"
+          "CrossSection\n"
+          "  Self-shielded cross sections.",
           py::arg("name"), py::arg("temp"), py::arg("b1"), py::arg("b2"),
           py::arg("xs1"), py::arg("xs2"))
+
+      .def("ring_two_term_xs", &NDLibrary::ring_two_term_xs,
+           "Uses the two-term rational approximation and the Stoker-Weiss "
+           "method to produce the self-shielded cross sections for a single "
+           "nuclide in a ring of fuel.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "name : str\n"
+           "       Name of the nuclide to be treated.\n"
+           "temp : float\n"
+           "       Temperature of the material (in kelvin).\n"
+           "a1 : float\n"
+           "     :math:`\\alpha_1`.\n"
+           "a2 : float\n"
+           "     :math:`\\alpha_2`.\n"
+           "b1 : float\n"
+           "     :math:`\\beta_1`.\n"
+           "b2 : float\n"
+           "     :math:`\\beta_2`.\n"
+           "mat_pot_xs : float\n"
+           "     Macroscopic potential cross section of material.\n"
+           "N : float\n"
+           "    Number density of the nuclie being shielded.\n"
+           "Rfuel : float\n"
+           "     Radius of the fuel pellet.\n"
+           "Rin : float\n"
+           "     Inner radius of the fuel ring.\n"
+           "Rout : float\n"
+           "     Outer radius of the fuel ring.\n\n"
+           "Returns\n"
+           "-------\n"
+           "CrossSection\n"
+           "  Self-shielded cross sections.",
+           py::arg("name"), py::arg("temp"), py::arg("a1"), py::arg("a2"),
+           py::arg("b1"), py::arg("b2"), py::arg("mat_pot_xs"), py::arg("N"),
+           py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"))
 
       .def_property_readonly("library", &NDLibrary::library,
                              "Name of the nuclear data library (if provided).")

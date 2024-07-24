@@ -70,7 +70,7 @@ class NDLibrary {
   std::shared_ptr<CrossSection> ring_two_term_xs(
       const std::string& name, const double temp, const double a1,
       const double a2, const double b1, const double b2,
-      const double mat_pot_xs, const double N, const double Rpin,
+      const double mat_pot_xs, const double N, const double Rfuel,
       const double Rin, const double Rout);
 
   const std::shared_ptr<H5::File>& h5() const { return h5_; }
@@ -100,7 +100,7 @@ class NDLibrary {
                  std::size_t it, double f_temp, std::size_t id,
                  double f_dil) const;
 
-  std::pair<double, double> eta_lm(std::size_t m, double Rpin, double Rin,
+  std::pair<double, double> eta_lm(std::size_t m, double Rfuel, double Rin,
                                    double Rout) const;
 };
 

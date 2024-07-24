@@ -194,6 +194,29 @@ void init_Material(py::module& m) {
            "             The macroscopic cross section.",
            py::arg("dils"), py::arg("ndl"))
 
+      .def("ring_carlvik_xs", &Material::ring_carlvik_xs,
+           "Computes the macroscopic material cross section, self-shielded "
+           "according to the Carlvik two-term approximation for a single ring "
+           "of fuel using the Stoker-Weiss method.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "C : float\n"
+           "    Dancoff correction factor.\n"
+           "Rfuel : float\n"
+           "     Radius of the fuel pellet.\n"
+           "Rin : float\n"
+           "     Inner radius of the fuel ring.\n"
+           "Rout : float\n"
+           "     Outer radius of the fuel ring.\n"
+           "ndl : NDLibrary\n"
+           "      Nuclear data library for cross section interpolation.\n\n"
+           "Returns\n"
+           "-------\n"
+           "CrossSection\n"
+           "             The macroscopic self-shielded cross section.",
+           py::arg("C"), py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"),
+           py::arg("ndl"))
+
       .def_property_readonly("composition", &Material::composition,
                              "The :py:class:`MaterialComposition` defining the "
                              "nuclides in the material.")

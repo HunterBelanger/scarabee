@@ -249,7 +249,7 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
 std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
     const std::string& name, const double temp, const double a1,
     const double a2, const double b1, const double b2, const double mat_pot_xs,
-    const double N, const double Rpin, const double Rin, const double Rout) {
+    const double N, const double Rfuel, const double Rin, const double Rout) {
   const auto& nuclide = get_nuclide(name);
   const double pot_xs = nuclide.potential_xs;
   const double macro_pot_xs = N * pot_xs;
@@ -270,7 +270,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
   xt::xtensor<double, 1> denoms = xt::zeros<double>({ngroups_});
 
   for (std::size_t m = 1; m <= 4; m++) {
-    const std::pair<double, double> eta_lm = this->eta_lm(m, Rpin, Rin, Rout);
+    const std::pair<double, double> eta_lm = this->eta_lm(m, Rfuel, Rin, Rout);
     const double eta_m = eta_lm.first;
     const double l_m = eta_lm.second;
 
@@ -451,11 +451,11 @@ void NDLibrary::interp_2d(xt::xtensor<double, 2>& E,
   }
 }
 
-std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rpin,
+std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
                                             double Rin, double Rout) const {
   // Shouldn't need to check m, as this is a private method
-  const double p_i = Rout / Rpin;
-  const double p_im = Rin / Rpin;
+  const double p_i = Rout / Rfuel;
+  const double p_im = Rin / Rfuel;
 
   const double p = [&m, &p_i, &p_im]() {
     if (m == 1 || m == 2) return p_i;
@@ -470,11 +470,11 @@ std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rpin,
     return -val;
   }();
 
-  // l = 4V_ring / S_pin = 4 pi (Rout^2 - Rin^2) / (2 pi Rpin)
-  const double l = 2. * (Rout * Rout - Rin * Rin) / Rpin;
+  // l = 4V_ring / S_pin = 4 pi (Rout^2 - Rin^2) / (2 pi Rfuel)
+  const double l = 2. * (Rout * Rout - Rin * Rin) / Rfuel;
 
   const double lm =
-      (2. * Rpin / PI) * (std::sqrt(1. - p * p) + std::asin(p) / p + theta);
+      (2. * Rfuel / PI) * (std::sqrt(1. - p * p) + std::asin(p) / p + theta);
 
   const double eta = [&m, &lm, &l, &p]() {
     const double val = p * lm / l;
