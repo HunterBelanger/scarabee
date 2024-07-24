@@ -193,11 +193,7 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
   xt::xtensor<double, 1> Ef = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> chi = xt::zeros<double>({ngroups_});
-  xt::xtensor<double, 2> Es1;
-  const bool has_P1 = xs_1->anisotropic() || xs_2->anisotropic();
-  if (has_P1) {
-    Es1 = xt::zeros<double>({ngroups_, ngroups_});
-  }
+  xt::xtensor<double, 2> Es1 = xt::zeros<double>({ngroups_, ngroups_});
 
   double vEf_sum_1 = 0.;
   double vEf_sum_2 = 0.;
@@ -216,10 +212,8 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     Ea(g) = f1_g * xs_1->Ea(g) + f2_g * xs_2->Ea(g);
     Ef(g) = f1_g * xs_1->Ef(g) + f2_g * xs_2->Ef(g);
     for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
-      Es(g, g_out) = f1_g * xs_1->Es(g, g_out) + f2_g * xs_2->Es(g, g_out);
-
-      if (has_P1)
-        Es1(g, g_out) = f1_g * xs_1->Es1(g, g_out) + f2_g * xs_2->Es1(g, g_out);
+      Es(g, g_out)  = f1_g * xs_1->Es(g, g_out)  + f2_g * xs_2->Es(g, g_out);
+      Es1(g, g_out) = f1_g * xs_1->Es1(g, g_out) + f2_g * xs_2->Es1(g, g_out);
     }
     Et(g) = Ea(g) + xt::sum(xt::view(Es, g, xt::all()))();
 
@@ -240,10 +234,7 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     if (chi_sum > 0.) chi /= chi_sum;
   }
 
-  if (has_P1)
-    return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
-
-  return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
+  return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
 }
 
 std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
@@ -272,11 +263,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
   xt::xtensor<double, 1> Ef = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> chi = xt::zeros<double>({ngroups_});
-  xt::xtensor<double, 2> Es1;
-  bool has_P1 = nuclide.p1_scatter->size() > 0;
-  if (has_P1) {
-    Es1 = xt::zeros<double>({ngroups_, ngroups_});
-  }
+  xt::xtensor<double, 2> Es1 = xt::zeros<double>({ngroups_, ngroups_});
 
   // Denominators of the weighting factor for each energy group.
   xt::xtensor<double, 1> denoms = xt::zeros<double>({ngroups_});
@@ -287,8 +274,8 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
     const double l_m = eta_lm.second;
 
     // Calculate the background xs
-    const double bg_xs_1 = (mat_pot_xs - macro_pot_xs + a1 / l_m) / N;
-    const double bg_xs_2 = (mat_pot_xs - macro_pot_xs + a2 / l_m) / N;
+    const double bg_xs_1 = l_m > 0. ? (mat_pot_xs - macro_pot_xs + a1 / l_m) / N : 1.E10;
+    const double bg_xs_2 = l_m > 0. ? (mat_pot_xs - macro_pot_xs + a2 / l_m) / N : 1.E10;
 
     // Get the two cross section sets
     auto xs_1 = interp_xs(name, temp, bg_xs_1);
@@ -313,9 +300,8 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
         Es(g, g_out) +=
             eta_m * (b1 * xs_1->Es(g, g_out) + b2 * xs_2->Es(g, g_out));
 
-        if (has_P1)
-          Es1(g, g_out) +=
-              eta_m * (b1 * xs_1->Es1(g, g_out) + b2 * xs_2->Es1(g, g_out));
+        Es1(g, g_out) +=
+            eta_m * (b1 * xs_1->Es1(g, g_out) + b2 * xs_2->Es1(g, g_out));
       }  // For all outgoing groups
 
       // Save the fission spectrum if we are in the first lump.
@@ -339,14 +325,11 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
       Es(g, g_out) *= invs_denom;
       Et(g) += Es(g, g_out);
 
-      if (has_P1) Es1(g, g_out) *= invs_denom;
+      Es1(g, g_out) *= invs_denom;
     }
   }
 
-  if (has_P1)
-    return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
-
-  return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
+  return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
 }
 
 void NDLibrary::get_temp_interp_params(double temp, const NuclideHandle& nuc,
@@ -472,7 +455,7 @@ std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
   }
 
   // Shouldn't need to check m, as this is a private method
-  const double p_i = Rout / Rfuel;
+  const double p_i = std::min(Rout / Rfuel, 1.);
   const double p_im = Rin / Rfuel;
 
   double p = p_i;

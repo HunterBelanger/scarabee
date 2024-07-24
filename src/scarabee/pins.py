@@ -159,6 +159,8 @@ class FuelPin:
                 if r > 0:
                     Rin = radii[-1]
                 Rout = np.sqrt((Vring + np.pi*Rin*Rin)/np.pi)
+                if Rout > self.fuel_radius:
+                  Rout = self.fuel_radius
                 radii.append(Rout)
 
         # Add gap radius

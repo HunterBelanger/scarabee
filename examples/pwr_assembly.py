@@ -5,8 +5,8 @@ np.set_printoptions(threshold=np.inf)
 np.set_printoptions(linewidth=np.inf)
 np.set_printoptions(4)
 
-#ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/endf8_shem281.h5')
-ndl = NDLibrary('C:\\Users\\BELANH2\\Documents\\nuclear_data\\endf8_shem281.h5')
+ndl = NDLibrary('/mnt/c/Users/BELANH2/Documents/nuclear_data/endf8_shem281.h5')
+#ndl = NDLibrary('C:\\Users\\BELANH2\\Documents\\nuclear_data\\endf8_shem281.h5')
 
 cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
              [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],
@@ -62,7 +62,8 @@ asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, f
 
 asmbly.condensation_scheme = cond_spec
 asmbly.few_group_condensation_scheme = few_grp_cond_spec
-asmbly.num_azimuthal_angles = 64
+asmbly.num_azimuthal_angles = 128
+asmbly.track_spacing = 0.01
 asmbly.plot_assembly = True
 
 asmbly.solve()
