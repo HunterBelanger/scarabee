@@ -250,12 +250,6 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
     const std::string& name, const double temp, const double a1,
     const double a2, const double b1, const double b2, const double mat_pot_xs,
     const double N, const double Rfuel, const double Rin, const double Rout) {
-  if (Rin == 0.) {
-    auto mssg = "Rin must be > 0.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
   if (Rin >= Rout) {
     auto mssg = "Rin must be < Rout.";
     spdlog::error(mssg);
@@ -292,15 +286,9 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
     const double eta_m = eta_lm.first;
     const double l_m = eta_lm.second;
 
-    std::cout << "eta_m = " << eta_m << "\n";
-    std::cout << "l_m = " << l_m << "\n";
-
     // Calculate the background xs
     const double bg_xs_1 = (mat_pot_xs - macro_pot_xs + a1 / l_m) / N;
     const double bg_xs_2 = (mat_pot_xs - macro_pot_xs + a2 / l_m) / N;
-
-    std::cout << "bg_xs_1 = " << bg_xs_1 << "\n";
-    std::cout << "bg_xs_2 = " << bg_xs_2 << "\n";
 
     // Get the two cross section sets
     auto xs_1 = interp_xs(name, temp, bg_xs_1);
@@ -314,7 +302,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
           (pot_xs + bg_xs_2) / (xs_2->Ea(g) + pot_xs + bg_xs_2);
 
       // Add contributions to the denominator
-      denoms(m - 1) += eta_m * (b1 * flux_1_g + b2 * flux_2_g);
+      denoms(g) += eta_m * (b1 * flux_1_g + b2 * flux_2_g);
 
       // Add contributions to the xs
       // Compute the xs values
@@ -477,6 +465,12 @@ void NDLibrary::interp_2d(xt::xtensor<double, 2>& E,
 
 std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
                                             double Rin, double Rout) const {
+  if (m == 0 || m > 4) {
+    auto mssg = "Invalid m.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Shouldn't need to check m, as this is a private method
   const double p_i = Rout / Rfuel;
   const double p_im = Rin / Rfuel;
@@ -485,7 +479,7 @@ std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
   if (m == 3 || m == 4)
     p = p_im;
 
-  double theta = PI * p * 0.5;
+  double theta = 0.5 * PI * p;
   if (m == 2 || m == 4)
     theta = -theta;
 

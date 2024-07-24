@@ -158,7 +158,7 @@ class FuelPin:
                 Rin = 0.
                 if r > 0:
                     Rin = radii[-1]
-                Rout = np.sqrt((Vring - np.pi*Rin*Rin)/np.pi)
+                Rout = np.sqrt((Vring + np.pi*Rin*Rin)/np.pi)
                 radii.append(Rout)
 
         # Add gap radius
@@ -184,13 +184,11 @@ class FuelPin:
         else:
             # We need to apply spatial self shielding.
             for r in range(self.fuel_rings):
-                if r == 0:
-                    Ee = 1.0 / (2.0 * radii[0])  # Fuel escape xs
-                    mats.append(self.fuel.carlvik_xs(dancoff_fuel, Ee, ndl))
-                else:
+                Rin = 0.
+                if r > 0:
                     Rin = radii[r-1]
-                    Rout = radii[r]
-                    mats.append(self.fuel.ring_carlvik_xs(dancoff_fuel, self.fuel_radius, Rin, Rout, ndl))
+                Rout = radii[r]
+                mats.append(self.fuel.ring_carlvik_xs(dancoff_fuel, self.fuel_radius, Rin, Rout, ndl))
                 mats[-1].name = "Fuel"
 
         # Next, add the gap (if present)
@@ -225,7 +223,7 @@ class FuelPin:
                 Rin = 0.
                 if r > 0:
                     Rin = radii[-1]
-                Rout = np.sqrt((Vring - np.pi*Rin*Rin)/np.pi)
+                Rout = np.sqrt((Vring + np.pi*Rin*Rin)/np.pi)
                 radii.append(Rout)
 
         if self.gap is not None:
