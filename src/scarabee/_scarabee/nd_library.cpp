@@ -6,7 +6,6 @@
 #include <xtensor/xtensor.hpp>
 
 #include <cmath>
-#include <filesystem>
 #include <sstream>
 
 namespace scarabee {
@@ -247,6 +246,92 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
   return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
 }
 
+std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(const std::string& name, const double temp, const double a1, const double a2, const double b1, const double b2, const double mat_pot_xs, const double N, const double Rpin, const double Rin, const double Rout) {
+  
+  const auto& nuclide = get_nuclide(name);
+  const double pot_xs = nuclide.potential_xs;
+  const double macro_pot_xs = N * pot_xs;
+
+  xt::xtensor<double, 1> Et = xt::zeros<double>({ngroups_});
+  xt::xtensor<double, 1> Ea = xt::zeros<double>({ngroups_});
+  xt::xtensor<double, 2> Es = xt::zeros<double>({ngroups_, ngroups_});
+  xt::xtensor<double, 1> Ef = xt::zeros<double>({ngroups_});
+  xt::xtensor<double, 1> vEf = xt::zeros<double>({ngroups_});
+  xt::xtensor<double, 1> chi = xt::zeros<double>({ngroups_});
+  xt::xtensor<double, 2> Es1;
+  bool has_P1 = nuclide.p1_scatter->size() > 0;
+  if (has_P1) {
+    Es1 = xt::zeros<double>({ngroups_, ngroups_});
+  }
+
+  // Denominators of the weighting factor for each energy group.
+  xt::xtensor<double, 1> denoms = xt::zeros<double>({ngroups_});
+  
+  for (std::size_t m = 1; m <= 4; m++) {
+    const std::pair<double, double> eta_lm = this->eta_lm(m, Rpin, Rin, Rout);
+    const double eta_m = eta_lm.first;
+    const double l_m = eta_lm.second;
+
+    // Calculate the background xs
+    const double bg_xs_1 = (mat_pot_xs - macro_pot_xs + a1 / l_m) / N;
+    const double bg_xs_2 = (mat_pot_xs - macro_pot_xs + a2 / l_m) / N;
+
+    // Get the two cross section sets
+    auto xs_1 = interp_xs(name, temp, bg_xs_1);
+    auto xs_2 = interp_xs(name, temp, bg_xs_2);
+    
+    for (std::size_t g = 0; g < ngroups_; g++) {
+      // Calculate the two flux values
+      const double flux_1_g = (pot_xs + bg_xs_1) / (xs_1->Ea(g) + pot_xs + bg_xs_1);
+      const double flux_2_g = (pot_xs + bg_xs_2) / (xs_2->Ea(g) + pot_xs + bg_xs_2);
+
+      // Add contributions to the denominator
+      denoms(m-1) += eta_m * (b1*flux_1_g + b2*flux_2_g);
+
+      // Add contributions to the xs
+      // Compute the xs values
+      Ea(g) += eta_m * (b1 * xs_1->Ea(g) + b2 * xs_2->Ea(g));
+      Ef(g) += eta_m * (b1 * xs_1->Ef(g) + b2 * xs_2->Ef(g));
+      vEf(g) += eta_m * (b1 * xs_1->vEf(g) + b2 * xs_2->vEf(g));
+      for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
+        Es(g, g_out) += eta_m * (b1 * xs_1->Es(g, g_out) + b2 * xs_2->Es(g, g_out));
+
+        if (has_P1)
+          Es1(g, g_out) += eta_m * (b1 * xs_1->Es1(g, g_out) + b2 * xs_2->Es1(g, g_out));
+      } // For all outgoing groups
+
+      // Save the fission spectrum if we are in the first lump.
+      // This assumes that the fission spectrum is dilution independent,
+      // which is an okay approximation. I am not sure how to completely
+      // handle the fission spectrum otherwise for this self shielding.
+      if (m == 1) {
+        chi(g) = xs_1->chi(g);
+      }
+    } // For all groups
+  } // For 4 lumps
+
+  // Now we go through and normalize each group by the denom, and calculate Et
+  for (std::size_t g = 0; g < ngroups_; g++) {
+    const double invs_denom = 1. / denoms(g);
+    Ea(g) *= invs_denom;
+    Ef(g) *= invs_denom;
+    vEf(g) *= invs_denom;
+    Et(g) = Ea(g);
+    for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
+      Es(g, g_out) *= invs_denom;
+      Et(g) += Es(g, g_out);
+
+      if (has_P1)
+        Es1(g, g_out) *= invs_denom;
+    }
+  }
+
+  if (has_P1)
+    return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
+
+  return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
+}
+
 void NDLibrary::get_temp_interp_params(double temp, const NuclideHandle& nuc,
                                        std::size_t& i, double& f) const {
   if (temp <= nuc.temperatures.front()) {
@@ -359,6 +444,43 @@ void NDLibrary::interp_2d(xt::xtensor<double, 2>& E,
       E = xt::view(nE, it, id, xt::all(), xt::all());
     }
   }
+}
+
+std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rpin, double Rin, double Rout) const {
+  // Shouldn't need to check m, as this is a private method 
+  const double p_i = Rout / Rpin;
+  const double p_im = Rin / Rpin;
+  
+  const double p = [&m, &p_i, &p_im]() {
+    if (m == 1 || m == 2)
+      return p_i;
+    return p_im;
+  }();
+
+  const double theta = [&m, &p]() {
+    const double val = PI * p * 0.5;
+
+    if (m == 1 || m == 3)
+      return val;
+
+    return -val;
+  }();
+  
+  // l = 4V_ring / S_pin = 4 pi (Rout^2 - Rin^2) / (2 pi Rpin)
+  const double l = 2. * (Rout*Rout - Rin*Rin) / Rpin;
+
+  const double lm = (2.*Rpin / PI) * (std::sqrt(1. - p*p) + std::asin(p)/p + theta);
+  
+  const double eta = [&m, &lm, &l, &p]() {
+    const double val = p*lm/l;
+
+    if (m == 1 || m == 4)
+      return val;
+
+    return -val;
+  }();
+
+  return {eta, lm};
 }
 
 }  // namespace scarabee
