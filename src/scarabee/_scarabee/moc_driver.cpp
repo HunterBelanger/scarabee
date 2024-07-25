@@ -970,7 +970,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
   const double sum_fiss_prod =
       std::accumulate(fiss_prod.begin(), fiss_prod.end(), 0.);
   const double invs_sum_fiss_prod =
-      sum_fiss_prod > 0. ? 1. / sum_fiss_prod : 0.;
+      sum_fiss_prod > 0. ? 1. / sum_fiss_prod : 1.;
 
   for (std::size_t g = 0; g < NG; g++) {
     // Get the sum of flux*volume for this group
