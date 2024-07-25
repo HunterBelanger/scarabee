@@ -38,7 +38,7 @@ Watercomp.add_nuclide("H1_H2O", 6.6630E-2)
 Watercomp.add_nuclide("O16",    3.3315E-2)
 Water = Material(Watercomp, 293.6, ndl)
 
-fp = FuelPin(fuel=UO2, fuel_radius=0.4095, clad=Zirc, clad_width=(0.475-0.4095), fuel_rings=8)
+fp = FuelPin(fuel=UO2, fuel_radius=0.4095, clad=Zirc, clad_width=(0.475-0.4095), fuel_rings=1)
 gt = GuideTube(inner_radius=0.57, outer_radius=0.61, clad=Zirc)
 
 asmbly = PWRAssembly(pitch=1.26, moderator=Water, shape=(17, 17), ndl=ndl)
