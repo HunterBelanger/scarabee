@@ -62,9 +62,8 @@ asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, f
 
 asmbly.condensation_scheme = cond_spec
 asmbly.few_group_condensation_scheme = few_grp_cond_spec
-asmbly.num_azimuthal_angles = 128
+asmbly.num_azimuthal_angles = 64
 asmbly.track_spacing = 0.01
-asmbly.plot_assembly = True
 
 asmbly.solve()
 
