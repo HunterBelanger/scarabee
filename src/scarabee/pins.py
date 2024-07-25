@@ -1,54 +1,12 @@
 from _scarabee import *
 import numpy as np
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, dual_annealing
+from lmfit import Minimizer, create_params
 from typing import Optional
 
 import matplotlib.pyplot as plt
 
-
-def _loss_func_n2(x, Ep, l, Et, flx):
-    """
-    x is an array with [a1, a2, b1]
-    Ep is macroscopic potential xs of material
-    l is mean chord length
-    Et is array of xs values used in transport
-    flx is array of flux values from transport
-    """
-    a1 = x[0]
-    a2 = x[1]
-    b1 = x[2]
-    b2 = 1. - b1
-    val = 0.
-    for p in range(len(Et)):
-        tmp = b1*((Ep*l + a1) / (Et[p]*l + a1)) + b2*((Ep*l + a2) / (Et[p]*l + a2))
-        tmp = flx[p] - tmp
-        val += tmp*tmp
-
-    return val
-
-def _loss_func_n3(x, Ep, l, Et, flx):
-    """
-    x is an array with [a1, a2, a3, b1, b2]
-    Ep is macroscopic potential xs of material
-    l is mean chord length
-    Et is array of xs values used in transport
-    flx is array of flux values from transport
-    """
-    a1 = x[0]
-    a2 = x[1]
-    a3 = x[2]
-    b1 = x[3]
-    b2 = x[4]
-    b3 = 1. - b1 - b2
-    val = 0.
-    for p in range(len(Et)):
-        tmp = b1*((Ep*l + a1) / (Et[p]*l + a1)) + b2*((Ep*l + a2) / (Et[p]*l + a2)) + b3*((Ep*l + a3) / (Et[p]*l + a3))
-        tmp = flx[p] - tmp
-        val += tmp*tmp
-
-    return val
-
-
+_fit_bounds = (-1000., 1000.)
 
 class FuelPin:
     """
@@ -117,18 +75,36 @@ class FuelPin:
     def determine_fuel_self_shielding_params(self):
         l = 2.*self.fuel_radius
         Ep = self.fuel.potential_xs
-        def P(Et, a1, a2, b1):
+
+        params = create_params(l=dict(value=l,    vary=False),
+                               Ep=dict(value=Ep,  vary=False),
+                               a1=dict(value=0.1, vary=True, min=0., max=2.),
+                               a2=dict(value=-0.2, vary=True, min=-2., max=0.),
+                               b1=dict(value=2.,  vary=True, min=-20., max=20.)
+                              )
+        def P(params, Et, flux):
+            l = params['l']
+            Ep = params['Ep']
+            a1 = params['a1']
+            a2 = params['a2']
+            b1 = params['b1']
             b2 = 1. - b1
-            return b1*((Ep*l + a1)/(Et*l + a1)) + b2*((Ep*l + a2)/(Et*l + a2))
+            model = b1*((Ep*l + a1)/(Et*l + a1)) + b2*((Ep*l + a2)/(Et*l + a2))
+            return model - flux
 
-        def J(Et, a1, a2, b1):
-            return np.array([b1*((l*(Et - Ep))/((Et*l + a1)*(Et*l + a1))), (1.-b1)*((l*(Et - Ep))/((Et*l + a2)*(Et*l + a2))), ((Ep*l + a1)/(Et*l + a1)) - ((Ep*l + a2)/(Et*l + a2))]).transpose()
+        def J(params, Et, flux):
+            l = params['l']
+            Ep = params['Ep']
+            a1 = params['a1']
+            a2 = params['a2']
+            b1 = params['b1']
+            b2 = 1. - b1
+            return np.array([b1*l*(Et - Ep)/((l*Et + a1)*(l*Et + a1)), b2*l*(Et - Ep)/((l*Et + a2)*(l*Et + a2)), ((Ep*l + a1)/(Et*l + a1)) - ((Ep*l + a2)/(Et*l + a2))]).transpose()
 
-        #params, _ = curve_fit(P, self.fuel_xs_vals, self.fuel_flux_vals, p0=[0.9464645261188415, -0.3640756671729957, 9.173046260907686], maxfev=100000)
-        params, _ = curve_fit(P, self.fuel_xs_vals, self.fuel_flux_vals, bounds=([-5., -5., -20.], [5., 5., 20.]), method='trf', jac=J, maxfev=200000)
-        self.fuel_a = params[:2].tolist()
-        self.fuel_b = params[2:].tolist()
-        self.fuel_b.append(1. - np.sum(params[2:]))
+        fitter = Minimizer(P, params, fcn_args=(np.array(self.fuel_xs_vals), np.array(self.fuel_flux_vals)), Dfun=J)
+        result = fitter.minimize(method='differential_evolution')
+        self.fuel_a = [result.params['a1'].value, result.params['a2'].value]
+        self.fuel_b = [result.params['b1'].value, 1. - result.params['b1'].value]
 
     def plot_fuel_ss(self):
         l = 2.*self.fuel_radius
@@ -142,18 +118,68 @@ class FuelPin:
                 val += b*((Ep*l + a)/(Et*l + a))
             return val
 
-        plt.plot(self.fuel_xs_vals, P(np.array(self.fuel_xs_vals)))
+        plt.plot(np.logspace(-5., 5., 500), P(np.logspace(-5., 5., 500)), c='red')
         plt.scatter(self.fuel_xs_vals, self.fuel_flux_vals)
         plt.xscale('log')
         plt.show()
 
     def determine_clad_self_shielding_params(self):
-        Rin = self.fuel_radius + self.gap_width
+        Rin = self.fuel_radius
+        if self.gap_width is not None:
+            Rin += self.gap_width
         Rout = Rin + self.clad_width
         l = 2.*(Rout - Rin)
         Ep = self.clad.potential_xs
-        opt_args = least_squares(_loss_func_n3, self.clad_ss_params, args=(Ep, l, np.array(self.clad_xs_vals), np.array(self.clad_flux_vals)))
-        self.fuel_ss_params = [opt_args.x[0], opt_args.x[1], opt_args.x[2], opt_args.x[3], opt_args.x[4], 1. - opt_args.x[3] - opt_args.x[4]]
+        
+        params = create_params(l=dict(value=l,    vary=False),
+                               Ep=dict(value=Ep,  vary=False),
+                               a1=dict(value=0.1, vary=True, min=0., max=2.),
+                               a2=dict(value=-0.2, vary=True, min=-2., max=0.),
+                               b1=dict(value=2.,  vary=True, min=-20., max=20.)
+                              )
+        def P(params, Et, flux):
+            l = params['l']
+            Ep = params['Ep']
+            a1 = params['a1']
+            a2 = params['a2']
+            b1 = params['b1']
+            b2 = 1. - b1
+            model = b1*((Ep*l + a1)/(Et*l + a1)) + b2*((Ep*l + a2)/(Et*l + a2))
+            return model - flux
+
+        def J(params, Et, flux):
+            l = params['l']
+            Ep = params['Ep']
+            a1 = params['a1']
+            a2 = params['a2']
+            b1 = params['b1']
+            b2 = 1. - b1
+            return np.array([b1*l*(Et - Ep)/((l*Et + a1)*(l*Et + a1)), b2*l*(Et - Ep)/((l*Et + a2)*(l*Et + a2)), ((Ep*l + a1)/(Et*l + a1)) - ((Ep*l + a2)/(Et*l + a2))]).transpose()
+
+        fitter = Minimizer(P, params, fcn_args=(np.array(self.clad_xs_vals), np.array(self.clad_flux_vals)), Dfun=J)
+        result = fitter.minimize(method='differential_evolution')
+        self.clad_a = [result.params['a1'].value, result.params['a2'].value]
+        self.clad_b = [result.params['b1'].value, 1. - result.params['b1'].value]
+
+    def plot_clad_ss(self):
+        Rin = self.fuel_radius
+        if self.gap_width is not None:
+            Rin += self.gap_width
+        Rout = Rin + self.clad_width
+        l = 2.*(Rout - Rin)
+        Ep = self.clad.potential_xs
+        def P(Et):
+            val = 0.
+            for i in range(len(self.clad_a)):
+                a = self.clad_a[i]
+                b = self.clad_b[i]
+                val += b*((Ep*l + a)/(Et*l + a))
+            return val
+
+        plt.plot(np.logspace(-5., 5., 500), P(np.logspace(-5., 5., 500)), c='red')
+        plt.scatter(self.clad_xs_vals, self.clad_flux_vals)
+        plt.xscale('log')
+        plt.show()
 
     def clad_offset(self):
         if self.gap_width is not None:
@@ -373,15 +399,58 @@ class GuideTube:
         self.clad_a = []
         self.clad_b = []
 
-
         if self.outer_radius <= self.inner_radius:
             raise RuntimeError("Outer radius must be > inner radius.")
     
     def determine_clad_self_shielding_params(self):
         l = 2.*(self.outer_radius - self.inner_radius)
         Ep = self.clad.potential_xs
-        opt_args = least_squares(_loss_func_n3, self.clad_ss_params, args=(Ep, l, np.array(self.clad_xs_vals), np.array(self.clad_flux_vals)))
-        self.fuel_ss_params = [opt_args.x[0], opt_args.x[1], opt_args.x[2], opt_args.x[3], opt_args.x[4], 1. - opt_args.x[3] - opt_args.x[4]]
+        
+        params = create_params(l=dict(value=l,    vary=False),
+                               Ep=dict(value=Ep,  vary=False),
+                               a1=dict(value=0.1, vary=True, min=0., max=2.),
+                               a2=dict(value=-0.2, vary=True, min=-2., max=0.),
+                               b1=dict(value=2.,  vary=True, min=-20., max=20.)
+                              )
+        def P(params, Et, flux):
+            l = params['l']
+            Ep = params['Ep']
+            a1 = params['a1']
+            a2 = params['a2']
+            b1 = params['b1']
+            b2 = 1. - b1
+            model = b1*((Ep*l + a1)/(Et*l + a1)) + b2*((Ep*l + a2)/(Et*l + a2))
+            return model - flux
+
+        def J(params, Et, flux):
+            l = params['l']
+            Ep = params['Ep']
+            a1 = params['a1']
+            a2 = params['a2']
+            b1 = params['b1']
+            b2 = 1. - b1
+            return np.array([b1*l*(Et - Ep)/((l*Et + a1)*(l*Et + a1)), b2*l*(Et - Ep)/((l*Et + a2)*(l*Et + a2)), ((Ep*l + a1)/(Et*l + a1)) - ((Ep*l + a2)/(Et*l + a2))]).transpose()
+
+        fitter = Minimizer(P, params, fcn_args=(np.array(self.clad_xs_vals), np.array(self.clad_flux_vals)), Dfun=J)
+        result = fitter.minimize(method='differential_evolution')
+        self.clad_a = [result.params['a1'].value, result.params['a2'].value]
+        self.clad_b = [result.params['b1'].value, 1. - result.params['b1'].value]
+
+    def plot_clad_ss(self):
+        l = 2.*(self.outer_radius - self.inner_radius)
+        Ep = self.clad.potential_xs
+        def P(Et):
+            val = 0.
+            for i in range(len(self.clad_a)):
+                a = self.clad_a[i]
+                b = self.clad_b[i]
+                val += b*((Ep*l + a)/(Et*l + a))
+            return val
+
+        plt.plot(np.logspace(-5., 5., 500), P(np.logspace(-5., 5., 500)), c='red')
+        plt.scatter(self.clad_xs_vals, self.clad_flux_vals)
+        plt.xscale('log')
+        plt.show()
 
     def clad_offset(self):
         return Vector(0.5 * (self.inner_radius + self.outer_radius), 0.0)
