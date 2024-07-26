@@ -84,7 +84,7 @@ class FuelPin:
             Et[0] = self.gap.potential_xs
             Ea[0] = self.gap.potential_xs
             gap = CrossSection(Et, Ea, Es, "Gap")
-            mats.append(Gap)
+            mats.append(gap)
 
         Et[0] = self.clad.potential_xs
         Ea[0] = self.clad.potential_xs
@@ -118,7 +118,7 @@ class FuelPin:
             Et[0] = self.gap.potential_xs
             Ea[0] = self.gap.potential_xs
             gap = CrossSection(Et, Ea, Es, "Gap")
-            mats.append(Gap)
+            mats.append(gap)
 
         # This returns a cell for calculating the fuel pin Dancoff factor.
         # As such, the clad XS has infinite values.
