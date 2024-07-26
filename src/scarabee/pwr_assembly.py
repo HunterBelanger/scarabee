@@ -2,7 +2,7 @@ from _scarabee import *
 from .pins import *
 import numpy as np
 from typing import Tuple
-from copy import copy
+from copy import copy, deepcopy
 
 
 class PWRAssembly:
@@ -30,10 +30,11 @@ class PWRAssembly:
         Defines how the energy groups will be condensed from the microgroup
         structure of the nuclear data library, to the macrogroup structure
         used in the full assembly calculation.
-    few_group_condensation_scheme : list of pairs of ints
+    few_group_condensation_scheme : list of pairs of ints, optional
         Defines how the energy groups will be condensed from the macrogroup
-        structure of the assembly calculation to the few group structure for
-        the nodal diffusion calculation.
+        structure of the assembly calculation to the few-group structure for
+        the nodal diffusion calculation. If None, no few-group diffusion
+        constants will be generated.
     pins : list of FuelPin or GuideTube
         Description of the pins which make up the assembly geometry.
     dancoff_track_spacing : float
@@ -71,6 +72,9 @@ class PWRAssembly:
     moc : MOCDriver
         The method of characteristics solver for the assembly calculation.
         Is None until solve has been called.
+    diffusion_xs : DiffusionXS
+        The few-group diffsuion group constants, if few-group constants were
+        generated.
     """
 
     def __init__(
@@ -80,8 +84,8 @@ class PWRAssembly:
         self.ndl = ndl  # Must assign first for calculating moderator xs
         self.moderator = moderator
         self._shape = shape
-        self.condensation_scheme = []
-        self.few_group_condensation_scheme = []
+        self.condensation_scheme = None
+        self.few_group_condensation_scheme = None
         self._pins = []
 
         # MOC parameters for computing dancoff corrections
@@ -111,8 +115,10 @@ class PWRAssembly:
     def criticality_spectrum_method(self, csm):
         if csm not in ["B1", "b1", "P1", "p1", None]:
             raise RuntimeError("Unknown criticality spectrum method.")
-
-        if csm in ["B1", "b1"]:
+        
+        if csm is None:
+            self._criticality_spectrum_method = None
+        elif csm in ["B1", "b1"]:
             self._criticality_spectrum_method = "B1"
         else:
             self._criticality_spectrum_method = "P1"
@@ -133,6 +139,7 @@ class PWRAssembly:
         self._pins = []
         for i in range(len(pins)):
             self._pins.append(copy(pins[i]))
+            self._pins[-1].condensed_xs  = deepcopy(pins[i].condensed_xs)
 
     @property
     def shape(self):
@@ -258,14 +265,20 @@ class PWRAssembly:
         if len(self.pins) == 0:
             raise RuntimeError("Cannot solve PWR assembly problem. No pins provided.")
 
+        if self.condensation_scheme is None:
+            # We make a fake condensation scheme that doesn't actually condense anything
+            self.condensation_scheme = []
+            for g in range(self.ndl.ngroups):
+                self.condensation_scheme.append([g, g])
+
         if len(self.condensation_scheme) == 0:
             raise RuntimeError(
                 "Cannot solve PWR assembly problem. No energy condensation scheme provided."
             )
 
-        if len(self.few_group_condensation_scheme) == 0:
+        if self.few_group_condensation_scheme is not None and len(self.few_group_condensation_scheme) == 0:
             raise RuntimeError(
-                "Cannot solve PWR assembly problem. No few group energy condensation scheme provided."
+                "Cannot solve PWR assembly problem. Few-group energy condensation scheme is empty."
             )
 
         self._get_fuel_dancoff_corrections()
@@ -659,6 +672,9 @@ class PWRAssembly:
         )
 
     def _few_group_xs(self):
+        if self.few_group_condensation_scheme is None:
+            return
+
         scarabee_log(LogLevel.Info, "")
         scarabee_log(LogLevel.Info, "Generating few group cross sections")
 
