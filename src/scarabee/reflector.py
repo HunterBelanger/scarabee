@@ -52,6 +52,8 @@ class Reflector:
         Convergence criteria for keff. Default is 1.E-5.
     flux_tolerance : float
         Convergence criteria for the flux. Default is 1.E-5.
+    diffusion_xs : DiffusionCrossSection
+        The few-group diffsuion group constants for the reflector region.
     """
 
     def __init__(

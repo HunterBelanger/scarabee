@@ -74,4 +74,11 @@ fname : str
         "mssg : str\n"
         "       Message to be logged.\n",
         py::arg("level"), py::arg("mssg"));
+
+  m.def("set_output_file", &set_output_file,
+      "Sets the output file for the Scarabee log.\n\n"
+      "Parameters\n"
+      "----------\n"
+      "fname : str\n"
+      "        Name of log file.\n");
 }

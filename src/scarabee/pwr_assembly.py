@@ -72,7 +72,7 @@ class PWRAssembly:
     moc : MOCDriver
         The method of characteristics solver for the assembly calculation.
         Is None until solve has been called.
-    diffusion_xs : DiffusionXS
+    diffusion_xs : DiffusionCrossSection
         The few-group diffsuion group constants, if few-group constants were
         generated.
     """

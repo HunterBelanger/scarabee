@@ -14,3 +14,7 @@ Lattice Tool Chains
 
 .. autoclass:: Reflector
     :members:
+
+.. autofunction:: save_diffusion_xs
+
+.. autofunction:: load_diffusion_xs
