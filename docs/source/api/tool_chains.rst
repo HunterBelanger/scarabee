@@ -9,6 +9,9 @@ Lattice Tool Chains
 .. autoclass:: GuideTube
     :members:
 
+.. autoclass:: BurnablePoisonPin
+    :members:
+
 .. autoclass:: PWRAssembly
     :members:
 
