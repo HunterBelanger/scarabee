@@ -4,7 +4,7 @@ name = "F31_0"
 
 set_output_file(name+"_out.txt")
 
-ndl = NDLibrary('/mnt/c/Users/BELANH2/Documents/nuclear_data/endf8_shem281.h5')
+ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/endf8_shem281.h5')
 
 cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
              [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],
@@ -101,12 +101,11 @@ Bafflecomp.add_nuclide("Si29", 4.8381E-5)
 Bafflecomp.add_nuclide("Si30", 3.1893E-5)
 Baffle = Material(Bafflecomp, 293.6, ndl)
 
-
 # Define a guide tube
 gt = GuideTube(inner_radius=0.50419, outer_radius=0.54610, clad=Clad)
 
 # Define fuel pin
-fp = FuelPin(fuel=Fuel31, fuel_radius=0.39218, gap=He, gap_width=0.40005-0.39218, clad=Clad, clad_width=0.45720-0.40005)
+fp = FuelPin(fuel=Fuel31, fuel_radius=0.39218, gap=He, gap_radius=0.40005, clad=Clad, clad_radius=0.45720)
 
 # Define assembly
 asmbly = PWRAssembly(pitch=1.25984, moderator=Water, shape=(17, 17), ndl=ndl)

@@ -2,32 +2,55 @@ from scarabee import *
 import matplotlib.pyplot as plt
 
 # Get diffusion cross sections
-a1 = load_diffusion_xs("F16_0.npy")
-a2 = load_diffusion_xs("F24_0.npy")
-a3 = load_diffusion_xs("F31_0.npy")
-rf = load_diffusion_xs("reflector.npy")
+a1_00 = load_diffusion_xs("F16_0.npy")
+a2_00 = load_diffusion_xs("F24_0.npy")
+a3_00 = load_diffusion_xs("F31_0.npy")
+a2_12 = load_diffusion_xs("F24_12.npy")
+a2_16 = load_diffusion_xs("F24_16.npy")
+a3_06 = load_diffusion_xs("F31_6.npy")
+a3_15 = load_diffusion_xs("F31_15.npy")
+a3_16 = load_diffusion_xs("F31_16.npy")
+a3_20 = load_diffusion_xs("F31_20.npy")
+rf___  = load_diffusion_xs("reflector.npy")
 
 # Define nodal geometry
-#            R   P   N   M   L   K   J   H   G   F   E   D   C   B   A
-tiles = [0., 0., 0., 0., rf, rf, rf, rf, rf, rf, rf, rf, rf, 0., 0., 0., 0.,
-         0., 0., rf, rf, rf, a3, a3, a3, a3, a3, a3, a3, rf, rf, rf, 0., 0., #  1 
-         0., rf, rf, a3, a3, a3, a1, a3, a1, a3, a1, a3, a3, a3, rf, rf, 0., #  2 
-         0., rf, a3, a3, a2, a1, a2, a1, a2, a1, a2, a1, a2, a3, a3, rf, 0., #  3
-         rf, rf, a3, a2, a2, a2, a1, a2, a1, a2, a1, a2, a2, a2, a3, rf, rf, #  4
-         rf, a3, a3, a1, a2, a1, a2, a1, a2, a1, a2, a1, a2, a1, a3, a3, rf, #  5
-         rf, a3, a1, a2, a1, a2, a1, a2, a1, a2, a1, a2, a1, a2, a1, a3, rf, #  6
-         rf, a3, a3, a1, a2, a1, a2, a1, a2, a1, a2, a1, a2, a1, a3, a3, rf, #  7
-         rf, a3, a1, a2, a1, a2, a1, a2, a1, a2, a1, a2, a1, a2, a1, a3, rf, #  8
-         rf, a3, a3, a1, a2, a1, a2, a1, a2, a1, a2, a1, a2, a1, a3, a3, rf, #  9
-         rf, a3, a1, a2, a1, a2, a1, a2, a1, a2, a1, a2, a1, a2, a1, a3, rf, # 10
-         rf, a3, a3, a1, a2, a1, a2, a1, a2, a1, a2, a1, a2, a1, a3, a3, rf, # 11
-         rf, rf, a3, a2, a2, a2, a1, a2, a1, a2, a1, a2, a2, a2, a3, rf, rf, # 12
-         0., rf, a3, a3, a2, a1, a2, a1, a2, a1, a2, a1, a2, a3, a3, rf, 0., # 13
-         0., rf, rf, a3, a3, a3, a1, a3, a1, a3, a1, a3, a3, a3, rf, rf, 0., # 14
-         0., 0., rf, rf, rf, a3, a3, a3, a3, a3, a3, a3, rf, rf, rf, 0., 0., # 15
-         0., 0., 0., 0., rf, rf, rf, rf, rf, rf, rf, rf, rf, 0., 0., 0., 0.,
+#                 R      P      N      M      L      K      J      H      G      F      E      D      C      B      A
+tiles = [0.   , 0.   , 0.   , 0.   , rf___, rf___, rf___, rf___, rf___, rf___, rf___, rf___, rf___, 0.   , 0.   , 0.   , 0.,
+
+         0.   , 0.   , rf___, rf___, rf___, a3_00, a3_06, a3_00, a3_06, a3_00, a3_06, a3_00, rf___, rf___, rf___, 0.   , 0.,    #  1 
+
+         0.   , rf___, rf___, a3_00, a3_00, a3_16, a1_00, a3_20, a1_00, a3_20, a1_00, a3_16, a3_00, a3_00, rf___, rf___, 0.,    #  2 
+
+         0.   , rf___, a3_00, a3_15, a2_16, a1_00, a2_16, a1_00, a2_16, a1_00, a2_16, a1_00, a2_16, a3_15, a3_00, rf___, 0.,    #  3
+
+         rf___, rf___, a3_00, a2_16, a2_00, a2_16, a1_00, a2_12, a1_00, a2_12, a1_00, a2_16, a2_00, a2_16, a3_00, rf___, rf___, #  4
+
+         rf___, a3_00, a3_16, a1_00, a2_16, a1_00, a2_12, a1_00, a2_12, a1_00, a2_12, a1_00, a2_16, a1_00, a3_16, a3_00, rf___, #  5
+
+         rf___, a3_06, a1_00, a2_16, a1_00, a2_12, a1_00, a2_12, a1_00, a2_12, a1_00, a2_12, a1_00, a2_16, a1_00, a3_06, rf___, #  6
+
+         rf___, a3_00, a3_20, a1_00, a2_12, a1_00, a2_12, a1_00, a2_16, a1_00, a2_12, a1_00, a2_12, a1_00, a3_20, a3_00, rf___, #  7
+
+         rf___, a3_06, a1_00, a2_16, a1_00, a2_12, a1_00, a2_16, a1_00, a2_16, a1_00, a2_12, a1_00, a2_16, a1_00, a3_06, rf___, #  8
+
+         rf___, a3_00, a3_20, a1_00, a2_12, a1_00, a2_12, a1_00, a2_16, a1_00, a2_12, a1_00, a2_12, a1_00, a3_20, a3_00, rf___, #  9
+
+         rf___, a3_06, a1_00, a2_16, a1_00, a2_12, a1_00, a2_12, a1_00, a2_12, a1_00, a2_12, a1_00, a2_16, a1_00, a3_06, rf___, # 10
+
+         rf___, a3_00, a3_16, a1_00, a2_16, a1_00, a2_12, a1_00, a2_12, a1_00, a2_12, a1_00, a2_16, a1_00, a3_16, a3_00, rf___, # 11
+
+         rf___, rf___, a3_00, a2_16, a2_00, a2_16, a1_00, a2_12, a1_00, a2_12, a1_00, a2_16, a2_00, a2_16, a3_00, rf___, rf___, # 12
+
+         0.   , rf___, a3_00, a3_15, a2_16, a1_00, a2_16, a1_00, a2_16, a1_00, a2_16, a1_00, a2_16, a3_15, a3_00, rf___, 0.,    # 13
+
+         0.   , rf___, rf___, a3_00, a3_00, a3_16, a1_00, a3_20, a1_00, a3_20, a1_00, a3_16, a3_00, a3_00, rf___, rf___, 0.,    # 14
+
+         0.   , 0.   , rf___, rf___, rf___, a3_00, a3_06, a3_00, a3_06, a3_00, a3_06, a3_00, rf___, rf___, rf___, 0.   , 0.,    # 15
+
+         0.   , 0.   , 0.   , 0.   , rf___, rf___, rf___, rf___, rf___, rf___, rf___, rf___, rf___, 0.   , 0.   , 0.   , 0.,
         ]
 
+# Define assembly dimension and the number of nodes per assembly
 dx = np.array(17*[21.50364])
 nx = 2*np.array(17*[1])
 
@@ -65,3 +88,4 @@ power = solver.power(x, y, z)[:,:,0]
 plt.pcolormesh(y, x, power, cmap='jet')
 plt.title("Power")
 plt.show()
+

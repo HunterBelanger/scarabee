@@ -1,0 +1,1100 @@
+[2024-07-26 21:25:28.262] [info] 
+[2024-07-26 21:25:28.262] [info] Computing Dancoff factors for fuel
+[2024-07-26 21:25:29.762] [info] 
+[2024-07-26 21:25:29.762] [info] Computing Dancoff factors for cladding
+[2024-07-26 21:25:31.241] [info] 
+[2024-07-26 21:25:31.241] [info] Performing micro-group pin cell calcuations
+[2024-07-26 21:25:31.241] [info]   Calculating fuel pin at index 0
+[2024-07-26 21:25:44.078] [info]   Calculating fuel pin at index 1
+[2024-07-26 21:25:45.334] [info]   Calculating fuel pin at index 2
+[2024-07-26 21:25:46.609] [info]   Calculating fuel pin at index 3
+[2024-07-26 21:25:47.851] [info]   Calculating fuel pin at index 4
+[2024-07-26 21:25:49.141] [info]   Calculating fuel pin at index 5
+[2024-07-26 21:25:50.412] [info]   Calculating fuel pin at index 6
+[2024-07-26 21:25:51.667] [info]   Calculating fuel pin at index 7
+[2024-07-26 21:25:52.939] [info]   Calculating fuel pin at index 8
+[2024-07-26 21:25:54.187] [info]   Calculating fuel pin at index 9
+[2024-07-26 21:25:55.461] [info]   Calculating fuel pin at index 10
+[2024-07-26 21:25:56.733] [info]   Calculating fuel pin at index 11
+[2024-07-26 21:25:58.004] [info]   Calculating fuel pin at index 12
+[2024-07-26 21:25:59.272] [info]   Calculating fuel pin at index 13
+[2024-07-26 21:26:00.544] [info]   Calculating fuel pin at index 14
+[2024-07-26 21:26:01.820] [info]   Calculating fuel pin at index 15
+[2024-07-26 21:26:03.087] [info]   Calculating fuel pin at index 16
+[2024-07-26 21:26:04.358] [info]   Calculating fuel pin at index 17
+[2024-07-26 21:26:05.633] [info]   Calculating fuel pin at index 18
+[2024-07-26 21:26:06.891] [info]   Calculating fuel pin at index 19
+[2024-07-26 21:26:08.177] [info]   Calculating fuel pin at index 20
+[2024-07-26 21:26:09.492] [info]   Calculating fuel pin at index 21
+[2024-07-26 21:26:10.749] [info]   Calculating fuel pin at index 22
+[2024-07-26 21:26:12.036] [info]   Calculating fuel pin at index 23
+[2024-07-26 21:26:13.315] [info]   Calculating fuel pin at index 24
+[2024-07-26 21:26:14.580] [info]   Calculating fuel pin at index 25
+[2024-07-26 21:26:15.865] [info]   Calculating fuel pin at index 26
+[2024-07-26 21:26:17.127] [info]   Calculating fuel pin at index 27
+[2024-07-26 21:26:18.419] [info]   Calculating fuel pin at index 28
+[2024-07-26 21:26:19.687] [info]   Calculating fuel pin at index 29
+[2024-07-26 21:26:20.945] [info]   Calculating fuel pin at index 30
+[2024-07-26 21:26:22.232] [info]   Calculating fuel pin at index 31
+[2024-07-26 21:26:23.498] [info]   Calculating fuel pin at index 32
+[2024-07-26 21:26:24.767] [info]   Calculating fuel pin at index 33
+[2024-07-26 21:26:26.044] [info]   Calculating fuel pin at index 34
+[2024-07-26 21:26:27.304] [info]   Calculating fuel pin at index 35
+[2024-07-26 21:26:28.585] [info]   Calculating fuel pin at index 36
+[2024-07-26 21:26:29.854] [info]   Calculating fuel pin at index 37
+[2024-07-26 21:26:31.126] [info]   Calculating fuel pin at index 38
+[2024-07-26 21:26:32.406] [info]   Calculating fuel pin at index 40
+[2024-07-26 21:26:33.654] [info]   Calculating fuel pin at index 41
+[2024-07-26 21:26:34.926] [info]   Calculating fuel pin at index 43
+[2024-07-26 21:26:36.196] [info]   Calculating fuel pin at index 44
+[2024-07-26 21:26:37.486] [info]   Calculating fuel pin at index 46
+[2024-07-26 21:26:38.820] [info]   Calculating fuel pin at index 47
+[2024-07-26 21:26:40.105] [info]   Calculating fuel pin at index 48
+[2024-07-26 21:26:41.396] [info]   Calculating fuel pin at index 49
+[2024-07-26 21:26:42.675] [info]   Calculating fuel pin at index 50
+[2024-07-26 21:26:43.935] [info]   Calculating fuel pin at index 51
+[2024-07-26 21:26:45.214] [info]   Calculating fuel pin at index 52
+[2024-07-26 21:26:46.486] [info]   Calculating fuel pin at index 53
+[2024-07-26 21:26:47.742] [info]   Calculating fuel pin at index 55
+[2024-07-26 21:26:49.036] [info]   Calculating fuel pin at index 56
+[2024-07-26 21:26:50.293] [info]   Calculating fuel pin at index 57
+[2024-07-26 21:26:51.575] [info]   Calculating fuel pin at index 58
+[2024-07-26 21:26:52.845] [info]   Calculating fuel pin at index 59
+[2024-07-26 21:26:54.102] [info]   Calculating fuel pin at index 60
+[2024-07-26 21:26:55.368] [info]   Calculating fuel pin at index 61
+[2024-07-26 21:26:56.634] [info]   Calculating fuel pin at index 62
+[2024-07-26 21:26:57.913] [info]   Calculating fuel pin at index 63
+[2024-07-26 21:26:59.172] [info]   Calculating fuel pin at index 65
+[2024-07-26 21:27:00.474] [info]   Calculating fuel pin at index 66
+[2024-07-26 21:27:01.758] [info]   Calculating fuel pin at index 67
+[2024-07-26 21:27:03.032] [info]   Calculating fuel pin at index 68
+[2024-07-26 21:27:04.292] [info]   Calculating fuel pin at index 69
+[2024-07-26 21:27:05.564] [info]   Calculating fuel pin at index 70
+[2024-07-26 21:27:06.829] [info]   Calculating fuel pin at index 71
+[2024-07-26 21:27:08.114] [info]   Calculating fuel pin at index 72
+[2024-07-26 21:27:09.436] [info]   Calculating fuel pin at index 73
+[2024-07-26 21:27:10.698] [info]   Calculating fuel pin at index 74
+[2024-07-26 21:27:11.971] [info]   Calculating fuel pin at index 75
+[2024-07-26 21:27:13.223] [info]   Calculating fuel pin at index 76
+[2024-07-26 21:27:14.507] [info]   Calculating fuel pin at index 77
+[2024-07-26 21:27:15.783] [info]   Calculating fuel pin at index 78
+[2024-07-26 21:27:17.046] [info]   Calculating fuel pin at index 79
+[2024-07-26 21:27:18.322] [info]   Calculating fuel pin at index 80
+[2024-07-26 21:27:19.571] [info]   Calculating fuel pin at index 81
+[2024-07-26 21:27:20.868] [info]   Calculating fuel pin at index 82
+[2024-07-26 21:27:22.127] [info]   Calculating fuel pin at index 83
+[2024-07-26 21:27:23.381] [info]   Calculating fuel pin at index 84
+[2024-07-26 21:27:24.657] [info]   Calculating fuel pin at index 85
+[2024-07-26 21:27:25.966] [info]   Calculating fuel pin at index 86
+[2024-07-26 21:27:27.219] [info]   Calculating fuel pin at index 88
+[2024-07-26 21:27:28.500] [info]   Calculating fuel pin at index 89
+[2024-07-26 21:27:29.753] [info]   Calculating fuel pin at index 91
+[2024-07-26 21:27:31.059] [info]   Calculating fuel pin at index 92
+[2024-07-26 21:27:32.340] [info]   Calculating fuel pin at index 94
+[2024-07-26 21:27:33.602] [info]   Calculating fuel pin at index 95
+[2024-07-26 21:27:34.888] [info]   Calculating fuel pin at index 97
+[2024-07-26 21:27:36.158] [info]   Calculating fuel pin at index 98
+[2024-07-26 21:27:37.441] [info]   Calculating fuel pin at index 100
+[2024-07-26 21:27:38.707] [info]   Calculating fuel pin at index 101
+[2024-07-26 21:27:40.026] [info]   Calculating fuel pin at index 102
+[2024-07-26 21:27:41.337] [info]   Calculating fuel pin at index 103
+[2024-07-26 21:27:42.617] [info]   Calculating fuel pin at index 104
+[2024-07-26 21:27:43.900] [info]   Calculating fuel pin at index 105
+[2024-07-26 21:27:45.207] [info]   Calculating fuel pin at index 106
+[2024-07-26 21:27:46.484] [info]   Calculating fuel pin at index 107
+[2024-07-26 21:27:47.786] [info]   Calculating fuel pin at index 108
+[2024-07-26 21:27:49.091] [info]   Calculating fuel pin at index 109
+[2024-07-26 21:27:50.370] [info]   Calculating fuel pin at index 110
+[2024-07-26 21:27:51.655] [info]   Calculating fuel pin at index 111
+[2024-07-26 21:27:52.953] [info]   Calculating fuel pin at index 112
+[2024-07-26 21:27:54.263] [info]   Calculating fuel pin at index 113
+[2024-07-26 21:27:55.579] [info]   Calculating fuel pin at index 114
+[2024-07-26 21:27:56.870] [info]   Calculating fuel pin at index 115
+[2024-07-26 21:27:58.173] [info]   Calculating fuel pin at index 116
+[2024-07-26 21:27:59.454] [info]   Calculating fuel pin at index 117
+[2024-07-26 21:28:00.759] [info]   Calculating fuel pin at index 118
+[2024-07-26 21:28:02.056] [info]   Calculating fuel pin at index 119
+[2024-07-26 21:28:03.354] [info]   Calculating fuel pin at index 120
+[2024-07-26 21:28:04.637] [info]   Calculating fuel pin at index 121
+[2024-07-26 21:28:05.945] [info]   Calculating fuel pin at index 122
+[2024-07-26 21:28:07.230] [info]   Calculating fuel pin at index 123
+[2024-07-26 21:28:08.582] [info]   Calculating fuel pin at index 124
+[2024-07-26 21:28:09.919] [info]   Calculating fuel pin at index 125
+[2024-07-26 21:28:11.279] [info]   Calculating fuel pin at index 126
+[2024-07-26 21:28:12.595] [info]   Calculating fuel pin at index 127
+[2024-07-26 21:28:13.910] [info]   Calculating fuel pin at index 128
+[2024-07-26 21:28:15.197] [info]   Calculating fuel pin at index 129
+[2024-07-26 21:28:16.502] [info]   Calculating fuel pin at index 130
+[2024-07-26 21:28:17.778] [info]   Calculating fuel pin at index 131
+[2024-07-26 21:28:19.089] [info]   Calculating fuel pin at index 132
+[2024-07-26 21:28:20.371] [info]   Calculating fuel pin at index 133
+[2024-07-26 21:28:21.640] [info]   Calculating fuel pin at index 134
+[2024-07-26 21:28:22.938] [info]   Calculating fuel pin at index 135
+[2024-07-26 21:28:24.238] [info]   Calculating fuel pin at index 136
+[2024-07-26 21:28:25.520] [info]   Calculating fuel pin at index 137
+[2024-07-26 21:28:26.817] [info]   Calculating fuel pin at index 139
+[2024-07-26 21:28:28.117] [info]   Calculating fuel pin at index 140
+[2024-07-26 21:28:29.419] [info]   Calculating fuel pin at index 142
+[2024-07-26 21:28:30.704] [info]   Calculating fuel pin at index 143
+[2024-07-26 21:28:31.987] [info]   Calculating fuel pin at index 145
+[2024-07-26 21:28:33.301] [info]   Calculating fuel pin at index 146
+[2024-07-26 21:28:34.580] [info]   Calculating fuel pin at index 148
+[2024-07-26 21:28:35.869] [info]   Calculating fuel pin at index 149
+[2024-07-26 21:28:37.186] [info]   Calculating fuel pin at index 151
+[2024-07-26 21:28:38.481] [info]   Calculating fuel pin at index 152
+[2024-07-26 21:28:39.784] [info]   Calculating fuel pin at index 153
+[2024-07-26 21:28:41.113] [info]   Calculating fuel pin at index 154
+[2024-07-26 21:28:42.380] [info]   Calculating fuel pin at index 155
+[2024-07-26 21:28:43.669] [info]   Calculating fuel pin at index 156
+[2024-07-26 21:28:44.959] [info]   Calculating fuel pin at index 157
+[2024-07-26 21:28:46.237] [info]   Calculating fuel pin at index 158
+[2024-07-26 21:28:47.527] [info]   Calculating fuel pin at index 159
+[2024-07-26 21:28:48.806] [info]   Calculating fuel pin at index 160
+[2024-07-26 21:28:50.118] [info]   Calculating fuel pin at index 161
+[2024-07-26 21:28:51.423] [info]   Calculating fuel pin at index 162
+[2024-07-26 21:28:52.705] [info]   Calculating fuel pin at index 163
+[2024-07-26 21:28:54.006] [info]   Calculating fuel pin at index 164
+[2024-07-26 21:28:55.295] [info]   Calculating fuel pin at index 165
+[2024-07-26 21:28:56.594] [info]   Calculating fuel pin at index 166
+[2024-07-26 21:28:57.898] [info]   Calculating fuel pin at index 167
+[2024-07-26 21:28:59.175] [info]   Calculating fuel pin at index 168
+[2024-07-26 21:29:00.497] [info]   Calculating fuel pin at index 169
+[2024-07-26 21:29:01.808] [info]   Calculating fuel pin at index 170
+[2024-07-26 21:29:03.091] [info]   Calculating fuel pin at index 171
+[2024-07-26 21:29:04.381] [info]   Calculating fuel pin at index 172
+[2024-07-26 21:29:05.652] [info]   Calculating fuel pin at index 173
+[2024-07-26 21:29:06.999] [info]   Calculating fuel pin at index 174
+[2024-07-26 21:29:08.308] [info]   Calculating fuel pin at index 175
+[2024-07-26 21:29:09.600] [info]   Calculating fuel pin at index 176
+[2024-07-26 21:29:10.946] [info]   Calculating fuel pin at index 177
+[2024-07-26 21:29:12.278] [info]   Calculating fuel pin at index 178
+[2024-07-26 21:29:13.556] [info]   Calculating fuel pin at index 179
+[2024-07-26 21:29:14.852] [info]   Calculating fuel pin at index 180
+[2024-07-26 21:29:16.153] [info]   Calculating fuel pin at index 181
+[2024-07-26 21:29:17.444] [info]   Calculating fuel pin at index 182
+[2024-07-26 21:29:18.755] [info]   Calculating fuel pin at index 183
+[2024-07-26 21:29:20.037] [info]   Calculating fuel pin at index 184
+[2024-07-26 21:29:21.329] [info]   Calculating fuel pin at index 185
+[2024-07-26 21:29:22.618] [info]   Calculating fuel pin at index 186
+[2024-07-26 21:29:23.917] [info]   Calculating fuel pin at index 187
+[2024-07-26 21:29:25.223] [info]   Calculating fuel pin at index 188
+[2024-07-26 21:29:26.509] [info]   Calculating fuel pin at index 190
+[2024-07-26 21:29:27.828] [info]   Calculating fuel pin at index 191
+[2024-07-26 21:29:29.154] [info]   Calculating fuel pin at index 193
+[2024-07-26 21:29:30.424] [info]   Calculating fuel pin at index 194
+[2024-07-26 21:29:31.755] [info]   Calculating fuel pin at index 196
+[2024-07-26 21:29:33.076] [info]   Calculating fuel pin at index 197
+[2024-07-26 21:29:34.361] [info]   Calculating fuel pin at index 199
+[2024-07-26 21:29:35.654] [info]   Calculating fuel pin at index 200
+[2024-07-26 21:29:36.959] [info]   Calculating fuel pin at index 202
+[2024-07-26 21:29:38.259] [info]   Calculating fuel pin at index 203
+[2024-07-26 21:29:39.599] [info]   Calculating fuel pin at index 204
+[2024-07-26 21:29:40.918] [info]   Calculating fuel pin at index 205
+[2024-07-26 21:29:42.294] [info]   Calculating fuel pin at index 206
+[2024-07-26 21:29:43.616] [info]   Calculating fuel pin at index 207
+[2024-07-26 21:29:44.908] [info]   Calculating fuel pin at index 208
+[2024-07-26 21:29:46.231] [info]   Calculating fuel pin at index 209
+[2024-07-26 21:29:47.541] [info]   Calculating fuel pin at index 210
+[2024-07-26 21:29:48.832] [info]   Calculating fuel pin at index 211
+[2024-07-26 21:29:50.157] [info]   Calculating fuel pin at index 212
+[2024-07-26 21:29:51.453] [info]   Calculating fuel pin at index 213
+[2024-07-26 21:29:52.756] [info]   Calculating fuel pin at index 214
+[2024-07-26 21:29:54.062] [info]   Calculating fuel pin at index 215
+[2024-07-26 21:29:55.370] [info]   Calculating fuel pin at index 216
+[2024-07-26 21:29:56.682] [info]   Calculating fuel pin at index 217
+[2024-07-26 21:29:57.989] [info]   Calculating fuel pin at index 218
+[2024-07-26 21:29:59.276] [info]   Calculating fuel pin at index 219
+[2024-07-26 21:30:00.582] [info]   Calculating fuel pin at index 220
+[2024-07-26 21:30:01.866] [info]   Calculating fuel pin at index 221
+[2024-07-26 21:30:03.208] [info]   Calculating fuel pin at index 222
+[2024-07-26 21:30:04.525] [info]   Calculating fuel pin at index 223
+[2024-07-26 21:30:05.814] [info]   Calculating fuel pin at index 225
+[2024-07-26 21:30:07.144] [info]   Calculating fuel pin at index 226
+[2024-07-26 21:30:08.458] [info]   Calculating fuel pin at index 227
+[2024-07-26 21:30:09.789] [info]   Calculating fuel pin at index 228
+[2024-07-26 21:30:11.123] [info]   Calculating fuel pin at index 229
+[2024-07-26 21:30:12.497] [info]   Calculating fuel pin at index 230
+[2024-07-26 21:30:13.809] [info]   Calculating fuel pin at index 231
+[2024-07-26 21:30:15.140] [info]   Calculating fuel pin at index 232
+[2024-07-26 21:30:16.463] [info]   Calculating fuel pin at index 233
+[2024-07-26 21:30:17.756] [info]   Calculating fuel pin at index 235
+[2024-07-26 21:30:19.057] [info]   Calculating fuel pin at index 236
+[2024-07-26 21:30:20.350] [info]   Calculating fuel pin at index 237
+[2024-07-26 21:30:21.657] [info]   Calculating fuel pin at index 238
+[2024-07-26 21:30:22.956] [info]   Calculating fuel pin at index 239
+[2024-07-26 21:30:24.246] [info]   Calculating fuel pin at index 240
+[2024-07-26 21:30:25.564] [info]   Calculating fuel pin at index 241
+[2024-07-26 21:30:26.866] [info]   Calculating fuel pin at index 242
+[2024-07-26 21:30:28.167] [info]   Calculating fuel pin at index 244
+[2024-07-26 21:30:29.470] [info]   Calculating fuel pin at index 245
+[2024-07-26 21:30:30.772] [info]   Calculating fuel pin at index 247
+[2024-07-26 21:30:32.103] [info]   Calculating fuel pin at index 248
+[2024-07-26 21:30:33.397] [info]   Calculating fuel pin at index 250
+[2024-07-26 21:30:34.675] [info]   Calculating fuel pin at index 251
+[2024-07-26 21:30:35.985] [info]   Calculating fuel pin at index 252
+[2024-07-26 21:30:37.279] [info]   Calculating fuel pin at index 253
+[2024-07-26 21:30:38.592] [info]   Calculating fuel pin at index 254
+[2024-07-26 21:30:39.927] [info]   Calculating fuel pin at index 255
+[2024-07-26 21:30:41.221] [info]   Calculating fuel pin at index 256
+[2024-07-26 21:30:42.605] [info]   Calculating fuel pin at index 257
+[2024-07-26 21:30:43.932] [info]   Calculating fuel pin at index 258
+[2024-07-26 21:30:45.245] [info]   Calculating fuel pin at index 259
+[2024-07-26 21:30:46.563] [info]   Calculating fuel pin at index 260
+[2024-07-26 21:30:47.878] [info]   Calculating fuel pin at index 261
+[2024-07-26 21:30:49.178] [info]   Calculating fuel pin at index 262
+[2024-07-26 21:30:50.475] [info]   Calculating fuel pin at index 263
+[2024-07-26 21:30:51.763] [info]   Calculating fuel pin at index 264
+[2024-07-26 21:30:53.074] [info]   Calculating fuel pin at index 265
+[2024-07-26 21:30:54.374] [info]   Calculating fuel pin at index 266
+[2024-07-26 21:30:55.644] [info]   Calculating fuel pin at index 267
+[2024-07-26 21:30:56.978] [info]   Calculating fuel pin at index 268
+[2024-07-26 21:30:58.290] [info]   Calculating fuel pin at index 269
+[2024-07-26 21:30:59.573] [info]   Calculating fuel pin at index 270
+[2024-07-26 21:31:00.883] [info]   Calculating fuel pin at index 271
+[2024-07-26 21:31:02.171] [info]   Calculating fuel pin at index 272
+[2024-07-26 21:31:03.498] [info]   Calculating fuel pin at index 273
+[2024-07-26 21:31:04.813] [info]   Calculating fuel pin at index 274
+[2024-07-26 21:31:06.118] [info]   Calculating fuel pin at index 275
+[2024-07-26 21:31:07.428] [info]   Calculating fuel pin at index 276
+[2024-07-26 21:31:08.737] [info]   Calculating fuel pin at index 277
+[2024-07-26 21:31:10.055] [info]   Calculating fuel pin at index 278
+[2024-07-26 21:31:11.367] [info]   Calculating fuel pin at index 279
+[2024-07-26 21:31:12.690] [info]   Calculating fuel pin at index 280
+[2024-07-26 21:31:14.061] [info]   Calculating fuel pin at index 281
+[2024-07-26 21:31:15.398] [info]   Calculating fuel pin at index 282
+[2024-07-26 21:31:16.711] [info]   Calculating fuel pin at index 283
+[2024-07-26 21:31:18.030] [info]   Calculating fuel pin at index 284
+[2024-07-26 21:31:19.327] [info]   Calculating fuel pin at index 285
+[2024-07-26 21:31:20.611] [info]   Calculating fuel pin at index 286
+[2024-07-26 21:31:21.919] [info]   Calculating fuel pin at index 287
+[2024-07-26 21:31:23.231] [info]   Calculating fuel pin at index 288
+[2024-07-26 21:31:24.518] [info]   Calculating cell at index 39
+[2024-07-26 21:31:29.348] [info]   Calculating cell at index 42
+[2024-07-26 21:31:31.088] [info]   Calculating cell at index 45
+[2024-07-26 21:31:32.815] [info]   Calculating cell at index 54
+[2024-07-26 21:31:34.546] [info]   Calculating cell at index 64
+[2024-07-26 21:31:36.305] [info]   Calculating cell at index 87
+[2024-07-26 21:31:38.022] [info]   Calculating cell at index 90
+[2024-07-26 21:31:39.287] [info]   Calculating cell at index 93
+[2024-07-26 21:31:40.527] [info]   Calculating cell at index 96
+[2024-07-26 21:31:41.756] [info]   Calculating cell at index 99
+[2024-07-26 21:31:43.496] [info]   Calculating cell at index 138
+[2024-07-26 21:31:45.246] [info]   Calculating cell at index 141
+[2024-07-26 21:31:46.485] [info]   Calculating cell at index 144
+[2024-07-26 21:31:47.692] [info]   Calculating cell at index 147
+[2024-07-26 21:31:48.913] [info]   Calculating cell at index 150
+[2024-07-26 21:31:50.633] [info]   Calculating cell at index 189
+[2024-07-26 21:31:52.340] [info]   Calculating cell at index 192
+[2024-07-26 21:31:53.567] [info]   Calculating cell at index 195
+[2024-07-26 21:31:54.786] [info]   Calculating cell at index 198
+[2024-07-26 21:31:56.012] [info]   Calculating cell at index 201
+[2024-07-26 21:31:57.751] [info]   Calculating cell at index 224
+[2024-07-26 21:31:59.472] [info]   Calculating cell at index 234
+[2024-07-26 21:32:01.199] [info]   Calculating cell at index 243
+[2024-07-26 21:32:02.925] [info]   Calculating cell at index 246
+[2024-07-26 21:32:04.651] [info]   Calculating cell at index 249
+[2024-07-26 21:32:06.399] [info] 
+[2024-07-26 21:32:06.399] [info] Performing pin cell energy condensation
+[2024-07-26 21:32:06.693] [info] 
+[2024-07-26 21:32:06.693] [info] Performing macrogroup assembly calculation
+[2024-07-26 21:32:07.493] [info] Creating quadrature
+[2024-07-26 21:32:07.494] [info] Number of azimuthal angles: 64
+[2024-07-26 21:32:07.494] [info] Maximum track spacing: 0.01 cm
+[2024-07-26 21:32:07.494] [info] Tracing tracks
+[2024-07-26 21:32:21.046] [info] Renormalizing segment lengths
+[2024-07-26 21:32:21.072] [info] Determining track connections
+[2024-07-26 21:32:21.107] [info] Time spent dawing tracks: 13.614 s.
+[2024-07-26 21:32:21.107] [info] Solving for keff.
+[2024-07-26 21:32:21.107] [info] keff tolerance: 1.00000E-05
+[2024-07-26 21:32:21.107] [info] Flux tolerance: 1.00000E-05
+[2024-07-26 21:32:21.872] [info] -------------------------------------
+[2024-07-26 21:32:21.872] [info] Iteration    1          keff: 0.94921
+[2024-07-26 21:32:21.872] [info]      keff difference:     5.35115E-02
+[2024-07-26 21:32:21.872] [info]      max flux difference: 2.92775E+00
+[2024-07-26 21:32:21.872] [info]      Iteration time: 7.57575E-01 s
+[2024-07-26 21:32:22.640] [info] -------------------------------------
+[2024-07-26 21:32:22.640] [info] Iteration    2          keff: 0.97944
+[2024-07-26 21:32:22.640] [info]      keff difference:     3.08718E-02
+[2024-07-26 21:32:22.640] [info]      max flux difference: 5.00912E+00
+[2024-07-26 21:32:22.640] [info]      Iteration time: 7.67733E-01 s
+[2024-07-26 21:32:23.432] [info] -------------------------------------
+[2024-07-26 21:32:23.432] [info] Iteration    3          keff: 1.04459
+[2024-07-26 21:32:23.432] [info]      keff difference:     6.23668E-02
+[2024-07-26 21:32:23.432] [info]      max flux difference: 2.14280E+00
+[2024-07-26 21:32:23.432] [info]      Iteration time: 7.92084E-01 s
+[2024-07-26 21:32:24.219] [info] -------------------------------------
+[2024-07-26 21:32:24.219] [info] Iteration    4          keff: 1.12405
+[2024-07-26 21:32:24.219] [info]      keff difference:     7.06889E-02
+[2024-07-26 21:32:24.219] [info]      max flux difference: 2.13627E+00
+[2024-07-26 21:32:24.219] [info]      Iteration time: 7.87410E-01 s
+[2024-07-26 21:32:24.990] [info] -------------------------------------
+[2024-07-26 21:32:24.990] [info] Iteration    5          keff: 1.20834
+[2024-07-26 21:32:24.990] [info]      keff difference:     6.97538E-02
+[2024-07-26 21:32:24.990] [info]      max flux difference: 6.59208E-01
+[2024-07-26 21:32:24.990] [info]      Iteration time: 7.70912E-01 s
+[2024-07-26 21:32:25.759] [info] -------------------------------------
+[2024-07-26 21:32:25.759] [info] Iteration    6          keff: 1.29112
+[2024-07-26 21:32:25.759] [info]      keff difference:     6.41181E-02
+[2024-07-26 21:32:25.759] [info]      max flux difference: 2.42393E-01
+[2024-07-26 21:32:25.759] [info]      Iteration time: 7.68608E-01 s
+[2024-07-26 21:32:26.522] [info] -------------------------------------
+[2024-07-26 21:32:26.522] [info] Iteration    7          keff: 1.36832
+[2024-07-26 21:32:26.522] [info]      keff difference:     5.64176E-02
+[2024-07-26 21:32:26.522] [info]      max flux difference: 1.23290E-01
+[2024-07-26 21:32:26.522] [info]      Iteration time: 7.63142E-01 s
+[2024-07-26 21:32:27.315] [info] -------------------------------------
+[2024-07-26 21:32:27.315] [info] Iteration    8          keff: 1.43739
+[2024-07-26 21:32:27.315] [info]      keff difference:     4.80561E-02
+[2024-07-26 21:32:27.315] [info]      max flux difference: 1.16643E-01
+[2024-07-26 21:32:27.315] [info]      Iteration time: 7.92552E-01 s
+[2024-07-26 21:32:28.084] [info] -------------------------------------
+[2024-07-26 21:32:28.084] [info] Iteration    9          keff: 1.49693
+[2024-07-26 21:32:28.084] [info]      keff difference:     3.97733E-02
+[2024-07-26 21:32:28.084] [info]      max flux difference: 1.11422E-01
+[2024-07-26 21:32:28.084] [info]      Iteration time: 7.68936E-01 s
+[2024-07-26 21:32:28.855] [info] -------------------------------------
+[2024-07-26 21:32:28.855] [info] Iteration   10          keff: 1.54629
+[2024-07-26 21:32:28.855] [info]      keff difference:     3.19217E-02
+[2024-07-26 21:32:28.855] [info]      max flux difference: 1.05682E-01
+[2024-07-26 21:32:28.855] [info]      Iteration time: 7.70738E-01 s
+[2024-07-26 21:32:29.631] [info] -------------------------------------
+[2024-07-26 21:32:29.631] [info] Iteration   11          keff: 1.58536
+[2024-07-26 21:32:29.631] [info]      keff difference:     2.46460E-02
+[2024-07-26 21:32:29.631] [info]      max flux difference: 1.01760E-01
+[2024-07-26 21:32:29.631] [info]      Iteration time: 7.76372E-01 s
+[2024-07-26 21:32:30.420] [info] -------------------------------------
+[2024-07-26 21:32:30.420] [info] Iteration   12          keff: 1.61440
+[2024-07-26 21:32:30.420] [info]      keff difference:     1.79886E-02
+[2024-07-26 21:32:30.420] [info]      max flux difference: 9.77416E-02
+[2024-07-26 21:32:30.420] [info]      Iteration time: 7.89240E-01 s
+[2024-07-26 21:32:31.201] [info] -------------------------------------
+[2024-07-26 21:32:31.201] [info] Iteration   13          keff: 1.63393
+[2024-07-26 21:32:31.201] [info]      keff difference:     1.19486E-02
+[2024-07-26 21:32:31.201] [info]      max flux difference: 9.45182E-02
+[2024-07-26 21:32:31.201] [info]      Iteration time: 7.80744E-01 s
+[2024-07-26 21:32:31.969] [info] -------------------------------------
+[2024-07-26 21:32:31.969] [info] Iteration   14          keff: 1.64464
+[2024-07-26 21:32:31.969] [info]      keff difference:     6.51150E-03
+[2024-07-26 21:32:31.969] [info]      max flux difference: 9.14193E-02
+[2024-07-26 21:32:31.969] [info]      Iteration time: 7.68185E-01 s
+[2024-07-26 21:32:32.745] [info] -------------------------------------
+[2024-07-26 21:32:32.745] [info] Iteration   15          keff: 1.64737
+[2024-07-26 21:32:32.745] [info]      keff difference:     1.66117E-03
+[2024-07-26 21:32:32.745] [info]      max flux difference: 8.76061E-02
+[2024-07-26 21:32:32.745] [info]      Iteration time: 7.75960E-01 s
+[2024-07-26 21:32:33.517] [info] -------------------------------------
+[2024-07-26 21:32:33.517] [info] Iteration   16          keff: 1.64307
+[2024-07-26 21:32:33.517] [info]      keff difference:     2.61727E-03
+[2024-07-26 21:32:33.517] [info]      max flux difference: 8.10410E-02
+[2024-07-26 21:32:33.517] [info]      Iteration time: 7.71677E-01 s
+[2024-07-26 21:32:34.287] [info] -------------------------------------
+[2024-07-26 21:32:34.287] [info] Iteration   17          keff: 1.63272
+[2024-07-26 21:32:34.287] [info]      keff difference:     6.33853E-03
+[2024-07-26 21:32:34.287] [info]      max flux difference: 7.65525E-02
+[2024-07-26 21:32:34.287] [info]      Iteration time: 7.69924E-01 s
+[2024-07-26 21:32:35.051] [info] -------------------------------------
+[2024-07-26 21:32:35.051] [info] Iteration   18          keff: 1.61733
+[2024-07-26 21:32:35.051] [info]      keff difference:     9.51963E-03
+[2024-07-26 21:32:35.051] [info]      max flux difference: 7.22190E-02
+[2024-07-26 21:32:35.051] [info]      Iteration time: 7.64223E-01 s
+[2024-07-26 21:32:35.816] [info] -------------------------------------
+[2024-07-26 21:32:35.816] [info] Iteration   19          keff: 1.59786
+[2024-07-26 21:32:35.816] [info]      keff difference:     1.21821E-02
+[2024-07-26 21:32:35.816] [info]      max flux difference: 6.81313E-02
+[2024-07-26 21:32:35.816] [info]      Iteration time: 7.64378E-01 s
+[2024-07-26 21:32:36.582] [info] -------------------------------------
+[2024-07-26 21:32:36.582] [info] Iteration   20          keff: 1.57525
+[2024-07-26 21:32:36.582] [info]      keff difference:     1.43530E-02
+[2024-07-26 21:32:36.582] [info]      max flux difference: 6.51539E-02
+[2024-07-26 21:32:36.582] [info]      Iteration time: 7.66392E-01 s
+[2024-07-26 21:32:37.364] [info] -------------------------------------
+[2024-07-26 21:32:37.364] [info] Iteration   21          keff: 1.55034
+[2024-07-26 21:32:37.364] [info]      keff difference:     1.60657E-02
+[2024-07-26 21:32:37.364] [info]      max flux difference: 6.14161E-02
+[2024-07-26 21:32:37.364] [info]      Iteration time: 7.82115E-01 s
+[2024-07-26 21:32:38.134] [info] -------------------------------------
+[2024-07-26 21:32:38.134] [info] Iteration   22          keff: 1.52389
+[2024-07-26 21:32:38.134] [info]      keff difference:     1.73586E-02
+[2024-07-26 21:32:38.134] [info]      max flux difference: 5.66365E-02
+[2024-07-26 21:32:38.134] [info]      Iteration time: 7.69806E-01 s
+[2024-07-26 21:32:38.898] [info] -------------------------------------
+[2024-07-26 21:32:38.898] [info] Iteration   23          keff: 1.49654
+[2024-07-26 21:32:38.898] [info]      keff difference:     1.82741E-02
+[2024-07-26 21:32:38.898] [info]      max flux difference: 5.11330E-02
+[2024-07-26 21:32:38.898] [info]      Iteration time: 7.64019E-01 s
+[2024-07-26 21:32:39.662] [info] -------------------------------------
+[2024-07-26 21:32:39.662] [info] Iteration   24          keff: 1.46885
+[2024-07-26 21:32:39.662] [info]      keff difference:     1.88572E-02
+[2024-07-26 21:32:39.662] [info]      max flux difference: 4.52421E-02
+[2024-07-26 21:32:39.662] [info]      Iteration time: 7.63763E-01 s
+[2024-07-26 21:32:40.459] [info] -------------------------------------
+[2024-07-26 21:32:40.459] [info] Iteration   25          keff: 1.44124
+[2024-07-26 21:32:40.459] [info]      keff difference:     1.91532E-02
+[2024-07-26 21:32:40.459] [info]      max flux difference: 3.92827E-02
+[2024-07-26 21:32:40.459] [info]      Iteration time: 7.97124E-01 s
+[2024-07-26 21:32:41.237] [info] -------------------------------------
+[2024-07-26 21:32:41.237] [info] Iteration   26          keff: 1.41408
+[2024-07-26 21:32:41.237] [info]      keff difference:     1.92065E-02
+[2024-07-26 21:32:41.237] [info]      max flux difference: 3.35253E-02
+[2024-07-26 21:32:41.237] [info]      Iteration time: 7.77670E-01 s
+[2024-07-26 21:32:42.016] [info] -------------------------------------
+[2024-07-26 21:32:42.017] [info] Iteration   27          keff: 1.38763
+[2024-07-26 21:32:42.017] [info]      keff difference:     1.90590E-02
+[2024-07-26 21:32:42.017] [info]      max flux difference: 2.81741E-02
+[2024-07-26 21:32:42.017] [info]      Iteration time: 7.79250E-01 s
+[2024-07-26 21:32:42.778] [info] -------------------------------------
+[2024-07-26 21:32:42.778] [info] Iteration   28          keff: 1.36210
+[2024-07-26 21:32:42.778] [info]      keff difference:     1.87493E-02
+[2024-07-26 21:32:42.778] [info]      max flux difference: 2.33773E-02
+[2024-07-26 21:32:42.778] [info]      Iteration time: 7.61319E-01 s
+[2024-07-26 21:32:43.560] [info] -------------------------------------
+[2024-07-26 21:32:43.560] [info] Iteration   29          keff: 1.33760
+[2024-07-26 21:32:43.560] [info]      keff difference:     1.83118E-02
+[2024-07-26 21:32:43.560] [info]      max flux difference: 2.29837E-02
+[2024-07-26 21:32:43.560] [info]      Iteration time: 7.81597E-01 s
+[2024-07-26 21:32:44.332] [info] -------------------------------------
+[2024-07-26 21:32:44.332] [info] Iteration   30          keff: 1.31424
+[2024-07-26 21:32:44.332] [info]      keff difference:     1.77767E-02
+[2024-07-26 21:32:44.332] [info]      max flux difference: 2.25242E-02
+[2024-07-26 21:32:44.332] [info]      Iteration time: 7.72738E-01 s
+[2024-07-26 21:32:45.105] [info] -------------------------------------
+[2024-07-26 21:32:45.105] [info] Iteration   31          keff: 1.29206
+[2024-07-26 21:32:45.105] [info]      keff difference:     1.71697E-02
+[2024-07-26 21:32:45.105] [info]      max flux difference: 2.21469E-02
+[2024-07-26 21:32:45.105] [info]      Iteration time: 7.72441E-01 s
+[2024-07-26 21:32:45.868] [info] -------------------------------------
+[2024-07-26 21:32:45.868] [info] Iteration   32          keff: 1.27107
+[2024-07-26 21:32:45.868] [info]      keff difference:     1.65125E-02
+[2024-07-26 21:32:45.868] [info]      max flux difference: 2.16608E-02
+[2024-07-26 21:32:45.868] [info]      Iteration time: 7.63545E-01 s
+[2024-07-26 21:32:46.640] [info] -------------------------------------
+[2024-07-26 21:32:46.640] [info] Iteration   33          keff: 1.25127
+[2024-07-26 21:32:46.640] [info]      keff difference:     1.58229E-02
+[2024-07-26 21:32:46.640] [info]      max flux difference: 2.10551E-02
+[2024-07-26 21:32:46.640] [info]      Iteration time: 7.71350E-01 s
+[2024-07-26 21:32:47.420] [info] -------------------------------------
+[2024-07-26 21:32:47.420] [info] Iteration   34          keff: 1.23264
+[2024-07-26 21:32:47.420] [info]      keff difference:     1.51152E-02
+[2024-07-26 21:32:47.420] [info]      max flux difference: 2.03596E-02
+[2024-07-26 21:32:47.420] [info]      Iteration time: 7.79797E-01 s
+[2024-07-26 21:32:48.194] [info] -------------------------------------
+[2024-07-26 21:32:48.194] [info] Iteration   35          keff: 1.21514
+[2024-07-26 21:32:48.194] [info]      keff difference:     1.44010E-02
+[2024-07-26 21:32:48.194] [info]      max flux difference: 1.95992E-02
+[2024-07-26 21:32:48.194] [info]      Iteration time: 7.73668E-01 s
+[2024-07-26 21:32:48.961] [info] -------------------------------------
+[2024-07-26 21:32:48.961] [info] Iteration   36          keff: 1.19873
+[2024-07-26 21:32:48.961] [info]      keff difference:     1.36892E-02
+[2024-07-26 21:32:48.961] [info]      max flux difference: 1.87950E-02
+[2024-07-26 21:32:48.961] [info]      Iteration time: 7.67437E-01 s
+[2024-07-26 21:32:49.734] [info] -------------------------------------
+[2024-07-26 21:32:49.734] [info] Iteration   37          keff: 1.18336
+[2024-07-26 21:32:49.734] [info]      keff difference:     1.29870E-02
+[2024-07-26 21:32:49.734] [info]      max flux difference: 1.79641E-02
+[2024-07-26 21:32:49.734] [info]      Iteration time: 7.73239E-01 s
+[2024-07-26 21:32:50.533] [info] -------------------------------------
+[2024-07-26 21:32:50.534] [info] Iteration   38          keff: 1.16898
+[2024-07-26 21:32:50.534] [info]      keff difference:     1.22995E-02
+[2024-07-26 21:32:50.534] [info]      max flux difference: 1.71205E-02
+[2024-07-26 21:32:50.534] [info]      Iteration time: 7.99126E-01 s
+[2024-07-26 21:32:51.312] [info] -------------------------------------
+[2024-07-26 21:32:51.312] [info] Iteration   39          keff: 1.15554
+[2024-07-26 21:32:51.312] [info]      keff difference:     1.16309E-02
+[2024-07-26 21:32:51.312] [info]      max flux difference: 1.64425E-02
+[2024-07-26 21:32:51.312] [info]      Iteration time: 7.78105E-01 s
+[2024-07-26 21:32:52.084] [info] -------------------------------------
+[2024-07-26 21:32:52.084] [info] Iteration   40          keff: 1.14299
+[2024-07-26 21:32:52.084] [info]      keff difference:     1.09839E-02
+[2024-07-26 21:32:52.084] [info]      max flux difference: 1.57823E-02
+[2024-07-26 21:32:52.084] [info]      Iteration time: 7.71959E-01 s
+[2024-07-26 21:32:52.867] [info] -------------------------------------
+[2024-07-26 21:32:52.867] [info] Iteration   41          keff: 1.13127
+[2024-07-26 21:32:52.867] [info]      keff difference:     1.03606E-02
+[2024-07-26 21:32:52.867] [info]      max flux difference: 1.51110E-02
+[2024-07-26 21:32:52.867] [info]      Iteration time: 7.83608E-01 s
+[2024-07-26 21:32:53.660] [info] -------------------------------------
+[2024-07-26 21:32:53.660] [info] Iteration   42          keff: 1.12033
+[2024-07-26 21:32:53.660] [info]      keff difference:     9.76238E-03
+[2024-07-26 21:32:53.660] [info]      max flux difference: 1.44364E-02
+[2024-07-26 21:32:53.660] [info]      Iteration time: 7.92668E-01 s
+[2024-07-26 21:32:54.434] [info] -------------------------------------
+[2024-07-26 21:32:54.434] [info] Iteration   43          keff: 1.11013
+[2024-07-26 21:32:54.434] [info]      keff difference:     9.18996E-03
+[2024-07-26 21:32:54.434] [info]      max flux difference: 1.37651E-02
+[2024-07-26 21:32:54.434] [info]      Iteration time: 7.73610E-01 s
+[2024-07-26 21:32:55.205] [info] -------------------------------------
+[2024-07-26 21:32:55.205] [info] Iteration   44          keff: 1.10061
+[2024-07-26 21:32:55.205] [info]      keff difference:     8.64374E-03
+[2024-07-26 21:32:55.205] [info]      max flux difference: 1.31023E-02
+[2024-07-26 21:32:55.205] [info]      Iteration time: 7.71209E-01 s
+[2024-07-26 21:32:55.997] [info] -------------------------------------
+[2024-07-26 21:32:55.997] [info] Iteration   45          keff: 1.09175
+[2024-07-26 21:32:55.997] [info]      keff difference:     8.12374E-03
+[2024-07-26 21:32:55.997] [info]      max flux difference: 1.24522E-02
+[2024-07-26 21:32:55.997] [info]      Iteration time: 7.91717E-01 s
+[2024-07-26 21:32:56.785] [info] -------------------------------------
+[2024-07-26 21:32:56.785] [info] Iteration   46          keff: 1.08348
+[2024-07-26 21:32:56.785] [info]      keff difference:     7.62974E-03
+[2024-07-26 21:32:56.785] [info]      max flux difference: 1.18180E-02
+[2024-07-26 21:32:56.785] [info]      Iteration time: 7.87851E-01 s
+[2024-07-26 21:32:57.579] [info] -------------------------------------
+[2024-07-26 21:32:57.579] [info] Iteration   47          keff: 1.07577
+[2024-07-26 21:32:57.579] [info]      keff difference:     7.16129E-03
+[2024-07-26 21:32:57.579] [info]      max flux difference: 1.12022E-02
+[2024-07-26 21:32:57.579] [info]      Iteration time: 7.94308E-01 s
+[2024-07-26 21:32:58.387] [info] -------------------------------------
+[2024-07-26 21:32:58.387] [info] Iteration   48          keff: 1.06860
+[2024-07-26 21:32:58.387] [info]      keff difference:     6.71780E-03
+[2024-07-26 21:32:58.387] [info]      max flux difference: 1.06067E-02
+[2024-07-26 21:32:58.387] [info]      Iteration time: 8.08046E-01 s
+[2024-07-26 21:32:59.166] [info] -------------------------------------
+[2024-07-26 21:32:59.166] [info] Iteration   49          keff: 1.06191
+[2024-07-26 21:32:59.166] [info]      keff difference:     6.29854E-03
+[2024-07-26 21:32:59.166] [info]      max flux difference: 1.00329E-02
+[2024-07-26 21:32:59.166] [info]      Iteration time: 7.78858E-01 s
+[2024-07-26 21:32:59.941] [info] -------------------------------------
+[2024-07-26 21:32:59.941] [info] Iteration   50          keff: 1.05568
+[2024-07-26 21:32:59.941] [info]      keff difference:     5.90270E-03
+[2024-07-26 21:32:59.941] [info]      max flux difference: 9.48164E-03
+[2024-07-26 21:32:59.941] [info]      Iteration time: 7.74845E-01 s
+[2024-07-26 21:33:00.720] [info] -------------------------------------
+[2024-07-26 21:33:00.720] [info] Iteration   51          keff: 1.04987
+[2024-07-26 21:33:00.720] [info]      keff difference:     5.52940E-03
+[2024-07-26 21:33:00.720] [info]      max flux difference: 8.95349E-03
+[2024-07-26 21:33:00.720] [info]      Iteration time: 7.79279E-01 s
+[2024-07-26 21:33:01.494] [info] -------------------------------------
+[2024-07-26 21:33:01.494] [info] Iteration   52          keff: 1.04446
+[2024-07-26 21:33:01.494] [info]      keff difference:     5.17774E-03
+[2024-07-26 21:33:01.494] [info]      max flux difference: 8.44866E-03
+[2024-07-26 21:33:01.494] [info]      Iteration time: 7.73558E-01 s
+[2024-07-26 21:33:02.270] [info] -------------------------------------
+[2024-07-26 21:33:02.270] [info] Iteration   53          keff: 1.03943
+[2024-07-26 21:33:02.270] [info]      keff difference:     4.84677E-03
+[2024-07-26 21:33:02.270] [info]      max flux difference: 7.96711E-03
+[2024-07-26 21:33:02.270] [info]      Iteration time: 7.75786E-01 s
+[2024-07-26 21:33:03.044] [info] -------------------------------------
+[2024-07-26 21:33:03.044] [info] Iteration   54          keff: 1.03473
+[2024-07-26 21:33:03.044] [info]      keff difference:     4.53553E-03
+[2024-07-26 21:33:03.044] [info]      max flux difference: 7.50859E-03
+[2024-07-26 21:33:03.044] [info]      Iteration time: 7.73945E-01 s
+[2024-07-26 21:33:03.815] [info] -------------------------------------
+[2024-07-26 21:33:03.815] [info] Iteration   55          keff: 1.03036
+[2024-07-26 21:33:03.815] [info]      keff difference:     4.24306E-03
+[2024-07-26 21:33:03.815] [info]      max flux difference: 7.07270E-03
+[2024-07-26 21:33:03.815] [info]      Iteration time: 7.70985E-01 s
+[2024-07-26 21:33:04.600] [info] -------------------------------------
+[2024-07-26 21:33:04.600] [info] Iteration   56          keff: 1.02629
+[2024-07-26 21:33:04.600] [info]      keff difference:     3.96842E-03
+[2024-07-26 21:33:04.600] [info]      max flux difference: 6.65889E-03
+[2024-07-26 21:33:04.600] [info]      Iteration time: 7.84842E-01 s
+[2024-07-26 21:33:05.383] [info] -------------------------------------
+[2024-07-26 21:33:05.383] [info] Iteration   57          keff: 1.02249
+[2024-07-26 21:33:05.383] [info]      keff difference:     3.71069E-03
+[2024-07-26 21:33:05.383] [info]      max flux difference: 6.26654E-03
+[2024-07-26 21:33:05.383] [info]      Iteration time: 7.82905E-01 s
+[2024-07-26 21:33:06.160] [info] -------------------------------------
+[2024-07-26 21:33:06.160] [info] Iteration   58          keff: 1.01896
+[2024-07-26 21:33:06.160] [info]      keff difference:     3.46895E-03
+[2024-07-26 21:33:06.160] [info]      max flux difference: 5.89492E-03
+[2024-07-26 21:33:06.160] [info]      Iteration time: 7.77216E-01 s
+[2024-07-26 21:33:06.931] [info] -------------------------------------
+[2024-07-26 21:33:06.931] [info] Iteration   59          keff: 1.01567
+[2024-07-26 21:33:06.931] [info]      keff difference:     3.24232E-03
+[2024-07-26 21:33:06.931] [info]      max flux difference: 5.54327E-03
+[2024-07-26 21:33:06.931] [info]      Iteration time: 7.71210E-01 s
+[2024-07-26 21:33:07.713] [info] -------------------------------------
+[2024-07-26 21:33:07.714] [info] Iteration   60          keff: 1.01260
+[2024-07-26 21:33:07.714] [info]      keff difference:     3.02996E-03
+[2024-07-26 21:33:07.714] [info]      max flux difference: 5.21080E-03
+[2024-07-26 21:33:07.714] [info]      Iteration time: 7.82087E-01 s
+[2024-07-26 21:33:08.488] [info] -------------------------------------
+[2024-07-26 21:33:08.488] [info] Iteration   61          keff: 1.00974
+[2024-07-26 21:33:08.488] [info]      keff difference:     2.83104E-03
+[2024-07-26 21:33:08.488] [info]      max flux difference: 4.89670E-03
+[2024-07-26 21:33:08.488] [info]      Iteration time: 7.74880E-01 s
+[2024-07-26 21:33:09.263] [info] -------------------------------------
+[2024-07-26 21:33:09.263] [info] Iteration   62          keff: 1.00708
+[2024-07-26 21:33:09.263] [info]      keff difference:     2.64479E-03
+[2024-07-26 21:33:09.263] [info]      max flux difference: 4.60014E-03
+[2024-07-26 21:33:09.263] [info]      Iteration time: 7.74684E-01 s
+[2024-07-26 21:33:10.034] [info] -------------------------------------
+[2024-07-26 21:33:10.034] [info] Iteration   63          keff: 1.00459
+[2024-07-26 21:33:10.034] [info]      keff difference:     2.47044E-03
+[2024-07-26 21:33:10.034] [info]      max flux difference: 4.32031E-03
+[2024-07-26 21:33:10.034] [info]      Iteration time: 7.70634E-01 s
+[2024-07-26 21:33:10.808] [info] -------------------------------------
+[2024-07-26 21:33:10.808] [info] Iteration   64          keff: 1.00228
+[2024-07-26 21:33:10.808] [info]      keff difference:     2.30730E-03
+[2024-07-26 21:33:10.808] [info]      max flux difference: 4.05641E-03
+[2024-07-26 21:33:10.808] [info]      Iteration time: 7.74110E-01 s
+[2024-07-26 21:33:11.590] [info] -------------------------------------
+[2024-07-26 21:33:11.590] [info] Iteration   65          keff: 1.00013
+[2024-07-26 21:33:11.590] [info]      keff difference:     2.15467E-03
+[2024-07-26 21:33:11.590] [info]      max flux difference: 3.80765E-03
+[2024-07-26 21:33:11.590] [info]      Iteration time: 7.82054E-01 s
+[2024-07-26 21:33:12.377] [info] -------------------------------------
+[2024-07-26 21:33:12.377] [info] Iteration   66          keff: 0.99812
+[2024-07-26 21:33:12.377] [info]      keff difference:     2.01192E-03
+[2024-07-26 21:33:12.377] [info]      max flux difference: 3.57327E-03
+[2024-07-26 21:33:12.377] [info]      Iteration time: 7.86931E-01 s
+[2024-07-26 21:33:13.154] [info] -------------------------------------
+[2024-07-26 21:33:13.154] [info] Iteration   67          keff: 0.99625
+[2024-07-26 21:33:13.154] [info]      keff difference:     1.87844E-03
+[2024-07-26 21:33:13.154] [info]      max flux difference: 3.35252E-03
+[2024-07-26 21:33:13.154] [info]      Iteration time: 7.77294E-01 s
+[2024-07-26 21:33:13.924] [info] -------------------------------------
+[2024-07-26 21:33:13.924] [info] Iteration   68          keff: 0.99450
+[2024-07-26 21:33:13.924] [info]      keff difference:     1.75365E-03
+[2024-07-26 21:33:13.924] [info]      max flux difference: 3.14470E-03
+[2024-07-26 21:33:13.924] [info]      Iteration time: 7.69261E-01 s
+[2024-07-26 21:33:14.697] [info] -------------------------------------
+[2024-07-26 21:33:14.697] [info] Iteration   69          keff: 0.99288
+[2024-07-26 21:33:14.697] [info]      keff difference:     1.63701E-03
+[2024-07-26 21:33:14.697] [info]      max flux difference: 2.94912E-03
+[2024-07-26 21:33:14.697] [info]      Iteration time: 7.72737E-01 s
+[2024-07-26 21:33:15.468] [info] -------------------------------------
+[2024-07-26 21:33:15.468] [info] Iteration   70          keff: 0.99136
+[2024-07-26 21:33:15.468] [info]      keff difference:     1.52801E-03
+[2024-07-26 21:33:15.468] [info]      max flux difference: 2.76513E-03
+[2024-07-26 21:33:15.468] [info]      Iteration time: 7.71820E-01 s
+[2024-07-26 21:33:16.263] [info] -------------------------------------
+[2024-07-26 21:33:16.263] [info] Iteration   71          keff: 0.98995
+[2024-07-26 21:33:16.263] [info]      keff difference:     1.42615E-03
+[2024-07-26 21:33:16.263] [info]      max flux difference: 2.59209E-03
+[2024-07-26 21:33:16.263] [info]      Iteration time: 7.94619E-01 s
+[2024-07-26 21:33:17.040] [info] -------------------------------------
+[2024-07-26 21:33:17.040] [info] Iteration   72          keff: 0.98863
+[2024-07-26 21:33:17.040] [info]      keff difference:     1.33099E-03
+[2024-07-26 21:33:17.040] [info]      max flux difference: 2.42941E-03
+[2024-07-26 21:33:17.040] [info]      Iteration time: 7.76782E-01 s
+[2024-07-26 21:33:17.809] [info] -------------------------------------
+[2024-07-26 21:33:17.809] [info] Iteration   73          keff: 0.98741
+[2024-07-26 21:33:17.809] [info]      keff difference:     1.24210E-03
+[2024-07-26 21:33:17.809] [info]      max flux difference: 2.27652E-03
+[2024-07-26 21:33:17.809] [info]      Iteration time: 7.68682E-01 s
+[2024-07-26 21:33:18.603] [info] -------------------------------------
+[2024-07-26 21:33:18.603] [info] Iteration   74          keff: 0.98626
+[2024-07-26 21:33:18.603] [info]      keff difference:     1.15907E-03
+[2024-07-26 21:33:18.603] [info]      max flux difference: 2.13287E-03
+[2024-07-26 21:33:18.603] [info]      Iteration time: 7.94472E-01 s
+[2024-07-26 21:33:19.396] [info] -------------------------------------
+[2024-07-26 21:33:19.396] [info] Iteration   75          keff: 0.98520
+[2024-07-26 21:33:19.396] [info]      keff difference:     1.08153E-03
+[2024-07-26 21:33:19.396] [info]      max flux difference: 1.99794E-03
+[2024-07-26 21:33:19.396] [info]      Iteration time: 7.92486E-01 s
+[2024-07-26 21:33:20.177] [info] -------------------------------------
+[2024-07-26 21:33:20.177] [info] Iteration   76          keff: 0.98421
+[2024-07-26 21:33:20.177] [info]      keff difference:     1.00913E-03
+[2024-07-26 21:33:20.177] [info]      max flux difference: 1.87125E-03
+[2024-07-26 21:33:20.177] [info]      Iteration time: 7.81555E-01 s
+[2024-07-26 21:33:20.953] [info] -------------------------------------
+[2024-07-26 21:33:20.953] [info] Iteration   77          keff: 0.98328
+[2024-07-26 21:33:20.953] [info]      keff difference:     9.41527E-04
+[2024-07-26 21:33:20.953] [info]      max flux difference: 1.75231E-03
+[2024-07-26 21:33:20.953] [info]      Iteration time: 7.75528E-01 s
+[2024-07-26 21:33:21.726] [info] -------------------------------------
+[2024-07-26 21:33:21.726] [info] Iteration   78          keff: 0.98242
+[2024-07-26 21:33:21.726] [info]      keff difference:     8.78412E-04
+[2024-07-26 21:33:21.726] [info]      max flux difference: 1.64070E-03
+[2024-07-26 21:33:21.726] [info]      Iteration time: 7.72898E-01 s
+[2024-07-26 21:33:22.491] [info] -------------------------------------
+[2024-07-26 21:33:22.491] [info] Iteration   79          keff: 0.98161
+[2024-07-26 21:33:22.491] [info]      keff difference:     8.19493E-04
+[2024-07-26 21:33:22.491] [info]      max flux difference: 1.53598E-03
+[2024-07-26 21:33:22.491] [info]      Iteration time: 7.64855E-01 s
+[2024-07-26 21:33:23.262] [info] -------------------------------------
+[2024-07-26 21:33:23.262] [info] Iteration   80          keff: 0.98086
+[2024-07-26 21:33:23.262] [info]      keff difference:     7.64497E-04
+[2024-07-26 21:33:23.262] [info]      max flux difference: 1.43775E-03
+[2024-07-26 21:33:23.262] [info]      Iteration time: 7.70934E-01 s
+[2024-07-26 21:33:24.045] [info] -------------------------------------
+[2024-07-26 21:33:24.045] [info] Iteration   81          keff: 0.98016
+[2024-07-26 21:33:24.045] [info]      keff difference:     7.13165E-04
+[2024-07-26 21:33:24.045] [info]      max flux difference: 1.34564E-03
+[2024-07-26 21:33:24.045] [info]      Iteration time: 7.83063E-01 s
+[2024-07-26 21:33:24.822] [info] -------------------------------------
+[2024-07-26 21:33:24.822] [info] Iteration   82          keff: 0.97951
+[2024-07-26 21:33:24.822] [info]      keff difference:     6.65258E-04
+[2024-07-26 21:33:24.822] [info]      max flux difference: 1.25929E-03
+[2024-07-26 21:33:24.822] [info]      Iteration time: 7.76579E-01 s
+[2024-07-26 21:33:25.598] [info] -------------------------------------
+[2024-07-26 21:33:25.598] [info] Iteration   83          keff: 0.97890
+[2024-07-26 21:33:25.598] [info]      keff difference:     6.20549E-04
+[2024-07-26 21:33:25.598] [info]      max flux difference: 1.17834E-03
+[2024-07-26 21:33:25.598] [info]      Iteration time: 7.76289E-01 s
+[2024-07-26 21:33:26.376] [info] -------------------------------------
+[2024-07-26 21:33:26.376] [info] Iteration   84          keff: 0.97834
+[2024-07-26 21:33:26.376] [info]      keff difference:     5.78830E-04
+[2024-07-26 21:33:26.376] [info]      max flux difference: 1.10249E-03
+[2024-07-26 21:33:26.376] [info]      Iteration time: 7.78102E-01 s
+[2024-07-26 21:33:27.154] [info] -------------------------------------
+[2024-07-26 21:33:27.154] [info] Iteration   85          keff: 0.97781
+[2024-07-26 21:33:27.154] [info]      keff difference:     5.39901E-04
+[2024-07-26 21:33:27.154] [info]      max flux difference: 1.03142E-03
+[2024-07-26 21:33:27.154] [info]      Iteration time: 7.77995E-01 s
+[2024-07-26 21:33:27.920] [info] -------------------------------------
+[2024-07-26 21:33:27.920] [info] Iteration   86          keff: 0.97732
+[2024-07-26 21:33:27.920] [info]      keff difference:     5.03578E-04
+[2024-07-26 21:33:27.920] [info]      max flux difference: 9.64849E-04
+[2024-07-26 21:33:27.920] [info]      Iteration time: 7.65359E-01 s
+[2024-07-26 21:33:28.700] [info] -------------------------------------
+[2024-07-26 21:33:28.700] [info] Iteration   87          keff: 0.97686
+[2024-07-26 21:33:28.700] [info]      keff difference:     4.69690E-04
+[2024-07-26 21:33:28.700] [info]      max flux difference: 9.02499E-04
+[2024-07-26 21:33:28.700] [info]      Iteration time: 7.79985E-01 s
+[2024-07-26 21:33:29.481] [info] -------------------------------------
+[2024-07-26 21:33:29.481] [info] Iteration   88          keff: 0.97643
+[2024-07-26 21:33:29.481] [info]      keff difference:     4.38073E-04
+[2024-07-26 21:33:29.481] [info]      max flux difference: 8.44115E-04
+[2024-07-26 21:33:29.481] [info]      Iteration time: 7.81652E-01 s
+[2024-07-26 21:33:30.258] [info] -------------------------------------
+[2024-07-26 21:33:30.258] [info] Iteration   89          keff: 0.97603
+[2024-07-26 21:33:30.258] [info]      keff difference:     4.08577E-04
+[2024-07-26 21:33:30.258] [info]      max flux difference: 7.89452E-04
+[2024-07-26 21:33:30.258] [info]      Iteration time: 7.76617E-01 s
+[2024-07-26 21:33:31.023] [info] -------------------------------------
+[2024-07-26 21:33:31.023] [info] Iteration   90          keff: 0.97566
+[2024-07-26 21:33:31.023] [info]      keff difference:     3.81062E-04
+[2024-07-26 21:33:31.023] [info]      max flux difference: 7.38281E-04
+[2024-07-26 21:33:31.023] [info]      Iteration time: 7.64970E-01 s
+[2024-07-26 21:33:31.795] [info] -------------------------------------
+[2024-07-26 21:33:31.795] [info] Iteration   91          keff: 0.97531
+[2024-07-26 21:33:31.795] [info]      keff difference:     3.55395E-04
+[2024-07-26 21:33:31.795] [info]      max flux difference: 6.90386E-04
+[2024-07-26 21:33:31.795] [info]      Iteration time: 7.71687E-01 s
+[2024-07-26 21:33:32.572] [info] -------------------------------------
+[2024-07-26 21:33:32.572] [info] Iteration   92          keff: 0.97499
+[2024-07-26 21:33:32.572] [info]      keff difference:     3.31452E-04
+[2024-07-26 21:33:32.572] [info]      max flux difference: 6.45562E-04
+[2024-07-26 21:33:32.572] [info]      Iteration time: 7.76800E-01 s
+[2024-07-26 21:33:33.348] [info] -------------------------------------
+[2024-07-26 21:33:33.349] [info] Iteration   93          keff: 0.97469
+[2024-07-26 21:33:33.349] [info]      keff difference:     3.09119E-04
+[2024-07-26 21:33:33.349] [info]      max flux difference: 6.03619E-04
+[2024-07-26 21:33:33.349] [info]      Iteration time: 7.76683E-01 s
+[2024-07-26 21:33:34.142] [info] -------------------------------------
+[2024-07-26 21:33:34.142] [info] Iteration   94          keff: 0.97441
+[2024-07-26 21:33:34.142] [info]      keff difference:     2.88289E-04
+[2024-07-26 21:33:34.142] [info]      max flux difference: 5.64375E-04
+[2024-07-26 21:33:34.142] [info]      Iteration time: 7.93738E-01 s
+[2024-07-26 21:33:34.905] [info] -------------------------------------
+[2024-07-26 21:33:34.905] [info] Iteration   95          keff: 0.97415
+[2024-07-26 21:33:34.905] [info]      keff difference:     2.68859E-04
+[2024-07-26 21:33:34.905] [info]      max flux difference: 5.27660E-04
+[2024-07-26 21:33:34.905] [info]      Iteration time: 7.62621E-01 s
+[2024-07-26 21:33:35.700] [info] -------------------------------------
+[2024-07-26 21:33:35.700] [info] Iteration   96          keff: 0.97390
+[2024-07-26 21:33:35.700] [info]      keff difference:     2.50738E-04
+[2024-07-26 21:33:35.700] [info]      max flux difference: 4.93315E-04
+[2024-07-26 21:33:35.700] [info]      Iteration time: 7.94532E-01 s
+[2024-07-26 21:33:36.486] [info] -------------------------------------
+[2024-07-26 21:33:36.486] [info] Iteration   97          keff: 0.97368
+[2024-07-26 21:33:36.486] [info]      keff difference:     2.33836E-04
+[2024-07-26 21:33:36.486] [info]      max flux difference: 4.61189E-04
+[2024-07-26 21:33:36.486] [info]      Iteration time: 7.86651E-01 s
+[2024-07-26 21:33:37.269] [info] -------------------------------------
+[2024-07-26 21:33:37.269] [info] Iteration   98          keff: 0.97346
+[2024-07-26 21:33:37.269] [info]      keff difference:     2.18073E-04
+[2024-07-26 21:33:37.269] [info]      max flux difference: 4.31142E-04
+[2024-07-26 21:33:37.269] [info]      Iteration time: 7.83000E-01 s
+[2024-07-26 21:33:38.037] [info] -------------------------------------
+[2024-07-26 21:33:38.037] [info] Iteration   99          keff: 0.97327
+[2024-07-26 21:33:38.037] [info]      keff difference:     2.03371E-04
+[2024-07-26 21:33:38.037] [info]      max flux difference: 4.03041E-04
+[2024-07-26 21:33:38.037] [info]      Iteration time: 7.67332E-01 s
+[2024-07-26 21:33:38.810] [info] -------------------------------------
+[2024-07-26 21:33:38.810] [info] Iteration  100          keff: 0.97308
+[2024-07-26 21:33:38.810] [info]      keff difference:     1.89660E-04
+[2024-07-26 21:33:38.810] [info]      max flux difference: 3.76762E-04
+[2024-07-26 21:33:38.810] [info]      Iteration time: 7.72775E-01 s
+[2024-07-26 21:33:39.551] [info] -------------------------------------
+[2024-07-26 21:33:39.551] [info] Iteration  101          keff: 0.97291
+[2024-07-26 21:33:39.551] [info]      keff difference:     1.76873E-04
+[2024-07-26 21:33:39.551] [info]      max flux difference: 3.52189E-04
+[2024-07-26 21:33:39.551] [info]      Iteration time: 7.41122E-01 s
+[2024-07-26 21:33:40.335] [info] -------------------------------------
+[2024-07-26 21:33:40.336] [info] Iteration  102          keff: 0.97275
+[2024-07-26 21:33:40.336] [info]      keff difference:     1.64947E-04
+[2024-07-26 21:33:40.336] [info]      max flux difference: 3.29213E-04
+[2024-07-26 21:33:40.336] [info]      Iteration time: 7.84595E-01 s
+[2024-07-26 21:33:41.105] [info] -------------------------------------
+[2024-07-26 21:33:41.105] [info] Iteration  103          keff: 0.97260
+[2024-07-26 21:33:41.105] [info]      keff difference:     1.53826E-04
+[2024-07-26 21:33:41.105] [info]      max flux difference: 3.07729E-04
+[2024-07-26 21:33:41.105] [info]      Iteration time: 7.69175E-01 s
+[2024-07-26 21:33:41.874] [info] -------------------------------------
+[2024-07-26 21:33:41.874] [info] Iteration  104          keff: 0.97246
+[2024-07-26 21:33:41.874] [info]      keff difference:     1.43454E-04
+[2024-07-26 21:33:41.874] [info]      max flux difference: 2.87644E-04
+[2024-07-26 21:33:41.874] [info]      Iteration time: 7.68758E-01 s
+[2024-07-26 21:33:42.647] [info] -------------------------------------
+[2024-07-26 21:33:42.647] [info] Iteration  105          keff: 0.97233
+[2024-07-26 21:33:42.647] [info]      keff difference:     1.33781E-04
+[2024-07-26 21:33:42.647] [info]      max flux difference: 2.68867E-04
+[2024-07-26 21:33:42.647] [info]      Iteration time: 7.73016E-01 s
+[2024-07-26 21:33:43.420] [info] -------------------------------------
+[2024-07-26 21:33:43.420] [info] Iteration  106          keff: 0.97221
+[2024-07-26 21:33:43.420] [info]      keff difference:     1.24761E-04
+[2024-07-26 21:33:43.420] [info]      max flux difference: 2.51313E-04
+[2024-07-26 21:33:43.420] [info]      Iteration time: 7.73278E-01 s
+[2024-07-26 21:33:44.196] [info] -------------------------------------
+[2024-07-26 21:33:44.196] [info] Iteration  107          keff: 0.97209
+[2024-07-26 21:33:44.196] [info]      keff difference:     1.16349E-04
+[2024-07-26 21:33:44.196] [info]      max flux difference: 2.34903E-04
+[2024-07-26 21:33:44.196] [info]      Iteration time: 7.75507E-01 s
+[2024-07-26 21:33:44.961] [info] -------------------------------------
+[2024-07-26 21:33:44.961] [info] Iteration  108          keff: 0.97199
+[2024-07-26 21:33:44.961] [info]      keff difference:     1.08504E-04
+[2024-07-26 21:33:44.961] [info]      max flux difference: 2.19564E-04
+[2024-07-26 21:33:44.961] [info]      Iteration time: 7.65627E-01 s
+[2024-07-26 21:33:45.735] [info] -------------------------------------
+[2024-07-26 21:33:45.735] [info] Iteration  109          keff: 0.97189
+[2024-07-26 21:33:45.735] [info]      keff difference:     1.01188E-04
+[2024-07-26 21:33:45.735] [info]      max flux difference: 2.05227E-04
+[2024-07-26 21:33:45.735] [info]      Iteration time: 7.73529E-01 s
+[2024-07-26 21:33:46.509] [info] -------------------------------------
+[2024-07-26 21:33:46.510] [info] Iteration  110          keff: 0.97180
+[2024-07-26 21:33:46.510] [info]      keff difference:     9.43659E-05
+[2024-07-26 21:33:46.510] [info]      max flux difference: 1.91825E-04
+[2024-07-26 21:33:46.510] [info]      Iteration time: 7.74628E-01 s
+[2024-07-26 21:33:47.284] [info] -------------------------------------
+[2024-07-26 21:33:47.284] [info] Iteration  111          keff: 0.97171
+[2024-07-26 21:33:47.284] [info]      keff difference:     8.80036E-05
+[2024-07-26 21:33:47.284] [info]      max flux difference: 1.79300E-04
+[2024-07-26 21:33:47.284] [info]      Iteration time: 7.74812E-01 s
+[2024-07-26 21:33:48.063] [info] -------------------------------------
+[2024-07-26 21:33:48.063] [info] Iteration  112          keff: 0.97163
+[2024-07-26 21:33:48.063] [info]      keff difference:     8.20705E-05
+[2024-07-26 21:33:48.063] [info]      max flux difference: 1.67593E-04
+[2024-07-26 21:33:48.063] [info]      Iteration time: 7.78968E-01 s
+[2024-07-26 21:33:48.831] [info] -------------------------------------
+[2024-07-26 21:33:48.831] [info] Iteration  113          keff: 0.97156
+[2024-07-26 21:33:48.831] [info]      keff difference:     7.65376E-05
+[2024-07-26 21:33:48.831] [info]      max flux difference: 1.56652E-04
+[2024-07-26 21:33:48.831] [info]      Iteration time: 7.67096E-01 s
+[2024-07-26 21:33:49.610] [info] -------------------------------------
+[2024-07-26 21:33:49.610] [info] Iteration  114          keff: 0.97149
+[2024-07-26 21:33:49.610] [info]      keff difference:     7.13778E-05
+[2024-07-26 21:33:49.610] [info]      max flux difference: 1.46427E-04
+[2024-07-26 21:33:49.610] [info]      Iteration time: 7.79255E-01 s
+[2024-07-26 21:33:50.389] [info] -------------------------------------
+[2024-07-26 21:33:50.389] [info] Iteration  115          keff: 0.97143
+[2024-07-26 21:33:50.389] [info]      keff difference:     6.65660E-05
+[2024-07-26 21:33:50.389] [info]      max flux difference: 1.36871E-04
+[2024-07-26 21:33:50.389] [info]      Iteration time: 7.78888E-01 s
+[2024-07-26 21:33:51.158] [info] -------------------------------------
+[2024-07-26 21:33:51.158] [info] Iteration  116          keff: 0.97137
+[2024-07-26 21:33:51.158] [info]      keff difference:     6.20788E-05
+[2024-07-26 21:33:51.158] [info]      max flux difference: 1.27941E-04
+[2024-07-26 21:33:51.158] [info]      Iteration time: 7.68821E-01 s
+[2024-07-26 21:33:51.928] [info] -------------------------------------
+[2024-07-26 21:33:51.928] [info] Iteration  117          keff: 0.97131
+[2024-07-26 21:33:51.928] [info]      keff difference:     5.78943E-05
+[2024-07-26 21:33:51.928] [info]      max flux difference: 1.19596E-04
+[2024-07-26 21:33:51.928] [info]      Iteration time: 7.70643E-01 s
+[2024-07-26 21:33:52.701] [info] -------------------------------------
+[2024-07-26 21:33:52.701] [info] Iteration  118          keff: 0.97126
+[2024-07-26 21:33:52.701] [info]      keff difference:     5.39919E-05
+[2024-07-26 21:33:52.701] [info]      max flux difference: 1.11798E-04
+[2024-07-26 21:33:52.701] [info]      Iteration time: 7.72462E-01 s
+[2024-07-26 21:33:53.481] [info] -------------------------------------
+[2024-07-26 21:33:53.481] [info] Iteration  119          keff: 0.97121
+[2024-07-26 21:33:53.481] [info]      keff difference:     5.03528E-05
+[2024-07-26 21:33:53.481] [info]      max flux difference: 1.04511E-04
+[2024-07-26 21:33:53.481] [info]      Iteration time: 7.80463E-01 s
+[2024-07-26 21:33:54.258] [info] -------------------------------------
+[2024-07-26 21:33:54.258] [info] Iteration  120          keff: 0.97116
+[2024-07-26 21:33:54.258] [info]      keff difference:     4.69591E-05
+[2024-07-26 21:33:54.258] [info]      max flux difference: 9.77021E-05
+[2024-07-26 21:33:54.258] [info]      Iteration time: 7.76036E-01 s
+[2024-07-26 21:33:55.028] [info] -------------------------------------
+[2024-07-26 21:33:55.028] [info] Iteration  121          keff: 0.97112
+[2024-07-26 21:33:55.028] [info]      keff difference:     4.37942E-05
+[2024-07-26 21:33:55.028] [info]      max flux difference: 9.13395E-05
+[2024-07-26 21:33:55.028] [info]      Iteration time: 7.70019E-01 s
+[2024-07-26 21:33:55.799] [info] -------------------------------------
+[2024-07-26 21:33:55.799] [info] Iteration  122          keff: 0.97108
+[2024-07-26 21:33:55.799] [info]      keff difference:     4.08428E-05
+[2024-07-26 21:33:55.799] [info]      max flux difference: 8.53943E-05
+[2024-07-26 21:33:55.799] [info]      Iteration time: 7.71551E-01 s
+[2024-07-26 21:33:56.578] [info] -------------------------------------
+[2024-07-26 21:33:56.578] [info] Iteration  123          keff: 0.97104
+[2024-07-26 21:33:56.578] [info]      keff difference:     3.80904E-05
+[2024-07-26 21:33:56.578] [info]      max flux difference: 7.98391E-05
+[2024-07-26 21:33:56.578] [info]      Iteration time: 7.78577E-01 s
+[2024-07-26 21:33:57.364] [info] -------------------------------------
+[2024-07-26 21:33:57.364] [info] Iteration  124          keff: 0.97101
+[2024-07-26 21:33:57.364] [info]      keff difference:     3.55236E-05
+[2024-07-26 21:33:57.364] [info]      max flux difference: 7.46485E-05
+[2024-07-26 21:33:57.364] [info]      Iteration time: 7.86181E-01 s
+[2024-07-26 21:33:58.143] [info] -------------------------------------
+[2024-07-26 21:33:58.143] [info] Iteration  125          keff: 0.97098
+[2024-07-26 21:33:58.143] [info]      keff difference:     3.31299E-05
+[2024-07-26 21:33:58.143] [info]      max flux difference: 6.97985E-05
+[2024-07-26 21:33:58.143] [info]      Iteration time: 7.78881E-01 s
+[2024-07-26 21:33:58.903] [info] -------------------------------------
+[2024-07-26 21:33:58.903] [info] Iteration  126          keff: 0.97095
+[2024-07-26 21:33:58.903] [info]      keff difference:     3.08976E-05
+[2024-07-26 21:33:58.903] [info]      max flux difference: 6.52669E-05
+[2024-07-26 21:33:58.903] [info]      Iteration time: 7.59936E-01 s
+[2024-07-26 21:33:59.686] [info] -------------------------------------
+[2024-07-26 21:33:59.686] [info] Iteration  127          keff: 0.97092
+[2024-07-26 21:33:59.686] [info]      keff difference:     2.88158E-05
+[2024-07-26 21:33:59.686] [info]      max flux difference: 6.10327E-05
+[2024-07-26 21:33:59.686] [info]      Iteration time: 7.83197E-01 s
+[2024-07-26 21:34:00.460] [info] -------------------------------------
+[2024-07-26 21:34:00.460] [info] Iteration  128          keff: 0.97089
+[2024-07-26 21:34:00.460] [info]      keff difference:     2.68744E-05
+[2024-07-26 21:34:00.460] [info]      max flux difference: 5.70764E-05
+[2024-07-26 21:34:00.460] [info]      Iteration time: 7.73921E-01 s
+[2024-07-26 21:34:01.238] [info] -------------------------------------
+[2024-07-26 21:34:01.238] [info] Iteration  129          keff: 0.97087
+[2024-07-26 21:34:01.238] [info]      keff difference:     2.50639E-05
+[2024-07-26 21:34:01.238] [info]      max flux difference: 5.33798E-05
+[2024-07-26 21:34:01.238] [info]      Iteration time: 7.77563E-01 s
+[2024-07-26 21:34:02.016] [info] -------------------------------------
+[2024-07-26 21:34:02.016] [info] Iteration  130          keff: 0.97085
+[2024-07-26 21:34:02.016] [info]      keff difference:     2.33754E-05
+[2024-07-26 21:34:02.016] [info]      max flux difference: 4.99259E-05
+[2024-07-26 21:34:02.016] [info]      Iteration time: 7.78314E-01 s
+[2024-07-26 21:34:02.804] [info] -------------------------------------
+[2024-07-26 21:34:02.804] [info] Iteration  131          keff: 0.97082
+[2024-07-26 21:34:02.804] [info]      keff difference:     2.18007E-05
+[2024-07-26 21:34:02.804] [info]      max flux difference: 4.66986E-05
+[2024-07-26 21:34:02.804] [info]      Iteration time: 7.87539E-01 s
+[2024-07-26 21:34:03.584] [info] -------------------------------------
+[2024-07-26 21:34:03.584] [info] Iteration  132          keff: 0.97080
+[2024-07-26 21:34:03.584] [info]      keff difference:     2.03322E-05
+[2024-07-26 21:34:03.584] [info]      max flux difference: 4.36831E-05
+[2024-07-26 21:34:03.584] [info]      Iteration time: 7.80341E-01 s
+[2024-07-26 21:34:04.361] [info] -------------------------------------
+[2024-07-26 21:34:04.361] [info] Iteration  133          keff: 0.97079
+[2024-07-26 21:34:04.361] [info]      keff difference:     1.89626E-05
+[2024-07-26 21:34:04.361] [info]      max flux difference: 4.08655E-05
+[2024-07-26 21:34:04.361] [info]      Iteration time: 7.76570E-01 s
+[2024-07-26 21:34:05.142] [info] -------------------------------------
+[2024-07-26 21:34:05.142] [info] Iteration  134          keff: 0.97077
+[2024-07-26 21:34:05.142] [info]      keff difference:     1.76854E-05
+[2024-07-26 21:34:05.142] [info]      max flux difference: 3.82327E-05
+[2024-07-26 21:34:05.142] [info]      Iteration time: 7.81018E-01 s
+[2024-07-26 21:34:05.902] [info] -------------------------------------
+[2024-07-26 21:34:05.902] [info] Iteration  135          keff: 0.97075
+[2024-07-26 21:34:05.902] [info]      keff difference:     1.64942E-05
+[2024-07-26 21:34:05.902] [info]      max flux difference: 3.57726E-05
+[2024-07-26 21:34:05.902] [info]      Iteration time: 7.60310E-01 s
+[2024-07-26 21:34:06.674] [info] -------------------------------------
+[2024-07-26 21:34:06.674] [info] Iteration  136          keff: 0.97074
+[2024-07-26 21:34:06.674] [info]      keff difference:     1.53833E-05
+[2024-07-26 21:34:06.674] [info]      max flux difference: 3.34738E-05
+[2024-07-26 21:34:06.674] [info]      Iteration time: 7.71981E-01 s
+[2024-07-26 21:34:07.456] [info] -------------------------------------
+[2024-07-26 21:34:07.456] [info] Iteration  137          keff: 0.97072
+[2024-07-26 21:34:07.456] [info]      keff difference:     1.43473E-05
+[2024-07-26 21:34:07.456] [info]      max flux difference: 3.13257E-05
+[2024-07-26 21:34:07.456] [info]      Iteration time: 7.81213E-01 s
+[2024-07-26 21:34:08.228] [info] -------------------------------------
+[2024-07-26 21:34:08.228] [info] Iteration  138          keff: 0.97071
+[2024-07-26 21:34:08.228] [info]      keff difference:     1.33811E-05
+[2024-07-26 21:34:08.228] [info]      max flux difference: 2.93184E-05
+[2024-07-26 21:34:08.228] [info]      Iteration time: 7.72201E-01 s
+[2024-07-26 21:34:08.997] [info] -------------------------------------
+[2024-07-26 21:34:08.997] [info] Iteration  139          keff: 0.97070
+[2024-07-26 21:34:08.998] [info]      keff difference:     1.24800E-05
+[2024-07-26 21:34:08.998] [info]      max flux difference: 2.74425E-05
+[2024-07-26 21:34:08.998] [info]      Iteration time: 7.69496E-01 s
+[2024-07-26 21:34:09.768] [info] -------------------------------------
+[2024-07-26 21:34:09.768] [info] Iteration  140          keff: 0.97069
+[2024-07-26 21:34:09.768] [info]      keff difference:     1.16396E-05
+[2024-07-26 21:34:09.768] [info]      max flux difference: 2.56895E-05
+[2024-07-26 21:34:09.768] [info]      Iteration time: 7.70334E-01 s
+[2024-07-26 21:34:10.545] [info] -------------------------------------
+[2024-07-26 21:34:10.545] [info] Iteration  141          keff: 0.97068
+[2024-07-26 21:34:10.545] [info]      keff difference:     1.08558E-05
+[2024-07-26 21:34:10.545] [info]      max flux difference: 2.40513E-05
+[2024-07-26 21:34:10.545] [info]      Iteration time: 7.77329E-01 s
+[2024-07-26 21:34:11.321] [info] -------------------------------------
+[2024-07-26 21:34:11.321] [info] Iteration  142          keff: 0.97067
+[2024-07-26 21:34:11.321] [info]      keff difference:     1.01249E-05
+[2024-07-26 21:34:11.321] [info]      max flux difference: 2.25202E-05
+[2024-07-26 21:34:11.321] [info]      Iteration time: 7.75799E-01 s
+[2024-07-26 21:34:12.097] [info] -------------------------------------
+[2024-07-26 21:34:12.097] [info] Iteration  143          keff: 0.97066
+[2024-07-26 21:34:12.097] [info]      keff difference:     9.44313E-06
+[2024-07-26 21:34:12.097] [info]      max flux difference: 2.10892E-05
+[2024-07-26 21:34:12.097] [info]      Iteration time: 7.75461E-01 s
+[2024-07-26 21:34:12.872] [info] -------------------------------------
+[2024-07-26 21:34:12.872] [info] Iteration  144          keff: 0.97065
+[2024-07-26 21:34:12.872] [info]      keff difference:     8.80733E-06
+[2024-07-26 21:34:12.872] [info]      max flux difference: 1.97518E-05
+[2024-07-26 21:34:12.872] [info]      Iteration time: 7.75640E-01 s
+[2024-07-26 21:34:13.645] [info] -------------------------------------
+[2024-07-26 21:34:13.645] [info] Iteration  145          keff: 0.97064
+[2024-07-26 21:34:13.645] [info]      keff difference:     8.21435E-06
+[2024-07-26 21:34:13.645] [info]      max flux difference: 1.85017E-05
+[2024-07-26 21:34:13.645] [info]      Iteration time: 7.72938E-01 s
+[2024-07-26 21:34:14.415] [info] -------------------------------------
+[2024-07-26 21:34:14.415] [info] Iteration  146          keff: 0.97063
+[2024-07-26 21:34:14.415] [info]      keff difference:     7.66130E-06
+[2024-07-26 21:34:14.415] [info]      max flux difference: 1.73332E-05
+[2024-07-26 21:34:14.415] [info]      Iteration time: 7.69822E-01 s
+[2024-07-26 21:34:15.187] [info] -------------------------------------
+[2024-07-26 21:34:15.187] [info] Iteration  147          keff: 0.97063
+[2024-07-26 21:34:15.187] [info]      keff difference:     7.14551E-06
+[2024-07-26 21:34:15.187] [info]      max flux difference: 1.62409E-05
+[2024-07-26 21:34:15.187] [info]      Iteration time: 7.71447E-01 s
+[2024-07-26 21:34:15.956] [info] -------------------------------------
+[2024-07-26 21:34:15.956] [info] Iteration  148          keff: 0.97062
+[2024-07-26 21:34:15.956] [info]      keff difference:     6.66445E-06
+[2024-07-26 21:34:15.956] [info]      max flux difference: 1.52197E-05
+[2024-07-26 21:34:15.956] [info]      Iteration time: 7.69308E-01 s
+[2024-07-26 21:34:16.740] [info] -------------------------------------
+[2024-07-26 21:34:16.740] [info] Iteration  149          keff: 0.97061
+[2024-07-26 21:34:16.740] [info]      keff difference:     6.21579E-06
+[2024-07-26 21:34:16.740] [info]      max flux difference: 1.42651E-05
+[2024-07-26 21:34:16.740] [info]      Iteration time: 7.84263E-01 s
+[2024-07-26 21:34:17.516] [info] -------------------------------------
+[2024-07-26 21:34:17.516] [info] Iteration  150          keff: 0.97061
+[2024-07-26 21:34:17.516] [info]      keff difference:     5.79735E-06
+[2024-07-26 21:34:17.516] [info]      max flux difference: 1.33726E-05
+[2024-07-26 21:34:17.516] [info]      Iteration time: 7.75908E-01 s
+[2024-07-26 21:34:18.307] [info] -------------------------------------
+[2024-07-26 21:34:18.307] [info] Iteration  151          keff: 0.97060
+[2024-07-26 21:34:18.307] [info]      keff difference:     5.40708E-06
+[2024-07-26 21:34:18.307] [info]      max flux difference: 1.25381E-05
+[2024-07-26 21:34:18.307] [info]      Iteration time: 7.90363E-01 s
+[2024-07-26 21:34:19.081] [info] -------------------------------------
+[2024-07-26 21:34:19.081] [info] Iteration  152          keff: 0.97060
+[2024-07-26 21:34:19.081] [info]      keff difference:     5.04308E-06
+[2024-07-26 21:34:19.081] [info]      max flux difference: 1.17578E-05
+[2024-07-26 21:34:19.081] [info]      Iteration time: 7.74033E-01 s
+[2024-07-26 21:34:19.852] [info] -------------------------------------
+[2024-07-26 21:34:19.852] [info] Iteration  153          keff: 0.97059
+[2024-07-26 21:34:19.852] [info]      keff difference:     4.70360E-06
+[2024-07-26 21:34:19.852] [info]      max flux difference: 1.10282E-05
+[2024-07-26 21:34:19.852] [info]      Iteration time: 7.70593E-01 s
+[2024-07-26 21:34:20.630] [info] -------------------------------------
+[2024-07-26 21:34:20.630] [info] Iteration  154          keff: 0.97059
+[2024-07-26 21:34:20.630] [info]      keff difference:     4.38697E-06
+[2024-07-26 21:34:20.630] [info]      max flux difference: 1.03458E-05
+[2024-07-26 21:34:20.630] [info]      Iteration time: 7.78386E-01 s
+[2024-07-26 21:34:21.402] [info] -------------------------------------
+[2024-07-26 21:34:21.402] [info] Iteration  155          keff: 0.97059
+[2024-07-26 21:34:21.402] [info]      keff difference:     4.09166E-06
+[2024-07-26 21:34:21.402] [info]      max flux difference: 9.70756E-06
+[2024-07-26 21:34:21.402] [info]      Iteration time: 7.72242E-01 s
+[2024-07-26 21:34:21.402] [info] 
+[2024-07-26 21:34:21.402] [info] Simulation Time: 1.20295E+02 s
+[2024-07-26 21:34:21.403] [info] 
+[2024-07-26 21:34:21.403] [info] Performing P1 criticality spectrum calculation
+[2024-07-26 21:34:21.422] [info] Kinf    : 0.97053
+[2024-07-26 21:34:21.422] [info] Buckling: -0.00082
+[2024-07-26 21:34:21.422] [info] 
+[2024-07-26 21:34:21.422] [info] Generating few group cross sections
+[2024-07-26 21:34:21.441] [info]   D: 9.2888E-01  2.6797E-01  
+[2024-07-26 21:34:21.441] [info]  Ea: 9.6250E-03  8.9233E-02  
+[2024-07-26 21:34:21.441] [info]  Ef: 2.1709E-03  4.3430E-02  
+[2024-07-26 21:34:21.441] [info] vEf: 5.5208E-03  1.0554E-01  
+[2024-07-26 21:34:21.441] [info] chi: 1.0000E+00  2.1863E-09  
+[2024-07-26 21:34:21.441] [info] Es:  outgoing group ->
+[2024-07-26 21:34:21.441] [info] 1 -> g: 5.0703E-01  1.8523E-02  
+[2024-07-26 21:34:21.441] [info] 2 -> g: 2.4786E-03  1.2009E+00  
