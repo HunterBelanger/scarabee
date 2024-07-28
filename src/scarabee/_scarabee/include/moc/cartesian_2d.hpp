@@ -83,6 +83,9 @@ class Cartesian2D {
   std::pair<UniqueFSR, Vector> get_fsr_r_local(const Vector& r,
                                                const Direction& u) const;
 
+  std::vector<UniqueFSR> get_all_fsr_in_cell(const Vector& r,
+                                             const Direction& u) const;
+
   std::size_t get_num_fsr_instances(std::size_t id) const;
 
   std::set<std::size_t> get_all_fsr_ids() const;

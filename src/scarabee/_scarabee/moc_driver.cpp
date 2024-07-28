@@ -818,6 +818,18 @@ std::size_t MOCDriver::get_fsr_indx(const UniqueFSR& fsr) const {
   return i;
 }
 
+std::vector<std::size_t> MOCDriver::get_all_fsr_in_cell(
+    const Vector& r, const Direction& u) const {
+  auto fsrs = geometry_->get_all_fsr_in_cell(r, u);
+  std::vector<std::size_t> inds(fsrs.size(), 0);
+
+  for (std::size_t i = 0; i < fsrs.size(); i++) {
+    inds[i] = this->get_fsr_indx(fsrs[i]);
+  }
+
+  return inds;
+}
+
 void MOCDriver::set_extern_src(const Vector& r, const Direction& u,
                                std::size_t g, double src) {
   std::size_t i = 0;

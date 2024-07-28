@@ -60,18 +60,20 @@ void init_MOCDriver(py::module& m) {
           "generate_tracks",
           [](MOCDriver& md, std::uint32_t na, double d,
              PolarQuadratureType pq) { return md.generate_tracks(na, d, pq); },
-           "Traces tracks across the geometry for the calculation.\n\n"
-           "Parameters\n"
-           "----------\n"
-           "nangles : int\n"
-           "          Number of azimuthal angles (must be even).\n"
-           "d : float\n"
-           "    Max spacing between tracks of a given angle (in cm).\n"
-           "polar_quad : PolarQuadrature\n"
-           "             Polar quadrature for generating segment lengths.",
+          "Traces tracks across the geometry for the calculation.\n\n"
+          "Parameters\n"
+          "----------\n"
+          "nangles : int\n"
+          "          Number of azimuthal angles (must be even).\n"
+          "d : float\n"
+          "    Max spacing between tracks of a given angle (in cm).\n"
+          "polar_quad : PolarQuadrature\n"
+          "             Polar quadrature for generating segment lengths.",
           py::arg("nangles"), py::arg("d"), py::arg("polar_quad"))
 
-      .def_property_readonly("drawn", &MOCDriver::drawn, "True if geometry has been traced, False otherwise.")
+      .def_property_readonly(
+          "drawn", &MOCDriver::drawn,
+          "True if geometry has been traced, False otherwise.")
 
       .def_property(
           "keff_tolerance", &MOCDriver::keff_tolerance,
@@ -174,7 +176,8 @@ void init_MOCDriver(py::module& m) {
            py::arg("i"))
 
       .def_property_readonly("keff", &MOCDriver::keff,
-                             "Value of keff estimated by solver (1 by default if no solution has been obtained).")
+                             "Value of keff estimated by solver (1 by default "
+                             "if no solution has been obtained).")
 
       .def_property_readonly("ngroups", &MOCDriver::ngroups,
                              "Number of energy groups.")
@@ -188,7 +191,8 @@ void init_MOCDriver(py::module& m) {
           "sim_mode",
           [](const MOCDriver& md) -> SimulationMode { return md.sim_mode(); },
           [](MOCDriver& md, SimulationMode& m) { md.sim_mode() = m; },
-          ":py:class:`SimulationMode` describing type of simulation (fixed-source or keff).")
+          ":py:class:`SimulationMode` describing type of simulation "
+          "(fixed-source or keff).")
 
       .def_property(
           "x_min_bc",
@@ -222,8 +226,9 @@ void init_MOCDriver(py::module& m) {
           [](MOCDriver& md, BoundaryCondition& bc) { md.y_max_bc() = bc; },
           ":py:class:`BoundadaryCondition` at y_max.")
 
-      .def_property_readonly("geometry", &MOCDriver::geometry,
-                             "The :py:class:`Cartesian2D` geometry for the problem.")
+      .def_property_readonly(
+          "geometry", &MOCDriver::geometry,
+          "The :py:class:`Cartesian2D` geometry for the problem.")
 
       .def_property_readonly("size", &MOCDriver::size,
                              "Number of flat source regions.")
@@ -246,7 +251,24 @@ void init_MOCDriver(py::module& m) {
       .def_property_readonly("y_max", &MOCDriver::y_max,
                              "Maximum value of y in problem domain.")
 
-      .def_property_readonly("solved", &MOCDriver::solved, "True if solve has been run sucessfully (reset to false on generate_tracks).")
+      .def_property_readonly("solved", &MOCDriver::solved,
+                             "True if solve has been run sucessfully (reset to "
+                             "false on generate_tracks).")
+
+      .def("get_all_fsr_in_cell", &MOCDriver::get_all_fsr_in_cell,
+           "Obtains the index of all Flat Source Regions contained in the Cell "
+           "located at position r.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "r : Vector\n"
+           "    Position at which to set the source.\n"
+           "u : Direction\n"
+           "    Direction vector used to disambiguate the FSR.\n\n"
+           "Returns\n"
+           "-------\n"
+           "list of int\n"
+           "    Indices of all flat source regions in the cell.\n",
+           py::arg("r"), py::arg("u"))
 
       .def("set_extern_src",
            py::overload_cast<const Vector&, const Direction&, std::size_t,
@@ -376,14 +398,15 @@ void init_MOCDriver(py::module& m) {
            "       Criticality spectrum from a P1 or B1 calculation.\n",
            py::arg("flux"))
 
-      .def("plot",
-           [](const MOCDriver& md) {
-             ImApp::App guiplotter(1920, 1080, "Scarabee MOC Plotter");
-             guiplotter.enable_docking();
-             guiplotter.push_layer(std::make_unique<MOCPlotter>(&md));
-             guiplotter.run();
-           },
-           "Open the graphical MOC geometry plotting window.")
+      .def(
+          "plot",
+          [](const MOCDriver& md) {
+            ImApp::App guiplotter(1920, 1080, "Scarabee MOC Plotter");
+            guiplotter.enable_docking();
+            guiplotter.push_layer(std::make_unique<MOCPlotter>(&md));
+            guiplotter.run();
+          },
+          "Open the graphical MOC geometry plotting window.")
 
       .def(
           "rasterize_flux",
@@ -455,9 +478,11 @@ void init_MOCDriver(py::module& m) {
           "Returns\n"
           "-------\n"
           "flux : ndarray\n"
-          "       Values of the flux. First index is group, second is y, third is x.\n"
+          "       Values of the flux. First index is group, second is y, third "
+          "is x.\n"
           "x : ndarray\n"
           "    Array of bounding x values.\n"
           "y : ndarray\n"
-          "    Array of bounding y values.\n", py::arg("nx"), py::arg("ny"));
+          "    Array of bounding y values.\n",
+          py::arg("nx"), py::arg("ny"));
 }

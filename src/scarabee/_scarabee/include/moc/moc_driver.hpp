@@ -77,6 +77,9 @@ class MOCDriver {
 
   std::size_t get_fsr_indx(const UniqueFSR& fsr) const;
 
+  std::vector<std::size_t> get_all_fsr_in_cell(const Vector& r,
+                                               const Direction& u) const;
+
   void set_extern_src(const Vector& r, const Direction& u, std::size_t g,
                       double src);
   double extern_src(const Vector& r, const Direction& u, std::size_t g) const;

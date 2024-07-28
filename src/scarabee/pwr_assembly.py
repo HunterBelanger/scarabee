@@ -75,6 +75,9 @@ class PWRAssembly:
     diffusion_xs : DiffusionCrossSection
         The few-group diffsuion group constants, if few-group constants were
         generated.
+    form_factors : ndarray
+        The pin-wise form factors for power distribution reconstruction.
+        Is None until solve has been called.
     """
 
     def __init__(
@@ -104,6 +107,8 @@ class PWRAssembly:
         self.plot_assembly = False
         self.moc_geom = None
         self.moc = None
+        self.diffusion_xs = None
+        self.form_factors = None
 
         self.criticality_spectrum_method = "P1"
 
@@ -287,6 +292,7 @@ class PWRAssembly:
         self._condense_xs()
         self._moc()
         self._criticality_spectrum_calc()
+        self._compute_form_factors()
         self._few_group_xs()
 
     def _get_fuel_dancoff_corrections(self):
@@ -670,6 +676,30 @@ class PWRAssembly:
         scarabee_log(
             LogLevel.Info, "Buckling: {:.5f}".format(self._criticality_spectrum.B2)
         )
+
+    def _compute_form_factors(self):
+        self.form_factors = np.zeros(self.shape)
+
+        u = Direction(1.0, 0.0)
+        for j in range(self.shape[1]):
+            y = self.moc.y_max - (j + 0.5) * self.pitch
+            for i in range(self.shape[0]):
+                x = self.moc.x_min + (i + 0.5) * self.pitch
+                r = Vector(x, y)
+
+                inds = self.moc.get_all_fsr_in_cell(r, u)
+
+                # We now compute power in the cell
+                for fi in inds:
+                    V = self.moc.volume(fi)
+                    xs = self.moc.xs(fi)
+                    for g in range(xs.ngroups):
+                        self.form_factors[j, i] += V * xs.Ef(g) * self.moc.flux(fi, g)
+
+        # Now we compute the average pin power, and normalize the form factors
+        avg_pwr = np.mean(self.form_factors)
+        self.form_factors /= avg_pwr
+
 
     def _few_group_xs(self):
         if self.few_group_condensation_scheme is None:

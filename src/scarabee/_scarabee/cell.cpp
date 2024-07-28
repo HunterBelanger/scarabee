@@ -112,6 +112,18 @@ UniqueFSR Cell::get_fsr(const Vector& r, const Direction& u) const {
   return {&fsrs_.front(), 0};
 }
 
+std::vector<UniqueFSR> Cell::get_all_fsr_in_cell(const Vector& /*r*/,
+                                                 const Direction& /*u*/) const {
+  std::vector<UniqueFSR> out;
+  out.reserve(fsrs_.size());
+
+  for (const auto& fsr : fsrs_) {
+    out.push_back({&fsr, 0});
+  }
+
+  return out;
+}
+
 std::set<std::size_t> Cell::get_all_fsr_ids() const {
   std::set<std::size_t> ids;
 

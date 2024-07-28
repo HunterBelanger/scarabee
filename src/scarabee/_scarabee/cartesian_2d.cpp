@@ -393,6 +393,45 @@ std::pair<UniqueFSR, Vector> Cartesian2D::get_fsr_r_local(
   return out;
 }
 
+std::vector<UniqueFSR> Cartesian2D::get_all_fsr_in_cell(
+    const Vector& r, const Direction& u) const {
+  auto ti = this->get_tile_index(r, u);
+
+  if (ti.has_value() == false) {
+    // We apparently are not in a tile. Return empty vector.
+    return {};
+  }
+
+  const auto& t = this->tile(*ti);
+  const Vector tc = get_tile_center(*ti);
+  Vector r_tile = r - tc;
+
+  if (t.valid() == false) {
+    std::stringstream mssg;
+    mssg << "Tile for Position r = " << r << ", and Direction u = " << u
+         << " is empty.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  std::vector<UniqueFSR> out;
+
+  if (t.c2d) {
+    out = t.c2d->get_all_fsr_in_cell(r_tile, u);
+  } else {
+    out = t.cell->get_all_fsr_in_cell(r_tile, u);
+  }
+
+  // Get unique ID
+  for (auto& outi : out) {
+    // Shouldn't need to check pointer, as the vector should only containvalid
+    // valid FSRs
+    outi.instance += fsr_offset_map_(ti->i, ti->j).find(outi.fsr->id())->second;
+  }
+
+  return out;
+}
+
 std::size_t Cartesian2D::get_num_fsr_instances(std::size_t id) const {
   std::size_t n = 0;
   for (const auto& t : tiles_) {

@@ -24,6 +24,9 @@ class Cell {
 
   UniqueFSR get_fsr(const Vector& r, const Direction& u) const;
 
+  std::vector<UniqueFSR> get_all_fsr_in_cell(const Vector& r,
+                                             const Direction& u) const;
+
   std::size_t num_fsrs() const { return fsrs_.size(); }
 
   std::size_t ngroups() const { return fsrs_.front().xs()->ngroups(); }
