@@ -59,7 +59,7 @@ class FuelPin:
         if self.gap_radius is not None:
             return Vector(self.gap_radius + 0.5 * (self.clad_radius - self.gap_radius), 0.0)
         else:
-            return Vector(self.fuel_radius + 0.5 * (self.clad_width - self.fuel_radius), 0.0)
+            return Vector(self.fuel_radius + 0.5 * (self.clad_radius - self.fuel_radius), 0.0)
 
     def make_fuel_dancoff_cell(self, pitch: float, moderator: Material):
         # We first determine all the radii

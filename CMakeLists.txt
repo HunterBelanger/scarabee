@@ -164,6 +164,9 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/diffusion_geometry.cpp
                               src/scarabee/_scarabee/fd_diffusion_driver.cpp
                               src/scarabee/_scarabee/nem_diffusion_driver.cpp
+                              src/scarabee/_scarabee/fuel_pin.cpp
+                              src/scarabee/_scarabee/guide_tube.cpp
+                              src/scarabee/_scarabee/burnable_poison_pin.cpp
                               #=================================================
                               src/scarabee/_scarabee/python/scarabee.cpp
                               src/scarabee/_scarabee/python/vector.cpp

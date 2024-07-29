@@ -30,7 +30,7 @@ void init_MaterialComposition(py::module& m) {
       .value("Atoms", Fraction::Atoms, "Indicates fractions are in Atoms.")
       .value("Weight", Fraction::Weight, "Indicates fractions are in Weight.");
 
-  py::class_<MaterialComposition>(
+  py::class_<MaterialComposition, std::shared_ptr<MaterialComposition>>(
       m, "MaterialComposition",
       "A MaterialComposition object represents all nuclides which make up a "
       "material, and portion of the material taken up b y each nuclide.")
@@ -75,7 +75,7 @@ void init_Material(py::module& m) {
       .value("sum", DensityUnits::sum,
              "Compute density from sum of fractions.");
 
-  py::class_<Material>(
+  py::class_<Material, std::shared_ptr<Material>>(
       m, "Material",
       "A Material object represents a material composition in combination with "
       "a density and temperature. From a Material, it is possible to obtain "
