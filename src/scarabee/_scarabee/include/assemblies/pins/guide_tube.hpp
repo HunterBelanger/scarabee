@@ -44,6 +44,8 @@ class GuideTube {
     return condensed_xs_;
   }
 
+  void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
+
  private:
   std::shared_ptr<Material> clad_;
   double inner_radius_;

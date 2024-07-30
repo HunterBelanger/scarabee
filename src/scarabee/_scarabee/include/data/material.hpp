@@ -65,6 +65,8 @@ class Material {
       double C, double Rfuel, double Rin, double Rout,
       std::shared_ptr<NDLibrary> ndl) const;
 
+  void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
+
  private:
   MaterialComposition composition_;
   double temperature_;

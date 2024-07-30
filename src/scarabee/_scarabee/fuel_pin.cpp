@@ -251,4 +251,10 @@ std::shared_ptr<PinCell> FuelPin::make_moc_cell(double pitch) const {
   return std::make_shared<PinCell>(radii, mats, pitch, pitch);
 }
 
+void FuelPin::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
+  fuel_->load_nuclides(ndl);
+  clad_->load_nuclides(ndl);
+  if (gap_) gap_->load_nuclides(ndl);
+}
+
 }  // namespace scarabee

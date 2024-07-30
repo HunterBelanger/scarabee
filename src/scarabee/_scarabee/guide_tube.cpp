@@ -123,4 +123,8 @@ std::shared_ptr<PinCell> GuideTube::make_moc_cell(double pitch) const {
   return std::make_shared<PinCell>(radii, mats, pitch, pitch);
 }
 
+void GuideTube::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
+  clad_->load_nuclides(ndl);
+}
+
 }  // namespace scarabee

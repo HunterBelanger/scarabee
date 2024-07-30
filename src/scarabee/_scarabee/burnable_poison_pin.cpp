@@ -261,4 +261,12 @@ std::shared_ptr<PinCell> BurnablePoisonPin::make_moc_cell(double pitch) const {
   return std::make_shared<PinCell>(radii, condensed_xs_, pitch, pitch);
 }
 
+void BurnablePoisonPin::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
+  center_->load_nuclides(ndl);
+  poison_clad_->load_nuclides(ndl);
+  poison_->load_nuclides(ndl);
+  guide_tube_clad_->load_nuclides(ndl);
+  if (gap_) gap_->load_nuclides(ndl);
+}
+
 }  // namespace scarabee

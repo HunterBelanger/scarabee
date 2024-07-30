@@ -33,6 +33,8 @@ class FuelPin {
     std::vector<std::shared_ptr<CrossSection>>& condensed_xs() { return condensed_xs_; }
     const std::vector<std::shared_ptr<CrossSection>>& condensed_xs() const { return condensed_xs_; }
 
+    void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
+
   private:
     std::shared_ptr<Material> fuel_; 
     double fuel_radius_;

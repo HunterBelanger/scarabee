@@ -1,9 +1,6 @@
 from _scarabee import *
 import _scarabee
-import numpy as np
 
-from .pins import *
-from .pwr_assembly import *
 from .reflector import *
 from .xs_utils import *
 

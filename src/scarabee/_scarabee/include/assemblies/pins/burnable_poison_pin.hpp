@@ -51,6 +51,8 @@ class BurnablePoisonPin {
     return condensed_xs_;
   }
 
+  void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
+
  private:
   std::shared_ptr<Material> center_;
   double center_radius_;

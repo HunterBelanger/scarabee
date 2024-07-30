@@ -388,6 +388,13 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
   return xsout;
 }
 
+void Material::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
+  for (const auto& nuc : composition_.nuclides) {
+    auto& nuc_handle = ndl->get_nuclide(nuc.name);
+    nuc_handle.load_xs_from_hdf5(*ndl);
+  }
+}
+
 }  // namespace scarabee
 
 // References

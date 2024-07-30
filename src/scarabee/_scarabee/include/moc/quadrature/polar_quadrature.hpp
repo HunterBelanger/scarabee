@@ -18,8 +18,9 @@ class PolarQuadrature {
  public:
   template <typename P>
   PolarQuadrature(P pq) : pq_(pq), invs_sin_(), wsin_(), sin_(), wgt_() {
-    sin_ = std::visit([](const auto& pq) { return pq.sin(); }, pq_);
     invs_sin_ = std::visit([](const auto& pq) { return pq.invs_sin(); }, pq_);
+    wsin_ = std::visit([](const auto& pq) { return pq.wsin(); }, pq_);
+    sin_ = std::visit([](const auto& pq) { return pq.sin(); }, pq_);
     wgt_ = std::visit([](const auto& pq) { return pq.wgt(); }, pq_);
   }
 
