@@ -348,7 +348,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
           xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
         }
       }  // For all tracks
-    }    // For all azimuthal angles
+    }  // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();

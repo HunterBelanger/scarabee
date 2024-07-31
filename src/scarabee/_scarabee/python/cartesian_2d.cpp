@@ -33,21 +33,21 @@ void init_Cartesian2D(py::module& m) {
       .def_readwrite("j", &Cartesian2D::TileIndex::j, "Index along y axis.");
 
   // Cartesian2D
-  py::class_<Cartesian2D, std::shared_ptr<Cartesian2D>>(
-      m, "Cartesian2D")
+  py::class_<Cartesian2D, std::shared_ptr<Cartesian2D>>(m, "Cartesian2D")
       .def(py::init<const std::vector<double>& /*dx*/,
-                    const std::vector<double>& /*dy*/>(), 
-          "A Cartesian2D represents a cartesian geometry, which is divided into "
-          ":py:class:`Tile` instances, each of which can contain either other "
-          "Cartesian2D geometries, or a :py:class:`Cell` which terminates the "
-          "geometry tree with materials.\n\n"
-          "Parameters\n"
-          "----------\n"
-          "dx : list of float\n"
-          "     List of all x widths.\n"
-          "dy : list of float\n"
-          "     List of all y heights.\n"
-          ,py::arg("dx"), py::arg("dy"))
+                    const std::vector<double>& /*dy*/>(),
+           "A Cartesian2D represents a cartesian geometry, which is divided "
+           "into "
+           ":py:class:`Tile` instances, each of which can contain either other "
+           "Cartesian2D geometries, or a :py:class:`Cell` which terminates the "
+           "geometry tree with materials.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "dx : list of float\n"
+           "     List of all x widths.\n"
+           "dy : list of float\n"
+           "     List of all y heights.\n",
+           py::arg("dx"), py::arg("dy"))
 
       .def_property_readonly("nx", &Cartesian2D::nx,
                              "Number of cells in x direction.")

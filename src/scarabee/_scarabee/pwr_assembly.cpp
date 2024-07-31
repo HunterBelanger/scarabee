@@ -668,11 +668,12 @@ void PWRAssembly::criticality_spectrum() {
   }
 
   spdlog::info("");
-  spdlog::info("Performing {} criticality spectrum calculation", criticality_spectrum_method_.value());
+  spdlog::info("Performing {} criticality spectrum calculation",
+               criticality_spectrum_method_.value());
 
   const auto homogenized_moc = moc_->homogenize();
 
-  std::unique_ptr<CriticalitySpectrum> crit_spectrum {nullptr};
+  std::unique_ptr<CriticalitySpectrum> crit_spectrum{nullptr};
   if (criticality_spectrum_method_.value() == "P1") {
     crit_spectrum = std::make_unique<P1CriticalitySpectrum>(homogenized_moc);
   } else {
@@ -696,7 +697,7 @@ void PWRAssembly::compute_form_factors() {
       const double x = moc_->x_min() + (static_cast<double>(i) + 0.5) * pitch_;
       const Vector r(x, y);
       auto inds = moc_->get_all_fsr_in_cell(r, u);
-      
+
       // We now compute power in the cell
       for (auto fi : inds) {
         const double V = moc_->volume(fi);
@@ -722,12 +723,12 @@ void PWRAssembly::few_group_xs() {
   auto NG = homog_xs->ngroups();
   const bool fissile = homog_xs->fissile();
 
-  xt::xtensor<double, 1> D =  xt::zeros<double>({NG});
+  xt::xtensor<double, 1> D = xt::zeros<double>({NG});
   xt::xtensor<double, 1> Ea = xt::zeros<double>({NG});
   xt::xtensor<double, 2> Es = xt::zeros<double>({NG, NG});
   xt::xtensor<double, 1> Ef, vEf, chi;
   if (fissile) {
-    Ef  = xt::zeros<double>({NG});
+    Ef = xt::zeros<double>({NG});
     vEf = xt::zeros<double>({NG});
     chi = xt::zeros<double>({NG});
   }
@@ -747,7 +748,7 @@ void PWRAssembly::few_group_xs() {
     }
   }
 
-  std::unique_ptr<DiffusionCrossSection> diff_xs {nullptr};
+  std::unique_ptr<DiffusionCrossSection> diff_xs{nullptr};
   if (fissile) {
     diff_xs = std::make_unique<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi);
   } else {
@@ -761,14 +762,15 @@ void PWRAssembly::few_group_xs() {
   // either method is acceptable [2]. In light of these comments, I have
   // chosen to go with Smith's recommendation of performing energy
   // condensation on the diffusion coefficients.
-  diffusion_xs_ = diff_xs->condense(few_group_condensation_scheme_, flux_spectrum);
+  diffusion_xs_ =
+      diff_xs->condense(few_group_condensation_scheme_, flux_spectrum);
 
   NG = diffusion_xs_->ngroups();
-  
-  D =  xt::zeros<double>({NG});
+
+  D = xt::zeros<double>({NG});
   Ea = xt::zeros<double>({NG});
   Es = xt::zeros<double>({NG, NG});
-  Ef  = xt::zeros<double>({NG});
+  Ef = xt::zeros<double>({NG});
   vEf = xt::zeros<double>({NG});
   chi = xt::zeros<double>({NG});
 
@@ -785,9 +787,9 @@ void PWRAssembly::few_group_xs() {
   }
 
   std::stringstream D_str, Ea_str, Ef_str, vEf_str, chi_str, Es_str;
-  D_str <<   "D  : " << D;
-  Ea_str <<  "Ea : " << Ea;
-  Ef_str <<  "Ef : " << Ef;
+  D_str << "D  : " << D;
+  Ea_str << "Ea : " << Ea;
+  Ef_str << "Ef : " << Ef;
   vEf_str << "vEf: " << vEf;
   chi_str << "chi: " << chi;
 
@@ -798,7 +800,7 @@ void PWRAssembly::few_group_xs() {
     spdlog::info(vEf_str.str());
     spdlog::info(chi_str.str());
   }
-  
+
   Es_str << "Es : " << xt::view(Es, 0, xt::all());
   spdlog::info(Es_str.str());
   for (std::size_t g = 1; g < NG; g++) {

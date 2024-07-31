@@ -148,7 +148,7 @@ void init_PWRAssembly(py::module& m) {
                     &PWRAssembly::set_plot_assembly)
 
       .def_property_readonly("moderator_xs", &PWRAssembly::moderator_xs)
-      
+
       .def_property_readonly("average_fuel_pin", &PWRAssembly::average_fuel_pin)
 
       .def_property_readonly("form_factors", &PWRAssembly::form_factors)

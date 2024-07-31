@@ -227,7 +227,7 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     Ea(g) = f1_g * xs_1->Ea(g) + f2_g * xs_2->Ea(g);
     Ef(g) = f1_g * xs_1->Ef(g) + f2_g * xs_2->Ef(g);
     for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
-      Es(g, g_out)  = f1_g * xs_1->Es(g, g_out)  + f2_g * xs_2->Es(g, g_out);
+      Es(g, g_out) = f1_g * xs_1->Es(g, g_out) + f2_g * xs_2->Es(g, g_out);
       Es1(g, g_out) = f1_g * xs_1->Es1(g, g_out) + f2_g * xs_2->Es1(g, g_out);
     }
     Et(g) = Ea(g) + xt::sum(xt::view(Es, g, xt::all()))();
@@ -289,8 +289,10 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
     const double l_m = eta_lm.second;
 
     // Calculate the background xs
-    const double bg_xs_1 = l_m > 0. ? (mat_pot_xs - macro_pot_xs + a1 / l_m) / N : 1.E10;
-    const double bg_xs_2 = l_m > 0. ? (mat_pot_xs - macro_pot_xs + a2 / l_m) / N : 1.E10;
+    const double bg_xs_1 =
+        l_m > 0. ? (mat_pot_xs - macro_pot_xs + a1 / l_m) / N : 1.E10;
+    const double bg_xs_2 =
+        l_m > 0. ? (mat_pot_xs - macro_pot_xs + a2 / l_m) / N : 1.E10;
 
     // Get the two cross section sets
     auto xs_1 = interp_xs(name, temp, bg_xs_1);
@@ -474,12 +476,10 @@ std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
   const double p_im = Rin / Rfuel;
 
   double p = p_i;
-  if (m == 3 || m == 4)
-    p = p_im;
+  if (m == 3 || m == 4) p = p_im;
 
   double theta = 0.5 * PI * p;
-  if (m == 2 || m == 4)
-    theta = -theta;
+  if (m == 2 || m == 4) theta = -theta;
 
   // l = 4V_ring / S_pin = 4 pi (Rout^2 - Rin^2) / (2 pi Rfuel)
   const double l = 2. * (Rout * Rout - Rin * Rin) / Rfuel;
@@ -489,9 +489,8 @@ std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
 
   const double lm = (2. * Rfuel / PI) * (T1 + T2 + theta);
 
-  double eta =  p * lm / l;
-  if (m == 2 || m == 3)
-    eta = -eta;
+  double eta = p * lm / l;
+  if (m == 2 || m == 3) eta = -eta;
 
   return {eta, lm};
 }

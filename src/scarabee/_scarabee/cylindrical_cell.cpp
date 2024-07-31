@@ -103,8 +103,8 @@ void CylindricalCell::calculate_collision_probabilities() {
   spdlog::info("Calculating collision probabilities.");
 
   // First, ensure we have a matrix of the proper size
-  p_ = xt::zeros<double>({ngroups(), nregions(), nregions()}); 
-  
+  p_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
+
   // Create a matrix to temporarily hold the S_ij factors. We do one group at
   // a time, so we don't need a third axis
   xt::xtensor<double, 2> S = xt::zeros<double>({nregions(), nregions()});
@@ -144,7 +144,7 @@ void CylindricalCell::parallel_calculate_collision_probabilities() {
   spdlog::info("Calculating collision probabilities.");
 
   // First, ensure we have a matrix of the proper size
-  p_ = xt::zeros<double>({ngroups(), nregions(), nregions()}); 
+  p_ = xt::zeros<double>({ngroups(), nregions(), nregions()});
 
   // Calculate the matrix for each energy group
 #pragma omp parallel for

@@ -18,7 +18,8 @@ namespace scarabee {
 
 class GuideTube {
  public:
-  GuideTube(std::shared_ptr<Material> clad, double inner_radius, double outer_radius);
+  GuideTube(std::shared_ptr<Material> clad, double inner_radius,
+            double outer_radius);
 
   Vector clad_offset() const;
 
@@ -30,10 +31,9 @@ class GuideTube {
 
   std::shared_ptr<CylindricalCell> make_cylindrical_cell(
       double pitch, std::shared_ptr<CrossSection> moderator,
-      double buffer_radius,
-      std::shared_ptr<CrossSection> buffer,
-      std::shared_ptr<NDLibrary> ndl,
-      std::optional<double> dancoff_clad, double clad_dilution = 300.) const;
+      double buffer_radius, std::shared_ptr<CrossSection> buffer,
+      std::shared_ptr<NDLibrary> ndl, std::optional<double> dancoff_clad,
+      double clad_dilution = 300.) const;
 
   std::shared_ptr<PinCell> make_moc_cell(double pitch) const;
 

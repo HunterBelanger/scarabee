@@ -190,7 +190,8 @@ void CylindricalFluxSolver::solve_single_thread() {
 
   // Outer Generations
   double max_outer_flux_diff = 100.;
-  while (std::abs((old_keff - k_)/k_) > k_tol_ || max_outer_flux_diff > flux_tol_) {
+  while (std::abs((old_keff - k_) / k_) > k_tol_ ||
+         max_outer_flux_diff > flux_tol_) {
     outer_iter++;
     old_outer_flux = flux_;
 
@@ -227,7 +228,8 @@ void CylindricalFluxSolver::solve_single_thread() {
 
       // Calculate the max difference in the flux
       max_inner_flux_diff = calc_flux_rel_diff(flux_, next_flux);
-      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter, max_inner_flux_diff);
+      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter,
+                    max_inner_flux_diff);
 
       // Copy next_flux into flux for calculating next relative difference
       flux_ = next_flux;
@@ -241,7 +243,7 @@ void CylindricalFluxSolver::solve_single_thread() {
 
     // Assign next_flux to be the flux
     std::swap(next_flux, flux_);
-  } // End of Outer Generations
+  }  // End of Outer Generations
 
   // Now that we have the solution, we need to get the number of source
   // neutrons reaching the boundary, x, from Stamm'ler and Abbate.
@@ -280,7 +282,8 @@ void CylindricalFluxSolver::solve_parallel() {
 
   // Outer Generations
   double max_outer_flux_diff = 100.;
-  while (std::abs((old_keff - k_)/k_) > k_tol_ || max_outer_flux_diff > flux_tol_) {
+  while (std::abs((old_keff - k_) / k_) > k_tol_ ||
+         max_outer_flux_diff > flux_tol_) {
     outer_iter++;
     old_outer_flux = flux_;
 
@@ -319,7 +322,8 @@ void CylindricalFluxSolver::solve_parallel() {
 
       // Calculate the max difference in the flux
       max_inner_flux_diff = calc_flux_rel_diff(flux_, next_flux);
-      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter, max_inner_flux_diff);
+      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter,
+                    max_inner_flux_diff);
 
       // Copy next_flux into flux for calculating next relative difference
       flux_ = next_flux;
@@ -333,7 +337,7 @@ void CylindricalFluxSolver::solve_parallel() {
 
     // Assign next_flux to be the flux
     std::swap(next_flux, flux_);
-  } // End of Outer Generations
+  }  // End of Outer Generations
 
   // Now that we have the solution, we need to get the number of source
   // neutrons reaching the boundary, x, from Stamm'ler and Abbate.
@@ -434,8 +438,9 @@ std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize(
   }
   const double sum_fiss_prod =
       std::accumulate(fiss_prod.begin(), fiss_prod.end(), 0.);
-  const double invs_sum_fiss_prod =
-      sum_fiss_prod > 0. ? 1. / sum_fiss_prod : 1.; // Do this to avoid nan errors
+  const double invs_sum_fiss_prod = sum_fiss_prod > 0.
+                                        ? 1. / sum_fiss_prod
+                                        : 1.;  // Do this to avoid nan errors
 
   for (std::size_t g = 0; g < NG; g++) {
     // Get the sum of flux*volume for this group
