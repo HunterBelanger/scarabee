@@ -52,6 +52,10 @@ class PWRAssembly {
   std::shared_ptr<Material> moderator() const { return moderator_; }
   void set_moderator(std::shared_ptr<Material> mod);
 
+  std::shared_ptr<CrossSection> moderator_xs() const { return moderator_xs_; }
+
+  std::shared_ptr<CrossSection> average_fuel_pin() const { return avg_fp_; }
+
   double pitch() const { return pitch_; }
 
   std::uint32_t num_azimuthal_angles() const { return num_azimuthal_angles_; }

@@ -39,6 +39,7 @@ struct NuclideHandle {
 
   bool loaded() const { return absorption != nullptr; }
   void load_xs_from_hdf5(const NDLibrary& ndl);
+  void unload();
 };
 
 class NDLibrary {
@@ -74,6 +75,8 @@ class NDLibrary {
       const double Rin, const double Rout);
 
   const std::shared_ptr<H5::File>& h5() const { return h5_; }
+
+  void unload();
 
  private:
   std::map<std::string, NuclideHandle> nuclide_handles_;

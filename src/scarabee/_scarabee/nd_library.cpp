@@ -44,6 +44,15 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
   }
 }
 
+void NuclideHandle::unload() {
+  absorption = nullptr;
+  scatter = nullptr;
+  p1_scatter = nullptr;
+  fission = nullptr;
+  chi = nullptr;
+  nu = nullptr;
+}
+
 NDLibrary::NDLibrary(const std::string& fname)
     : nuclide_handles_(),
       group_bounds_(),
@@ -105,6 +114,12 @@ const NuclideHandle& NDLibrary::get_nuclide(const std::string& name) const {
   }
 
   return nuclide_handles_.at(name);
+}
+
+void NDLibrary::unload() {
+  for (auto& nuc_handle : nuclide_handles_) {
+    nuc_handle.second.unload();
+  }
 }
 
 NuclideHandle& NDLibrary::get_nuclide(const std::string& name) {

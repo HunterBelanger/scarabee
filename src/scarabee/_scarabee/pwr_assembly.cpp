@@ -594,6 +594,10 @@ void PWRAssembly::pin_cell_calc() {
     pin_1d_fluxes[i]->solve();
   }
 
+  // At this point, we no longer need the raw nuclear data, so we unload it
+  // to conserve memory
+  ndl_->unload();
+
   set_logging_level(LogLevel::info);
 }
 

@@ -55,6 +55,11 @@ void init_PWRAssembly(py::module& m) {
       "    The factor used to multiply the pitch when calculating the flux in "
       "an\n"
       "    isolated pin. Default is 20.\n"
+      "moderator_xs : CrossSection\n"
+      "    The micro-group cross sections for the moderator in the problem.\n"
+      "average_fuel_pin : CrossSection\n"
+      "    Homogenized micro-group cross sections for the average fuel pin "
+      "cell.\n"
       "track_spacing : float\n"
       "    Spacing between tracks in the assembly calculation. Default is "
       "0.02.\n"
@@ -100,8 +105,7 @@ void init_PWRAssembly(py::module& m) {
                     &PWRAssembly::criticality_spectrum_method,
                     &PWRAssembly::set_criticality_spectrum_method)
 
-      .def_property("condensation_scheme",
-                    &PWRAssembly::condensation_scheme,
+      .def_property("condensation_scheme", &PWRAssembly::condensation_scheme,
                     &PWRAssembly::set_condensation_scheme)
 
       .def_property("few_group_condensation_scheme",
@@ -142,6 +146,10 @@ void init_PWRAssembly(py::module& m) {
 
       .def_property("plot_assembly", &PWRAssembly::plot_assembly,
                     &PWRAssembly::set_plot_assembly)
+
+      .def_property_readonly("moderator_xs", &PWRAssembly::moderator_xs)
+      
+      .def_property_readonly("average_fuel_pin", &PWRAssembly::average_fuel_pin)
 
       .def_property_readonly("form_factors", &PWRAssembly::form_factors)
 

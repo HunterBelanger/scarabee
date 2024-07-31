@@ -158,6 +158,9 @@ void init_NDLibrary(py::module& m) {
            py::arg("b1"), py::arg("b2"), py::arg("mat_pot_xs"), py::arg("N"),
            py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"))
 
+      .def("unload", &NDLibrary::unload,
+           "Deallocates all NuclideHandles which contained raw nuclear data.")
+
       .def_property_readonly("library", &NDLibrary::library,
                              "Name of the nuclear data library (if provided).")
 
