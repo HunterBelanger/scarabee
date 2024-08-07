@@ -365,17 +365,31 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
   double num = 0.;
   double denom = 0.;
 
-  for (std::size_t i = 0; i < fsrs_.size(); i++) {
-    const double Vr = fsrs_[i]->volume();
-    const auto& mat = *fsrs_[i]->xs();
-    for (std::uint32_t g = 0; g < ngroups_; g++) {
-      const double VvEf = Vr * mat.vEf(g);
-      const double flx = flux(g, i);
-      const double oflx = old_flux(g, i);
+#pragma omp parallel
+  {
+    double num_thrd = 0.;
+    double denom_thrd = 0.;
 
-      num += VvEf * flx;
-      denom += VvEf * oflx;
+#pragma omp for
+    for (int ii = 0; ii < static_cast<int>(fsrs_.size()); ii++) {
+      const std::size_t i = static_cast<std::size_t>(ii);
+      const double Vr = fsrs_[i]->volume();
+      const auto& mat = *fsrs_[i]->xs();
+      for (std::uint32_t g = 0; g < ngroups_; g++) {
+        const double VvEf = Vr * mat.vEf(g);
+        const double flx = flux(g, i);
+        const double oflx = old_flux(g, i);
+
+        num_thrd += VvEf * flx;
+        denom_thrd += VvEf * oflx;
+      }
     }
+
+#pragma omp atomic
+    num += num_thrd;
+
+#pragma omp atomic
+    denom += denom_thrd;
   }
 
   return keff_ * num / denom;
@@ -385,7 +399,10 @@ void MOCDriver::fill_source(xt::xtensor<double, 2>& scat_src,
                             const xt::xtensor<double, 2>& flux) const {
   const double inv_k = 1. / keff_;
   const double isotropic = 1. / (4. * PI);
-  for (std::uint32_t g = 0; g < ngroups_; g++) {
+
+#pragma omp parallel for
+  for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
+    const std::size_t g = static_cast<std::size_t>(ig);
     for (std::size_t i = 0; i < fsrs_.size(); i++) {
       const auto& mat = *fsrs_[i]->xs();
       const double chi_g = mat.chi(g);
@@ -476,7 +493,11 @@ void MOCDriver::generate_tracks() {
   const double Dy = geometry_->y_max() - geometry_->y_min();
 
   tracks_.resize(n_track_angles_);
-  for (std::uint32_t i = 0; i < n_track_angles_; i++) {
+
+#pragma omp parallel for
+  for (int ii = 0; ii < static_cast<int>(n_track_angles_); ii++) {
+    const std::size_t i = static_cast<std::size_t>(ii);
+
     const auto& ai = angle_info_[i];
 
     // Allocate space for tracks associated with this angle
