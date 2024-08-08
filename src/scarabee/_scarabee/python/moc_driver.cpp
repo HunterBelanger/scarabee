@@ -16,7 +16,7 @@ namespace py = pybind11;
 using namespace scarabee;
 
 void init_MOCDriver(py::module& m) {
-  py::class_<MOCDriver>(m, "MOCDriver")
+  py::class_<MOCDriver, std::shared_ptr<MOCDriver>>(m, "MOCDriver")
       .def(py::init<
                std::shared_ptr<Cartesian2D> /*geometry*/,
                BoundaryCondition /*xmin = BoundaryCondition::Reflective*/,
