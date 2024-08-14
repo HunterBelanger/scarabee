@@ -104,6 +104,9 @@ class PWRAssembly {
   double keff_tolerance() const { return keff_tolerance_; }
   void set_keff_tolerance(double ftol);
 
+  const std::vector<double>& fuel_dancoff_corrections() const { return fuel_dancoff_corrections_; };
+  const std::vector<double>& clad_dancoff_corrections() const { return clad_dancoff_corrections_; };
+
   const xt::xtensor<double, 2>& form_factors() const { return form_factors_; }
   const xt::xtensor<double, 2>& adf() const { return adf_; }
   const xt::xtensor<double, 2>& cdf() const { return cdf_; }

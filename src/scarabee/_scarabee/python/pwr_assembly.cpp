@@ -78,6 +78,10 @@ void init_PWRAssembly(py::module& m) {
       "plot_assembly : bool\n"
       "    Indicates wether the GUI plotter for the assembly geometry will be\n"
       "    activated before performing the calcualtion.\n"
+      "fuel_dancoff_corrections : list of float\n"
+      "    List of the dancoff corrections for the fuel in each pin.\n"
+      "clad_dancoff_corrections : list of float\n"
+      "    List of the dancoff corrections for the cladding in each pin.\n"
       "criticality_spectrum_method : str or None\n"
       "    The type of leakage approximation used to modify the assembly flux\n"
       "    spectrum. Acceptable values are \"B1\", \"P1\", or None.\n"
@@ -161,6 +165,10 @@ void init_PWRAssembly(py::module& m) {
 
       .def_property("plot_assembly", &PWRAssembly::plot_assembly,
                     &PWRAssembly::set_plot_assembly)
+
+      .def_property_readonly("fuel_dancoff_corrections", &PWRAssembly::fuel_dancoff_corrections)
+
+      .def_property_readonly("clad_dancoff_corrections", &PWRAssembly::clad_dancoff_corrections)
 
       .def_property_readonly("moderator_xs", &PWRAssembly::moderator_xs)
 
