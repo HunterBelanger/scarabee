@@ -2,7 +2,6 @@ from _scarabee import *
 import _scarabee
 
 from .reflector import *
-from .xs_utils import *
 
 __author__     = _scarabee.__author__
 __copyright__  = _scarabee.__copyright__

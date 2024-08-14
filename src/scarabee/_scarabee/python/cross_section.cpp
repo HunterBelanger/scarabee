@@ -172,7 +172,7 @@ void init_CrossSection(py::module& m) {
            "    Energy group.",
            py::arg("g"))
 
-      .def("nu", &CrossSection::vEf,
+      .def("nu", &CrossSection::nu,
            "Fission yield in group g.\n\n"
            "Parameters\n"
            "----------\n"
@@ -180,7 +180,7 @@ void init_CrossSection(py::module& m) {
            "    Energy group.",
            py::arg("g"))
 
-      .def("Er", &CrossSection::nu,
+      .def("Er", &CrossSection::Er,
            "Removal cross section in group g.\n\n"
            "Parameters\n"
            "----------\n"

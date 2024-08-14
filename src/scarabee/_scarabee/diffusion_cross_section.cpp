@@ -4,6 +4,7 @@
 #include <utils/constants.hpp>
 
 #include <xtensor/xbuilder.hpp>
+#include <xtensor/xnpy.hpp>
 
 #include <cmath>
 #include <sstream>
@@ -247,6 +248,44 @@ std::shared_ptr<DiffusionCrossSection> DiffusionCrossSection::condense(
       }
     }
   }
+
+  return std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi);
+}
+
+void DiffusionCrossSection::save(const std::string& fname) const {
+  const std::size_t NG = this->ngroups();
+
+  xt::xtensor<double, 2> data = xt::zeros<double>({5 + NG, NG});
+
+  for (std::size_t g = 0; g < NG; g++) {
+    data(0, g) = this->D(g);
+    data(1, g) = this->Ea(g);
+    data(2, g) = this->Ef(g);
+    data(3, g) = this->vEf(g);
+    data(4, g) = this->chi(g);
+
+    // Save Es
+    for (std::size_t gout = 0; gout < NG; gout++) {
+      data(5 + g, gout) = this->Es(g, gout);
+    }
+  }
+
+  // Now we save the data array to a NPY file
+  xt::dump_npy(fname, data);
+}
+
+std::shared_ptr<DiffusionCrossSection> DiffusionCrossSection::load(
+    const std::string& fname) {
+  auto data = xt::load_npy<double>(fname);
+
+  const std::size_t NG = data.shape()[1];
+
+  xt::xtensor<double, 1> D = xt::view(data, 0, xt::all());
+  xt::xtensor<double, 1> Ea = xt::view(data, 1, xt::all());
+  xt::xtensor<double, 1> Ef = xt::view(data, 2, xt::all());
+  xt::xtensor<double, 1> vEf = xt::view(data, 3, xt::all());
+  xt::xtensor<double, 1> chi = xt::view(data, 4, xt::all());
+  xt::xtensor<double, 2> Es = xt::view(data, xt::range(5, 5 + NG), xt::all());
 
   return std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi);
 }

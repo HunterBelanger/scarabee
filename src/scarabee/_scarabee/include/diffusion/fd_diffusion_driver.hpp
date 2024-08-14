@@ -1,7 +1,7 @@
 #ifndef SCARABEE_FD_DIFFUSION_DRIVER_H
 #define SCARABEE_FD_DIFFUSION_DRIVER_H
 
-#include <diffusion_cross_section.hpp>
+#include <diffusion/diffusion_data.hpp>
 #include <diffusion/diffusion_geometry.hpp>
 
 #include <xtensor/xarray.hpp>

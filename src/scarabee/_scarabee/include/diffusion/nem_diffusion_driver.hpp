@@ -1,7 +1,7 @@
 #ifndef SCARABEE_NEM_DIFFUSION_DRIVER_H
 #define SCARABEE_NEM_DIFFUSION_DRIVER_H
 
-#include <diffusion_cross_section.hpp>
+#include <diffusion/diffusion_data.hpp>
 #include <diffusion/diffusion_geometry.hpp>
 
 #include <Eigen/Dense>
@@ -55,6 +55,7 @@ class NEMDiffusionDriver {
   xt::xtensor<double, 3> power(const xt::xtensor<double, 1>& x,
                                const xt::xtensor<double, 1>& y,
                                const xt::xtensor<double, 1>& z) const;
+  std::tuple<xt::xtensor<double, 3>, xt::xtensor<double, 1>, xt::xtensor<double, 1>> pin_power(const xt::xtensor<double, 1>& z) const;
   xt::xtensor<double, 3> avg_power() const;
 
  private:
@@ -110,6 +111,7 @@ class NEMDiffusionDriver {
 
   xt::xtensor<xt::svector<std::size_t>, 1> geom_inds_;
   std::vector<std::shared_ptr<DiffusionCrossSection>> mats_;
+  xt::xtensor<double, 3> adf_; // m, group, side
 
   double keff_ = 1.;
   double flux_tol_ = 1.E-5;
@@ -119,7 +121,7 @@ class NEMDiffusionDriver {
   //----------------------------------------------------------------------------
   // PRIVATE METHODS
   void fill_coupling_matrices();
-  void fill_mats();
+  void fill_mats_adf();
   void fill_source();
   void fill_neighbors_and_geom_inds();
   void update_Jin_from_Jout(std::size_t g, std::size_t m);
@@ -207,7 +209,7 @@ class NEMDiffusionDriver {
   void fit_node_recon_params_corners(std::size_t g, std::size_t m);
 
   enum class Corner { PP, PM, MP, MM };
-  double eval_xy_corner_flux(std::size_t g, std::size_t m, Corner c) const;
+  double eval_heter_xy_corner_flux(std::size_t g, std::size_t m, Corner c) const;
   double avg_xy_corner_flux(std::size_t g, std::size_t m, Corner c) const;
 };
 

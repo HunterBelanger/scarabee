@@ -339,7 +339,7 @@ void load_source_matrix(const DiffusionGeometry& geom,
   QM.reserve(Eigen::VectorX<std::size_t>::Constant(NGRPS * NMATS, NGRPS));
 
   for (std::size_t m = 0; m < NMATS; m++) {
-    const DiffusionCrossSection& xs = *geom.mat(m);
+    const DiffusionData& xs = *geom.mat(m);
 
     for (std::size_t g = 0; g < NGRPS; g++) {
       const double chi_g = xs.chi(g);

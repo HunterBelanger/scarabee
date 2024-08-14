@@ -1,6 +1,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <xtensor-python/pytensor.hpp>
+
 #include <assemblies/pwr_assembly.hpp>
 
 namespace py = pybind11;
@@ -91,7 +93,11 @@ void init_PWRAssembly(py::module& m) {
       "    generated.\n"
       "form_factors : ndarray\n"
       "    The pin-wise form factors for power distribution reconstruction.\n"
-      "    Is None until solve has been called.\n")
+      "    Is None until solve has been called.\n"
+      "adf : ndarray\n"
+      "    The assembly discontinuity factors.\n"
+      "cdf : ndarray\n"
+      "    The corner discontinuity factors.\n")
 
       .def(py::init<double /*pitch*/, std::shared_ptr<Material> /*moderator*/,
                     std::pair<std::size_t, std::size_t> /*shape*/,
@@ -99,7 +105,16 @@ void init_PWRAssembly(py::module& m) {
            py::arg("pitch"), py::arg("moderator"), py::arg("shape"),
            py::arg("ndl"))
 
-      .def("solve", &PWRAssembly::solve)
+      .def("solve", &PWRAssembly::solve,
+           "Solve the assembly, generating few-group diffusion constants.")
+
+      .def("save_diffusion_data", &PWRAssembly::save_diffusion_data,
+           "Saves the diffusion data to a numpy zip file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : str\n"
+           "        Name of file in which to save data.",
+           py::arg("fname"))
 
       .def_property("criticality_spectrum_method",
                     &PWRAssembly::criticality_spectrum_method,
@@ -152,6 +167,10 @@ void init_PWRAssembly(py::module& m) {
       .def_property_readonly("average_fuel_pin", &PWRAssembly::average_fuel_pin)
 
       .def_property_readonly("form_factors", &PWRAssembly::form_factors)
+
+      .def_property_readonly("adf", &PWRAssembly::adf)
+      
+      .def_property_readonly("cdf", &PWRAssembly::cdf)
 
       .def_property_readonly("diffusion_xs", &PWRAssembly::diffusion_xs)
 

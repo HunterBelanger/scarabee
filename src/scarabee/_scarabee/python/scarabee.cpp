@@ -30,6 +30,7 @@ extern void init_PinCell(py::module&);
 extern void init_Cartesian2D(py::module&);
 extern void init_MOCDriver(py::module&);
 extern void init_CriticalitySpectrum(py::module&);
+extern void init_DiffusionData(py::module&);
 extern void init_DiffusionGeometry(py::module&);
 extern void init_FDDiffusionDriver(py::module&);
 extern void init_NEMDiffusionDriver(py::module&);
@@ -64,6 +65,7 @@ PYBIND11_MODULE(_scarabee, m) {
   init_Cartesian2D(m);
   init_MOCDriver(m);
   init_CriticalitySpectrum(m);
+  init_DiffusionData(m);
   init_DiffusionGeometry(m);
   init_FDDiffusionDriver(m);
   init_NEMDiffusionDriver(m);

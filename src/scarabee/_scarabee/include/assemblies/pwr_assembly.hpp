@@ -4,6 +4,7 @@
 #include <cylindrical_cell.hpp>
 #include <cylindrical_flux_solver.hpp>
 #include <diffusion_cross_section.hpp>
+#include <diffusion/diffusion_data.hpp>
 #include <assemblies/pins/fuel_pin.hpp>
 #include <assemblies/pins/guide_tube.hpp>
 #include <assemblies/pins/burnable_poison_pin.hpp>
@@ -11,6 +12,7 @@
 #include <moc/quadrature/yamamoto_tabuchi.hpp>
 #include <moc/cartesian_2d.hpp>
 #include <moc/moc_driver.hpp>
+#include <utils/criticality_spectrum.hpp>
 
 #include <xtensor/xtensor.hpp>
 
@@ -102,7 +104,9 @@ class PWRAssembly {
   double keff_tolerance() const { return keff_tolerance_; }
   void set_keff_tolerance(double ftol);
 
-  const xt::xtensor<double, 2> form_factors() const { return form_factors_; }
+  const xt::xtensor<double, 2>& form_factors() const { return form_factors_; }
+  const xt::xtensor<double, 2>& adf() const { return adf_; }
+  const xt::xtensor<double, 2>& cdf() const { return cdf_; }
   std::shared_ptr<DiffusionCrossSection> diffusion_xs() const {
     return diffusion_xs_;
   }
@@ -110,6 +114,7 @@ class PWRAssembly {
   std::shared_ptr<Cartesian2D> moc_geom() const { return moc_geom_; }
 
   void solve();
+  void save_diffusion_data(const std::string& fname) const;
 
  private:
   double pitch_;
@@ -141,9 +146,12 @@ class PWRAssembly {
   std::shared_ptr<MOCDriver> moc_{nullptr};
   std::shared_ptr<DiffusionCrossSection> diffusion_xs_{nullptr};
   xt::xtensor<double, 2> form_factors_;
+  xt::xtensor<double, 2> adf_;
+  xt::xtensor<double, 2> cdf_;
   std::vector<double> fuel_dancoff_corrections_;
   std::vector<double> clad_dancoff_corrections_;
   std::optional<std::string> criticality_spectrum_method_{"P1"};
+  std::shared_ptr<CriticalitySpectrum> criticality_spectrum_{nullptr};
 
   std::vector<std::shared_ptr<CylindricalCell>> pin_1d_cells;
   std::vector<std::shared_ptr<CylindricalFluxSolver>> pin_1d_fluxes;
@@ -157,11 +165,15 @@ class PWRAssembly {
   void criticality_spectrum();
   void compute_form_factors();
   void few_group_xs();
+  void compute_adf_cdf();
 
   enum class DancoffMaterial { Fuel, Clad };
   double isolated_fuel_pin_flux(DancoffMaterial dm) const;
   double isolated_guide_tube_flux() const;
   double isolated_burnable_poison_tube_flux() const;
+
+  std::vector<double> compute_avg_surface_flx(const std::vector<std::pair<std::size_t, double>>& segments) const;
+  std::vector<double> compute_avg_flx(const Vector& r, const Direction& u) const;
 };
 
 };  // namespace scarabee

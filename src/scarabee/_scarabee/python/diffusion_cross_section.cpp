@@ -163,5 +163,25 @@ void init_DiffusionCrossSection(py::module& m) {
            "-------\n"
            "DiffusionsCrossSection\n"
            "                      Condensed set of diffusion cross sections.\n",
-           py::arg("groups"), py::arg("flux"));
+           py::arg("groups"), py::arg("flux"))
+
+      .def("save", &DiffusionCrossSection::save,
+          "Saves a set of diffusion cross sections to a numpy file.\n\n"
+          "Parameters\n"
+          "----------\n"
+          "fname : str\n"
+          "        Name of file in which to save data.",
+          py::arg("fname"))
+
+      .def_static("load", &DiffusionCrossSection::load,
+          "Loads a set of diffusion cross sections from a numpy file.\n\n"
+          "Parameters\n"
+          "----------\n"
+          "fname : str\n"
+          "        Name of file from which to load data.\n\n"
+          "Returns\n"
+          "-------\n"
+          "DiffusionCrossSection\n"
+          "    Diffusion cross sections from the file.\n",
+          py::arg("fname"));
 }

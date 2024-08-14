@@ -1,6 +1,6 @@
 from scarabee import *
 
-name = "F31_6"
+name = "F31_6U"
 
 set_output_file(name+"_out.txt")
 
@@ -60,24 +60,13 @@ HeComp.add_nuclide("He3", 4.8089e-10)
 HeComp.add_nuclide("He4", 2.4044e-04)
 He = Material(HeComp, 575., ndl) 
 
-BH2O = 14
-RATIO_LW = (4.9456e-02)/((4.9456e-02)+(7.7035e-06))
-RATIO_HW = 1. - RATIO_LW
 WaterComp = MaterialComposition()
 WaterComp.add_nuclide("B10",     7.9714e-06)
 WaterComp.add_nuclide("B11",     3.2247e-05)
-WaterComp.add_nuclide("H1_H2O",  4.9456e-02)
-WaterComp.add_nuclide("O16",     RATIO_LW*2.4673e-02)
-WaterComp.add_nuclide("O17",     RATIO_LW*9.3734e-06)
-WaterComp.add_nuclide("O18",     RATIO_LW*4.9474e-05)
-#WaterComp.add_nuclide("H2_D2O",  7.7035e-06)
-#WaterComp.add_nuclide("O16_D2O", RATIO_HW*2.4673e-02)
-#WaterComp.add_nuclide("O17_D2O", RATIO_HW*9.3734e-06)
-#WaterComp.add_nuclide("O18_D2O", RATIO_HW*4.9474e-05)
-WaterComp.add_nuclide("H1",  7.7035e-06)
-WaterComp.add_nuclide("O16", RATIO_HW*2.4673e-02)
-WaterComp.add_nuclide("O17", RATIO_HW*9.3734e-06)
-WaterComp.add_nuclide("O18", RATIO_HW*4.9474e-05)
+WaterComp.add_nuclide("H1_H2O",  4.9456e-02 + 7.7035e-06)
+WaterComp.add_nuclide("O16",     2.4673e-02)
+WaterComp.add_nuclide("O17",     9.3734e-06)
+WaterComp.add_nuclide("O18",     4.9474e-05)
 Water = Material(WaterComp, 575., ndl)
 
 # SS304
@@ -159,5 +148,4 @@ asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, f
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp]
 asmbly.solve()
-save_diffusion_xs(name+".npy", asmbly.diffusion_xs)
-
+asmbly.save_diffusion_data(name+".npz")

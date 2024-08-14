@@ -13,14 +13,14 @@ void init_DiffusionGeometry(py::module& m) {
       m, "DiffusionGeometryTile",
       "A DiffusionGeometryTile represents an element of a cartesian diffusion "
       "mesh. It can have either an albedo entry (float) or a xs entry "
-      "(:py:class:`DiffusionCrossSection`), but not both.")
+      "(:py:class:`DiffusionData`), but not both.")
 
       .def_readwrite("albedo", &DiffusionGeometry::Tile::albedo,
                      "The albedo if the tile is a boundary condition.")
 
       .def_readwrite(
           "xs", &DiffusionGeometry::Tile::xs,
-          "The DiffusionCrossSection if the tile represents a material.");
+          "The DiffusionData if the tile represents a material.");
 
   py::enum_<DiffusionGeometry::Neighbor>(m, "Neighbor")
       .value("XN", DiffusionGeometry::Neighbor::XN)
@@ -42,7 +42,7 @@ void init_DiffusionGeometry(py::module& m) {
            "Creates a 1D DiffusionGeometry.\n\n"
            "Parameters\n"
            "----------\n"
-           "tiles : list of float or DiffusionCrossSection\n"
+           "tiles : list of float or DiffusionData or DiffusionCrossSection\n"
            "        All tiles in the geometry."
            "dx : list of float\n"
            "     Width of each tile.\n"
@@ -65,7 +65,7 @@ void init_DiffusionGeometry(py::module& m) {
            "Creates a 2D DiffusionGeometry.\n\n"
            "Parameters\n"
            "----------\n"
-           "tiles : list of float or DiffusionCrossSection\n"
+           "tiles : list of float or DiffusionData or DiffusionCrossSection\n"
            "        All tiles in the geometry."
            "dx : list of float\n"
            "     Width of each tile along x.\n"
@@ -100,7 +100,7 @@ void init_DiffusionGeometry(py::module& m) {
            "Creates a 3D DiffusionGeometry.\n\n"
            "Parameters\n"
            "----------\n"
-           "tiles : list of float or DiffusionCrossSection\n"
+           "tiles : list of float or DiffusionData or DiffusionCrossSection\n"
            "        All tiles in the geometry."
            "dx : list of float\n"
            "     Width of each tile along x.\n"
@@ -154,15 +154,15 @@ void init_DiffusionGeometry(py::module& m) {
 
       .def("mat",
            py::overload_cast<std::size_t>(&DiffusionGeometry::mat, py::const_),
-           "Obtains the :py:class:`DiffusionCrossSection` for material m.\n\n"
+           "Obtains the :py:class:`DiffusionData` for material m.\n\n"
            "Parameters\n"
            "----------\n"
            "m : int\n"
            "    Material index.\n\n"
            "Returns\n"
            "-------\n"
-           "DiffusionCrossSection\n"
-           "                     Cross section data for material m.\n",
+           "DiffusionData\n"
+           "    Cross section data, form factors, and ADFs for material m.\n",
            py::arg("m"))
 
       .def("volume", &DiffusionGeometry::volume,

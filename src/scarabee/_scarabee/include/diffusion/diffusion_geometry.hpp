@@ -1,7 +1,7 @@
 #ifndef SCARABEE_DIFFUSION_GEOMETRY_H
 #define SCARABEE_DIFFUSION_GEOMETRY_H
 
-#include <diffusion_cross_section.hpp>
+#include <diffusion/diffusion_data.hpp>
 
 #include <xtensor/xarray.hpp>
 
@@ -17,10 +17,11 @@ class DiffusionGeometry {
  public:
   struct Tile {
     std::optional<double> albedo;
-    std::shared_ptr<DiffusionCrossSection> xs;
+    std::shared_ptr<DiffusionData> xs;
   };
 
-  using TileFill = std::variant<double, std::shared_ptr<DiffusionCrossSection>>;
+  using TileFill = std::variant<double, std::shared_ptr<DiffusionData>,
+                                std::shared_ptr<DiffusionCrossSection>>;
 
   enum class Neighbor : std::uint8_t { XN, XP, YN, YP, ZN, ZP };
 
@@ -56,8 +57,8 @@ class DiffusionGeometry {
 
   std::pair<Tile, std::optional<std::size_t>> neighbor(std::size_t m,
                                                        Neighbor n) const;
-  const std::shared_ptr<DiffusionCrossSection>& mat(std::size_t m) const;
-  const std::shared_ptr<DiffusionCrossSection>& mat(
+  const std::shared_ptr<DiffusionData>& mat(std::size_t m) const;
+  const std::shared_ptr<DiffusionData>& mat(
       const xt::svector<std::size_t>& geo_indx) const;
   xt::svector<std::size_t> geom_indx(std::size_t m) const;
   std::optional<std::size_t> geom_to_mat_indx(
@@ -75,6 +76,22 @@ class DiffusionGeometry {
   double dx(std::size_t i) const { return x_bounds_[i + 1] - x_bounds_[i]; }
   double dy(std::size_t j) const { return y_bounds_[j + 1] - y_bounds_[j]; }
   double dz(std::size_t k) const { return z_bounds_[k + 1] - z_bounds_[k]; }
+
+  double adf_xp(std::size_t m, std::size_t g) const;
+  double adf_xn(std::size_t m, std::size_t g) const;
+  double adf_yp(std::size_t m, std::size_t g) const;
+  double adf_yn(std::size_t m, std::size_t g) const;
+
+  double cdf_I(std::size_t m, std::size_t g) const;
+  double cdf_II(std::size_t m, std::size_t g) const;
+  double cdf_III(std::size_t m, std::size_t g) const;
+  double cdf_IV(std::size_t m, std::size_t g) const;
+
+  const xt::xarray<Tile>& tiles() const { return tiles_; }
+  const std::vector<double> tile_dx() const { return tile_dx_; }
+  const std::vector<double> tile_dy() const { return tile_dy_; }
+  const std::vector<double> tile_dz() const { return tile_dz_; }
+  double form_factor(double x, double y, double z) const;
 
  private:
   xt::xarray<Tile> tiles_;

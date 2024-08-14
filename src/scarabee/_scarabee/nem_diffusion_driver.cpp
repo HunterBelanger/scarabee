@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <cstdarg>
+#include <optional>
 
 namespace scarabee {
 
@@ -183,12 +184,24 @@ void NEMDiffusionDriver::fill_coupling_matrices() {
   }
 }
 
-void NEMDiffusionDriver::fill_mats() {
+void NEMDiffusionDriver::fill_mats_adf() {
+  // Save all material cross sections
   mats_.reserve(NM_);
   for (std::size_t m = 0; m < NM_; m++) {
     const auto geom_indx = geom_inds_[m];
-    const auto& mat = geom_->mat(geom_indx);
+    const auto& mat = geom_->mat(geom_indx)->xs();
     mats_.push_back(mat);
+  }
+
+  // Save all node ADFs
+  adf_ = xt::zeros<double>({NM_, NG_, static_cast<std::size_t>(4)});
+  for (std::size_t m = 0; m < NM_; m++) {
+    for (std::size_t g = 0; g < NG_; g++) {
+      adf_(m, g, DiffusionData::ADF::YP) = geom_->adf_yp(m, g);
+      adf_(m, g, DiffusionData::ADF::XP) = geom_->adf_xp(m, g);
+      adf_(m, g, DiffusionData::ADF::YN) = geom_->adf_yn(m, g);
+      adf_(m, g, DiffusionData::ADF::XN) = geom_->adf_xn(m, g);
+    }
   }
 }
 
@@ -267,8 +280,12 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
   // UPDATE INCOMING CURRENTS IN NEIGHBORING NODES / B.C.
   // x+ surface
   if (n_xp.second) {
+    const double a = 0.5 * (1. - (adf_(n_xp.second.value(), g, DiffusionData::ADF::XN) / adf_(m, g, DiffusionData::ADF::XP)));
+
     j_in_out_(g, n_xp.second.value(), 0)(CurrentIndx::XM) =
-        j_in_out_(g, m, 1)(CurrentIndx::XP);
+        (1. / (1. - a)) *
+        (j_in_out_(g, m, 1)(CurrentIndx::XP) +
+         a * j_in_out_(g, n_xp.second.value(), 1)(CurrentIndx::XM));
   } else {
     const double albedo = n_xp.first.albedo.value();
     j_in_out_(g, m, 0)(CurrentIndx::XP) =
@@ -277,8 +294,12 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
 
   // x- surface
   if (n_xm.second) {
+    const double a = 0.5 * (1. - (adf_(n_xm.second.value(), g, DiffusionData::ADF::XP) / adf_(m, g, DiffusionData::ADF::XN)));
+
     j_in_out_(g, n_xm.second.value(), 0)(CurrentIndx::XP) =
-        j_in_out_(g, m, 1)(CurrentIndx::XM);
+        (1. / (1. - a)) *
+        (j_in_out_(g, m, 1)(CurrentIndx::XM) +
+         a * j_in_out_(g, n_xm.second.value(), 1)(CurrentIndx::XP));
   } else {
     const double albedo = n_xm.first.albedo.value();
     j_in_out_(g, m, 0)(CurrentIndx::XM) =
@@ -287,8 +308,12 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
 
   // y+ surface
   if (n_yp.second) {
+    const double a = 0.5 * (1. - (adf_(n_yp.second.value(), g, DiffusionData::ADF::YN) / adf_(m, g, DiffusionData::ADF::YP)));
+
     j_in_out_(g, n_yp.second.value(), 0)(CurrentIndx::YM) =
-        j_in_out_(g, m, 1)(CurrentIndx::YP);
+        (1. / (1. - a)) *
+        (j_in_out_(g, m, 1)(CurrentIndx::YP) +
+         a * j_in_out_(g, n_yp.second.value(), 1)(CurrentIndx::YM));
   } else {
     const double albedo = n_yp.first.albedo.value();
     j_in_out_(g, m, 0)(CurrentIndx::YP) =
@@ -297,8 +322,12 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
 
   // y- surface
   if (n_ym.second) {
+    const double a = 0.5 * (1. - (adf_(n_ym.second.value(), g, DiffusionData::ADF::YP) / adf_(m, g, DiffusionData::ADF::YN)));
+
     j_in_out_(g, n_ym.second.value(), 0)(CurrentIndx::YP) =
-        j_in_out_(g, m, 1)(CurrentIndx::YM);
+        (1. / (1. - a)) *
+        (j_in_out_(g, m, 1)(CurrentIndx::YM) +
+         a * j_in_out_(g, n_ym.second.value(), 1)(CurrentIndx::YP));
   } else {
     const double albedo = n_ym.first.albedo.value();
     j_in_out_(g, m, 0)(CurrentIndx::YM) =
@@ -678,7 +707,7 @@ void NEMDiffusionDriver::solve() {
 
   // Fill the coupling matrices
   fill_neighbors_and_geom_inds();
-  fill_mats();
+  fill_mats_adf();
   fill_coupling_matrices();
 
   // Begin power iteration
@@ -729,6 +758,12 @@ void NEMDiffusionDriver::solve() {
   Rmats_.resize({0, 0});
   Pmats_.resize({0, 0});
   Q_.resize({0, 0});
+
+  // Before reconstruction, we want to compute the average power in each node,
+  // and then normalize by that.
+  const double avg_node_pwr = xt::mean(this->avg_power())();
+  flux_ /= avg_node_pwr;
+  j_in_out_ /= avg_node_pwr;
 
   // Calculate flux reconstruction parameters for each node
   Timer fitting_timer;
@@ -991,6 +1026,78 @@ xt::xtensor<double, 3> NEMDiffusionDriver::power(
   return pwr_out;
 }
 
+std::tuple<xt::xtensor<double, 3>, xt::xtensor<double, 1>, xt::xtensor<double, 1>> NEMDiffusionDriver::pin_power(const xt::xtensor<double, 1>& z) const {
+  // First, we need to make sure all the assemblies have the same form factor
+  // shapes. If not, we cannot build a conforming mesh, and we complain.
+  std::optional<std::size_t> x_oshp = std::nullopt, y_oshp = std::nullopt;
+  for (const auto& tile : geom_->tiles()) {
+    if (tile.xs) {
+      const auto& ff = tile.xs->form_factors();
+      if (ff.size() > 0) {
+        if (x_oshp && y_oshp) {
+          if (y_oshp.value() != ff.shape()[0] ||
+              x_oshp.value() != ff.shape()[1]) {
+            auto mssg = "Assemblies have varrying form factor shapes. "
+              "Cannot create a conformal mesh for pin power reconstruction.";
+            spdlog::error(mssg);
+            throw ScarabeeException(mssg);
+          }
+        } else {
+          y_oshp = ff.shape()[0];
+          x_oshp = ff.shape()[1];
+        }
+      }
+    }
+  }
+
+  if (x_oshp.has_value() == false || y_oshp.has_value() == false) {
+    auto mssg = "No form factors provided on any assembly. "
+      "Cannot reconstruct pin powers.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  const std::size_t x_shp = x_oshp.value();
+  const std::size_t y_shp = y_oshp.value();
+
+  // First, we need to create a mesh for the x and y points
+  xt::xtensor<double, 1> x = xt::zeros<double>({x_shp*geom_->tile_dx().size() + 1});
+  std::size_t i = 1;
+  for (std::size_t xt = 0; xt < geom_->tile_dx().size(); xt++) {
+    const double tile_pitch = geom_->tile_dx()[xt] / static_cast<double>(x_shp);
+    for (std::size_t p = 0; p < x_shp; p++) {
+      x[i] = x[i-1] + tile_pitch;
+      i++;
+    }
+  }
+  
+  xt::xtensor<double, 1> y = xt::zeros<double>({y_shp*geom_->tile_dy().size() + 1});
+  i = 1;
+  for (std::size_t yt = 0; yt < geom_->tile_dy().size(); yt++) {
+    const double tile_pitch = geom_->tile_dy()[yt] / static_cast<double>(y_shp);
+    for (std::size_t p = 0; p < y_shp; p++) {
+      y[i] = y[i-1] + tile_pitch;
+      i++;
+    }
+  }
+
+  // We now load the powers
+  xt::xtensor<double, 3> pwr_out = xt::zeros<double>({x.size()-1, y.size()-1, z.size()});
+  for (std::size_t i = 0; i < x.size()-1; i++) {
+    const double xx = 0.5*(x[i+1] + x[i]);
+    for (std::size_t j = 0; j < y.size()-1; j++) {
+      const double yy = 0.5*(y[j+1] + y[j]);
+      for (std::size_t k = 0; k < z.size(); k++) {
+        const double zz = z[k];
+
+        pwr_out(i, j, k) = power(xx, yy, zz) * geom_->form_factor(xx, yy, zz);
+      }
+    }
+  }
+
+  return {pwr_out, x, y};
+}
+
 xt::xtensor<double, 3> NEMDiffusionDriver::avg_power() const {
   // If problem isn't solved yet, we error
   if (solved_ == false) {
@@ -1206,7 +1313,7 @@ void NEMDiffusionDriver::fit_node_recon_params_corners(std::size_t g,
   nf.cxy22 = 0.25 * (pp + pm + mm + mp);
 }
 
-double NEMDiffusionDriver::eval_xy_corner_flux(std::size_t g, std::size_t m,
+double NEMDiffusionDriver::eval_heter_xy_corner_flux(std::size_t g, std::size_t m,
                                                Corner c) const {
   const NodeFlux& nf = recon_params(g, m);
   const double dx = 1. / nf.invs_dx;
@@ -1216,21 +1323,25 @@ double NEMDiffusionDriver::eval_xy_corner_flux(std::size_t g, std::size_t m,
   const double y_hi = nf.ym + 0.5 * dy;
   const double y_low = nf.ym - 0.5 * dy;
 
+  // Since the definition of the CDF is
+  // CDF = flux_het / flux_hom
+  // we compute the heterogeneous flux as flux_het = flux_hom * CDF
+
   switch (c) {
     case Corner::PP:
-      return nf.flux_xy_no_cross(x_hi, y_hi);
+      return nf.flux_xy_no_cross(x_hi, y_hi) * geom_->cdf_I(m, g);
       break;
 
     case Corner::PM:
-      return nf.flux_xy_no_cross(x_hi, y_low);
+      return nf.flux_xy_no_cross(x_hi, y_low) * geom_->cdf_IV(m, g);
       break;
 
     case Corner::MP:
-      return nf.flux_xy_no_cross(x_low, y_hi);
+      return nf.flux_xy_no_cross(x_low, y_hi) * geom_->cdf_II(m, g);
       break;
 
     case Corner::MM:
-      return nf.flux_xy_no_cross(x_low, y_low);
+      return nf.flux_xy_no_cross(x_low, y_low) * geom_->cdf_III(m, g);
       break;
   }
 
@@ -1246,7 +1357,7 @@ double NEMDiffusionDriver::avg_xy_corner_flux(std::size_t g, std::size_t m,
   double denom = 0.;
 
   // First, we add our contribution to the corner flux estimation
-  num += eval_xy_corner_flux(g, m, c);
+  num += eval_heter_xy_corner_flux(g, m, c);
   denom += 1.;
 
   if (c == Corner::PP) {
@@ -1254,18 +1365,18 @@ double NEMDiffusionDriver::avg_xy_corner_flux(std::size_t g, std::size_t m,
     const auto& n_yp = neighbors_(m, 2);
 
     if (n_xp.second) {
-      num += eval_xy_corner_flux(g, n_xp.second.value(), Corner::MP);
+      num += eval_heter_xy_corner_flux(g, n_xp.second.value(), Corner::MP);
       denom += 1.;
     }
     if (n_yp.second) {
-      num += eval_xy_corner_flux(g, n_yp.second.value(), Corner::PM);
+      num += eval_heter_xy_corner_flux(g, n_yp.second.value(), Corner::PM);
       denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx(
         {geom_inds[0] + 1, geom_inds[1] + 1, geom_inds[2]});
     if (om) {
-      num += eval_xy_corner_flux(g, om.value(), Corner::MM);
+      num += eval_heter_xy_corner_flux(g, om.value(), Corner::MM);
       denom += 1.;
     }
   } else if (c == Corner::PM) {
@@ -1273,18 +1384,18 @@ double NEMDiffusionDriver::avg_xy_corner_flux(std::size_t g, std::size_t m,
     const auto& n_ym = neighbors_(m, 3);
 
     if (n_xp.second) {
-      num += eval_xy_corner_flux(g, n_xp.second.value(), Corner::MM);
+      num += eval_heter_xy_corner_flux(g, n_xp.second.value(), Corner::MM);
       denom += 1.;
     }
     if (n_ym.second) {
-      num += eval_xy_corner_flux(g, n_ym.second.value(), Corner::PP);
+      num += eval_heter_xy_corner_flux(g, n_ym.second.value(), Corner::PP);
       denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx(
         {geom_inds[0] + 1, geom_inds[1] - 1, geom_inds[2]});
     if (om) {
-      num += eval_xy_corner_flux(g, om.value(), Corner::MP);
+      num += eval_heter_xy_corner_flux(g, om.value(), Corner::MP);
       denom += 1.;
     }
   } else if (c == Corner::MM) {
@@ -1292,18 +1403,18 @@ double NEMDiffusionDriver::avg_xy_corner_flux(std::size_t g, std::size_t m,
     const auto& n_ym = neighbors_(m, 3);
 
     if (n_xm.second) {
-      num += eval_xy_corner_flux(g, n_xm.second.value(), Corner::PM);
+      num += eval_heter_xy_corner_flux(g, n_xm.second.value(), Corner::PM);
       denom += 1.;
     }
     if (n_ym.second) {
-      num += eval_xy_corner_flux(g, n_ym.second.value(), Corner::MP);
+      num += eval_heter_xy_corner_flux(g, n_ym.second.value(), Corner::MP);
       denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx(
         {geom_inds[0] - 1, geom_inds[1] - 1, geom_inds[2]});
     if (om) {
-      num += eval_xy_corner_flux(g, om.value(), Corner::PP);
+      num += eval_heter_xy_corner_flux(g, om.value(), Corner::PP);
       denom += 1.;
     }
   } else {  // c = Corner::MP
@@ -1311,23 +1422,45 @@ double NEMDiffusionDriver::avg_xy_corner_flux(std::size_t g, std::size_t m,
     const auto& n_yp = neighbors_(m, 2);
 
     if (n_xm.second) {
-      num += eval_xy_corner_flux(g, n_xm.second.value(), Corner::PP);
+      num += eval_heter_xy_corner_flux(g, n_xm.second.value(), Corner::PP);
       denom += 1.;
     }
     if (n_yp.second) {
-      num += eval_xy_corner_flux(g, n_yp.second.value(), Corner::MM);
+      num += eval_heter_xy_corner_flux(g, n_yp.second.value(), Corner::MM);
       denom += 1.;
     }
 
     const auto om = geom_->geom_to_mat_indx(
         {geom_inds[0] - 1, geom_inds[1] + 1, geom_inds[2]});
     if (om) {
-      num += eval_xy_corner_flux(g, om.value(), Corner::PM);
+      num += eval_heter_xy_corner_flux(g, om.value(), Corner::PM);
       denom += 1.;
     }
   }
 
-  return num / denom;
+  const double avg_het_flx = num / denom;
+
+  // The homogeneous flux is then flux_hom = flux_het / CDF
+  double CDF = 1.;
+  switch (c) {
+    case Corner::PP:
+      CDF = geom_->cdf_I(m, g);
+      break;
+
+    case Corner::PM:
+      CDF = geom_->cdf_IV(m, g);
+      break;
+
+    case Corner::MP:
+      CDF = geom_->cdf_II(m, g);
+      break;
+
+    case Corner::MM:
+      CDF = geom_->cdf_III(m, g);
+      break;
+  }
+
+  return avg_het_flx / CDF;
 }
 
 }  // namespace scarabee

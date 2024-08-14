@@ -66,6 +66,15 @@ set(XTENSOR_USE_XSIMD ON CACHE BOOL "Enable SIMD acceleration.")
 FetchContent_MakeAvailable(xtensor)
 
 #===============================================================================
+# Get XTENSOR-IO
+message(STATUS "Downloading xtensor-io")
+FetchContent_Declare(xtensor-io
+  GIT_REPOSITORY https://github.com/HunterBelanger/xtensor-io.git
+  GIT_TAG        feature/std_filesystem
+)
+FetchContent_MakeAvailable(xtensor-io)
+
+#===============================================================================
 # Get Pybind11
 set(PYBIND11_FINDPYTHON ON)
 message(STATUS "Downloading pybind11 v2.12.0")
@@ -161,6 +170,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/moc_driver.cpp
                               src/scarabee/_scarabee/moc_plotter.cpp
                               src/scarabee/_scarabee/criticality_spectrum.cpp
+                              src/scarabee/_scarabee/diffusion_data.cpp
                               src/scarabee/_scarabee/diffusion_geometry.cpp
                               src/scarabee/_scarabee/fd_diffusion_driver.cpp
                               src/scarabee/_scarabee/nem_diffusion_driver.cpp
@@ -190,6 +200,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/python/cartesian_2d.cpp
                               src/scarabee/_scarabee/python/moc_driver.cpp
                               src/scarabee/_scarabee/python/criticality_spectrum.cpp
+                              src/scarabee/_scarabee/python/diffusion_data.cpp
                               src/scarabee/_scarabee/python/diffusion_geometry.cpp
                               src/scarabee/_scarabee/python/fd_diffusion_driver.cpp
                               src/scarabee/_scarabee/python/nem_diffusion_driver.cpp
@@ -199,7 +210,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
 
 target_include_directories(_scarabee PRIVATE include)
 target_compile_features(_scarabee PRIVATE cxx_std_20)
-target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-python htl HighFive hdf5-static Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
+target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-io xtensor-python htl HighFive hdf5-static Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
 target_include_directories(_scarabee PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/scarabee/_scarabee/include>
   $<BUILD_INTERFACE:${NUMPY_INCLUDE_DIRS}>

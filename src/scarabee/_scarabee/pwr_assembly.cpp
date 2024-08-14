@@ -5,6 +5,7 @@
 #include <moc/moc_plotter.hpp>
 
 #include <xtensor/xio.hpp>
+#include "diffusion/diffusion_data.hpp"
 
 namespace scarabee {
 
@@ -49,8 +50,8 @@ void PWRAssembly::set_keff_tolerance(double ktol) {
 
 void PWRAssembly::set_criticality_spectrum_method(
     const std::optional<std::string>& csm) {
-  if (csm.has_value() == false || *csm == "B1" || *csm == "b1" ||
-      *csm == "P1" || *csm == "p1") {
+  if (csm.has_value() != false && *csm != "B1" && *csm != "b1" &&
+      *csm != "P1" && *csm != "p1") {
     auto mssg = "Unknown criticality spectrum method.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -203,6 +204,7 @@ void PWRAssembly::solve() {
   criticality_spectrum();
   compute_form_factors();
   few_group_xs();
+  compute_adf_cdf();
 }
 
 double PWRAssembly::isolated_fuel_pin_flux(DancoffMaterial dm) const {
@@ -673,17 +675,16 @@ void PWRAssembly::criticality_spectrum() {
 
   const auto homogenized_moc = moc_->homogenize();
 
-  std::unique_ptr<CriticalitySpectrum> crit_spectrum{nullptr};
   if (criticality_spectrum_method_.value() == "P1") {
-    crit_spectrum = std::make_unique<P1CriticalitySpectrum>(homogenized_moc);
+    criticality_spectrum_ = std::make_shared<P1CriticalitySpectrum>(homogenized_moc);
   } else {
-    crit_spectrum = std::make_unique<B1CriticalitySpectrum>(homogenized_moc);
+    criticality_spectrum_ = std::make_shared<B1CriticalitySpectrum>(homogenized_moc);
   }
 
-  moc_->apply_criticality_spectrum(crit_spectrum->flux());
+  moc_->apply_criticality_spectrum(criticality_spectrum_->flux());
 
-  spdlog::info("Kinf    : {:.5f}", crit_spectrum->k_inf());
-  spdlog::info("Buckling: {:.5f}", crit_spectrum->buckling());
+  spdlog::info("Kinf    : {:.5f}", criticality_spectrum_->k_inf());
+  spdlog::info("Buckling: {:.5f}", criticality_spectrum_->buckling());
 }
 
 void PWRAssembly::compute_form_factors() {
@@ -808,6 +809,155 @@ void PWRAssembly::few_group_xs() {
     Es_str << "     " << xt::view(Es, g, xt::all());
     spdlog::info(Es_str.str());
   }
+}
+
+void PWRAssembly::compute_adf_cdf() {
+  // Number of few groups
+  const std::size_t NG = few_group_condensation_scheme_.size();
+
+  // We first need to compute the homogenous few-group flux for the assembly
+  std::vector<double> homog_flx(NG, 0.);
+  double total_volume = 0.;
+  for (std::size_t i = 0; i < moc_->nfsr(); i++) {
+    const double Vi = moc_->volume(i);
+    total_volume += Vi;
+
+    for (std::size_t G = 0; G < NG; G++) {
+      const std::size_t gmin = few_group_condensation_scheme_[G].first;
+      const std::size_t gmax = few_group_condensation_scheme_[G].first;
+
+      for (std::size_t g = gmin; g <= gmax; g++) {
+        homog_flx[G] += Vi * moc_->flux(i, g);
+      }
+    }
+  }
+  for (auto& flx : homog_flx) flx /= total_volume;
+
+  // Trace the needed segments along the assembly
+  const auto xp_segments = moc_->trace_fsr_segments(
+      Vector(moc_->x_max() - 0.01, moc_->y_max()), Direction(0., -1.));
+
+  const auto xn_segments = moc_->trace_fsr_segments(
+      Vector(moc_->x_min() + 0.01, moc_->y_max()), Direction(0., -1.));
+
+  const auto yp_segments = moc_->trace_fsr_segments(
+      Vector(moc_->x_min(), moc_->y_max() - 0.01), Direction(1., 0.));
+
+  const auto yn_segments = moc_->trace_fsr_segments(
+      Vector(moc_->x_min(), moc_->y_min() + 0.01), Direction(1., 0.));
+
+  // Get average flux in each macro group along each surface
+  const auto xp_flx = compute_avg_surface_flx(xp_segments);
+  const auto xn_flx = compute_avg_surface_flx(xn_segments);
+  const auto yp_flx = compute_avg_surface_flx(yp_segments);
+  const auto yn_flx = compute_avg_surface_flx(yn_segments);
+
+  // Load the adf array
+  adf_ = xt::zeros<double>({NG, static_cast<std::size_t>(4)});
+  for (std::size_t G = 0; G < NG; G++) {
+    adf_(G, DiffusionData::ADF::YP) = yp_flx[G] / homog_flx[G];
+    adf_(G, DiffusionData::ADF::XP) = xp_flx[G] / homog_flx[G];
+    adf_(G, DiffusionData::ADF::YN) = yn_flx[G] / homog_flx[G];
+    adf_(G, DiffusionData::ADF::XN) = xn_flx[G] / homog_flx[G];
+  }
+
+  // We now need to compute the corner fluxes for the cdf
+  const auto I_flx = compute_avg_flx(
+      Vector(moc_->x_max() - 0.01, moc_->y_max() - 0.011), Direction(-1., -1.));
+  const auto II_flx = compute_avg_flx(
+      Vector(moc_->x_min() + 0.01, moc_->y_max() - 0.011), Direction(1., -1.));
+  const auto III_flx = compute_avg_flx(
+      Vector(moc_->x_min() + 0.01, moc_->y_min() + 0.011), Direction(1., 1.));
+  const auto IV_flx = compute_avg_flx(
+      Vector(moc_->x_max() - 0.01, moc_->y_min() + 0.011), Direction(-1., 1.));
+  cdf_ = xt::zeros<double>({NG, static_cast<std::size_t>(4)});
+  for (std::size_t G = 0; G < NG; G++) {
+    cdf_(G, DiffusionData::CDF::I) = I_flx[G] / homog_flx[G];
+    cdf_(G, DiffusionData::CDF::II) = II_flx[G] / homog_flx[G];
+    cdf_(G, DiffusionData::CDF::III) = III_flx[G] / homog_flx[G];
+    cdf_(G, DiffusionData::CDF::IV) = IV_flx[G] / homog_flx[G];
+  }
+  
+  std::stringstream str;
+  str << "ADF : " << xt::view(adf_, 0, xt::all());
+  spdlog::info(str.str());
+  for (std::size_t G = 1; G < NG; G++) {
+    str.str(std::string());
+    str << "      " << xt::view(adf_, G, xt::all());
+    spdlog::info(str.str());
+  }
+  str.str(std::string());
+  
+  str << "CDF : " << xt::view(cdf_, 0, xt::all());
+  spdlog::info(str.str());
+  for (std::size_t G = 1; G < NG; G++) {
+    str.str(std::string());
+    str << "      " << xt::view(cdf_, G, xt::all());
+    spdlog::info(str.str());
+  }
+}
+
+void PWRAssembly::save_diffusion_data(const std::string& fname) const {
+  if (diffusion_xs_ == nullptr ||
+      form_factors_.size() == 0 ||
+      adf_.size() == 0 ||
+      cdf_.size() == 0) {
+    auto mssg = "Cannot save DiffusionData. Assembly has not been solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  DiffusionData dd(diffusion_xs_, form_factors_, adf_, cdf_);
+  dd.save(fname);
+}
+
+std::vector<double> PWRAssembly::compute_avg_surface_flx(
+    const std::vector<std::pair<std::size_t, double>>& segments) const {
+  double total_len = 0.;
+  for (const auto& i_l : segments) total_len += i_l.second;
+  const double invs_tot_len = 1. / total_len;
+
+  // Number of few groups
+  const std::size_t NG = few_group_condensation_scheme_.size();
+
+  std::vector<double> flx(NG, 0.);
+
+  for (const auto& i_l : segments) {
+    for (std::size_t G = 0; G < NG; G++) {
+      const std::size_t gmin = few_group_condensation_scheme_[G].first;
+      const std::size_t gmax = few_group_condensation_scheme_[G].first;
+
+      for (std::size_t g = gmin; g <= gmax; g++) {
+        flx[G] += i_l.second * moc_->flux(i_l.first, g);
+      }
+    }
+  }
+
+  for (auto& f : flx) f *= invs_tot_len;
+
+  return flx;
+}
+
+std::vector<double> PWRAssembly::compute_avg_flx(const Vector& r,
+                                                 const Direction& u) const {
+  const auto fsr = moc_->get_fsr(r, u);
+  const std::size_t i = moc_->get_fsr_indx(fsr);
+
+  // Number of few groups
+  const std::size_t NG = few_group_condensation_scheme_.size();
+
+  std::vector<double> flx(NG, 0.);
+
+  for (std::size_t G = 0; G < NG; G++) {
+    const std::size_t gmin = few_group_condensation_scheme_[G].first;
+    const std::size_t gmax = few_group_condensation_scheme_[G].first;
+
+    for (std::size_t g = gmin; g <= gmax; g++) {
+      flx[G] += moc_->flux(i, g);
+    }
+  }
+
+  return flx;
 }
 
 }  // namespace scarabee

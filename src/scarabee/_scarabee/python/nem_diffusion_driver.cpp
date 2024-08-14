@@ -145,5 +145,7 @@ void init_NEMDiffusionDriver(py::module& m) {
            "Returns\n"
            "-------\n"
            "array of float\n"
-           "      Value of the average power density in each node.\n");
+           "      Value of the average power density in each node.\n")
+
+      .def("pin_power", &NEMDiffusionDriver::pin_power);
 }

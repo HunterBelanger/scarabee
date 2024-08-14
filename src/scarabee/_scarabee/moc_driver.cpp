@@ -587,6 +587,23 @@ void MOCDriver::generate_tracks() {
   }
 }
 
+std::vector<std::pair<std::size_t, double>> MOCDriver::trace_fsr_segments(const Vector r_start, const Direction& u) const {
+  std::vector<std::pair<std::size_t, double>> out;
+
+  Vector r_end = r_start;
+  std::pair<UniqueFSR, Vector> fsr_r = geometry_->get_fsr_r_local(r_end, u);
+  auto ti = geometry_->get_tile_index(r_end, u);
+  while (fsr_r.first.fsr && ti) {
+    const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
+    out.emplace_back(this->get_fsr_indx(fsr_r.first), d);
+    r_end = r_end + d * u;
+    ti = geometry_->get_tile_index(r_end, u);
+    if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
+  }
+
+  return out;
+}
+
 void MOCDriver::set_track_ends_bcs() {
   spdlog::info("Determining track connections");
 
