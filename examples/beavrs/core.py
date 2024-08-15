@@ -83,10 +83,10 @@ tiles = [0.    , 0.    , 0.    , 0.    , rf____, rf____, rf____, rf____, rf____,
 
 # Define assembly dimension and the number of nodes per assembly
 dx = np.array(17*[21.50364])
-nx = 1*np.array(17*[1])
+nx = 2*np.array(17*[1])
 
 dy = np.array(17*[21.50364])
-ny = 1*np.array(17*[1])
+ny = 2*np.array(17*[1])
 
 dz = np.array([20.])
 nz = np.array([1])
@@ -133,6 +133,4 @@ print(np.min(pin_power[nmsk]))
 plt.pcolormesh(y, x, pin_power[:,:,0], cmap='jet')
 plt.title("Pin Power")
 plt.show()
-
-print(solver.avg_power()[:,:,0])
 
