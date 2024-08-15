@@ -277,9 +277,11 @@ std::shared_ptr<DiffusionData> DiffusionData::load(const std::string& fname) {
   } else if (adf) {
     auto out = std::make_shared<DiffusionData>(xs);
     out->set_adf(*adf);
+    return out;
   } else if (cdf) {
     auto out = std::make_shared<DiffusionData>(xs);
     out->set_cdf(*cdf);
+    return out;
   } else {
     return std::make_shared<DiffusionData>(xs);
   }

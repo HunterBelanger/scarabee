@@ -51,6 +51,8 @@ class Reflector:
         Convergence criteria for the flux. Default is 1.E-5.
     diffusion_xs : DiffusionCrossSection
         The few-group diffsuion group constants for the reflector region.
+    adf : ndarray
+        The assembly discontinuity factors.
     """
 
     def __init__(
@@ -163,7 +165,25 @@ class Reflector:
         cell_flux.keff_tolerance = self.keff_tolerance
         cell_flux.flux_tolerance = self.flux_tolerance
         cell_flux.solve(parallel=True)
+        
+        # Here, we compute the ADFs
+        homog_flux_spec = cell_flux.homogenize_flux_spectrum(gap_regions+baffle_regions+ref_regions)
+        gap_flux_spec = cell_flux.homogenize_flux_spectrum(gap_regions+baffle_regions)
 
+        homog_flux = np.zeros(len(self.condensation_scheme))
+        gap_flux = np.zeros(len(self.condensation_scheme))
+        self.adf = np.zeros((len(self.condensation_scheme), 4))
+        for G in range(len(self.condensation_scheme)):
+            g_min = self.condensation_scheme[G][0]
+            g_max = self.condensation_scheme[G][1]
+
+            for g in range(g_min, g_max+1):
+                homog_flux[G] += homog_flux_spec[g]
+                gap_flux[G] += gap_flux_spec[g]
+            
+            self.adf[G,:] = gap_flux[G] / homog_flux[G]
+        
+        # Here we compute the cross sections
         homog_xs = cell_flux.homogenize(list(range(NF, len(radii))))
         homog_spec = cell_flux.homogenize_flux_spectrum(list(range(NF, len(radii))))
 
@@ -240,6 +260,20 @@ class Reflector:
         scarabee_log(LogLevel.Info, "Es:  outgoing group ->")
         for g in range(NG):
             scarabee_log(LogLevel.Info, Es_strs[g])
+        scarabee_log(LogLevel.Info, "ADF: {:}".format(self.adf[0,:]))
+        for g in range(1, NG):
+            scarabee_log(LogLevel.Info, "     {:}".format(self.adf[g,:]))
+
+    def save_diffusion_data(self, fname):
+        if self.diffusion_xs is None:
+            raise RuntimeError("No diffusion cross sections.")
+
+        if self.adf is None:
+            raise RuntimeError("No ADFs")
+
+        self.diffusion_data = DiffusionData(self.diffusion_xs)
+        self.diffusion_data.adf = self.adf
+        self.diffusion_data.save(fname)
 
 
 # REFERENCES
