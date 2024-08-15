@@ -49,8 +49,9 @@ CrossSection::CrossSection(
 
   // Apply the transport correction
   for (std::size_t g = 0; g < ngroups(); g++) {
-    Etr_(g) -= Es1_(g, g);
-    Es_tr_(g, g) -= Es1_(g, g);
+    const double Es1g = xt::sum(xt::view(Es1_, g, xt::all()))();
+    Etr_(g) -= Es1g;
+    Es_tr_(g, g) -= Es1g;
   }
 }
 
@@ -92,8 +93,9 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Et,
 
   // Apply the transport correction
   for (std::size_t g = 0; g < ngroups(); g++) {
-    Etr_(g) -= Es1_(g, g);
-    Es_tr_(g, g) -= Es1_(g, g);
+    const double Es1g = xt::sum(xt::view(Es1_, g, xt::all()))();
+    Etr_(g) -= Es1g;
+    Es_tr_(g, g) -= Es1g;
   }
 }
 
@@ -235,10 +237,18 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
   // Make sure that we are fissile if the other was also fissile
   if (R.fissile()) fissile_ = true;
 
+  // Now we aren't anisotropic and the other is, we need to allocate that array
+  if ((this->anisotropic() == false) && R.anisotropic()) {
+    Es1_ = xt::zeros<double>({ngroups(), ngroups()});
+  }
+  const bool aniso = this->anisotropic();
+
   // Add all other cross sections which aren't averaged
   for (std::size_t g = 0; g < ngroups(); g++) {
     for (std::size_t gout = 0; gout < ngroups(); gout++) {
       Es_tr_(g, gout) += R.Es_tr(g, gout);
+
+      if (aniso) Es1_(g, gout) += R.Es1(g, gout);
     }
 
     Etr_(g) += R.Etr(g);
@@ -255,6 +265,9 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
 CrossSection& CrossSection::operator*=(double N) {
   // Scale Es_tr_
   Es_tr_ *= N;
+
+  // Scale Es1_
+  Es1_ *= N;
 
   // Scale Etr_
   Etr_ *= N;

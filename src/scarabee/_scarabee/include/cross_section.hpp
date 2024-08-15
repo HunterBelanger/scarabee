@@ -54,7 +54,8 @@ class CrossSection {
   double Et(std::size_t g) const {
     double Et = Etr_(g);
     if (anisotropic()) {
-      Et += Es1_(g, g);
+      const double Es1g = xt::sum(xt::view(Es1_, g, xt::all()))();
+      Et += Es1g;
     }
     return Et;
   }
@@ -89,7 +90,8 @@ class CrossSection {
   double Es(std::size_t gin, std::size_t gout) const {
     double Es_gin_gout = Es_tr_(gin, gout);
     if (anisotropic() && gin == gout) {
-      Es_gin_gout += Es1_(gin, gout);
+      const double Es1g = xt::sum(xt::view(Es1_, gin, xt::all()))();
+      Es_gin_gout += Es1g;
     }
     return Es_gin_gout;
   }
@@ -101,7 +103,8 @@ class CrossSection {
   double Es(std::size_t gin) const {
     double Es = xt::sum(xt::view(Es_tr_, gin, xt::all()))();
     if (anisotropic()) {
-      Es += Es1_(gin, gin);
+      const double Es1g = xt::sum(xt::view(Es1_, gin, xt::all()))();
+      Es += Es1g;
     }
     return Es;
   }

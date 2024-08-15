@@ -178,16 +178,14 @@ std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
     this->interp_1d(chi, *nuc.chi, it, f_temp);
   }
 
-  // Reconstruct total, removing p1
+  // Reconstruct total
   xt::xtensor<double, 1> Et = xt::zeros<double>({ngroups_});
   for (std::size_t g = 0; g < ngroups_; g++) {
     Et(g) = Ea(g) + xt::sum(xt::view(Es, g, xt::all()))();
-    Et(g) -= Es1(g, g);
-    Es(g, g) -= Es1(g, g);
   }
 
   // Make temp CrossSection
-  return std::make_shared<CrossSection>(Et, Ea, Es, Ef, nu * Ef, chi);
+  return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, nu * Ef, chi);
 }
 
 std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
