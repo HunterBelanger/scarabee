@@ -4,7 +4,7 @@ name = "F24_0"
 
 set_output_file(name+"_out.txt")
 
-ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/endf8_shem281.h5')
+ndl = NDLibrary('/mnt/c/Users/BELANH2/Documents/nuclear_data/endf8_shem281.h5')
 
 cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
              [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],

@@ -4,7 +4,7 @@ name = "F31_0"
 
 set_output_file(name+"_out.txt")
 
-ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/endf8_shem281.h5')
+ndl = NDLibrary('/mnt/c/Users/BELANH2/Documents/nuclear_data/endf8_shem281.h5')
 
 cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
              [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],
@@ -23,7 +23,7 @@ Fuel31Comp.add_nuclide("O18",  9.1942e-05)
 Fuel31Comp.add_nuclide("U234", 5.7987e-06)
 Fuel31Comp.add_nuclide("U235", 7.2175e-04)
 Fuel31Comp.add_nuclide("U238", 2.2253e-02)
-Fuel31 = Material(Fuel31Comp, 800., ndl)
+Fuel31 = Material(Fuel31Comp, 575., ndl)
 
 CladComp = MaterialComposition()
 CladComp.fractions = Fraction.Atoms
@@ -88,7 +88,7 @@ Bafflecomp.add_nuclide("Ni64", 7.6261E-5)
 Bafflecomp.add_nuclide("Si28", 9.5281E-4)
 Bafflecomp.add_nuclide("Si29", 4.8381E-5)
 Bafflecomp.add_nuclide("Si30", 3.1893E-5)
-Baffle = Material(Bafflecomp, 293.6, ndl)
+Baffle = Material(Bafflecomp, 575., ndl)
 
 # Define a guide tube
 gt = GuideTube(inner_radius=0.50419, outer_radius=0.54610, clad=Clad)
@@ -127,4 +127,4 @@ print()
 refl = Reflector(asmbly.average_fuel_pin, moderator=asmbly.moderator_xs, assembly_width=21.50364, gap_width=0.1627, baffle_width=2.2225, baffle=Baffle, ndl=ndl)
 refl.condensation_scheme = [[0, 249], [250, 280]]
 refl.solve()
-refl.diffusion_xs.save("reflector.npy")
+refl.save_diffusion_data("reflector.npz")

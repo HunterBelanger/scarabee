@@ -4,7 +4,7 @@ name = "F16_0"
 
 set_output_file(name+"_out.txt")
 
-ndl = NDLibrary('/mnt/c/Users/hunte/Documents/nuclear_data/endf8_shem281.h5')
+ndl = NDLibrary('/mnt/c/Users/BELANH2/Documents/nuclear_data/endf8_shem281.h5')
 
 cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
              [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],
@@ -23,7 +23,7 @@ Fuel16Comp.add_nuclide("O18",  9.2032e-05)
 Fuel16Comp.add_nuclide("U234", 3.0131e-06)
 Fuel16Comp.add_nuclide("U235", 3.7503e-04)
 Fuel16Comp.add_nuclide("U238", 2.2625e-02)
-Fuel16 = Material(Fuel16Comp, 800., ndl)
+Fuel16 = Material(Fuel16Comp, 575., ndl)
 
 CladComp = MaterialComposition()
 CladComp.fractions = Fraction.Atoms

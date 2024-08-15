@@ -42,7 +42,9 @@ a3_153.rotate_clockwise()
 
 a3_16_  = DiffusionData.load("F31_16.npz")
 a3_20_  = DiffusionData.load("F31_20.npz")
-rf____  = DiffusionData(DiffusionCrossSection.load("reflector.npy"))
+rf____  = DiffusionData.load("reflector.npz")
+rf____.adf = np.array([[0.4, 0.4, 0.4, 0.4],
+                       [1.3, 1.3, 1.3, 1.3]])
 
 # Define nodal geometry
 #                R       P       N       M       L       K       J       H       G       F       E       D       C       B       A
@@ -83,10 +85,10 @@ tiles = [0.    , 0.    , 0.    , 0.    , rf____, rf____, rf____, rf____, rf____,
 
 # Define assembly dimension and the number of nodes per assembly
 dx = np.array(17*[21.50364])
-nx = 2*np.array(17*[1])
+nx = 1*np.array(17*[1])
 
 dy = np.array(17*[21.50364])
-ny = 2*np.array(17*[1])
+ny = 1*np.array(17*[1])
 
 dz = np.array([20.])
 nz = np.array([1])
