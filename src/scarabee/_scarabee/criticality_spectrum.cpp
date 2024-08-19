@@ -45,6 +45,23 @@ void fill_alphas(xt::xtensor<double, 1>& a,
 
   for (std::size_t g = 0; g < NG; g++) {
     const double Et2 = xs->Et(g) * xs->Et(g);
+    const double y = B2 / Et2;
+  
+    if (std::abs(y) < 0.01) {
+      const double x = (1./3.) - y*(0.2 - (1./7.)*y);
+      a[g] = (1. / 3.) * ((1./x) - y);
+    } else if (y < 0.) {
+      const double x = std::min(std::sqrt(-y), 0.999);
+      const double xx = 0.5*std::log((1. + x)/(1. - x));
+      a[g] = (1./3.) * y * xx / (x - xx);
+    } else {
+      // y > 0
+      const double x = std::sqrt(y);
+      const double xx = std::atan(x);
+      a[g] = (1./3.) * y * xx / (x - xx);
+    }
+
+
     const double x2 = std::abs(B2 / Et2);
     const double x = std::sqrt(x2);
 
@@ -150,7 +167,6 @@ B1CriticalitySpectrum::B1CriticalitySpectrum(std::shared_ptr<CrossSection> xs) {
 
   const std::size_t NG = xs->ngroups();
 
-  // For P1 approximation, alphas are all 1
   xt::xtensor<double, 1> a = xt::zeros<double>({NG});
 
   // First, we create and fill the Dinvs matrix for the current
