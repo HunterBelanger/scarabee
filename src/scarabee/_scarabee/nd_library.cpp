@@ -21,9 +21,12 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
   scatter = std::make_shared<xt::xtensor<double, 4>>();
   scatter->resize(
       {temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
-  p1_scatter = std::make_shared<xt::xtensor<double, 4>>();
-  p1_scatter->resize(
-      {temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
+
+  if (grp.exist("p1-scatter")) {
+    p1_scatter = std::make_shared<xt::xtensor<double, 4>>();
+    p1_scatter->resize({temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
+  }
+
   if (this->fissile) {
     fission = std::make_shared<xt::xtensor<double, 3>>();
     fission->resize({temperatures.size(), dilutions.size(), ndl.ngroups()});
@@ -36,7 +39,9 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
   // Read in data
   grp.getDataSet("absorption").read_raw<double>(absorption->data());
   grp.getDataSet("scatter").read_raw<double>(scatter->data());
-  grp.getDataSet("p1-scatter").read_raw<double>(p1_scatter->data());
+  if (grp.exist("p1-scatter")) {
+    grp.getDataSet("p1-scatter").read_raw<double>(p1_scatter->data());
+  }
   if (this->fissile) {
     grp.getDataSet("fission").read_raw<double>(fission->data());
     grp.getDataSet("nu").read_raw<double>(nu->data());
@@ -165,7 +170,9 @@ std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
   //--------------------------------------------------------
   // Do p1 scattering interpolation
   xt::xtensor<double, 2> Es1;
-  this->interp_2d(Es1, *nuc.p1_scatter, it, f_temp, id, f_dil);
+  if (nuc.p1_scatter) {
+    this->interp_2d(Es1, *nuc.p1_scatter, it, f_temp, id, f_dil);
+  }
 
   //--------------------------------------------------------
   // Do fission interpolation
@@ -185,7 +192,11 @@ std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
   }
 
   // Make temp CrossSection
-  return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, nu * Ef, chi);
+  if (nuc.p1_scatter) {
+    return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, nu * Ef, chi);
+  } else {
+    return std::make_shared<CrossSection>(Et, Ea, Es, Ef, nu * Ef, chi);
+  }
 }
 
 std::shared_ptr<CrossSection> NDLibrary::two_term_xs(

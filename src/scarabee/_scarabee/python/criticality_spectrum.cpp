@@ -46,8 +46,19 @@ void init_CriticalitySpectrum(py::module& m) {
            "Parameters\n"
            "----------\n"
            "xs : CrossSection\n"
-           "     Homogenized set of cross sections for the system.\n",
-           py::arg("xs"));
+           "     Homogenized set of cross sections for the system.\n\n",
+           py::arg("xs"))
+           
+      .def(py::init<std::shared_ptr<CrossSection>, double>(),
+           "Computes the flux and current energy spectrum using the P1 leakage "
+           "approximation for a given buckling.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "xs : CrossSection\n"
+           "     Homogenized set of cross sections for the system.\n"
+           "B : float\n"
+           "    Desired value of the buckling.\n\n",
+           py::arg("xs"), py::arg("B"));
 
   py::class_<B1CriticalitySpectrum, CriticalitySpectrum>(
       m, "B1CriticalitySpectrum")
@@ -57,6 +68,17 @@ void init_CriticalitySpectrum(py::module& m) {
            "Parameters\n"
            "----------\n"
            "xs : CrossSection\n"
-           "     Homogenized set of cross sections for the system.\n",
-           py::arg("xs"));
+           "     Homogenized set of cross sections for the system.\n\n",
+           py::arg("xs"))
+           
+      .def(py::init<std::shared_ptr<CrossSection>, double>(),
+           "Computes the flux and current energy spectrum using the B1 leakage "
+           "approximation for a given buckling.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "xs : CrossSection\n"
+           "     Homogenized set of cross sections for the system.\n"
+           "B : float\n"
+           "    Desired value of the buckling.\n\n",
+           py::arg("xs"), py::arg("B"));
 }

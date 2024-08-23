@@ -2,6 +2,7 @@ import ENDFtk
 import subprocess
 import os
 import numpy as np
+from scarabee import *
 
 _GROUPS_STRUCTURES = ["WIMS-69", "XMAS-172", "SHEM-281"]
 
@@ -287,7 +288,7 @@ class FrendyMG:
       self.nu = None
       self.chi = None
 
-  def process(self, h5=None):
+  def process(self, h5=None, chi=None):
     if not self.initialized:
       self.initialize()
 
@@ -300,8 +301,43 @@ class FrendyMG:
     
     self.processed = True
 
+    if chi is not None:
+      self.apply_P1_transport_correction(chi)
+
     if h5 is not None:
       self.add_to_hdf5(h5)
+
+  def apply_P1_transport_correction(self, chi):
+    if not self.processed:
+      raise RuntimeError("Cannot apply transport corretion to unprocessed data.")
+
+    for iT in range(len(self.temps)):
+      for id in range(len(self.dilutions)):
+        # Create a temporary xs set with the provided fission spectrum
+        Et = self.Ea[iT, id, :] + np.sum(self.Es[iT, id, :, :], axis=1)
+        if self.fissile: 
+          TempXS = CrossSection(Et, self.Ea[iT, id, :], self.Es[iT, id, :, :], self.Es1[iT, id, :, :], self.Ef[iT, id, :], self.nu[iT, id, :]*self.Ef[iT, id, :], chi)
+        else:
+          TempXS = CrossSection(Et, self.Ea[iT, id, :], self.Es[iT, id, :, :], self.Es1[iT, id, :, :], np.zeros(self.ngroups), np.zeros(self.ngroups), chi)
+
+        # We now perform a P1 leakage calculation
+        P1_spectrum = P1CriticalitySpectrum(TempXS, 0.0001)
+
+        # We now have diffusion coefficients
+        D = P1_spectrum.diff_coeff
+
+        # Compute transport xs
+        Etr = 1. / (3. * D)
+
+        # Calculate the delta xs for the transport correction
+        Delta = Et - Etr
+        
+        # Correct the xs data for the nuclide
+        for g in range(self.ngroups):
+          self.Es[iT, id, g, g] -= Delta[g]
+    
+    # Once we have done all temps and dilutions, we set the Es1 data to None
+    self.Es1 = None 
 
   def add_to_hdf5(self, h5):
     grp = h5.create_group(self.name)
@@ -320,7 +356,8 @@ class FrendyMG:
     # Save cross section data
     grp.create_dataset("absorption", data=self.Ea)
     grp.create_dataset("scatter", data=self.Es)
-    grp.create_dataset("p1-scatter", data=self.Es1)
+    if self.Es1 is not None:
+      grp.create_dataset("p1-scatter", data=self.Es1)
     grp.create_dataset("flux", data=self.flux)
     if self.fissile:
       grp.create_dataset("fission", data=self.Ef)

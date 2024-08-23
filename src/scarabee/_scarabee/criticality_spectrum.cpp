@@ -156,6 +156,48 @@ P1CriticalitySpectrum::P1CriticalitySpectrum(std::shared_ptr<CrossSection> xs) {
   }
 }
 
+P1CriticalitySpectrum::P1CriticalitySpectrum(std::shared_ptr<CrossSection> xs, double B) {
+  const std::size_t NG = xs->ngroups();
+
+  // For P1 approximation, alphas are all 1
+  const xt::xtensor<double, 1> a = xt::ones<double>({NG});
+
+  // Make vectors for flux and current
+  Eigen::VectorXd flx(NG);
+  Eigen::VectorXd cur(NG);
+  Eigen::VectorXd chi(NG), vEf(NG);
+  for (std::size_t g = 0; g < NG; g++) {
+    chi(g) = xs->chi(g);
+    vEf(g) = xs->vEf(g);
+  }
+
+  // Create the A matrix
+  Eigen::MatrixXd A(NG, NG);
+  Eigen::MatrixXd Dinvs(NG, NG);
+  fill_Dinvs(Dinvs, xs, a);
+  const Eigen::MatrixXd D = Dinvs.inverse();
+
+  B2_ = B*B;
+  fill_A(A, xs, D, B2_);
+  auto A_solver = A.colPivHouseholderQr();
+  flx = A_solver.solve(chi);
+  k_inf_ = vEf.dot(flx);
+
+  // Get the current
+  cur = std::abs(B) * D * flx;
+
+  // The output info is in the format (2,NG) where the first line has
+  // the flux spectrum, and the second has the diffusion coefficients.
+  flux_.resize({NG});
+  current_.resize({NG});
+  diff_coeff_.resize({NG});
+  for (std::size_t g = 0; g < NG; g++) {
+    flux_(g) = flx(g);
+    current_(g) = cur(g);
+    diff_coeff_(g) = cur(g) / (B * flx(g));
+  }
+}
+
 B1CriticalitySpectrum::B1CriticalitySpectrum(std::shared_ptr<CrossSection> xs) {
   if (xs->fissile() == false) {
     std::stringstream mssg;
@@ -231,6 +273,55 @@ B1CriticalitySpectrum::B1CriticalitySpectrum(std::shared_ptr<CrossSection> xs) {
 
   // Get the current
   cur = B * D * flx;
+
+  // The output info is in the format (2,NG) where the first line has
+  // the flux spectrum, and the second has the diffusion coefficients.
+  flux_.resize({NG});
+  current_.resize({NG});
+  diff_coeff_.resize({NG});
+  for (std::size_t g = 0; g < NG; g++) {
+    flux_(g) = flx(g);
+    current_(g) = cur(g);
+    diff_coeff_(g) = cur(g) / (B * flx(g));
+  }
+}
+
+B1CriticalitySpectrum::B1CriticalitySpectrum(std::shared_ptr<CrossSection> xs, double B) {
+  const std::size_t NG = xs->ngroups();
+
+  xt::xtensor<double, 1> a = xt::zeros<double>({NG});
+
+  // First, we create and fill the Dinvs matrix for the current
+  Eigen::MatrixXd Dinvs(NG, NG);
+
+  // Declare the D matrix
+  Eigen::MatrixXd D;
+
+  // Make the chi and vEf vectors
+  Eigen::VectorXd chi(NG), vEf(NG);
+  for (std::size_t g = 0; g < NG; g++) {
+    chi(g) = xs->chi(g);
+    vEf(g) = xs->vEf(g);
+  }
+
+  // Make vectors for flux and current
+  Eigen::VectorXd flx(NG);
+  Eigen::VectorXd cur(NG);
+
+  // Create the A matrix
+  Eigen::MatrixXd A(NG, NG);
+
+  B2_ = B*B;
+  fill_alphas(a, xs, B2_);
+  fill_Dinvs(Dinvs, xs, a);
+  D = Dinvs.inverse();
+  fill_A(A, xs, D, B2_);
+  auto A_solver = A.colPivHouseholderQr();
+  flx = A_solver.solve(chi);
+  k_inf_ = vEf.dot(flx);
+
+  // Get the current
+  cur = std::abs(B) * D * flx;
 
   // The output info is in the format (2,NG) where the first line has
   // the flux spectrum, and the second has the diffusion coefficients.
