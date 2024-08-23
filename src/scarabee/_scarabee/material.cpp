@@ -345,10 +345,18 @@ std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
   const double mat_pot_xs = this->potential_xs();
   for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
     const std::string& namei = composition_.nuclides[i].name;
+    const auto& nuclide = ndl->get_nuclide(namei);
     const double Ni = this->atom_density(namei);
 
-    auto xsi = ndl->ring_two_term_xs(namei, temperature(), a1, a2, b1, b2,
-                                     mat_pot_xs, Ni, Rfuel, Rin, Rout);
+    std::shared_ptr<CrossSection> xsi {nullptr};
+
+    if (nuclide.resonant) {
+      xsi = ndl->ring_two_term_xs(namei, temperature(), a1, a2, b1, b2, mat_pot_xs, Ni, Rfuel, Rin, Rout);
+    } else {
+      const double dil = (mat_pot_xs - Ni*nuclide.potential_xs) / Ni;
+      xsi = ndl->interp_xs(namei, temperature_, dil);
+    }
+
     *xsi *= Ni;
 
     if (xsout) {
@@ -366,16 +374,27 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
     const double Ee, std::shared_ptr<NDLibrary> ndl) const {
   std::shared_ptr<CrossSection> xsout(nullptr);
 
+  const double mat_pot_xs = this->potential_xs();
+
   // Add component from each nuclide
   for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
     const std::string& namei = composition_.nuclides[i].name;
+    const auto& nuclide = ndl->get_nuclide(namei);
     const double Ni = this->atom_density(namei);
     const double pot_xs = ndl->get_nuclide(namei).potential_xs;
     const double macro_pot_xs = Ni * pot_xs;
     const double bg_xs_1 = (potential_xs() - macro_pot_xs + a1 * Ee) / Ni;
     const double bg_xs_2 = (potential_xs() - macro_pot_xs + a2 * Ee) / Ni;
 
-    auto xsi = ndl->two_term_xs(namei, temperature(), b1, b2, bg_xs_1, bg_xs_2);
+    std::shared_ptr<CrossSection> xsi {nullptr};
+    
+    if (nuclide.resonant) {
+      xsi = ndl->two_term_xs(namei, temperature(), b1, b2, bg_xs_1, bg_xs_2);
+    } else {
+      const double dil = (mat_pot_xs - Ni*nuclide.potential_xs) / Ni;
+      xsi = ndl->interp_xs(namei, temperature_, dil);
+    }
+
     *xsi *= Ni;
 
     if (xsout) {
