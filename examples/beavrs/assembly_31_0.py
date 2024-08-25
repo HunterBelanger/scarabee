@@ -4,7 +4,7 @@ name = "F31_0"
 
 set_output_file(name+"_out.txt")
 
-ndl = NDLibrary('/mnt/c/Users/BELANH2/Documents/nuclear_data/endf8_shem281.h5')
+ndl = NDLibrary('/home/hunter/projects/scarabee/data/endf8_shem281.h5')
 
 cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
              [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],
@@ -63,7 +63,7 @@ He = Material(HeComp, 575., ndl)
 WaterComp = MaterialComposition()
 WaterComp.add_nuclide("B10",     7.9714e-06)
 WaterComp.add_nuclide("B11",     3.2247e-05)
-WaterComp.add_nuclide("H1_H2O",  4.9456e-02 + 7.7035e-06)
+WaterComp.add_nuclide("H1_H2O_TC",  4.9456e-02 + 7.7035e-06)
 WaterComp.add_nuclide("O16",     2.4673e-02)
 WaterComp.add_nuclide("O17",     9.3734e-06)
 WaterComp.add_nuclide("O18",     4.9474e-05)
@@ -91,7 +91,7 @@ Bafflecomp.add_nuclide("Si30", 3.1893E-5)
 Baffle = Material(Bafflecomp, 575., ndl)
 
 # Define a guide tube
-gt = GuideTube(inner_radius=0.50419, outer_radius=0.54610, clad=Clad)
+gt = GuideTube(inner_radius=0.56134, outer_radius=0.60198, clad=Clad)
 
 # Define fuel pin
 fp = FuelPin(fuel=Fuel31, fuel_radius=0.39218, gap=He, gap_radius=0.40005, clad=Clad, clad_radius=0.45720)
@@ -124,7 +124,7 @@ asmbly.save_diffusion_data(name+".npz")
 
 # Solve reflector
 print()
-refl = Reflector(asmbly.average_fuel_pin, moderator=asmbly.moderator_xs, assembly_width=21.50364, gap_width=0.1627, baffle_width=2.2225, baffle=Baffle, ndl=ndl)
+refl = MOCReflector(asmbly.average_fuel_pin, moderator=asmbly.moderator_xs, assembly_width=21.50364, gap_width=0.1627, baffle_width=2.2225, baffle=Baffle, ndl=ndl)
 refl.condensation_scheme = [[0, 249], [250, 280]]
 refl.solve()
 refl.save_diffusion_data("reflector.npz")

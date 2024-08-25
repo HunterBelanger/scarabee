@@ -43,8 +43,11 @@ a3_153.rotate_clockwise()
 a3_16_  = DiffusionData.load("F31_16.npz")
 a3_20_  = DiffusionData.load("F31_20.npz")
 rf____  = DiffusionData.load("reflector.npz")
-rf____.adf = np.array([[0.4, 0.4, 0.4, 0.4],
-                       [1.3, 1.3, 1.3, 1.3]])
+#rf____.adf = np.array([[0.8, 0.8, 0.8, 0.8],
+#                       [1.1, 1.1, 1.1, 1.1]])
+rf____.adf = np.array([[1.25, 1.25, 1.25, 1.25],
+                       [0.3,  0.3,  0.3,  0.3]])
+
 
 # Define nodal geometry
 #                R       P       N       M       L       K       J       H       G       F       E       D       C       B       A
