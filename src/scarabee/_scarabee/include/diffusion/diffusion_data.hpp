@@ -66,19 +66,43 @@ class DiffusionData {
   }
 
   double cdf_I(std::size_t g) const {
-    return cdf_.size() > 0 ? cdf_(g, CDF::I) : 1.;
+    if (cdf_.size() > 0) {
+      return cdf_(g, CDF::I);
+    } else if (adf_.size() > 0) {
+      return 0.5*(adf_xp(g) + adf_yp(g));
+    } else {
+      return 1.;
+    }
   }
 
   double cdf_II(std::size_t g) const {
-    return cdf_.size() > 0 ? cdf_(g, CDF::II) : 1.;
+    if (cdf_.size() > 0) {
+      return cdf_(g, CDF::II);
+    } else if (adf_.size() > 0) {
+      return 0.5*(adf_xn(g) + adf_yp(g));
+    } else {
+      return 1.;
+    }
   }
 
   double cdf_III(std::size_t g) const {
-    return cdf_.size() > 0 ? cdf_(g, CDF::III) : 1.;
+    if (cdf_.size() > 0) {
+      return cdf_(g, CDF::III);
+    } else if (adf_.size() > 0) {
+      return 0.5*(adf_xn(g) + adf_yn(g));
+    } else {
+      return 1.;
+    }
   }
 
   double cdf_IV(std::size_t g) const {
-    return cdf_.size() > 0 ? cdf_(g, CDF::IV) : 1.;
+    if (cdf_.size() > 0) {
+      return cdf_(g, CDF::IV);
+    } else if (adf_.size() > 0) {
+      return 0.5*(adf_xp(g) + adf_yn(g));
+    } else {
+      return 1.;
+    }
   }
 
   void rotate_clockwise();
