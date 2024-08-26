@@ -147,5 +147,16 @@ void init_NEMDiffusionDriver(py::module& m) {
            "array of float\n"
            "      Value of the average power density in each node.\n")
 
-      .def("pin_power", &NEMDiffusionDriver::pin_power);
+      .def("pin_power", &NEMDiffusionDriver::pin_power,
+           "Constructs an array storing the pin powers reconstructed on a "
+           "provided axial mesh.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "z : array of float\n"
+           "    Positions along the z axis.\n\n"
+           "Returns\n"
+           "-------\n"
+           "array of float\n"
+           "      Value of pin powers at all provided z positions.\n",
+           py::arg("z"));
 }
