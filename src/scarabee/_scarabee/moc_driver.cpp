@@ -395,7 +395,7 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
   return keff_ * num / denom;
 }
 
-void MOCDriver::fill_source(xt::xtensor<double, 2>& scat_src,
+void MOCDriver::fill_source(xt::xtensor<double, 2>& src,
                             const xt::xtensor<double, 2>& flux) const {
   const double inv_k = 1. / keff_;
   const double isotropic = 1. / (4. * PI);
@@ -419,7 +419,7 @@ void MOCDriver::fill_source(xt::xtensor<double, 2>& scat_src,
         Qout += inv_k * chi_g * vEf_gg * flux_gg_i;
       }
 
-      scat_src(g, i) = isotropic * Qout;
+      src(g, i) = isotropic * Qout;
     }
   }
 }

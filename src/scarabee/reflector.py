@@ -31,8 +31,11 @@ class Reflector:
     ----------
     condensation_scheme : list of pairs of ints
         Defines how the energy groups will be condensed from the microgroup
-        structure of the nuclear data library, to the few-group structure
-        used in the nodal calculation.
+        structure of the nuclear data library, to the macrogroup structure
+        used in the MOC calculation.
+    few_group_condensation_scheme : list of pairs of ints
+        Defines how the energy groups will be condensed from the macrogroup
+        structure of to the few-group structure used in nodal calculations.
     fuel : CrossSection
         Cross sections for a homogenized fuel assembly.
     moderator : CrossSection
@@ -72,7 +75,8 @@ class Reflector:
         self.assembly_width = assembly_width
         self.gap_width = gap_width
         self.baffle_width = baffle_width
-        self.condensation_scheme = []
+        self.condensation_scheme = None
+        self.few_group_condensation_scheme = None
 
         # No Dancoff correction, as looking at 1D isolated slab for baffle
         Ee = 1.0 / (2.0 * self.baffle_width)
@@ -119,13 +123,18 @@ class Reflector:
         """
         Runs a 1D annular problem to generate few group cross sections for the reflector.
         """
+        if self.condensation_scheme is None:
+            raise RuntimeError("Cannot perform reflector calculation without condensation scheme.")
+        
+        if self.few_group_condensation_scheme is None:
+            raise RuntimeError("Cannot perform reflector calculation without few-group condensation scheme.")
+
         # We start by making a cylindrical cell. This is just for condensation.
         radii = []
         mats = []
 
-        # According to [1], we should have 5 fuel assemblies, and then the reflector
-        # First, we add 5 fuel assemblies worth of rings
-        NF = 5 * 17
+        # We add 2 fuel assemblies worth of homogenized core
+        NF = 2 * 17
         dr = self.assembly_width / (17.0)
         last_rad = 0.0
         for i in range(NF):
@@ -165,6 +174,19 @@ class Reflector:
         cell_flux.keff_tolerance = self.keff_tolerance
         cell_flux.flux_tolerance = self.flux_tolerance
         cell_flux.solve(parallel=True)
+
+        # We now get homogenized xs and spectrums
+        gap_spectrum = cell_flux.homogenize_flux_spectrum(gap_regions)
+        gap_homog_xs = cell_flux.homogenize(gap_regions)
+        baffle_spectrum = cell_flux.homogenize_flux_spectrum(baffle_regions)
+        baffle_homog_xs = cell_flux.homogenize(baffle_regions)
+        ref_spectrum = cell_flux.homogenize_flux_spectrum(ref_regions)
+        ref_homog_xs = cell_flux.homogenize(ref_regions)
+
+        # Now condense cross sections for the assembly-reflector MOC calculation
+        gap_macro_xs = gap_homog_xs.condense(self.condensation_scheme, gap_spectrum)
+        baffle_macro_xs = baffle_homog_xs.condense(self.condensation_scheme, baffle_spectrum)
+        ref_macro_xs = ref_homog_xs.condense(self.condensation_scheme, ref_spectrum)
         
         # Here, we compute the ADFs
         homog_flux_spec = cell_flux.homogenize_flux_spectrum(gap_regions+baffle_regions+ref_regions)

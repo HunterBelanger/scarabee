@@ -1,6 +1,7 @@
 #include <cylindrical_flux_solver.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/logging.hpp>
+#include <utils/timer.hpp>
 
 #include <xtensor/xbuilder.hpp>
 
@@ -158,11 +159,18 @@ void CylindricalFluxSolver::fill_scatter_source(
 }
 
 void CylindricalFluxSolver::solve(bool parallel) {
+  Timer sim_timer;
+  sim_timer.start();
+
   if (parallel == false) {
     solve_single_thread();
   } else {
     solve_parallel();
   }
+
+  sim_timer.stop();
+  spdlog::info("");
+  spdlog::info("Simulation Time: {:.5E} s", sim_timer.elapsed_time());
 }
 
 void CylindricalFluxSolver::solve_single_thread() {
@@ -184,7 +192,6 @@ void CylindricalFluxSolver::solve_single_thread() {
   xt::xtensor<double, 2> old_outer_flux(flux_.shape());
   k_ = calc_keff(flux_);
   double old_keff = 100.;
-  spdlog::info("Initial keff {:.5f}", k_);
 
   std::size_t outer_iter = 0;
 
@@ -239,7 +246,10 @@ void CylindricalFluxSolver::solve_single_thread() {
     // Calculate keff
     old_keff = k_;
     k_ = calc_keff(next_flux);
-    spdlog::info("Iteration {} keff {:.5f}", outer_iter, k_);
+    spdlog::info("-------------------------------------");
+    spdlog::info("Iteration {:>4d}          keff: {:.5f}", outer_iter, k_);
+    spdlog::info("     keff difference:     {:.5E}", std::abs((old_keff - k_) / k_));
+    spdlog::info("     max flux difference: {:.5E}", max_outer_flux_diff);
 
     // Assign next_flux to be the flux
     std::swap(next_flux, flux_);
@@ -276,7 +286,6 @@ void CylindricalFluxSolver::solve_parallel() {
   xt::xtensor<double, 2> old_outer_flux(flux_.shape());
   k_ = calc_keff(flux_);
   double old_keff = 100.;
-  spdlog::info("Initial keff {:.5f}", k_);
 
   std::size_t outer_iter = 0;
 
@@ -333,7 +342,10 @@ void CylindricalFluxSolver::solve_parallel() {
     // Calculate keff
     old_keff = k_;
     k_ = calc_keff(next_flux);
-    spdlog::info("Iteration {} keff {:.5f}", outer_iter, k_);
+    spdlog::info("-------------------------------------");
+    spdlog::info("Iteration {:>4d}          keff: {:.5f}", outer_iter, k_);
+    spdlog::info("     keff difference:     {:.5E}", std::abs((old_keff - k_) / k_));
+    spdlog::info("     max flux difference: {:.5E}", max_outer_flux_diff);
 
     // Assign next_flux to be the flux
     std::swap(next_flux, flux_);
