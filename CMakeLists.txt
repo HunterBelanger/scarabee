@@ -28,6 +28,11 @@ FetchContent_Declare(ZLIB
 )
 set(ZLIB_BUILD_EXAMPLES OFF)
 FetchContent_MakeAvailable(ZLIB)
+if (MSVC)
+  set(zlib_dep zlibstatic)
+else()
+  set(zlib_dep zlib)
+endif()
 
 #===============================================================================
 # Get SPDLOG
@@ -217,7 +222,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
 
 target_include_directories(_scarabee PRIVATE include)
 target_compile_features(_scarabee PRIVATE cxx_std_20)
-target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-io xtensor-python zlibstatic htl HighFive hdf5-static Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
+target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-io xtensor-python ${zlib_dep} htl HighFive hdf5-static Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
 target_include_directories(_scarabee PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/scarabee/_scarabee/include>
   $<BUILD_INTERFACE:${NUMPY_INCLUDE_DIRS}>
