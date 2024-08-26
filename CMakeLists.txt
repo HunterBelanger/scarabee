@@ -19,6 +19,17 @@ set(EIGEN_BUILD_CMAKE_PACKAGE OFF)
 FetchContent_MakeAvailable(eigen)
 
 #===============================================================================
+# Get Zlib
+message(STATUS "Downloading zlib v1.3.1")
+FetchContent_Declare(ZLIB
+  GIT_REPOSITORY https://github.com/madler/zlib.git
+  GIT_TAG        v1.3.1
+  OVERRIDE_FIND_PACKAGE
+)
+set(ZLIB_BUILD_EXAMPLES OFF)
+FetchContent_MakeAvailable(ZLIB)
+
+#===============================================================================
 # Get SPDLOG
 message(STATUS "Downloading spdlog v1.13.0")
 FetchContent_Declare(spdlog
@@ -72,6 +83,7 @@ FetchContent_Declare(xtensor-io
   GIT_REPOSITORY https://github.com/HunterBelanger/xtensor-io.git
   GIT_TAG        feature/std_filesystem
 )
+set(HAVE_ZLIB ON CACHE BOOL "require ZLIB for npz file support")
 FetchContent_MakeAvailable(xtensor-io)
 
 #===============================================================================
@@ -103,12 +115,7 @@ message(STATUS "Numpy includes: ${NUMPY_INCLUDE_DIRS}")
 #===============================================================================
 # Get HDF5
 message(STATUS "Downloading HDF5 v1.14.3")
-find_package(ZLIB)
-if(ZLIB_FOUND)
-  set(HDF5_ENABLE_Z_LIB_SUPPORT ON)
-else()
-  set(HDF5_ENABLE_Z_LIB_SUPPORT OFF)
-endif()
+set(HDF5_ENABLE_Z_LIB_SUPPORT OFF)
 set(HDF5_EXTERNALLY_CONFIGURED  1)
 set(HDF5_ENABLE_SZIP_SUPPORT  OFF)
 set(HDF5_BUILD_EXAMPLES       OFF)
@@ -210,7 +217,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
 
 target_include_directories(_scarabee PRIVATE include)
 target_compile_features(_scarabee PRIVATE cxx_std_20)
-target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-io xtensor-python htl HighFive hdf5-static Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
+target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-io xtensor-python zlibstatic htl HighFive hdf5-static Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
 target_include_directories(_scarabee PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/scarabee/_scarabee/include>
   $<BUILD_INTERFACE:${NUMPY_INCLUDE_DIRS}>
