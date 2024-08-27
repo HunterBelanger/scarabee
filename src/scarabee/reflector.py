@@ -1,5 +1,14 @@
 from _scarabee import *
 import numpy as np
+from scipy.optimize import curve_fit
+
+def _flux(x, a0, a1, a2, a3, a4):
+    f0 = 1.
+    f1 = x
+    f2 = 3.*x*x - 0.25
+    f3 = x*(x-0.5)*(x+0.5)
+    f4 = (x*x - 0.05)*(x-0.5)*(x+0.5)
+    return a0*f0 + a1*f1 + a2*f2 + a3*f3 + a4*f4
 
 class Reflector:
     """
@@ -86,6 +95,9 @@ class Reflector:
         self.keff_tolerance = 1.0e-5
         self.flux_tolerance = 1.0e-5
 
+        self._num_azimuthal_angles = 64
+        self._track_spacing = 0.01
+
         if self.gap_width + self.baffle_width >= self.assembly_width:
             raise RuntimeError(
                 "The assembly width is smaller than the sum of the gap and baffle widths."
@@ -137,6 +149,7 @@ class Reflector:
         NF = 2 * 17
         dr = self.assembly_width / (17.0)
         last_rad = 0.0
+        fuel_regions = list(range(NF))
         for i in range(NF):
             radii.append(last_rad + dr)
             last_rad = radii[-1]
@@ -176,6 +189,8 @@ class Reflector:
         cell_flux.solve(parallel=True)
 
         # We now get homogenized xs and spectrums
+        fuel_spectrum = cell_flux.homogenize_flux_spectrum(fuel_regions)
+        fuel_homog_xs = cell_flux.homogenize(fuel_regions)
         gap_spectrum = cell_flux.homogenize_flux_spectrum(gap_regions)
         gap_homog_xs = cell_flux.homogenize(gap_regions)
         baffle_spectrum = cell_flux.homogenize_flux_spectrum(baffle_regions)
@@ -184,30 +199,75 @@ class Reflector:
         ref_homog_xs = cell_flux.homogenize(ref_regions)
 
         # Now condense cross sections for the assembly-reflector MOC calculation
+        fuel_macro_xs = fuel_homog_xs.condense(self.condensation_scheme, fuel_spectrum)
         gap_macro_xs = gap_homog_xs.condense(self.condensation_scheme, gap_spectrum)
         baffle_macro_xs = baffle_homog_xs.condense(self.condensation_scheme, baffle_spectrum)
         ref_macro_xs = ref_homog_xs.condense(self.condensation_scheme, ref_spectrum)
+
+        # We make a 1D MOC geometry for computing the reflector data
+        dy = 20.
+        dx = []
+        moc_1d_cells = []
+        NF = 2 * 17 * 2 # 2 assembly widths, 17 pins, 2 FSR per pin cell
+        dr = (2.*self.assembly_width) / NF
+        dx += NF*[dr]
+        moc_1d_cells += NF*[EmptyCell(fuel_macro_xs, dr, dy)]
+        dr = self.gap_width
+        dx += [dr]
+        moc_1d_cells += [EmptyCell(gap_macro_xs, dr, dy)]
+        dr = self.baffle_width / NB
+        dx += NB*[dr]
+        moc_1d_cells += NB*[EmptyCell(baffle_macro_xs, dr, dy)]
+        dr = ref_width / NR
+        dx += NR*[dr]
+        moc_1d_cells += NR * [EmptyCell(ref_macro_xs, dr, dy)]
+        moc_geom = Cartesian2D(dx, [dy])
+        moc_geom.set_tiles(moc_1d_cells)
+
+        moc = MOCDriver(moc_geom)
+        moc.x_max_bc = BoundaryCondition.Vacuum
+        moc.generate_tracks(self.num_azimuthal_angles, self.track_spacing, YamamotoTabuchi6())
+        moc.keff_tolerance = self.keff_tolerance
+        moc.flux_tolerance = self.flux_tolerance
+        moc.solve()
+
+        few_group_flux = np.zeros((len(self.few_group_condensation_scheme), 1+NB+NR))
+        for i in range(1+NB+NR):
+            for G in range(len(self.few_group_condensation_scheme)):
+                g_min = self.few_group_condensation_scheme[G][0]
+                g_max = self.few_group_condensation_scheme[G][1]
+
+                for g in range(g_min, g_max+1):
+                    few_group_flux[G, i] += moc.flux(i+NF, g)
+        dx = np.array(dx)
+        dx = dx[NF:]
+        x = np.zeros(len(dx))
+        for i in range(len(dx)):
+            if i == 0:
+                x[0] = 0.5*dx[0]
+            else:
+                x[i] = x[i-1] + 0.5*(dx[i-1] + dx[i])
+        x_min = 0.
+        x_max = x[-1] + 0.5*dx[-1]
+        x_mid = 0.5*(x_min + x_max)
+        x -= x_mid
+        x /= (x_max - x_min)
+        
+        homog_fit_params = []
+        for G in range(len(self.few_group_condensation_scheme)):
+            parms, _ = curve_fit(_flux, x, few_group_flux[G,:])
+            homog_fit_params.append(parms)
+
         
         # Here, we compute the ADFs
-        homog_flux_spec = cell_flux.homogenize_flux_spectrum(gap_regions+baffle_regions+ref_regions)
-        gap_flux_spec = cell_flux.homogenize_flux_spectrum(gap_regions+baffle_regions)
-
-        homog_flux = np.zeros(len(self.condensation_scheme))
-        gap_flux = np.zeros(len(self.condensation_scheme))
-        self.adf = np.zeros((len(self.condensation_scheme), 4))
-        for G in range(len(self.condensation_scheme)):
-            g_min = self.condensation_scheme[G][0]
-            g_max = self.condensation_scheme[G][1]
-
-            for g in range(g_min, g_max+1):
-                homog_flux[G] += homog_flux_spec[g]
-                gap_flux[G] += gap_flux_spec[g]
+        self.adf = np.zeros((len(self.few_group_condensation_scheme), 4))
+        for G in range(len(self.few_group_condensation_scheme)):
+            self.adf[G,:] = few_group_flux[G,0] / _flux(x[0], *homog_fit_params[G])
             
-            self.adf[G,:] = gap_flux[G] / homog_flux[G]
         
         # Here we compute the cross sections
-        homog_xs = cell_flux.homogenize(list(range(NF, len(radii))))
-        homog_spec = cell_flux.homogenize_flux_spectrum(list(range(NF, len(radii))))
+        homog_xs = moc.homogenize(list(range(NF, NF+1+NB+NR)))
+        homog_spec = moc.homogenize_flux_spectrum(list(range(NF, NF+1+NB+NR)))
 
         NG = homog_xs.ngroups
         fissile = homog_xs.fissile
@@ -237,7 +297,7 @@ class Reflector:
         else:
             diff_xs = DiffusionCrossSection(D, Ea, Es)
 
-        self.diffusion_xs = diff_xs.condense(self.condensation_scheme, homog_spec)
+        self.diffusion_xs = diff_xs.condense(self.few_group_condensation_scheme, homog_spec)
 
         NG = self.diffusion_xs.ngroups
 

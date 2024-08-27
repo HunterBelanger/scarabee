@@ -244,7 +244,7 @@ void Cartesian2D::set_tile(const TileIndex& ti,
 void Cartesian2D::set_tiles(const std::vector<TileFill>& fills) {
   // Make sure dimensions match
   if (fills.size() != tiles_.size()) {
-    auto mssg = "Number of provided file fills does not match number of files.";
+    auto mssg = "Number of provided tile fills does not match number of tiles.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
