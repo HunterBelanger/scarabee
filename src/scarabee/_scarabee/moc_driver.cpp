@@ -207,9 +207,23 @@ void MOCDriver::solve() {
   }
 
   flux_.resize({ngroups_, nfsrs_});
-  xt::xtensor<double, 2> src_;
-  src_.resize({ngroups_, nfsrs_});
-  src_.fill(0.);
+  xt::xtensor<double, 2> src;
+  src.resize({ngroups_, nfsrs_});
+  src.fill(0.);
+
+  // Initialize stabalization matrix (see [1])
+  xt::xtensor<double, 2> D;
+  D.resize({ngroups_, nfsrs_});
+  D.fill(0.);
+  for (std::size_t i = 0; i < nfsrs_; i++) {
+    const auto xs = this->xs(i);
+    for (std::size_t g = 0; g < ngroups_; g++) {
+      const double Estr_g_g = xs->Es_tr(g, g);
+      if (Estr_g_g < 0.) {
+        D(g, i) = -Estr_g_g / xs->Etr(g);
+      }
+    }
+  }
 
   // Initialize flux and keff
   if (mode_ == SimulationMode::Keff) {
@@ -241,20 +255,50 @@ void MOCDriver::solve() {
     iteration_timer.start();
     iteration++;
 
-    fill_source(src_, flux_);
-    src_ += extern_src_;
+    fill_source(src, flux_);
+    src += extern_src_;
+
+    // Check for negative source values at beginning of simulation
+    bool set_neg_src_to_zero = false;
+    if (iteration <= 20) {
+      for (std::size_t i = 0; i < src.size(); i++) {
+        if (src.flat(i) < 0.) {
+          src.flat(i) = 0.;
+          set_neg_src_to_zero = true;
+        }
+      } 
+    }
 
     next_flux.fill(0.);
-    sweep(next_flux, src_);
+    sweep(next_flux, src);
+
+    // Apply stabalization (see [1])
+    for (std::size_t g = 0; g < ngroups_; g++) {
+      for (std::size_t i = 0; i < nfsrs_; i++) {
+        if (D(g, i) != 0.) {
+          next_flux(g, i) += flux_(g, i)*D(g, i);
+          next_flux(g, i) /= (1. + D(g, i));
+        }
+      }
+    }
 
     if (mode_ == SimulationMode::Keff) {
       prev_keff = keff_;
       keff_ = calc_keff(next_flux, flux_);
       rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
-    }
+    } 
 
     // Get difference
     max_flx_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
+
+    // Make sure that the flux is positive everywhere !
+    bool set_neg_flux_to_zero = false;
+    for (std::size_t i = 0; i < next_flux.size(); i++) {
+      if (next_flux.flat(i) < 0.) {
+        next_flux.flat(i) = 0.;
+        set_neg_flux_to_zero = true;
+      }
+    }
 
     flux_ = next_flux;
 
@@ -269,6 +313,14 @@ void MOCDriver::solve() {
     spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
     spdlog::info("     Iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
+    
+    // Write warnings about negative flux and source
+    if (set_neg_src_to_zero) {
+      spdlog::warn("Negative source values set to zero.");
+    }
+    if (set_neg_flux_to_zero) {
+      spdlog::warn("Negative flux values set to zero.");
+    }
   }
 
   solved_ = true;
@@ -1145,3 +1197,8 @@ void MOCDriver::apply_criticality_spectrum(const xt::xtensor<double, 1>& flux) {
 }
 
 }  // namespace scarabee
+
+// REFERENCES
+// [1] G. Gunow, B. Forget, and K. Smith, “Stabilization of multi-group neutron
+//     transport with transport-corrected cross-sections,” Ann. Nucl. Energy,
+//     vol. 126, pp. 211–219, 2019, doi: 10.1016/j.anucene.2018.10.036.
