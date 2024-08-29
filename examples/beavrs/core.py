@@ -2,8 +2,6 @@ from scarabee import *
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
-np.set_printoptions(threshold=sys.maxsize)
-np.set_printoptions(linewidth=sys.maxsize)
 
 # Get diffusion cross sections
 a1_00_  = DiffusionData.load("F16_0.npz")
@@ -43,8 +41,6 @@ a3_153.rotate_clockwise()
 a3_16_  = DiffusionData.load("F31_16.npz")
 a3_20_  = DiffusionData.load("F31_20.npz")
 rf____  = DiffusionData.load("reflector.npz")
-rf____.adf = np.array([[1.25, 1.25, 1.25, 1.25],
-                       [0.3,  0.3,  0.3,  0.3]])
 
 
 # Define nodal geometry
@@ -111,16 +107,22 @@ z = np.array([0.])
 flux = solver.flux(x, y, z)[:,:,:,0]
 
 plt.pcolormesh(y, x, flux[0,:,:], cmap='jet')
-plt.title("Group 1")
+plt.title("Group 1 Flux")
 plt.show()
 
 plt.pcolormesh(y, x, flux[1,:,:], cmap='jet')
-plt.title("Group 2")
+plt.title("Group 2 Flux")
 plt.show()
 
 power = solver.power(x, y, z)[:,:,0]
 plt.pcolormesh(y, x, power, cmap='jet')
-plt.title("Power")
+plt.title("Homogeneous Power Distribution")
+plt.show()
+
+avg_power = solver.avg_power()
+avg_power /= np.mean(avg_power)
+plt.imshow(avg_power[:,:,0], cmap='jet')
+plt.title("Node Average Powers")
 plt.show()
 
 pin_power, x, y = solver.pin_power(z)
@@ -130,10 +132,10 @@ pin_power[msk] = np.nan
 
 avg = np.mean(pin_power[nmsk])
 pin_power /= avg
-print(np.max(pin_power[nmsk]))
-print(np.min(pin_power[nmsk]))
+
+print("Max Pin Power: {:.3f}".format(np.max(pin_power[nmsk])))
+print("Min Pin Power: {:.3f}".format(np.min(pin_power[nmsk])))
 
 plt.pcolormesh(y, x, pin_power[:,:,0], cmap='jet')
-plt.title("Pin Power")
+plt.title("Pin Power Distribution")
 plt.show()
-
