@@ -1,10 +1,12 @@
 #include <diffusion/diffusion_data.hpp>
-#include <memory>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 
 #include <xtensor/xmanipulation.hpp>
 #include <xtensor-io/xnpz.hpp>
+
+#include <filesystem>
+#include <memory>
 
 namespace scarabee {
 
@@ -185,6 +187,10 @@ void DiffusionData::rotate_counterclockwise() {
 }
 
 void DiffusionData::save(const std::string& fname) const {
+  if (std::filesystem::exists(fname)) {
+    std::filesystem::remove(fname);
+  }
+
   const std::size_t NG = this->ngroups();
 
   xt::xtensor<double, 2> xs_data = xt::zeros<double>({5 + NG, NG});

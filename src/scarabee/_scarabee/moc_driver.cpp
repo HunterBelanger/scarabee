@@ -1062,12 +1062,14 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
   // We need to calculate the total fission production in each volume for
   // generating the homogenized fission spectrum.
   std::vector<double> fiss_prod(NR, 0.);
+  std::size_t j = 0;
   for (const auto i : regions) {
     const auto& mat = this->xs(i);
     const double V = this->volume(i);
     for (std::size_t g = 0; g < NG; g++) {
-      fiss_prod[i] += mat->vEf(g) * flux(i, g) * V;
+      fiss_prod[j] += mat->vEf(g) * flux(i, g) * V; 
     }
+    j++;
   }
   const double sum_fiss_prod =
       std::accumulate(fiss_prod.begin(), fiss_prod.end(), 0.);
@@ -1082,6 +1084,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
     }
     const double invs_sum_fluxV = 1. / sum_fluxV;
 
+    j = 0;
     for (const auto i : regions) {
       const auto& mat = this->xs(i);
       const double V = volume(i);
@@ -1091,13 +1094,15 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
       Ef(g) += coeff * mat->Ef(g);
       vEf(g) += coeff * mat->vEf(g);
 
-      chi(g) += invs_sum_fiss_prod * fiss_prod[i] * mat->chi(g);
+      chi(g) += invs_sum_fiss_prod * fiss_prod[j] * mat->chi(g);
 
       for (std::size_t gg = 0; gg < NG; gg++) {
         Es(g, gg) += coeff * mat->Es(g, gg);
 
         if (has_P1) Es1(g, gg) += coeff * mat->Es1(g, gg);
       }
+
+      j++;
     }
 
     // Reconstruct total xs from absorption and scattering

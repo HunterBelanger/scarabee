@@ -1,14 +1,6 @@
 from _scarabee import *
 import numpy as np
-from scipy.optimize import curve_fit
-
-def _flux(x, a0, a1, a2, a3, a4):
-    f0 = 1.
-    f1 = x
-    f2 = 3.*x*x - 0.25
-    f3 = x*(x-0.5)*(x+0.5)
-    f4 = (x*x - 0.05)*(x-0.5)*(x+0.5)
-    return a0*f0 + a1*f1 + a2*f2 + a3*f3 + a4*f4
+#import matplotlib.pyplot as plt
 
 class Reflector:
     """
@@ -205,10 +197,10 @@ class Reflector:
         ref_macro_xs = ref_homog_xs.condense(self.condensation_scheme, ref_spectrum)
 
         # We make a 1D MOC geometry for computing the reflector data
-        dy = 20.
+        dy = 2.
         dx = []
         moc_1d_cells = []
-        NF = 2 * 17 * 2 # 2 assembly widths, 17 pins, 2 FSR per pin cell
+        NF = 2 * 17 * 2 # 17 pins, 2 FSR per pin cell
         dr = (2.*self.assembly_width) / NF
         dx += NF*[dr]
         moc_1d_cells += NF*[EmptyCell(fuel_macro_xs, dr, dy)]
@@ -231,44 +223,63 @@ class Reflector:
         moc.flux_tolerance = self.flux_tolerance
         moc.solve()
 
-        few_group_flux = np.zeros((len(self.few_group_condensation_scheme), 1+NB+NR))
-        for i in range(1+NB+NR):
+        few_group_flux = np.zeros((len(self.few_group_condensation_scheme), NF+1+NB+NR))
+        for i in range(NF+1+NB+NR):
             for G in range(len(self.few_group_condensation_scheme)):
                 g_min = self.few_group_condensation_scheme[G][0]
                 g_max = self.few_group_condensation_scheme[G][1]
 
                 for g in range(g_min, g_max+1):
-                    few_group_flux[G, i] += moc.flux(i+NF, g)
+                    few_group_flux[G, i] += moc.flux(i, g)
         dx = np.array(dx)
-        dx = dx[NF:]
         x = np.zeros(len(dx))
         for i in range(len(dx)):
             if i == 0:
                 x[0] = 0.5*dx[0]
             else:
                 x[i] = x[i-1] + 0.5*(dx[i-1] + dx[i])
-        x_min = 0.
-        x_max = x[-1] + 0.5*dx[-1]
-        x_mid = 0.5*(x_min + x_max)
-        x -= x_mid
-        x /= (x_max - x_min)
-        
-        homog_fit_params = []
-        for G in range(len(self.few_group_condensation_scheme)):
-            parms, _ = curve_fit(_flux, x, few_group_flux[G,:])
-            homog_fit_params.append(parms)
 
-        
-        # Here, we compute the ADFs
-        self.adf = np.zeros((len(self.few_group_condensation_scheme), 4))
-        for G in range(len(self.few_group_condensation_scheme)):
-            self.adf[G,:] = few_group_flux[G,0] / _flux(x[0], *homog_fit_params[G])
-            
-        
         # Here we compute the cross sections
         homog_xs = moc.homogenize(list(range(NF, NF+1+NB+NR)))
         homog_spec = moc.homogenize_flux_spectrum(list(range(NF, NF+1+NB+NR)))
+        self.diffusion_xs = Reflector._get_diffusion_xs(homog_xs, homog_spec, self.few_group_condensation_scheme)
 
+        homog_xs = moc.homogenize(list(range(0, NF)))
+        homog_spec = moc.homogenize_flux_spectrum(list(range(0, NF)))
+        fuel_diffusion_xs = Reflector._get_diffusion_xs(homog_xs, homog_spec, self.few_group_condensation_scheme)
+
+        # Do nodal calculation to obtain homogeneous flux
+        nodal_tiles = [fuel_diffusion_xs, self.diffusion_xs]
+        nodal_geom = DiffusionGeometry(nodal_tiles, [2.*self.assembly_width, self.assembly_width], [8, 4],
+                                       [10.], [1], [10.], [1], 1., 0., 1., 1., 1., 1.) 
+        nodal_solver = NEMDiffusionDriver(nodal_geom)
+        nodal_solver.solve()
+        nodal_flux = np.zeros((len(self.few_group_condensation_scheme), len(x)))
+        for i in range(len(x)):
+            for g in range(len(self.few_group_condensation_scheme)):
+                nodal_flux[g, i] = nodal_solver.flux(x[i], 5., 5., g)
+        
+        # Normalize flux to fast group reflective boundary
+        few_group_flux /= few_group_flux[0,0]
+        nodal_flux /= nodal_flux[0,0]
+        
+        # Keep this commented, just in case it's needed later
+        #plt.plot(x, few_group_flux[0,:], label="Fast Hetero")
+        #plt.plot(x, few_group_flux[1,:], label="Thermal Hetero")
+        #plt.plot(x, nodal_flux[0,:], label="Fast Homo")
+        #plt.plot(x, nodal_flux[1,:], label="Thermal Homo")
+        #plt.legend().set_draggable(True)
+        #plt.show()
+
+        # Here, we compute the ADFs
+        self.adf = np.zeros((len(self.few_group_condensation_scheme), 4))
+        for G in range(len(self.few_group_condensation_scheme)):
+            self.adf[G,:] = few_group_flux[G, NF] / nodal_flux[G, NF] 
+        
+        # Write data to terminal/output file
+        self._write_data()
+    
+    def _get_diffusion_xs(homog_xs, homog_spec, cond_scheme):
         NG = homog_xs.ngroups
         fissile = homog_xs.fissile
 
@@ -297,10 +308,10 @@ class Reflector:
         else:
             diff_xs = DiffusionCrossSection(D, Ea, Es)
 
-        self.diffusion_xs = diff_xs.condense(self.few_group_condensation_scheme, homog_spec)
+        return diff_xs.condense(cond_scheme, homog_spec)
 
+    def _write_data(self):
         NG = self.diffusion_xs.ngroups
-
         D = []
         Ea = []
         Ef = []
