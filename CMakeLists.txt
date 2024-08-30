@@ -24,7 +24,7 @@ message(STATUS "Downloading zlib v1.3.1")
 FetchContent_Declare(ZLIB
   GIT_REPOSITORY https://github.com/madler/zlib.git
   GIT_TAG        v1.3.1
-  OVERRIDE_FIND_PACKAGE
+  #OVERRIDE_FIND_PACKAGE
 )
 set(ZLIB_BUILD_EXAMPLES OFF)
 FetchContent_MakeAvailable(ZLIB)
@@ -190,6 +190,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/guide_tube.cpp
                               src/scarabee/_scarabee/burnable_poison_pin.cpp
                               src/scarabee/_scarabee/pwr_assembly.cpp
+                              src/scarabee/_scarabee/reflector_sn.cpp
                               #=================================================
                               src/scarabee/_scarabee/python/scarabee.cpp
                               src/scarabee/_scarabee/python/vector.cpp
@@ -218,6 +219,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/python/nem_diffusion_driver.cpp
                               src/scarabee/_scarabee/python/pins.cpp
                               src/scarabee/_scarabee/python/pwr_assembly.cpp
+                              src/scarabee/_scarabee/python/reflector_sn.cpp
                             )
 
 target_include_directories(_scarabee PRIVATE include)
