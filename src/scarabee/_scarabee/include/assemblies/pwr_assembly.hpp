@@ -1,3 +1,6 @@
+#ifndef PWR_ASSEMBLY_H
+#define PWR_ASSEMBLY_H
+
 #include <data/nd_library.hpp>
 #include <data/material.hpp>
 #include <cross_section.hpp>
@@ -180,3 +183,5 @@ class PWRAssembly {
 };
 
 };  // namespace scarabee
+
+#endif

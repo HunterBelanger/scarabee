@@ -3,9 +3,9 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/criticality_spectrum.hpp>
 #include <moc/moc_plotter.hpp>
+#include <diffusion/diffusion_data.hpp>
 
 #include <xtensor/xio.hpp>
-#include "diffusion/diffusion_data.hpp"
 
 namespace scarabee {
 
@@ -624,6 +624,7 @@ void PWRAssembly::condense_xs() {
           [this, &xs, &flux_spectrum](auto& P) {
             P->condensed_xs().push_back(
                 xs->condense(condensation_scheme_, flux_spectrum));
+            P->condensed_xs().back()->set_name(xs->name());
           },
           pin);
     }
