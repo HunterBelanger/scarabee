@@ -1,18 +1,20 @@
-#include <assemblies/pwr_assembly.hpp>
+#include <assemblies/pwr_reflector.hpp>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/criticality_spectrum.hpp>
 #include <moc/moc_plotter.hpp>
+#include <moc/empty_cell.hpp>
 #include <diffusion/diffusion_data.hpp>
 
 #include <xtensor/xio.hpp>
 
 namespace scarabee {
 
-PWRAssembly::PWRAssembly(double pitch, std::shared_ptr<Material> moderator,
+PWRReflector::PWRReflector(double pitch, std::shared_ptr<Material> moderator,
                          std::pair<std::size_t, std::size_t> shape,
+                         double gap_width, double baffle_width, std::shared_ptr<Material> baffle,
                          std::shared_ptr<NDLibrary> ndl)
-    : pitch_(pitch), shape_(shape), ndl_(ndl) {
+    : pitch_(pitch), shape_(shape), ndl_(ndl), gap_width_(gap_width), baffle_width_(baffle_width), baffle_(baffle) {
   this->set_moderator(moderator);
 
   if (pitch_ <= 0.) {
@@ -20,9 +22,42 @@ PWRAssembly::PWRAssembly(double pitch, std::shared_ptr<Material> moderator,
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
+
+  if (gap_width_ < 0.) {
+    auto mssg = "Reflector gap width must be >= 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (baffle_width_ < 0.) {
+    auto mssg = "Reflector baffle width must be >= 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (baffle_ == nullptr && baffle_width_ != 0.) {
+    auto mssg = "Reflector baffle material is None but baffle width is > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (baffle_width_ == 0. && baffle_ != nullptr) {
+    auto mssg = "Reflector baffle width is 0, but baffle material is not None.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  const double assembly_width = static_cast<double>(shape_.first) * pitch_;
+  after_baffle_ref_width_ = assembly_width - gap_width_ - baffle_width_;
+
+  if (after_baffle_ref_width_ <= 0.) {
+    auto mssg = "The gap width + baffle width is greater than the assembly width.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
 }
 
-void PWRAssembly::set_flux_tolerance(double ftol) {
+void PWRReflector::set_flux_tolerance(double ftol) {
   if (ftol <= 0.) {
     auto mssg = "Tolerance for flux must be in the interval (0., 0.1).";
     spdlog::error(mssg);
@@ -38,7 +73,7 @@ void PWRAssembly::set_flux_tolerance(double ftol) {
   flux_tolerance_ = ftol;
 }
 
-void PWRAssembly::set_keff_tolerance(double ktol) {
+void PWRReflector::set_keff_tolerance(double ktol) {
   if (ktol <= 0.) {
     auto mssg = "Tolerance for keff must be in the interval (0., 0.1).";
     spdlog::error(mssg);
@@ -54,25 +89,7 @@ void PWRAssembly::set_keff_tolerance(double ktol) {
   keff_tolerance_ = ktol;
 }
 
-void PWRAssembly::set_criticality_spectrum_method(
-    const std::optional<std::string>& csm) {
-  if (csm.has_value() != false && *csm != "B1" && *csm != "b1" &&
-      *csm != "P1" && *csm != "p1") {
-    auto mssg = "Unknown criticality spectrum method.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  if (csm.has_value() == false) {
-    criticality_spectrum_method_ = csm;
-  } else if (*csm == "B1" || *csm == "b1") {
-    criticality_spectrum_method_ = "B1";
-  } else {
-    criticality_spectrum_method_ = "P1";
-  }
-}
-
-void PWRAssembly::set_pins(const std::vector<Pin>& pins) {
+void PWRReflector::set_pins(const std::vector<Pin>& pins) {
   if (pins.size() != shape_.first * shape_.second) {
     auto mssg = "The number of pins does not agree with the assembly shape.";
     spdlog::error(mssg);
@@ -114,7 +131,7 @@ void PWRAssembly::set_pins(const std::vector<Pin>& pins) {
   }
 }
 
-void PWRAssembly::set_moderator(std::shared_ptr<Material> mod) {
+void PWRReflector::set_moderator(std::shared_ptr<Material> mod) {
   if (mod == nullptr) {
     auto mssg = "Moderator cannot be None.";
     spdlog::error(mssg);
@@ -127,7 +144,7 @@ void PWRAssembly::set_moderator(std::shared_ptr<Material> mod) {
   moderator_xs_->set_name("Moderator");
 }
 
-void PWRAssembly::set_num_azimuthal_angles(std::uint32_t n) {
+void PWRReflector::set_num_azimuthal_angles(std::uint32_t n) {
   if (n < 4) {
     auto mssg = "Number of azimuthal angles must be >= 4.";
     spdlog::error(mssg);
@@ -143,7 +160,7 @@ void PWRAssembly::set_num_azimuthal_angles(std::uint32_t n) {
   num_azimuthal_angles_ = n;
 }
 
-void PWRAssembly::set_track_spacing(double t) {
+void PWRReflector::set_track_spacing(double t) {
   if (t <= 0. || t >= 1.) {
     auto mssg = "Track spacing must be > 0 and < 1.";
     spdlog::error(mssg);
@@ -153,7 +170,7 @@ void PWRAssembly::set_track_spacing(double t) {
   track_spacing_ = t;
 }
 
-void PWRAssembly::set_dancoff_track_spacing(double t) {
+void PWRReflector::set_dancoff_track_spacing(double t) {
   if (t <= 0. || t >= 1.) {
     auto mssg = "Track spacing must be > 0 and < 1.";
     spdlog::error(mssg);
@@ -163,7 +180,7 @@ void PWRAssembly::set_dancoff_track_spacing(double t) {
   dancoff_track_spacing_ = t;
 }
 
-void PWRAssembly::set_dancoff_num_azimuthal_angles(std::uint32_t n) {
+void PWRReflector::set_dancoff_num_azimuthal_angles(std::uint32_t n) {
   if (n < 4) {
     auto mssg = "Number of azimuthal angles must be >= 4.";
     spdlog::error(mssg);
@@ -179,7 +196,7 @@ void PWRAssembly::set_dancoff_num_azimuthal_angles(std::uint32_t n) {
   dancoff_num_azimuthal_angles_ = n;
 }
 
-void PWRAssembly::solve() {
+void PWRReflector::solve() {
   if (pins_.size() == 0) {
     auto mssg = "Cannot solve PWR assembly problem. No pins provided.";
     spdlog::error(mssg);
@@ -202,18 +219,18 @@ void PWRAssembly::solve() {
     throw ScarabeeException(mssg);
   }
 
+  build_reflector_dancoff_geometry();
   get_fuel_dancoff_corrections();
   get_clad_dancoff_corrections();
   pin_cell_calc();
   condense_xs();
   moc_calc();
-  criticality_spectrum();
   compute_form_factors();
   few_group_xs();
   compute_adf_cdf();
 }
 
-double PWRAssembly::isolated_fuel_pin_flux(DancoffMaterial dm) const {
+double PWRReflector::isolated_fuel_pin_flux(DancoffMaterial dm) const {
   // We first make the system for an isolated fuel pin.
   // We isolate it by multiplying the pitch by 20.
   std::shared_ptr<SimplePinCell> isolated_fp{nullptr};
@@ -278,7 +295,7 @@ double PWRAssembly::isolated_fuel_pin_flux(DancoffMaterial dm) const {
   return iso_flux;
 }
 
-double PWRAssembly::isolated_guide_tube_flux() const {
+double PWRReflector::isolated_guide_tube_flux() const {
   // We first make the system for an isolated guide tube.
   // We isolate it by multiplying the pitch by 20.
   std::shared_ptr<SimplePinCell> isolated_gt{nullptr};
@@ -333,7 +350,7 @@ double PWRAssembly::isolated_guide_tube_flux() const {
   return iso_flux;
 }
 
-double PWRAssembly::isolated_burnable_poison_tube_flux() const {
+double PWRReflector::isolated_burnable_poison_tube_flux() const {
   // We first make the system for an isolated burnable poison pin.
   // We isolate it by multiplying the pitch by 20.
   std::shared_ptr<SimplePinCell> isolated_bp{nullptr};
@@ -388,7 +405,70 @@ double PWRAssembly::isolated_burnable_poison_tube_flux() const {
   return iso_flux;
 }
 
-void PWRAssembly::get_fuel_dancoff_corrections() {
+void PWRReflector::build_reflector_dancoff_geometry() {
+  // We start by making cross sections for the different materials.
+  xt::xtensor<double, 1> Et = {moderator_->potential_xs()};
+  xt::xtensor<double, 1> Ea = {Et(0)};
+  xt::xtensor<double, 2> Es = {{0.}};
+  auto mod = std::make_shared<CrossSection>(Et, Ea, Es, "Moderator");
+
+  std::shared_ptr<CrossSection> baff {nullptr};
+  if (baffle_) {
+    Et(0) = baffle_->potential_xs();
+    Ea(0) = Et(0);
+    baff = std::make_shared<CrossSection>(Et, Ea, Es, "Baffle");
+  }
+
+  // Determine number of regions
+  std::size_t NG = static_cast<std::size_t>(gap_width_ / 0.3);
+  if (NG == 0) NG++;
+  double dx_gap = gap_width_ / static_cast<double>(NG);
+
+  std::size_t NB = 0;
+  double dx_baffle = 0.;
+  if (baffle_) {
+    NB = static_cast<std::size_t>(baffle_width_ / 0.3);
+    dx_baffle = baffle_width_ / static_cast<double>(NB);
+  }
+
+  std::size_t NR = static_cast<std::size_t>(after_baffle_ref_width_ / 0.3) + 1;
+  double dx_ref = after_baffle_ref_width_ / static_cast<double>(NR);
+
+  const double asmbly_y = static_cast<double>(shape_.second) * pitch_;
+  std::size_t NY = static_cast<std::size_t>(asmbly_y / 0.3) + 1;
+  const double delta_y = asmbly_y / static_cast<double>(NY);
+
+  // Create base tiles
+  std::shared_ptr<EmptyCell> gap_tile = std::make_shared<EmptyCell>(mod, dx_gap, delta_y);
+  std::shared_ptr<EmptyCell> baff_tile {nullptr};
+  if (baffle_)
+    baff_tile = std::make_shared<EmptyCell>(baff, dx_baffle, delta_y);
+  std::shared_ptr<EmptyCell> ref_tile = std::make_shared<EmptyCell>(mod, dx_ref, delta_y);
+
+  // Create the dx and dy arrays
+  std::vector<double> dy(NY, delta_y);
+  std::vector<double> dx;
+  dx.reserve(NG+NB+NR);
+  for (std::size_t i = 0; i < NG+NB+NR; i++) {
+    if (i < NG) dx.push_back(dx_gap);
+    else if (i < NG+NB) dx.push_back(dx_baffle);
+    else dx.push_back(dx_ref);
+  }
+
+  reflector_dancoff_geom_ = std::make_shared<Cartesian2D>(dx, dy);
+
+  std::vector<Cartesian2D::TileFill> tiles;
+  tiles.reserve((NG+NB+NR)*NY);
+  for (std::size_t j = 0; j < NY; j++) {
+    for (std::size_t i = 0; i < NG; i++) tiles.push_back(gap_tile);
+    for (std::size_t i = 0; i < NB; i++) tiles.push_back(baff_tile);
+    for (std::size_t i = 0; i < NR; i++) tiles.push_back(ref_tile);
+  }
+
+  reflector_dancoff_geom_->set_tiles(tiles);
+}
+
+void PWRReflector::get_fuel_dancoff_corrections() {
   spdlog::info("");
   spdlog::info("Computing Dancoff factors for fuel");
   set_logging_level(LogLevel::warn);
@@ -451,7 +531,7 @@ void PWRAssembly::get_fuel_dancoff_corrections() {
   set_logging_level(LogLevel::info);
 }
 
-void PWRAssembly::get_clad_dancoff_corrections() {
+void PWRReflector::get_clad_dancoff_corrections() {
   spdlog::info("");
   spdlog::info("Computing Dancoff factors for cladding");
   set_logging_level(LogLevel::warn);
@@ -528,7 +608,7 @@ void PWRAssembly::get_clad_dancoff_corrections() {
   set_logging_level(LogLevel::info);
 }
 
-void PWRAssembly::pin_cell_calc() {
+void PWRReflector::pin_cell_calc() {
   spdlog::info("");
   spdlog::info("Performing micro-group pin cell calcuations");
   spdlog::info("Please wait...");
@@ -609,7 +689,7 @@ void PWRAssembly::pin_cell_calc() {
   set_logging_level(LogLevel::info);
 }
 
-void PWRAssembly::condense_xs() {
+void PWRReflector::condense_xs() {
   spdlog::info("");
   spdlog::info("Performing pin cell energy condensation");
   set_logging_level(LogLevel::warn);
@@ -639,7 +719,7 @@ void PWRAssembly::condense_xs() {
   set_logging_level(LogLevel::info);
 }
 
-void PWRAssembly::moc_calc() {
+void PWRReflector::moc_calc() {
   spdlog::info("");
   spdlog::info("Performing macrogroup assembly calculation");
 
@@ -671,30 +751,7 @@ void PWRAssembly::moc_calc() {
   moc_->solve();
 }
 
-void PWRAssembly::criticality_spectrum() {
-  if (criticality_spectrum_method_.has_value() == false) {
-    return;
-  }
-
-  spdlog::info("");
-  spdlog::info("Performing {} criticality spectrum calculation",
-               criticality_spectrum_method_.value());
-
-  const auto homogenized_moc = moc_->homogenize();
-
-  if (criticality_spectrum_method_.value() == "P1") {
-    criticality_spectrum_ = std::make_shared<P1CriticalitySpectrum>(homogenized_moc);
-  } else {
-    criticality_spectrum_ = std::make_shared<B1CriticalitySpectrum>(homogenized_moc);
-  }
-
-  moc_->apply_criticality_spectrum(criticality_spectrum_->flux());
-
-  spdlog::info("Kinf    : {:.5f}", criticality_spectrum_->k_inf());
-  spdlog::info("Buckling: {:.5f}", criticality_spectrum_->buckling());
-}
-
-void PWRAssembly::compute_form_factors() {
+void PWRReflector::compute_form_factors() {
   form_factors_ = xt::zeros<double>({shape_.first, shape_.second});
 
   const Direction u(1., 0.);
@@ -722,7 +779,7 @@ void PWRAssembly::compute_form_factors() {
   form_factors_ /= avg_pwr;
 }
 
-void PWRAssembly::few_group_xs() {
+void PWRReflector::few_group_xs() {
   spdlog::info("");
   spdlog::info("Generating few group cross sections");
 
@@ -818,7 +875,7 @@ void PWRAssembly::few_group_xs() {
   }
 }
 
-void PWRAssembly::compute_adf_cdf() {
+void PWRReflector::compute_adf_cdf() {
   // Number of few groups
   const std::size_t NG = few_group_condensation_scheme_.size();
 
@@ -904,7 +961,7 @@ void PWRAssembly::compute_adf_cdf() {
   }
 }
 
-void PWRAssembly::save_diffusion_data(const std::string& fname) const {
+void PWRReflector::save_diffusion_data(const std::string& fname) const {
   if (diffusion_xs_ == nullptr ||
       form_factors_.size() == 0 ||
       adf_.size() == 0 ||
@@ -918,7 +975,7 @@ void PWRAssembly::save_diffusion_data(const std::string& fname) const {
   dd.save(fname);
 }
 
-std::vector<double> PWRAssembly::compute_avg_surface_flx(
+std::vector<double> PWRReflector::compute_avg_surface_flx(
     const std::vector<std::pair<std::size_t, double>>& segments) const {
   double total_len = 0.;
   for (const auto& i_l : segments) total_len += i_l.second;
@@ -945,7 +1002,7 @@ std::vector<double> PWRAssembly::compute_avg_surface_flx(
   return flx;
 }
 
-std::vector<double> PWRAssembly::compute_avg_flx(const Vector& r,
+std::vector<double> PWRReflector::compute_avg_flx(const Vector& r,
                                                  const Direction& u) const {
   const auto fsr = moc_->get_fsr(r, u);
   const std::size_t i = moc_->get_fsr_indx(fsr);
