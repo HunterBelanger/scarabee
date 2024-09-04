@@ -1042,22 +1042,21 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
   const std::size_t NR = regions.size();
   const std::size_t NG = this->ngroups();
 
-  bool has_P1 = false;
+  std::size_t max_l = 0;
   for (const auto m : regions) {
-    if (this->xs(m)->anisotropic()) {
-      has_P1 = true;
-      break;
+    const auto m_max_l = this->xs(m)->max_legendre_order();
+    if (m_max_l > max_l) {
+      max_l = m_max_l;
     }
   }
 
   xt::xtensor<double, 1> Et = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> Dtr = xt::zeros<double>({NG});
   xt::xtensor<double, 1> Ea = xt::zeros<double>({NG});
-  xt::xtensor<double, 2> Es = xt::zeros<double>({NG, NG});
+  xt::xtensor<double, 3> Es = xt::zeros<double>({max_l+1, NG, NG});
   xt::xtensor<double, 1> Ef = xt::zeros<double>({NG});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({NG});
   xt::xtensor<double, 1> chi = xt::zeros<double>({NG});
-  xt::xtensor<double, 2> Es1;
-  if (has_P1) Es1 = xt::zeros<double>({NG, NG});
 
   // We need to calculate the total fission production in each volume for
   // generating the homogenized fission spectrum.
@@ -1090,32 +1089,27 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
       const double V = volume(i);
       const double flx = flux(i, g);
       const double coeff = invs_sum_fluxV * flx * V;
+      Dtr(g) += coeff * mat->Dtr(g);
       Ea(g) += coeff * mat->Ea(g);
       Ef(g) += coeff * mat->Ef(g);
       vEf(g) += coeff * mat->vEf(g);
 
       chi(g) += invs_sum_fiss_prod * fiss_prod[j] * mat->chi(g);
 
-      for (std::size_t gg = 0; gg < NG; gg++) {
-        Es(g, gg) += coeff * mat->Es(g, gg);
-
-        if (has_P1) Es1(g, gg) += coeff * mat->Es1(g, gg);
+      for (std::size_t l = 0; l <= max_l; l++) {
+        for (std::size_t gg = 0; gg < NG; gg++) {
+          Es(l, g, gg) += coeff * mat->Es(l, g, gg);
+        }
       }
 
       j++;
     }
 
     // Reconstruct total xs from absorption and scattering
-    Et(g) = Ea(g) + xt::sum(xt::view(Es, g, xt::all()))();
+    Et(g) = Ea(g) + xt::sum(xt::view(Es, 0, g, xt::all()))();
   }
 
-  if (has_P1) {
-    return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
-  }
-
-  // If we don't have a P1 matrix, then Et actually contains Etr and Es
-  // contains Es_tr. We can therefore use that constructor.
-  return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
+  return std::make_shared<CrossSection>(Et, Dtr, Ea, Es, Ef, vEf, chi);
 }
 
 xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum() const {

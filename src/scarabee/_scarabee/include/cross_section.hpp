@@ -21,9 +21,9 @@ class CrossSection {
                const xt::xtensor<double, 1>& chi, const std::string& name = "");
 
   CrossSection(const xt::xtensor<double, 1>& Et,
+               const xt::xtensor<double, 1>& Dtr,
                const xt::xtensor<double, 1>& Ea,
-               const xt::xtensor<double, 2>& Es,
-               const xt::xtensor<double, 2>& Es1,
+               const xt::xtensor<double, 3>& Es,
                const xt::xtensor<double, 1>& Ef,
                const xt::xtensor<double, 1>& vEf,
                const xt::xtensor<double, 1>& chi, const std::string& name = "");
@@ -34,9 +34,9 @@ class CrossSection {
                const std::string& name = "");
 
   CrossSection(const xt::xtensor<double, 1>& Et,
+               const xt::xtensor<double, 1>& Dtr,
                const xt::xtensor<double, 1>& Ea,
-               const xt::xtensor<double, 2>& Es,
-               const xt::xtensor<double, 2>& Es1, const std::string& name = "");
+               const xt::xtensor<double, 3>& Es, const std::string& name = "");
 
   std::size_t ngroups() const { return Etr_.size(); }
 
@@ -45,19 +45,18 @@ class CrossSection {
 
   bool fissile() const { return fissile_; }
 
-  bool anisotropic() const { return Es1_.size() > 0; }
+  bool anisotropic() const { return Es_.shape()[0] > 1; }
+
+  std::size_t max_legendre_order() const { return Es_.shape()[0]-1; }
 
   const xt::xtensor<double, 1>& Etr() const { return Etr_; }
 
   double Etr(std::size_t g) const { return Etr_(g); }
 
+  double Dtr(std::size_t g) const { return Dtr_(g); }
+
   double Et(std::size_t g) const {
-    double Et = Etr_(g);
-    if (anisotropic()) {
-      const double Es1g = xt::sum(xt::view(Es1_, g, xt::all()))();
-      Et += Es1g;
-    }
-    return Et;
+    return Etr_(g) + Dtr_(g);
   }
 
   double Ea(std::size_t g) const { return Ea_(g); }
@@ -79,32 +78,31 @@ class CrossSection {
   double chi(std::size_t g) const { return chi_(g); }
 
   double Es_tr(std::size_t gin, std::size_t gout) const {
-    return Es_tr_(gin, gout);
-  }
-
-  double Es1(std::size_t gin, std::size_t gout) const {
-    if (anisotropic()) return Es1_(gin, gout);
-    return 0.;
-  }
-
-  double Es(std::size_t gin, std::size_t gout) const {
-    double Es_gin_gout = Es_tr_(gin, gout);
-    if (anisotropic() && gin == gout) {
-      const double Es1g = xt::sum(xt::view(Es1_, gin, xt::all()))();
-      Es_gin_gout += Es1g;
-    }
-    return Es_gin_gout;
+    return Es_(0, gin, gout);
   }
 
   double Es_tr(std::size_t gin) const {
-    return xt::sum(xt::view(Es_tr_, gin, xt::all()))();
+    return xt::sum(xt::view(Es_, 0, gin, xt::all()))();
   }
 
-  double Es(std::size_t gin) const {
-    double Es = xt::sum(xt::view(Es_tr_, gin, xt::all()))();
-    if (anisotropic()) {
-      const double Es1g = xt::sum(xt::view(Es1_, gin, xt::all()))();
-      Es += Es1g;
+  double Es(std::size_t l, std::size_t gin, std::size_t gout) const {
+    if (l > this->max_legendre_order())
+      return 0.;
+
+    double Es_l_gin_gout = Es_(l, gin, gout);
+    if (l == 0 && gin == gout) {
+      Es_l_gin_gout += Dtr_(gin);
+    }
+    return Es_l_gin_gout;
+  }
+
+  double Es(std::size_t l, std::size_t gin) const {
+    if (l > this->max_legendre_order())
+      return 0.;
+
+    double Es = xt::sum(xt::view(Es_, l, gin, xt::all()))();
+    if (l == 0) {
+      Es += Dtr_[gin];
     }
     return Es;
   }
@@ -120,13 +118,15 @@ class CrossSection {
   CrossSection& operator*=(double N);
 
  private:
-  xt::xtensor<double, 2> Es_tr_;  // Transport Corrected Scattering matrix
-  xt::xtensor<double, 2> Es1_;    // P1 Scattering matrix
-  xt::xtensor<double, 1> Etr_;    // Transport xs
-  xt::xtensor<double, 1> Ea_;     // Absorption xs
-  xt::xtensor<double, 1> Ef_;     // Fission xs
-  xt::xtensor<double, 1> vEf_;    // Fission xs * yield
-  xt::xtensor<double, 1> chi_;    // Fission spectrum
+  xt::xtensor<double, 1> Etr_; // Transport xs
+  xt::xtensor<double, 1> Dtr_; // Transport Correction xs
+  xt::xtensor<double, 1> Ea_;  // Absorption xs
+  xt::xtensor<double, 1> Ef_;  // Fission xs
+  xt::xtensor<double, 1> vEf_; // Fission xs * yield
+  xt::xtensor<double, 1> chi_; // Fission spectrum
+  // Scattering Matrices. [0,:,:] is the TRANSPORT corrected P0 scatter matrix
+  // while [1,:,:] is the P1 scatter matrix, [2,:,:] is the P2 matrix, etc.
+  xt::xtensor<double, 3> Es_;
   std::string name_;
   bool fissile_;
 

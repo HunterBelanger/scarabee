@@ -18,30 +18,37 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
                            const xt::xtensor<double, 1>& vEf,
                            const xt::xtensor<double, 1>& chi,
                            const std::string& name)
-    : Es_tr_(Es_tr),
-      Es1_(),
-      Etr_(Etr),
+    : Etr_(Etr),
+      Dtr_(),
       Ea_(Ea),
       Ef_(Ef),
       vEf_(vEf),
       chi_(chi),
+      Es_(),
       name_(name),
       fissile_(false) {
+  // We were provided with transport corrected data, so Dtr is 0 here
+  Dtr_ = xt::zeros<double>({Etr_.size()});
+
+  // Now will initialize the scatter matrix
+  Es_ = xt::zeros<double>({static_cast<std::size_t>(1), Es_tr.shape()[0], Es_tr.shape()[1]});
+  xt::view(Es_, 0, xt::all(), xt::all()) = Es_tr;
+
   this->check_xs();
 }
 
 CrossSection::CrossSection(
-    const xt::xtensor<double, 1>& Et, const xt::xtensor<double, 1>& Ea,
-    const xt::xtensor<double, 2>& Es, const xt::xtensor<double, 2>& Es1,
+    const xt::xtensor<double, 1>& Et, const xt::xtensor<double, 1>& Dtr,
+    const xt::xtensor<double, 1>& Ea, const xt::xtensor<double, 3>& Es,
     const xt::xtensor<double, 1>& Ef, const xt::xtensor<double, 1>& vEf,
     const xt::xtensor<double, 1>& chi, const std::string& name)
-    : Es_tr_(Es),
-      Es1_(Es1),
-      Etr_(Et),
+    : Etr_(Et),
+      Dtr_(Dtr),
       Ea_(Ea),
       Ef_(Ef),
       vEf_(vEf),
       chi_(chi),
+      Es_(Es),
       name_(name),
       fissile_(false) {
   // Check xs first, to make sure the size of everything is okay
@@ -49,9 +56,8 @@ CrossSection::CrossSection(
 
   // Apply the transport correction
   for (std::size_t g = 0; g < ngroups(); g++) {
-    const double Es1g = xt::sum(xt::view(Es1_, g, xt::all()))();
-    Etr_(g) -= Es1g;
-    Es_tr_(g, g) -= Es1g;
+    Etr_(g) -= Dtr_(g);
+    Es_(0, g, g) -= Dtr_(g);
   }
 }
 
@@ -59,31 +65,37 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
                            const xt::xtensor<double, 1>& Ea,
                            const xt::xtensor<double, 2>& Es_tr,
                            const std::string& name)
-    : Es_tr_(Es_tr),
-      Es1_(),
-      Etr_(Etr),
+    : Etr_(Etr),
+      Dtr_(),
       Ea_(Ea),
       vEf_(),
       chi_(),
+      Es_(),
       name_(name),
       fissile_(false) {
+  Dtr_ = xt::zeros<double>({ngroups()});
   Ef_ = xt::zeros<double>({ngroups()});
   vEf_ = xt::zeros<double>({ngroups()});
   chi_ = xt::zeros<double>({ngroups()});
+  
+  // Now will initialize the scatter matrix
+  Es_ = xt::zeros<double>({static_cast<std::size_t>(1), Es_tr.shape()[0], Es_tr.shape()[1]});
+  xt::view(Es_, 0, xt::all(), xt::all()) = Es_tr;
+
   this->check_xs();
 }
 
 CrossSection::CrossSection(const xt::xtensor<double, 1>& Et,
+                           const xt::xtensor<double, 1>& Dtr,
                            const xt::xtensor<double, 1>& Ea,
-                           const xt::xtensor<double, 2>& Es,
-                           const xt::xtensor<double, 2>& Es1,
+                           const xt::xtensor<double, 3>& Es,
                            const std::string& name)
-    : Es_tr_(Es),
-      Es1_(Es1),
-      Etr_(Et),
+    : Etr_(Et),
+      Dtr_(Dtr),
       Ea_(Ea),
       vEf_(),
       chi_(),
+      Es_(Es),
       name_(name),
       fissile_(false) {
   Ef_ = xt::zeros<double>({ngroups()});
@@ -93,9 +105,8 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Et,
 
   // Apply the transport correction
   for (std::size_t g = 0; g < ngroups(); g++) {
-    const double Es1g = xt::sum(xt::view(Es1_, g, xt::all()))();
-    Etr_(g) -= Es1g;
-    Es_tr_(g, g) -= Es1g;
+    Etr_(g) -= Dtr_(g);
+    Es_(0, g, g) -= Dtr_(g);
   }
 }
 
@@ -147,15 +158,12 @@ std::shared_ptr<CrossSection> CrossSection::condense(
   // Everything checks out, we can start the condensation.
 
   xt::xtensor<double, 1> Et = xt::zeros<double>({NGOUT});
+  xt::xtensor<double, 1> Dtr = xt::zeros<double>({NGOUT});
   xt::xtensor<double, 1> Ea = xt::zeros<double>({NGOUT});
-  xt::xtensor<double, 2> Es = xt::zeros<double>({NGOUT, NGOUT});
   xt::xtensor<double, 1> Ef = xt::zeros<double>({NGOUT});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({NGOUT});
   xt::xtensor<double, 1> chi = xt::zeros<double>({NGOUT});
-  xt::xtensor<double, 2> Es1;
-
-  const bool has_P1 = this->anisotropic();
-  if (has_P1) Es1 = xt::zeros<double>({NGOUT, NGOUT});
+  xt::xtensor<double, 3> Es = xt::zeros<double>({max_legendre_order()+1, NGOUT, NGOUT});
 
   for (std::size_t G = 0; G < NGOUT; G++) {  // Incoming macro groups
     const std::size_t g_min = groups[G].first;
@@ -169,6 +177,7 @@ std::shared_ptr<CrossSection> CrossSection::condense(
     // First we do all of the 1D cross sections
     for (std::size_t g = g_min; g <= g_max; g++) {
       const double fluxg_fluxG = flux(g) * invs_flux_G;
+      Dtr(G) += fluxg_fluxG * this->Dtr(g);
       Ea(G) += fluxg_fluxG * this->Ea(g);
       Ef(G) += fluxg_fluxG * this->Ef(g);
       vEf(G) += fluxg_fluxG * this->vEf(g);
@@ -176,32 +185,27 @@ std::shared_ptr<CrossSection> CrossSection::condense(
     }
 
     // Next, we do all 2D cross sections
-    for (std::size_t GG = 0; GG < NGOUT; GG++) {  // Outgoing macro groups
-      const std::size_t gg_min = groups[GG].first;
-      const std::size_t gg_max = groups[GG].second;
+    for (std::size_t l = 0; l <= max_legendre_order(); l++) {
+      for (std::size_t GG = 0; GG < NGOUT; GG++) {  // Outgoing macro groups
+        const std::size_t gg_min = groups[GG].first;
+        const std::size_t gg_max = groups[GG].second;
 
-      for (std::size_t g = g_min; g <= g_max; g++) {  // Incoming micro groups
-        const double fluxg_fluxG = flux(g) * invs_flux_G;
-        for (std::size_t gg = gg_min; gg <= gg_max;
-             gg++) {  // Outgoing micro groups
-          Es(G, GG) += fluxg_fluxG * this->Es(g, gg);
-
-          if (has_P1) Es1(G, GG) += fluxg_fluxG * this->Es1(g, gg);
+        for (std::size_t g = g_min; g <= g_max; g++) {  // Incoming micro groups
+          const double fluxg_fluxG = flux(g) * invs_flux_G;
+          for (std::size_t gg = gg_min; gg <= gg_max; gg++) {  // Outgoing micro groups
+            Es(l, G, GG) += fluxg_fluxG * this->Es(l, g, gg);
+          }
         }
       }
     }
 
     // Reconstruct total xs from absorption and scattering
-    Et(G) = Ea(G) + xt::sum(xt::view(Es, G, xt::all()))();
-  }
-
-  if (has_P1) {
-    return std::make_shared<CrossSection>(Et, Ea, Es, Es1, Ef, vEf, chi);
+    Et(G) = Ea(G) + xt::sum(xt::view(Es, 0, G, xt::all()))();
   }
 
   // If we don't have a P1 matrix, then Et actually contains Etr and Es
   // contains Es_tr. We can therefore use that constructor.
-  return std::make_shared<CrossSection>(Et, Ea, Es, Ef, vEf, chi);
+  return std::make_shared<CrossSection>(Et, Dtr, Ea, Es, Ef, vEf, chi);
 }
 
 CrossSection& CrossSection::operator+=(const CrossSection& R) {
@@ -237,25 +241,34 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
   // Make sure that we are fissile if the other was also fissile
   if (R.fissile()) fissile_ = true;
 
-  // Now we aren't anisotropic and the other is, we need to allocate that array
-  if ((this->anisotropic() == false) && R.anisotropic()) {
-    Es1_ = xt::zeros<double>({ngroups(), ngroups()});
+  // We now fill a temporary scattering matrix array which contains the P0,
+  // P1, ..., Pl scattering matrices where the P0 IS NOT transport corrected.
+  xt::xtensor<double, 3> temp_Es;
+  const std::size_t max_legendre_order = std::max(this->max_legendre_order(), R.max_legendre_order());
+  temp_Es = xt::zeros<double>({max_legendre_order+1, ngroups(), ngroups()});
+  for (std::size_t l = 0; l <= max_legendre_order; l++) {
+    for (std::size_t gin = 0; gin < ngroups(); gin++) {
+      for (std::size_t gout = 0; gout < ngroups(); gout++) {
+        temp_Es(l, gin, gout) = this->Es(l, gin, gout) + R.Es(l, gin, gout);
+      }
+    }
   }
-  const bool aniso = this->anisotropic();
 
   // Add all other cross sections which aren't averaged
   for (std::size_t g = 0; g < ngroups(); g++) {
-    for (std::size_t gout = 0; gout < ngroups(); gout++) {
-      Es_tr_(g, gout) += R.Es_tr(g, gout);
-
-      if (aniso) Es1_(g, gout) += R.Es1(g, gout);
-    }
-
     Etr_(g) += R.Etr(g);
+    Dtr_(g) += R.Dtr(g);
     Ea_(g) += R.Ea(g);
     Ef_(g) += R.Ef(g);
     vEf_(g) += R.vEf(g);
   }
+
+  // Now that we have calculated a new Dtr, we can apply the transport
+  // correction to the new scattering matrix
+  for (std::size_t g = 0; g < ngroups(); g++) {
+    temp_Es(0, g, g) -= Dtr_(g);
+  }
+  Es_ = temp_Es;
 
   this->check_xs();
 
@@ -263,11 +276,8 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
 }
 
 CrossSection& CrossSection::operator*=(double N) {
-  // Scale Es_tr_
-  Es_tr_ *= N;
-
-  // Scale Es1_
-  Es1_ *= N;
+  // Scale Es_
+  Es_ *= N;
 
   // Scale Etr_
   Etr_ *= N;
@@ -306,42 +316,46 @@ void CrossSection::check_xs() {
     throw ScarabeeException(mssg);
   }
 
+  if (Dtr_.size() != ngroups()) {
+    auto mssg = "Dtr is not the same size as Et.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   if (Ea_.size() != ngroups()) {
-    auto mssg = "Ea is not the same size of Et.";
+    auto mssg = "Ea is not the same size as Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
   if (Ef_.size() != ngroups()) {
-    auto mssg = "Ef is not the same size of Et.";
+    auto mssg = "Ef is not the same size as Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
   if (vEf_.size() != ngroups()) {
-    auto mssg = "vEf is not the same size of Et.";
+    auto mssg = "vEf is not the same size as Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
   if (chi_.size() != ngroups()) {
-    auto mssg = "chi is not the same size of Et.";
+    auto mssg = "chi is not the same size as Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (Es_tr_.shape(0) != ngroups() || Es_tr_.shape(1) != ngroups()) {
-    auto mssg = "Es is not the same size of Et.";
+  if (Es_.shape()[0] == 0) {
+    auto mssg = "Es has a length of zero along legendre moment axis.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (Es1_.size() > 0) {
-    if (Es1_.shape(0) != ngroups() || Es1_.shape(1) != ngroups()) {
-      auto mssg = "Es1 is not the same size of Et.";
-      spdlog::error(mssg);
-      throw ScarabeeException(mssg);
-    }
+  if (Es_.shape()[1] != ngroups() || Es_.shape()[2] != ngroups()) {
+    auto mssg = "Es is not the same size as Et.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   // Check values for each group
@@ -381,6 +395,13 @@ void CrossSection::check_xs() {
 
   // Make sure no NaN values
   for (std::size_t gin = 0; gin < ngroups(); gin++) {
+    if (std::isnan(Dtr_(gin))) {
+      std::stringstream mssg;
+      mssg << "Dtr has NaN value in group " << gin << ".";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+
     if (std::isnan(Ea_(gin))) {
       std::stringstream mssg;
       mssg << "Ea has NaN value in group " << gin << ".";
@@ -424,20 +445,13 @@ void CrossSection::check_xs() {
     }
 
     for (std::size_t gout = 0; gout < ngroups(); gout++) {
-      if (std::isnan(Es_tr_(gin, gout))) {
-        std::stringstream mssg;
-        mssg << "Es_tr has NaN value in transfer " << gin << " -> " << gout
-             << ".";
-        spdlog::error(mssg.str());
-        throw ScarabeeException(mssg.str());
-      }
-
-      if (Es1_.size() > 0 && std::isnan(Es1_(gin, gout))) {
-        std::stringstream mssg;
-        mssg << "Es1 has NaN value in transfer " << gin << " -> " << gout
-             << ".";
-        spdlog::error(mssg.str());
-        throw ScarabeeException(mssg.str());
+      for (std::size_t l = 0; l <= max_legendre_order(); l++) {
+        if (std::isnan(Es_(gin, gout))) {
+          std::stringstream mssg;
+          mssg << "Es_ has NaN value in l = " << l << ", " << gin << " -> " << gout << ".";
+          spdlog::error(mssg.str());
+          throw ScarabeeException(mssg.str());
+        }
       }
     }
   }

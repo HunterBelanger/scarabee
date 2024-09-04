@@ -53,17 +53,15 @@ class Material {
   bool resonant() const { return resonant_; }
 
   std::shared_ptr<CrossSection> carlvik_xs(
-      double C, double Ee, std::shared_ptr<NDLibrary> ndl) const;
+      double C, double Ee, std::shared_ptr<NDLibrary> ndl, std::size_t max_l = 1) const;
 
-  std::shared_ptr<CrossSection> roman_xs(double C, double Ee,
-                                         std::shared_ptr<NDLibrary> ndl) const;
+  std::shared_ptr<CrossSection> roman_xs(double C, double Ee, std::shared_ptr<NDLibrary> ndl, std::size_t max_l = 1) const;
 
-  std::shared_ptr<CrossSection> dilution_xs(
-      const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl) const;
+  std::shared_ptr<CrossSection> dilution_xs(const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl, std::size_t max_l = 1) const;
 
   std::shared_ptr<CrossSection> ring_carlvik_xs(
       double C, double Rfuel, double Rin, double Rout,
-      std::shared_ptr<NDLibrary> ndl) const;
+      std::shared_ptr<NDLibrary> ndl, std::size_t max_l = 1) const;
 
   void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
 
@@ -82,7 +80,7 @@ class Material {
 
   std::shared_ptr<CrossSection> two_term_xs(
       const double a1, const double a2, const double b1, const double b2,
-      const double Ee, std::shared_ptr<NDLibrary> ndl) const;
+      const double Ee, std::shared_ptr<NDLibrary> ndl, std::size_t max_l) const;
 };
 
 }  // namespace scarabee

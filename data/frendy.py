@@ -140,11 +140,23 @@ _GROUP_IDS = {"WIMS-69": "epri-69", "XMAS-172": "xmas-nea-lanl-172", "SHEM-281":
 
 _DEFAULT_GROUP_STRUCTURE = "XMAS-172"
 
+_DEFAULT_MAX_LEGENDRE_MOMENT = 1
+
 def set_default_group_structure(name):
   global _DEFAULT_GROUP_STRUCTURE
   if name not in _GROUPS_STRUCTURES:
     raise RuntimeError("Uknown group structure \"{}\".".format(name))
   _DEFAULT_GROUP_STRUCTURE = name
+
+def set_default_max_legendre_moments(l):
+  global _DEFAULT_MAX_LEGENDRE_MOMENT
+  if l >= 0 and l <= 3:
+    _DEFAULT_MAX_LEGENDRE_MOMENT = l
+  else:
+    raise RuntimeError("Default max legendre moment must be in range [0, 3].")
+
+def get_default_max_legendre_moments():
+  return _DEFAULT_MAX_LEGENDRE_MOMENT
 
 def get_default_group_structure():
   return _DEFAULT_GROUP_STRUCTURE
@@ -158,6 +170,8 @@ class KRAMXS:
     self.Ea = None
     self.Es = None
     self.Es1 = None
+    self.Es2 = None
+    self.Es3 = None
     self.Ef = None
     self.nu = None
     self.chi = None
@@ -176,7 +190,7 @@ class KRAMXS:
     line = np.array(line)
     return line
 
-  def from_file(fname):
+  def from_file(fname, max_l):
     fl = open(fname, 'r')
     fl.readline() # Skip the XSN 1 header
 
@@ -214,13 +228,34 @@ class KRAMXS:
     fl.readline()
 
     # Read P1-scattering matrix
-    Es1 = []
-    line_num = 0
-    while line_num < ngroups:
-      line_num += 1
-      Es1.append(KRAMXS.__read_line(fl))
-    Es1 = np.array(Es1)
-    Es1 = np.copy(np.swapaxes(Es1, 0, 1))
+    if max_l >= 1:
+      Es1 = []
+      line_num = 0
+      while line_num < ngroups:
+        line_num += 1
+        Es1.append(KRAMXS.__read_line(fl))
+      Es1 = np.array(Es1)
+      Es1 = np.copy(np.swapaxes(Es1, 0, 1))
+
+    # Read P2-scattering matrix
+    if max_l >= 2:
+      Es2 = []
+      line_num = 0
+      while line_num < ngroups:
+        line_num += 1
+        Es2.append(KRAMXS.__read_line(fl))
+      Es2 = np.array(Es2)
+      Es2 = np.copy(np.swapaxes(Es2, 0, 1))
+    
+    # Read P3-scattering matrix
+    if max_l >= 3:
+      Es3 = []
+      line_num = 0
+      while line_num < ngroups:
+        line_num += 1
+        Es3.append(KRAMXS.__read_line(fl))
+      Es3 = np.array(Es3)
+      Es3 = np.copy(np.swapaxes(Es3, 0, 1))
 
     fl.close()
 
@@ -229,7 +264,14 @@ class KRAMXS:
     xs.Et = Et
     xs.Ea = Ea
     xs.Es = Es
-    xs.Es1 = Es1
+
+    if Es1 is not None:
+      xs.Es1 = Es1
+    if Es2 is not None:
+      xs.Es2 = Es2
+    if Es3 is not None:
+      xs.Es3 = Es3
+
     xs.Ef = Ef
     xs.nu = np.divide(vEf, Ef, out=np.zeros_like(vEf), where=Ef!=0.)
     xs.chi = chi
@@ -255,6 +297,10 @@ class FrendyMG:
     self.processed = False
     self.resonant = False
     self.delete_files = True
+    self.max_legendre_moment = _DEFAULT_MAX_LEGENDRE_MOMENT
+
+    if self.max_legendre_moment > 3:
+      raise RuntimeError("Only legendre moments up to L=3 are supported.")
 
   def initialize(self):
     if self.dilutions is not None:
@@ -274,11 +320,11 @@ class FrendyMG:
 
     if len(self.dilutions) > 1:
       self.resonant = True
-
-    self.Es =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups, self.ngroups))
-    self.Es1 = np.zeros((len(self.temps), len(self.dilutions), self.ngroups, self.ngroups))
+    
+    self.Dtr =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
     self.Ea =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
     self.flux =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
+    self.Es =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups, self.ngroups))
     if self.fissile:
       self.Ef = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
       self.nu = np.zeros((len(self.temps), self.ngroups))
@@ -287,6 +333,21 @@ class FrendyMG:
       self.Ef = None
       self.nu = None
       self.chi = None
+
+    if self.max_legendre_moment >= 1:
+      self.Es1 = np.zeros((len(self.temps), len(self.dilutions), self.ngroups, self.ngroups))
+    else:
+      self.Es1 = None
+
+    if self.max_legendre_moment >= 2:
+      self.Es2 = np.zeros((len(self.temps), len(self.dilutions), self.ngroups, self.ngroups))
+    else:
+      self.Es2 = None
+
+    if self.max_legendre_moment >= 3:
+      self.Es3 = np.zeros((len(self.temps), len(self.dilutions), self.ngroups, self.ngroups))
+    else:
+      self.Es3 = None
 
   def process(self, h5=None, chi=None):
     if not self.initialized:
@@ -303,6 +364,8 @@ class FrendyMG:
 
     if chi is not None:
       self.apply_P1_transport_correction(chi)
+    else:
+      self.apply_inscatter_transport_correction()
 
     if h5 is not None:
       self.add_to_hdf5(h5)
@@ -330,15 +393,19 @@ class FrendyMG:
         Etr = 1. / (3. * D)
 
         # Calculate the delta xs for the transport correction
-        Delta = Et - Etr
-        
-        # Correct the xs data for the nuclide
-        for g in range(self.ngroups):
-          self.Es[iT, id, g, g] -= Delta[g]
-    
-    # Once we have done all temps and dilutions, we set the Es1 data to None
-    self.Es1 = None 
+        self.Dtr[iT, id, :] = Et - Etr
+  
+  def apply_inscatter_transport_correction(self):
+    if not self.processed:
+      raise RuntimeError("Cannot apply transport corretion to unprocessed data.")
 
+    if self.Es1 is not None:
+      for iT in range(len(self.temps)):
+        for id in range(len(self.dilutions)):
+          # Calculate the delta xs for the transport correction
+          for g in range(self.ngroups):
+              self.Dtr[iT, id, g] = np.sum(self.Es1[iT, id, g, :])
+    
   def add_to_hdf5(self, h5):
     grp = h5.create_group(self.name)
 
@@ -354,10 +421,15 @@ class FrendyMG:
     grp.attrs['dilutions'] = self.dilutions
 
     # Save cross section data
+    grp.create_dataset("transport-correction", data=self.Dtr)
     grp.create_dataset("absorption", data=self.Ea)
     grp.create_dataset("scatter", data=self.Es)
     if self.Es1 is not None:
       grp.create_dataset("p1-scatter", data=self.Es1)
+    if self.Es2 is not None:
+      grp.create_dataset("p2-scatter", data=self.Es2)
+    if self.Es3 is not None:
+      grp.create_dataset("p3-scatter", data=self.Es3)
     grp.create_dataset("flux", data=self.flux)
     if self.fissile:
       grp.create_dataset("fission", data=self.Ef)
@@ -400,7 +472,7 @@ class FrendyMG:
       out += "potential_scat_xs {pot_xs}\n".format(pot_xs=self.pot_xs)
     out += "mg_file_name {mgfname}\n".format(mgfname=self.name)
     out += "temperature {temp}\n".format(temp=temp)
-    out += "legendre_order 1\n"
+    out += "legendre_order {max_l}\n".format(max_l=self.max_legendre_moment)
     out += "mg_structure ( {id} )\n".format(id=_GROUP_IDS[self.group_strucutre])
     out += "mg_weighting_spectrum ( fission+1/e+maxwell  )\n"
     out += "process_gas_xs off\n"
@@ -465,13 +537,18 @@ class FrendyMG:
     for d in range(len(self.dilutions)):
       # Read xs file
       fname = self.name+"_KRAMXS_MACRO_bg" + str(d) + ".mg"
-      xs = KRAMXS.from_file(fname)
+      xs = KRAMXS.from_file(fname, self.max_legendre_moment)
 
       # Save values. FRENDY order dilutions from high to low, hence the index
       # shift on d to add them backwards
       self.Ea[itemp,-(d+1),:] = xs.Ea
       self.Es[itemp,-(d+1),:,:] = xs.Es
-      self.Es1[itemp,-(d+1),:,:] = xs.Es1
+      if xs.Es1 is not None:
+        self.Es1[itemp,-(d+1),:,:] = xs.Es1
+      if xs.Es2 is not None:
+        self.Es2[itemp,-(d+1),:,:] = xs.Es2
+      if xs.Es3 is not None:
+        self.Es3[itemp,-(d+1),:,:] = xs.Es3
       if self.fissile:
         self.Ef[itemp,-(d+1),:] = xs.Ef
         if d == 0:

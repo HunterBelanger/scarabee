@@ -17,7 +17,7 @@ void fill_A(Eigen::MatrixXd& A, std::shared_ptr<CrossSection> xs,
 
   for (std::size_t g = 0; g < NG; g++) {
     for (std::size_t gg = 0; gg < NG; gg++) {
-      A(g, gg) = B2 * D(g, gg) - xs->Es(gg, g);
+      A(g, gg) = B2 * D(g, gg) - xs->Es(0, gg, g);
     }
     A(g, g) += xs->Et(g);
   }
@@ -31,7 +31,7 @@ void fill_Dinvs(Eigen::MatrixXd& Dinvs, std::shared_ptr<CrossSection> xs,
 
   for (std::size_t g = 0; g < NG; g++) {
     for (std::size_t gg = 0; gg < NG; gg++) {
-      Dinvs(g, gg) = -xs->Es1(gg, g);
+      Dinvs(g, gg) = -xs->Es(1, gg, g);
     }
     Dinvs(g, g) += a(g) * xs->Et(g);
   }

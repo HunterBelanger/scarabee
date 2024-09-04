@@ -31,8 +31,11 @@ struct NuclideHandle {
   bool resonant;
 
   std::shared_ptr<xt::xtensor<double, 3>> absorption;
+  std::shared_ptr<xt::xtensor<double, 3>> transport_correction;
   std::shared_ptr<xt::xtensor<double, 4>> scatter;
   std::shared_ptr<xt::xtensor<double, 4>> p1_scatter;
+  std::shared_ptr<xt::xtensor<double, 4>> p2_scatter;
+  std::shared_ptr<xt::xtensor<double, 4>> p3_scatter;
   std::shared_ptr<xt::xtensor<double, 3>> fission;
   std::shared_ptr<xt::xtensor<double, 2>> chi;
   std::shared_ptr<xt::xtensor<double, 2>> nu;
@@ -60,19 +63,21 @@ class NDLibrary {
   void convert_fractions(Material& mat) const;
 
   std::shared_ptr<CrossSection> interp_xs(const std::string& name,
-                                          const double temp, const double dil);
+                                          const double temp, const double dil,
+                                          std::size_t max_l = 1);
 
   std::shared_ptr<CrossSection> two_term_xs(const std::string& name,
                                             const double temp, const double b1,
                                             const double b2,
                                             const double bg_xs_1,
-                                            const double bg_xs_2);
+                                            const double bg_xs_2,
+                                            std::size_t max_l = 1);
 
   std::shared_ptr<CrossSection> ring_two_term_xs(
       const std::string& name, const double temp, const double a1,
       const double a2, const double b1, const double b2,
       const double mat_pot_xs, const double N, const double Rfuel,
-      const double Rin, const double Rout);
+      const double Rin, const double Rout, std::size_t max_l = 1);
 
   const std::shared_ptr<H5::File>& h5() const { return h5_; }
 

@@ -155,12 +155,14 @@ void init_Material(py::module& m) {
            "Ee : float\n"
            "     Escpae cross section.\n"
            "ndl : NDLibrary\n"
-           "      Nuclear data library for cross section interpolation.\n\n"
+           "      Nuclear data library for cross section interpolation.\n"
+           "max_l : int\n"
+           "        Maximum legendre moment (default is 1).\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
            "             The macroscopic self-shielded cross section.",
-           py::arg("C"), py::arg("Ee"), py::arg("ndl"))
+           py::arg("C"), py::arg("Ee"), py::arg("ndl"), py::arg("max_l") = 1)
 
       .def("roman_xs", &Material::roman_xs,
            "Computes the macroscopic material cross section, self-shielded "
@@ -172,12 +174,14 @@ void init_Material(py::module& m) {
            "Ee : float\n"
            "     Escpae cross section.\n"
            "ndl : NDLibrary\n"
-           "      Nuclear data library for cross section interpolation.\n\n"
+           "      Nuclear data library for cross section interpolation.\n"
+           "max_l : int\n"
+           "        Maximum legendre moment (default is 1).\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
            "             The macroscopic self-shielded cross section.",
-           py::arg("C"), py::arg("Ee"), py::arg("ndl"))
+           py::arg("C"), py::arg("Ee"), py::arg("ndl"), py::arg("max_l") = 1)
 
       .def("dilution_xs", &Material::dilution_xs,
            "Computes the macroscopic material cross section with nuclides "
@@ -187,12 +191,14 @@ void init_Material(py::module& m) {
            "dils : list of float\n"
            "       Desired dilution for each nuclide.\n"
            "ndl : NDLibrary\n"
-           "      Nuclear data library for cross section interpolation.\n\n"
+           "      Nuclear data library for cross section interpolation.\n"
+           "max_l : int\n"
+           "        Maximum legendre moment (default is 1).\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
            "             The macroscopic cross section.",
-           py::arg("dils"), py::arg("ndl"))
+           py::arg("dils"), py::arg("ndl"), py::arg("max_l") = 1)
 
       .def("ring_carlvik_xs", &Material::ring_carlvik_xs,
            "Computes the macroscopic material cross section, self-shielded "
@@ -209,13 +215,15 @@ void init_Material(py::module& m) {
            "Rout : float\n"
            "     Outer radius of the fuel ring.\n"
            "ndl : NDLibrary\n"
-           "      Nuclear data library for cross section interpolation.\n\n"
+           "      Nuclear data library for cross section interpolation.\n"
+           "max_l : int\n"
+           "        Maximum legendre moment (default is 1).\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
            "             The macroscopic self-shielded cross section.",
            py::arg("C"), py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"),
-           py::arg("ndl"))
+           py::arg("ndl"), py::arg("max_l") = 1)
 
       .def_property_readonly("composition", &Material::composition,
                              "The :py:class:`MaterialComposition` defining the "

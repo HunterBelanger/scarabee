@@ -75,11 +75,13 @@ void init_NDLibrary(py::module& m) {
            "       Desired temperature in kelvin.\n"
            "dil : str\n"
            "      Desired dilution in barns.\n"
+           "max_l : int\n"
+           "        Maximum legendre moment (default is 1).\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
            "  Interpolated cross sections.",
-           py::arg("name"), py::arg("temp"), py::arg("dil"))
+           py::arg("name"), py::arg("temp"), py::arg("dil"), py::arg("max_l") = 1)
 
       .def(
           "two_term_xs", &NDLibrary::two_term_xs,
@@ -114,13 +116,15 @@ void init_NDLibrary(py::module& m) {
           "      Background cross section for first term (:math:`\\sigma_1`).\n"
           "xs2 : float\n"
           "      Background cross section for second term "
-          "(:math:`\\sigma_2`).\n\n"
+          "(:math:`\\sigma_2`).\n"
+          "max_l : int\n"
+          "        Maximum legendre moment (default is 1).\n\n"
           "Returns\n"
           "-------\n"
           "CrossSection\n"
           "  Self-shielded cross sections.",
           py::arg("name"), py::arg("temp"), py::arg("b1"), py::arg("b2"),
-          py::arg("xs1"), py::arg("xs2"))
+          py::arg("xs1"), py::arg("xs2"), py::arg("max_l") = 1)
 
       .def("ring_two_term_xs", &NDLibrary::ring_two_term_xs,
            "Uses the two-term rational approximation and the Stoker-Weiss "
@@ -149,14 +153,16 @@ void init_NDLibrary(py::module& m) {
            "Rin : float\n"
            "     Inner radius of the fuel ring.\n"
            "Rout : float\n"
-           "     Outer radius of the fuel ring.\n\n"
+           "     Outer radius of the fuel ring.\n"
+           "max_l : int\n"
+           "        Maximum legendre moment (default is 1).\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
            "  Self-shielded cross sections.",
            py::arg("name"), py::arg("temp"), py::arg("a1"), py::arg("a2"),
            py::arg("b1"), py::arg("b2"), py::arg("mat_pot_xs"), py::arg("N"),
-           py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"))
+           py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"), py::arg("max_l") = 1)
 
       .def("unload", &NDLibrary::unload,
            "Deallocates all NuclideHandles which contained raw nuclear data.")
