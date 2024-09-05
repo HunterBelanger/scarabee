@@ -198,14 +198,14 @@ void PWRReflector::set_dancoff_num_azimuthal_angles(std::uint32_t n) {
 
 void PWRReflector::solve() {
   if (pins_.size() == 0) {
-    auto mssg = "Cannot solve PWR assembly problem. No pins provided.";
+    auto mssg = "Cannot solve PWR reflector problem. No pins provided.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
   if (condensation_scheme_.size() == 0) {
     auto mssg =
-        "Cannot solve PWR assembly problem. No energy condensation scheme "
+        "Cannot solve PWR reflector problem. No energy condensation scheme "
         "provided.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -213,7 +213,7 @@ void PWRReflector::solve() {
 
   if (few_group_condensation_scheme_.size() == 0) {
     auto mssg =
-        "Cannot solve PWR assembly problem. Few-group energy condensation "
+        "Cannot solve PWR reflector problem. Few-group energy condensation "
         "scheme is empty.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -225,7 +225,6 @@ void PWRReflector::solve() {
   pin_cell_calc();
   condense_xs();
   moc_calc();
-  compute_form_factors();
   few_group_xs();
   compute_adf_cdf();
 }
@@ -468,6 +467,56 @@ void PWRReflector::build_reflector_dancoff_geometry() {
   reflector_dancoff_geom_->set_tiles(tiles);
 }
 
+void PWRReflector::build_reflector_geometry() {
+  // Determine number of regions
+  std::size_t NG = static_cast<std::size_t>(gap_width_ / 0.3);
+  if (NG == 0) NG++;
+  double dx_gap = gap_width_ / static_cast<double>(NG);
+
+  std::size_t NB = 0;
+  double dx_baffle = 0.;
+  if (baffle_) {
+    NB = static_cast<std::size_t>(baffle_width_ / 0.3);
+    dx_baffle = baffle_width_ / static_cast<double>(NB);
+  }
+
+  std::size_t NR = static_cast<std::size_t>(after_baffle_ref_width_ / 0.3) + 1;
+  double dx_ref = after_baffle_ref_width_ / static_cast<double>(NR);
+
+  const double asmbly_y = static_cast<double>(shape_.second) * pitch_;
+  std::size_t NY = static_cast<std::size_t>(asmbly_y / 0.3) + 1;
+  const double delta_y = asmbly_y / static_cast<double>(NY);
+
+  // Create base tiles
+  std::shared_ptr<EmptyCell> gap_tile = std::make_shared<EmptyCell>(macro_gap_xs_, dx_gap, delta_y);
+  std::shared_ptr<EmptyCell> baff_tile {nullptr};
+  if (baffle_)
+    baff_tile = std::make_shared<EmptyCell>(macro_baffle_xs_, dx_baffle, delta_y);
+  std::shared_ptr<EmptyCell> ref_tile = std::make_shared<EmptyCell>(macro_ref_xs_, dx_ref, delta_y);
+
+  // Create the dx and dy arrays
+  std::vector<double> dy(NY, delta_y);
+  std::vector<double> dx;
+  dx.reserve(NG+NB+NR);
+  for (std::size_t i = 0; i < NG+NB+NR; i++) {
+    if (i < NG) dx.push_back(dx_gap);
+    else if (i < NG+NB) dx.push_back(dx_baffle);
+    else dx.push_back(dx_ref);
+  }
+
+  moc_refl_geom_ = std::make_shared<Cartesian2D>(dx, dy);
+
+  std::vector<Cartesian2D::TileFill> tiles;
+  tiles.reserve((NG+NB+NR)*NY);
+  for (std::size_t j = 0; j < NY; j++) {
+    for (std::size_t i = 0; i < NG; i++) tiles.push_back(gap_tile);
+    for (std::size_t i = 0; i < NB; i++) tiles.push_back(baff_tile);
+    for (std::size_t i = 0; i < NR; i++) tiles.push_back(ref_tile);
+  }
+
+  moc_refl_geom_->set_tiles(tiles);
+}
+
 void PWRReflector::get_fuel_dancoff_corrections() {
   spdlog::info("");
   spdlog::info("Computing Dancoff factors for fuel");
@@ -486,10 +535,18 @@ void PWRReflector::get_fuel_dancoff_corrections() {
         },
         pin));
   }
-  std::shared_ptr<Cartesian2D> geom =
+
+  std::shared_ptr<Cartesian2D> asmbly_geom =
       std::make_shared<Cartesian2D>(std::vector<double>(shape_.first, pitch_),
                                     std::vector<double>(shape_.first, pitch_));
-  geom->set_tiles(fuel_df_pins);
+  asmbly_geom->set_tiles(fuel_df_pins);
+
+  const double asmbly_dx = static_cast<double>(shape_.first)  * pitch_;
+  const double asmbly_dy = static_cast<double>(shape_.second) * pitch_;
+  std::shared_ptr<Cartesian2D> geom = std::make_shared<Cartesian2D>(std::vector<double>(2, asmbly_dx),
+                                                                    std::vector<double>(1, asmbly_dy));
+  std::vector<Cartesian2D::TileFill> tiles {asmbly_geom, reflector_dancoff_geom_};
+  geom->set_tiles(tiles);
   std::shared_ptr<MOCDriver> moc = std::make_shared<MOCDriver>(geom);
 
   // Set the source
@@ -503,6 +560,7 @@ void PWRReflector::get_fuel_dancoff_corrections() {
   }
 
   // Solve the lattice problem
+  moc->x_max_bc() = BoundaryCondition::Vacuum;
   moc->generate_tracks(dancoff_num_azimuthal_angles_, dancoff_track_spacing_,
                        dancoff_polar_quadrature_);
   moc->sim_mode() = SimulationMode::FixedSource;
@@ -551,10 +609,18 @@ void PWRReflector::get_clad_dancoff_corrections() {
         },
         pin));
   }
-  std::shared_ptr<Cartesian2D> geom =
+
+  std::shared_ptr<Cartesian2D> asmbly_geom =
       std::make_shared<Cartesian2D>(std::vector<double>(shape_.first, pitch_),
                                     std::vector<double>(shape_.first, pitch_));
-  geom->set_tiles(fuel_df_pins);
+  asmbly_geom->set_tiles(fuel_df_pins);
+
+  const double asmbly_dx = static_cast<double>(shape_.first)  * pitch_;
+  const double asmbly_dy = static_cast<double>(shape_.second) * pitch_;
+  std::shared_ptr<Cartesian2D> geom = std::make_shared<Cartesian2D>(std::vector<double>(2, asmbly_dx),
+                                                                    std::vector<double>(1, asmbly_dy));
+  std::vector<Cartesian2D::TileFill> tiles {asmbly_geom, reflector_dancoff_geom_};
+  geom->set_tiles(tiles);
   std::shared_ptr<MOCDriver> moc = std::make_shared<MOCDriver>(geom);
 
   // Set the source
@@ -568,6 +634,7 @@ void PWRReflector::get_clad_dancoff_corrections() {
   }
 
   // Solve the lattice problem
+  moc->x_max_bc() = BoundaryCondition::Vacuum;
   moc->generate_tracks(dancoff_num_azimuthal_angles_, dancoff_track_spacing_,
                        dancoff_polar_quadrature_);
   moc->sim_mode() = SimulationMode::FixedSource;
@@ -689,6 +756,93 @@ void PWRReflector::pin_cell_calc() {
   set_logging_level(LogLevel::info);
 }
 
+void PWRReflector::baffle_spectrum_calc() {
+  spdlog::info("");
+  spdlog::info("Performing the micro-group baffle/reflector calcuation");
+  spdlog::info("Please wait...");
+  set_logging_level(LogLevel::warn);
+
+  // First, we create the baffle cross section (if present)
+  if (baffle_) {
+    const double Ee = 1. / (2. * baffle_width_);
+    baffle_xs_ = baffle_->roman_xs(0., Ee, ndl_);
+    baffle_xs_->set_name("Baffle");
+  }
+
+  // Now we create a 1D annular pin cell problem to approximate the fine
+  // specrum in the gap, baffle, and reflector
+  std::size_t NF = 2 * 17;
+  std::vector<std::size_t> fuel_regions(NF);
+  std::iota(fuel_regions.begin(), fuel_regions.end(), 0);
+  double dx_fuel = pitch_;
+
+  std::size_t NG = static_cast<std::size_t>(gap_width_ / 0.3);
+  if (NG == 0) NG++;
+  double dx_gap = gap_width_ / static_cast<double>(NG);
+  std::vector<std::size_t> gap_regions(NG);
+  std::iota(gap_regions.begin(), gap_regions.end(), NF);
+
+  std::size_t NB = 0;
+  double dx_baffle = 0.;
+  std::vector<std::size_t> baffle_regions;
+  if (baffle_) {
+    NB = static_cast<std::size_t>(baffle_width_ / 0.3);
+    dx_baffle = baffle_width_ / static_cast<double>(NB);
+    baffle_regions.resize(NB);
+    std::iota(baffle_regions.begin(), baffle_regions.end(), NF+NG);
+  }
+
+  std::size_t NR = static_cast<std::size_t>(after_baffle_ref_width_ / 0.3) + 1;
+  double dx_ref = after_baffle_ref_width_ / static_cast<double>(NR);
+  std::vector<std::size_t> ref_regions(NR);
+  std::iota(ref_regions.begin(), ref_regions.end(), NF+NG+NB);
+
+  std::vector<double> radii;
+  std::vector<std::shared_ptr<CrossSection>> mats;
+  radii.reserve(NF+NG+NB+NR);
+  mats.reserve(NF+NG+NB+NR);
+
+  for (std::size_t i = 0; i < NF; i++) {
+    radii.push_back(dx_fuel);
+    mats.push_back(avg_fp_);
+  }
+  for (std::size_t i = 0; i < NG; i++) {
+    radii.push_back(dx_gap);
+    mats.push_back(moderator_xs_);
+  }
+  for (std::size_t i = 0; i < NB; i++) {
+    radii.push_back(dx_baffle);
+    mats.push_back(baffle_xs_);
+  }
+  for (std::size_t i = 0; i < NR; i++) {
+    radii.push_back(dx_ref);
+    mats.push_back(moderator_xs_);
+  }
+
+  reflector_cyl_cell_ = std::make_shared<CylindricalCell>(radii, mats);
+  reflector_cyl_flux_cell_->solve();
+  reflector_cyl_flux_cell_ = std::make_shared<CylindricalFluxSolver>(reflector_cyl_cell_);
+  reflector_cyl_flux_cell_->set_albedo(0.);
+  reflector_cyl_flux_cell_->solve(true); // Solve in parallel
+
+  // Now we condense the macro cross sections
+  auto gap_homog_xs = reflector_cyl_flux_cell_->homogenize(gap_regions);
+  auto gap_spectrum = reflector_cyl_flux_cell_->homogenize_flux_spectrum(gap_regions);
+  macro_gap_xs_ = gap_homog_xs->condense(condensation_scheme_, gap_spectrum);
+
+  auto ref_homog_xs = reflector_cyl_flux_cell_->homogenize(ref_regions);
+  auto ref_spectrum = reflector_cyl_flux_cell_->homogenize_flux_spectrum(ref_regions);
+  macro_ref_xs_ = ref_homog_xs->condense(condensation_scheme_, ref_spectrum);
+
+  if (baffle_) {
+    auto baf_homog_xs = reflector_cyl_flux_cell_->homogenize(baffle_regions);
+    auto baf_spectrum = reflector_cyl_flux_cell_->homogenize_flux_spectrum(baffle_regions);
+    macro_baffle_xs_ = baf_homog_xs->condense(condensation_scheme_, baf_spectrum);
+  }
+
+  set_logging_level(LogLevel::info);
+}
+
 void PWRReflector::condense_xs() {
   spdlog::info("");
   spdlog::info("Performing pin cell energy condensation");
@@ -733,8 +887,16 @@ void PWRReflector::moc_calc() {
 
   std::vector<double> dx(shape_.first, pitch_);
   std::vector<double> dy(shape_.second, pitch_);
-  moc_geom_ = std::make_shared<Cartesian2D>(dx, dy);
-  moc_geom_->set_tiles(moc_pins);
+  moc_asmbly_geom_ = std::make_shared<Cartesian2D>(dx, dy);
+  moc_asmbly_geom_->set_tiles(moc_pins);
+
+  build_reflector_geometry();
+
+  const double asmbly_dx = static_cast<double>(shape_.first)  * pitch_;
+  const double asmbly_dy = static_cast<double>(shape_.second) * pitch_;
+  moc_geom_ = std::make_shared<Cartesian2D>(std::vector<double>(2, asmbly_dx), std::vector<double>(1, asmbly_dy));
+  std::vector<Cartesian2D::TileFill> tiles {moc_asmbly_geom_, moc_refl_geom_};
+  moc_geom_->set_tiles(tiles);
 
   moc_ = std::make_shared<MOCDriver>(moc_geom_);
   if (plot_assembly_) {
@@ -743,7 +905,8 @@ void PWRReflector::moc_calc() {
     guiplotter.push_layer(std::make_unique<MOCPlotter>(moc_.get()));
     guiplotter.run();
   }
-
+  
+  moc_->x_max_bc() = BoundaryCondition::Vacuum;
   moc_->generate_tracks(num_azimuthal_angles_, track_spacing_,
                         polar_quadrature_);
   moc_->set_keff_tolerance(keff_tolerance_);
@@ -751,40 +914,49 @@ void PWRReflector::moc_calc() {
   moc_->solve();
 }
 
-void PWRReflector::compute_form_factors() {
-  form_factors_ = xt::zeros<double>({shape_.first, shape_.second});
-
-  const Direction u(1., 0.);
-
-  for (std::size_t j = 0; j < shape_.second; j++) {
-    const double y = moc_->y_max() - (static_cast<double>(j) + 0.5) * pitch_;
-    for (std::size_t i = 0; i < shape_.first; i++) {
-      const double x = moc_->x_min() + (static_cast<double>(i) + 0.5) * pitch_;
-      const Vector r(x, y);
-      auto inds = moc_->get_all_fsr_in_cell(r, u);
-
-      // We now compute power in the cell
-      for (auto fi : inds) {
-        const double V = moc_->volume(fi);
-        const auto& xs = moc_->xs(fi);
-        for (std::size_t g = 0; g < xs->ngroups(); g++) {
-          form_factors_(j, i) += V * xs->Ef(g) * moc_->flux(fi, g);
-        }
-      }
-    }
-  }
-
-  // Now we compute the average pin power, and normalize the form factors
-  const double avg_pwr = xt::mean(form_factors_)();
-  form_factors_ /= avg_pwr;
-}
-
 void PWRReflector::few_group_xs() {
   spdlog::info("");
   spdlog::info("Generating few group cross sections");
 
-  const auto homog_xs = moc_->homogenize();
-  const auto flux_spectrum = moc_->homogenize_flux_spectrum();
+  std::vector<std::size_t> asmbly_regions(moc_asmbly_geom_->num_fsrs());
+  std::iota(asmbly_regions.begin(), asmbly_regions.end(), 0);
+  std::vector<std::size_t> refl_regions(moc_refl_geom_->num_fsrs());
+  std::iota(refl_regions.begin(), refl_regions.end(), asmbly_regions.size());
+
+  asmbly_diffusion_xs_ = make_diffusion_xs(asmbly_regions);
+  refl_diffusion_xs_ = make_diffusion_xs(refl_regions);
+
+  auto NG = refl_diffusion_xs_->ngroups();
+  xt::xtensor<double, 1> D = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> Ea = xt::zeros<double>({NG});
+  xt::xtensor<double, 2> Es = xt::zeros<double>({NG, NG});
+
+  for (std::size_t g = 0; g < NG; g++) {
+    D(g) = refl_diffusion_xs_->D(g);
+    Ea(g) = refl_diffusion_xs_->Ea(g);
+    for (std::size_t gg = 0; gg < NG; gg++) {
+      Es(g, gg) = refl_diffusion_xs_->Es(g, gg);
+    }
+  }
+
+  std::stringstream D_str, Ea_str, Es_str;
+  D_str << "D  : " << D;
+  Ea_str << "Ea : " << Ea;
+  spdlog::info(D_str.str());
+  spdlog::info(Ea_str.str());
+
+  Es_str << "Es : " << xt::view(Es, 0, xt::all());
+  spdlog::info(Es_str.str());
+  for (std::size_t g = 1; g < NG; g++) {
+    Es_str.str(std::string());
+    Es_str << "     " << xt::view(Es, g, xt::all());
+    spdlog::info(Es_str.str());
+  }
+}
+
+std::shared_ptr<DiffusionCrossSection> PWRReflector::make_diffusion_xs(const std::vector<std::size_t>& regions) const {
+  const auto homog_xs = moc_->homogenize(regions);
+  const auto flux_spectrum = moc_->homogenize_flux_spectrum(regions);
   auto NG = homog_xs->ngroups();
   const bool fissile = homog_xs->fissile();
 
@@ -827,143 +999,15 @@ void PWRReflector::few_group_xs() {
   // either method is acceptable [2]. In light of these comments, I have
   // chosen to go with Smith's recommendation of performing energy
   // condensation on the diffusion coefficients.
-  diffusion_xs_ =
-      diff_xs->condense(few_group_condensation_scheme_, flux_spectrum);
-
-  NG = diffusion_xs_->ngroups();
-
-  D = xt::zeros<double>({NG});
-  Ea = xt::zeros<double>({NG});
-  Es = xt::zeros<double>({NG, NG});
-  Ef = xt::zeros<double>({NG});
-  vEf = xt::zeros<double>({NG});
-  chi = xt::zeros<double>({NG});
-
-  for (std::size_t g = 0; g < NG; g++) {
-    D(g) = diffusion_xs_->D(g);
-    Ea(g) = diffusion_xs_->Ea(g);
-    Ef(g) = diffusion_xs_->Ef(g);
-    vEf(g) = diffusion_xs_->vEf(g);
-    chi(g) = diffusion_xs_->chi(g);
-
-    for (std::size_t gg = 0; gg < NG; gg++) {
-      Es(g, gg) = diffusion_xs_->Es(g, gg);
-    }
-  }
-
-  std::stringstream D_str, Ea_str, Ef_str, vEf_str, chi_str, Es_str;
-  D_str << "D  : " << D;
-  Ea_str << "Ea : " << Ea;
-  Ef_str << "Ef : " << Ef;
-  vEf_str << "vEf: " << vEf;
-  chi_str << "chi: " << chi;
-
-  spdlog::info(D_str.str());
-  spdlog::info(Ea_str.str());
-  if (fissile) {
-    spdlog::info(Ef_str.str());
-    spdlog::info(vEf_str.str());
-    spdlog::info(chi_str.str());
-  }
-
-  Es_str << "Es : " << xt::view(Es, 0, xt::all());
-  spdlog::info(Es_str.str());
-  for (std::size_t g = 1; g < NG; g++) {
-    Es_str.str(std::string());
-    Es_str << "     " << xt::view(Es, g, xt::all());
-    spdlog::info(Es_str.str());
-  }
+  return diff_xs->condense(few_group_condensation_scheme_, flux_spectrum);
 }
 
 void PWRReflector::compute_adf_cdf() {
-  // Number of few groups
-  const std::size_t NG = few_group_condensation_scheme_.size();
-
-  // We first need to compute the homogenous few-group flux for the assembly
-  std::vector<double> homog_flx(NG, 0.);
-  double total_volume = 0.;
-  for (std::size_t i = 0; i < moc_->nfsr(); i++) {
-    const double Vi = moc_->volume(i);
-    total_volume += Vi;
-
-    for (std::size_t G = 0; G < NG; G++) {
-      const std::size_t gmin = few_group_condensation_scheme_[G].first;
-      const std::size_t gmax = few_group_condensation_scheme_[G].first;
-
-      for (std::size_t g = gmin; g <= gmax; g++) {
-        homog_flx[G] += Vi * moc_->flux(i, g);
-      }
-    }
-  }
-  for (auto& flx : homog_flx) flx /= total_volume;
-
-  // Trace the needed segments along the assembly
-  const auto xp_segments = moc_->trace_fsr_segments(
-      Vector(moc_->x_max() - 0.01, moc_->y_max()), Direction(0., -1.));
-
-  const auto xn_segments = moc_->trace_fsr_segments(
-      Vector(moc_->x_min() + 0.01, moc_->y_max()), Direction(0., -1.));
-
-  const auto yp_segments = moc_->trace_fsr_segments(
-      Vector(moc_->x_min(), moc_->y_max() - 0.01), Direction(1., 0.));
-
-  const auto yn_segments = moc_->trace_fsr_segments(
-      Vector(moc_->x_min(), moc_->y_min() + 0.01), Direction(1., 0.));
-
-  // Get average flux in each macro group along each surface
-  const auto xp_flx = compute_avg_surface_flx(xp_segments);
-  const auto xn_flx = compute_avg_surface_flx(xn_segments);
-  const auto yp_flx = compute_avg_surface_flx(yp_segments);
-  const auto yn_flx = compute_avg_surface_flx(yn_segments);
-
-  // Load the adf array
-  adf_ = xt::zeros<double>({NG, static_cast<std::size_t>(4)});
-  for (std::size_t G = 0; G < NG; G++) {
-    adf_(G, DiffusionData::ADF::YP) = yp_flx[G] / homog_flx[G];
-    adf_(G, DiffusionData::ADF::XP) = xp_flx[G] / homog_flx[G];
-    adf_(G, DiffusionData::ADF::YN) = yn_flx[G] / homog_flx[G];
-    adf_(G, DiffusionData::ADF::XN) = xn_flx[G] / homog_flx[G];
-  }
-
-  // We now need to compute the corner fluxes for the cdf
-  const auto I_flx = compute_avg_flx(
-      Vector(moc_->x_max() - 0.01, moc_->y_max() - 0.011), Direction(-1., -1.));
-  const auto II_flx = compute_avg_flx(
-      Vector(moc_->x_min() + 0.01, moc_->y_max() - 0.011), Direction(1., -1.));
-  const auto III_flx = compute_avg_flx(
-      Vector(moc_->x_min() + 0.01, moc_->y_min() + 0.011), Direction(1., 1.));
-  const auto IV_flx = compute_avg_flx(
-      Vector(moc_->x_max() - 0.01, moc_->y_min() + 0.011), Direction(-1., 1.));
-  cdf_ = xt::zeros<double>({NG, static_cast<std::size_t>(4)});
-  for (std::size_t G = 0; G < NG; G++) {
-    cdf_(G, DiffusionData::CDF::I) = I_flx[G] / homog_flx[G];
-    cdf_(G, DiffusionData::CDF::II) = II_flx[G] / homog_flx[G];
-    cdf_(G, DiffusionData::CDF::III) = III_flx[G] / homog_flx[G];
-    cdf_(G, DiffusionData::CDF::IV) = IV_flx[G] / homog_flx[G];
-  }
   
-  std::stringstream str;
-  str << "ADF : " << xt::view(adf_, 0, xt::all());
-  spdlog::info(str.str());
-  for (std::size_t G = 1; G < NG; G++) {
-    str.str(std::string());
-    str << "      " << xt::view(adf_, G, xt::all());
-    spdlog::info(str.str());
-  }
-  str.str(std::string());
-  
-  str << "CDF : " << xt::view(cdf_, 0, xt::all());
-  spdlog::info(str.str());
-  for (std::size_t G = 1; G < NG; G++) {
-    str.str(std::string());
-    str << "      " << xt::view(cdf_, G, xt::all());
-    spdlog::info(str.str());
-  }
 }
 
 void PWRReflector::save_diffusion_data(const std::string& fname) const {
-  if (diffusion_xs_ == nullptr ||
-      form_factors_.size() == 0 ||
+  if (refl_diffusion_xs_ == nullptr ||
       adf_.size() == 0 ||
       cdf_.size() == 0) {
     auto mssg = "Cannot save DiffusionData. Assembly has not been solved.";
@@ -971,7 +1015,9 @@ void PWRReflector::save_diffusion_data(const std::string& fname) const {
     throw ScarabeeException(mssg);
   }
 
-  DiffusionData dd(diffusion_xs_, form_factors_, adf_, cdf_);
+  DiffusionData dd(refl_diffusion_xs_);
+  dd.set_adf(adf_);
+  dd.set_cdf(cdf_);
   dd.save(fname);
 }
 

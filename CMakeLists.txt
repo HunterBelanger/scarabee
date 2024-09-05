@@ -190,6 +190,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/guide_tube.cpp
                               src/scarabee/_scarabee/burnable_poison_pin.cpp
                               src/scarabee/_scarabee/pwr_assembly.cpp
+                              src/scarabee/_scarabee/pwr_reflector.cpp
                               src/scarabee/_scarabee/reflector_sn.cpp
                               #=================================================
                               src/scarabee/_scarabee/python/scarabee.cpp
@@ -219,6 +220,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/python/nem_diffusion_driver.cpp
                               src/scarabee/_scarabee/python/pins.cpp
                               src/scarabee/_scarabee/python/pwr_assembly.cpp
+                              src/scarabee/_scarabee/python/pwr_reflector.cpp
                               src/scarabee/_scarabee/python/reflector_sn.cpp
                             )
 

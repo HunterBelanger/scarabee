@@ -106,11 +106,13 @@ class PWRReflector {
   const std::vector<double>& fuel_dancoff_corrections() const { return fuel_dancoff_corrections_; };
   const std::vector<double>& clad_dancoff_corrections() const { return clad_dancoff_corrections_; };
 
-  const xt::xtensor<double, 2>& form_factors() const { return form_factors_; }
   const xt::xtensor<double, 2>& adf() const { return adf_; }
   const xt::xtensor<double, 2>& cdf() const { return cdf_; }
-  std::shared_ptr<DiffusionCrossSection> diffusion_xs() const {
-    return diffusion_xs_;
+  std::shared_ptr<DiffusionCrossSection> assembly_diffusion_xs() const {
+    return asmbly_diffusion_xs_;
+  }
+  std::shared_ptr<DiffusionCrossSection> reflector_diffusion_xs() const {
+    return refl_diffusion_xs_;
   }
   std::shared_ptr<MOCDriver> moc() const { return moc_; }
   std::shared_ptr<Cartesian2D> moc_geom() const { return moc_geom_; }
@@ -138,6 +140,11 @@ class PWRReflector {
   std::shared_ptr<Material> baffle_{nullptr};
   std::shared_ptr<CrossSection> baffle_xs_{nullptr};
   std::shared_ptr<Cartesian2D> reflector_dancoff_geom_{nullptr};
+  std::shared_ptr<CylindricalCell> reflector_cyl_cell_{nullptr};
+  std::shared_ptr<CylindricalFluxSolver> reflector_cyl_flux_cell_{nullptr};
+  std::shared_ptr<CrossSection> macro_gap_xs_{nullptr};
+  std::shared_ptr<CrossSection> macro_baffle_xs_{nullptr};
+  std::shared_ptr<CrossSection> macro_ref_xs_{nullptr};
 
   // MOC parameters for computing dancoff corrections
   std::uint32_t dancoff_num_azimuthal_angles_{64};
@@ -152,10 +159,12 @@ class PWRReflector {
   PolarQuadrature polar_quadrature_{YamamotoTabuchi<6>()};
 
   bool plot_assembly_{false};
+  std::shared_ptr<Cartesian2D> moc_asmbly_geom_{nullptr};
+  std::shared_ptr<Cartesian2D> moc_refl_geom_{nullptr};
   std::shared_ptr<Cartesian2D> moc_geom_{nullptr};
   std::shared_ptr<MOCDriver> moc_{nullptr};
-  std::shared_ptr<DiffusionCrossSection> diffusion_xs_{nullptr};
-  xt::xtensor<double, 2> form_factors_;
+  std::shared_ptr<DiffusionCrossSection> asmbly_diffusion_xs_{nullptr};
+  std::shared_ptr<DiffusionCrossSection> refl_diffusion_xs_{nullptr};
   xt::xtensor<double, 2> adf_;
   xt::xtensor<double, 2> cdf_;
   std::vector<double> fuel_dancoff_corrections_;
@@ -166,12 +175,13 @@ class PWRReflector {
   std::shared_ptr<CrossSection> avg_fp_{nullptr};
 
   void build_reflector_dancoff_geometry();
+  void build_reflector_geometry();
   void get_fuel_dancoff_corrections();
   void get_clad_dancoff_corrections();
   void pin_cell_calc();
+  void baffle_spectrum_calc();
   void condense_xs();
   void moc_calc();
-  void compute_form_factors();
   void few_group_xs();
   void compute_adf_cdf();
 
@@ -182,6 +192,8 @@ class PWRReflector {
 
   std::vector<double> compute_avg_surface_flx(const std::vector<std::pair<std::size_t, double>>& segments) const;
   std::vector<double> compute_avg_flx(const Vector& r, const Direction& u) const;
+
+  std::shared_ptr<DiffusionCrossSection> make_diffusion_xs(const std::vector<std::size_t>& regions) const;
 };
 
 };  // namespace scarabee
