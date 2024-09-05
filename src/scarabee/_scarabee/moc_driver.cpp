@@ -681,7 +681,7 @@ void MOCDriver::set_track_ends_bcs() {
       // }
 
       tracks.at(i).exit_bc() = this->y_max_bc_;
-      comp_tracks.at(ai.nx - 1 - i).exit_bc() = this->y_max_bc_;
+      comp_tracks.at(ai.ny + i).exit_bc() = this->y_max_bc_;
     }
 
     // Go through intersections on bottom side
@@ -702,7 +702,7 @@ void MOCDriver::set_track_ends_bcs() {
       // }
 
       tracks.at(ai.ny + i).entry_bc() = this->y_min_bc_;
-      comp_tracks.at(nt - 1 - i).entry_bc() = this->y_min_bc_;
+      comp_tracks.at(i).entry_bc() = this->y_min_bc_;
     }
 
     // Go down left/right sides
@@ -724,7 +724,7 @@ void MOCDriver::set_track_ends_bcs() {
       // }
 
       tracks.at(i).entry_bc() = this->x_min_bc_;
-      comp_tracks.at(ai.nx + i).exit_bc() = this->x_min_bc_;
+      comp_tracks.at(ai.ny - 1 - i).exit_bc() = this->x_min_bc_;
 
       // Right
       tracks.at(ai.nx + i).set_exit_track_flux(
@@ -743,7 +743,7 @@ void MOCDriver::set_track_ends_bcs() {
       // }
 
       tracks.at(ai.nx + i).exit_bc() = this->x_max_bc_;
-      comp_tracks.at(i).entry_bc() = this->x_max_bc_;
+      comp_tracks.at(nt - 1 - i).entry_bc() = this->x_max_bc_;
     }
   }
 }
