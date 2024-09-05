@@ -378,10 +378,11 @@ class FrendyMG:
       for id in range(len(self.dilutions)):
         # Create a temporary xs set with the provided fission spectrum
         Et = self.Ea[iT, id, :] + np.sum(self.Es[iT, id, :, :], axis=1)
+        Es = np.array([self.Es[iT, id, :, :], self.Es1[iT, id, :, :]])
         if self.fissile: 
-          TempXS = CrossSection(Et, self.Ea[iT, id, :], self.Es[iT, id, :, :], self.Es1[iT, id, :, :], self.Ef[iT, id, :], self.nu[iT, id, :]*self.Ef[iT, id, :], chi)
+          TempXS = CrossSection(Et, self.Dtr[iT, id, :], self.Ea[iT, id, :], Es, self.Ef[iT, id, :], self.nu[iT, id, :]*self.Ef[iT, id, :], chi)
         else:
-          TempXS = CrossSection(Et, self.Ea[iT, id, :], self.Es[iT, id, :, :], self.Es1[iT, id, :, :], np.zeros(self.ngroups), np.zeros(self.ngroups), chi)
+          TempXS = CrossSection(Et, self.Dtr[iT, id, :], self.Ea[iT, id, :], Es, np.zeros(self.ngroups), np.zeros(self.ngroups), chi)
 
         # We now perform a P1 leakage calculation
         P1_spectrum = P1CriticalitySpectrum(TempXS, 0.0001)
