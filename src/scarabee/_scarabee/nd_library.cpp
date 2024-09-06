@@ -10,7 +10,7 @@
 
 namespace scarabee {
 
-void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
+void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l) {
   if (this->loaded()) return;
 
   auto grp = ndl.h5()->getGroup(this->name);
@@ -24,15 +24,15 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
   scatter->resize(
       {temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
 
-  if (grp.exist("p1-scatter")) {
+  if (grp.exist("p1-scatter") && max_l >= 1) {
     p1_scatter = std::make_shared<xt::xtensor<double, 4>>();
     p1_scatter->resize({temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
   }
-  if (grp.exist("p2-scatter")) {
+  if (grp.exist("p2-scatter") && max_l >= 2) {
     p2_scatter = std::make_shared<xt::xtensor<double, 4>>();
     p2_scatter->resize({temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
   }
-  if (grp.exist("p3-scatter")) {
+  if (grp.exist("p3-scatter") && max_l >= 3) {
     p3_scatter = std::make_shared<xt::xtensor<double, 4>>();
     p3_scatter->resize({temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
   }
@@ -50,13 +50,13 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl) {
   grp.getDataSet("absorption").read_raw<double>(absorption->data());
   grp.getDataSet("transport-correction").read_raw<double>(transport_correction->data());
   grp.getDataSet("scatter").read_raw<double>(scatter->data());
-  if (grp.exist("p1-scatter")) {
+  if (grp.exist("p1-scatter") && max_l >= 1) {
     grp.getDataSet("p1-scatter").read_raw<double>(p1_scatter->data());
   }
-  if (grp.exist("p2-scatter")) {
+  if (grp.exist("p2-scatter") && max_l >= 2) {
     grp.getDataSet("p2-scatter").read_raw<double>(p2_scatter->data());
   }
-  if (grp.exist("p3-scatter")) {
+  if (grp.exist("p3-scatter") && max_l >= 3) {
     grp.getDataSet("p3-scatter").read_raw<double>(p3_scatter->data());
   }
   if (this->fissile) {
@@ -174,7 +174,7 @@ std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
   get_dil_interp_params(dil, nuc, id, f_dil);
 
   if (nuc.loaded() == false) {
-    nuc.load_xs_from_hdf5(*this);
+    nuc.load_xs_from_hdf5(*this, max_l);
   }
 
   //--------------------------------------------------------

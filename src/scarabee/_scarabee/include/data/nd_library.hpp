@@ -41,7 +41,7 @@ struct NuclideHandle {
   std::shared_ptr<xt::xtensor<double, 2>> nu;
 
   bool loaded() const { return absorption != nullptr; }
-  void load_xs_from_hdf5(const NDLibrary& ndl);
+  void load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l);
   void unload();
 };
 

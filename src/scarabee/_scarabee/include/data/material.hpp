@@ -5,6 +5,7 @@
 
 #include <string>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace scarabee {
@@ -40,6 +41,9 @@ class Material {
 
   std::size_t size() const { return composition_.nuclides.size(); }
 
+  std::size_t max_legendre_order() const { return max_l_; }
+  void set_max_legendre_order(std::size_t max_l) { max_l_ = max_l; }
+
   bool has_component(const std::string& name) const;
   double atom_density(const std::string& name) const;
 
@@ -53,15 +57,15 @@ class Material {
   bool resonant() const { return resonant_; }
 
   std::shared_ptr<CrossSection> carlvik_xs(
-      double C, double Ee, std::shared_ptr<NDLibrary> ndl, std::size_t max_l = 1) const;
+      double C, double Ee, std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l = std::nullopt) const;
 
-  std::shared_ptr<CrossSection> roman_xs(double C, double Ee, std::shared_ptr<NDLibrary> ndl, std::size_t max_l = 1) const;
+  std::shared_ptr<CrossSection> roman_xs(double C, double Ee, std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l = std::nullopt) const;
 
-  std::shared_ptr<CrossSection> dilution_xs(const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl, std::size_t max_l = 1) const;
+  std::shared_ptr<CrossSection> dilution_xs(const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l = std::nullopt) const;
 
   std::shared_ptr<CrossSection> ring_carlvik_xs(
       double C, double Rfuel, double Rin, double Rout,
-      std::shared_ptr<NDLibrary> ndl, std::size_t max_l = 1) const;
+      std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l = std::nullopt) const;
 
   void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
 
@@ -72,6 +76,7 @@ class Material {
   double atoms_per_bcm_;
   double grams_per_cm3_;
   double potential_xs_;
+  std::size_t max_l_ {1};
   bool fissile_;
   bool resonant_;
 

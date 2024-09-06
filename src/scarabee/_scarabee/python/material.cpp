@@ -225,6 +225,11 @@ void init_Material(py::module& m) {
            py::arg("C"), py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"),
            py::arg("ndl"), py::arg("max_l") = 1)
 
+      .def_property("max_legendre_order", &Material::max_legendre_order,
+                    &Material::set_max_legendre_order,
+                    "The maximum legendre order for loading and interpolating "
+                    "scattering matrices. The default value is 1.")
+
       .def_property_readonly("composition", &Material::composition,
                              "The :py:class:`MaterialComposition` defining the "
                              "nuclides in the material.")
