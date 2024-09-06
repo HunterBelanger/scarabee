@@ -238,7 +238,8 @@ void Material::normalize_fractions() {
 }
 
 std::shared_ptr<CrossSection> Material::carlvik_xs(
-    double C, double Ee, std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l) const {
+    double C, double Ee, std::shared_ptr<NDLibrary> ndl,
+    std::optional<std::size_t> max_l) const {
   if (max_l.has_value() == false) max_l = max_l_;
 
   // This implementation is based on the methods outlined by Koike and Gibson
@@ -254,7 +255,8 @@ std::shared_ptr<CrossSection> Material::carlvik_xs(
 }
 
 std::shared_ptr<CrossSection> Material::roman_xs(
-    double C, double Ee, std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l) const {
+    double C, double Ee, std::shared_ptr<NDLibrary> ndl,
+    std::optional<std::size_t> max_l) const {
   if (max_l.has_value() == false) max_l = max_l_;
   // This implementation is based on the methods outlined by Koike and Gibson
   // in his PhD thesis [1,2]. We start by computing the coefficients for the
@@ -280,12 +282,14 @@ std::shared_ptr<CrossSection> Material::roman_xs(
 
     return this->two_term_xs(a1, a2, b1, b2, Ee, ndl, *max_l);
   } else {
-    return this->two_term_xs(a1_base, a2_base, b1_base, b2_base, Ee, ndl, *max_l);
+    return this->two_term_xs(a1_base, a2_base, b1_base, b2_base, Ee, ndl,
+                             *max_l);
   }
 }
 
 std::shared_ptr<CrossSection> Material::dilution_xs(
-    const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l) const {
+    const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl,
+    std::optional<std::size_t> max_l) const {
   if (max_l.has_value() == false) max_l = max_l_;
 
   if (dils.size() != this->size()) {
@@ -355,12 +359,13 @@ std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
     const auto& nuclide = ndl->get_nuclide(namei);
     const double Ni = this->atom_density(namei);
 
-    std::shared_ptr<CrossSection> xsi {nullptr};
+    std::shared_ptr<CrossSection> xsi{nullptr};
 
     if (nuclide.resonant) {
-      xsi = ndl->ring_two_term_xs(namei, temperature(), a1, a2, b1, b2, mat_pot_xs, Ni, Rfuel, Rin, Rout, *max_l);
+      xsi = ndl->ring_two_term_xs(namei, temperature(), a1, a2, b1, b2,
+                                  mat_pot_xs, Ni, Rfuel, Rin, Rout, *max_l);
     } else {
-      const double dil = (mat_pot_xs - Ni*nuclide.potential_xs) / Ni;
+      const double dil = (mat_pot_xs - Ni * nuclide.potential_xs) / Ni;
       xsi = ndl->interp_xs(namei, temperature_, dil, *max_l);
     }
 
@@ -393,12 +398,13 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
     const double bg_xs_1 = (potential_xs() - macro_pot_xs + a1 * Ee) / Ni;
     const double bg_xs_2 = (potential_xs() - macro_pot_xs + a2 * Ee) / Ni;
 
-    std::shared_ptr<CrossSection> xsi {nullptr};
-    
+    std::shared_ptr<CrossSection> xsi{nullptr};
+
     if (nuclide.resonant) {
-      xsi = ndl->two_term_xs(namei, temperature(), b1, b2, bg_xs_1, bg_xs_2, max_l);
+      xsi = ndl->two_term_xs(namei, temperature(), b1, b2, bg_xs_1, bg_xs_2,
+                             max_l);
     } else {
-      const double dil = (mat_pot_xs - Ni*nuclide.potential_xs) / Ni;
+      const double dil = (mat_pot_xs - Ni * nuclide.potential_xs) / Ni;
       xsi = ndl->interp_xs(namei, temperature_, dil, max_l);
     }
 

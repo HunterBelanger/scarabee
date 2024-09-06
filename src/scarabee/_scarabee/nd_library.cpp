@@ -19,22 +19,26 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l) {
   absorption = std::make_shared<xt::xtensor<double, 3>>();
   absorption->resize({temperatures.size(), dilutions.size(), ndl.ngroups()});
   transport_correction = std::make_shared<xt::xtensor<double, 3>>();
-  transport_correction->resize({temperatures.size(), dilutions.size(), ndl.ngroups()});
+  transport_correction->resize(
+      {temperatures.size(), dilutions.size(), ndl.ngroups()});
   scatter = std::make_shared<xt::xtensor<double, 4>>();
   scatter->resize(
       {temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
 
   if (grp.exist("p1-scatter") && max_l >= 1) {
     p1_scatter = std::make_shared<xt::xtensor<double, 4>>();
-    p1_scatter->resize({temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
+    p1_scatter->resize(
+        {temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
   }
   if (grp.exist("p2-scatter") && max_l >= 2) {
     p2_scatter = std::make_shared<xt::xtensor<double, 4>>();
-    p2_scatter->resize({temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
+    p2_scatter->resize(
+        {temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
   }
   if (grp.exist("p3-scatter") && max_l >= 3) {
     p3_scatter = std::make_shared<xt::xtensor<double, 4>>();
-    p3_scatter->resize({temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
+    p3_scatter->resize(
+        {temperatures.size(), dilutions.size(), ndl.ngroups(), ndl.ngroups()});
   }
 
   if (this->fissile) {
@@ -48,7 +52,8 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l) {
 
   // Read in data
   grp.getDataSet("absorption").read_raw<double>(absorption->data());
-  grp.getDataSet("transport-correction").read_raw<double>(transport_correction->data());
+  grp.getDataSet("transport-correction")
+      .read_raw<double>(transport_correction->data());
   grp.getDataSet("scatter").read_raw<double>(scatter->data());
   if (grp.exist("p1-scatter") && max_l >= 1) {
     grp.getDataSet("p1-scatter").read_raw<double>(p1_scatter->data());
@@ -160,7 +165,8 @@ NuclideHandle& NDLibrary::get_nuclide(const std::string& name) {
 
 std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
                                                    const double temp,
-                                                   const double dil, std::size_t max_l) {
+                                                   const double dil,
+                                                   std::size_t max_l) {
   auto& nuc = this->get_nuclide(name);
 
   // Get temperature interpolation factors
@@ -192,7 +198,8 @@ std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
   if (max_l == 3 && nuc.p3_scatter == nullptr) max_l--;
   if (max_l == 2 && nuc.p2_scatter == nullptr) max_l--;
   if (max_l == 1 && nuc.p1_scatter == nullptr) max_l--;
-  xt::xtensor<double, 3> Es = xt::zeros<double>({max_l+1, ngroups_, ngroups_});
+  xt::xtensor<double, 3> Es =
+      xt::zeros<double>({max_l + 1, ngroups_, ngroups_});
 
   //--------------------------------------------------------
   // Do P0 scattering interpolation
@@ -244,7 +251,8 @@ std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
 
 std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     const std::string& name, const double temp, const double b1,
-    const double b2, const double bg_xs_1, const double bg_xs_2, std::size_t max_l) {
+    const double b2, const double bg_xs_1, const double bg_xs_2,
+    std::size_t max_l) {
   // See reference [1] to understand this interpolation scheme, in addition to
   // the calculation of the flux based on the pot_xs and sig_a.
 
@@ -257,7 +265,8 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
   xt::xtensor<double, 1> Et = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> Dtr = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> Ea = xt::zeros<double>({ngroups_});
-  xt::xtensor<double, 3> Es = xt::zeros<double>({xs_1->max_legendre_order()+1, ngroups_, ngroups_});
+  xt::xtensor<double, 3> Es =
+      xt::zeros<double>({xs_1->max_legendre_order() + 1, ngroups_, ngroups_});
   xt::xtensor<double, 1> Ef = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> chi = xt::zeros<double>({ngroups_});
@@ -281,7 +290,8 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     Ef(g) = f1_g * xs_1->Ef(g) + f2_g * xs_2->Ef(g);
     for (std::size_t l = 0; l <= xs_1->max_legendre_order(); l++) {
       for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
-        Es(l, g, g_out) = f1_g * xs_1->Es(l, g, g_out) + f2_g * xs_2->Es(l, g, g_out);
+        Es(l, g, g_out) =
+            f1_g * xs_1->Es(l, g, g_out) + f2_g * xs_2->Es(l, g, g_out);
       }
     }
     Et(g) = Ea(g) + xt::sum(xt::view(Es, 0, g, xt::all()))();
@@ -309,7 +319,8 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
 std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
     const std::string& name, const double temp, const double a1,
     const double a2, const double b1, const double b2, const double mat_pot_xs,
-    const double N, const double Rfuel, const double Rin, const double Rout, std::size_t max_l) {
+    const double N, const double Rfuel, const double Rin, const double Rout,
+    std::size_t max_l) {
   if (Rin >= Rout) {
     auto mssg = "Rin must be < Rout.";
     spdlog::error(mssg);
@@ -333,7 +344,8 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
   xt::xtensor<double, 1> Et = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> Dtr = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> Ea = xt::zeros<double>({ngroups_});
-  xt::xtensor<double, 3> Es = xt::zeros<double>({max_l+1, ngroups_, ngroups_});
+  xt::xtensor<double, 3> Es =
+      xt::zeros<double>({max_l + 1, ngroups_, ngroups_});
   xt::xtensor<double, 1> Ef = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> chi = xt::zeros<double>({ngroups_});
@@ -374,8 +386,9 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
       vEf(g) += eta_m * (b1 * xs_1->vEf(g) + b2 * xs_2->vEf(g));
       for (std::size_t l = 0; l <= max_l; l++) {
         for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
-          Es(l, g, g_out) += eta_m * (b1 * xs_1->Es(l, g, g_out) + b2 * xs_2->Es(l, g, g_out));
-        } // For all outgoing groups
+          Es(l, g, g_out) +=
+              eta_m * (b1 * xs_1->Es(l, g, g_out) + b2 * xs_2->Es(l, g, g_out));
+        }  // For all outgoing groups
       }
 
       // Save the fission spectrum if we are in the first lump.
@@ -386,7 +399,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
         chi(g) = xs_1->chi(g);
       }
     }  // For all groups
-  }  // For 4 lumps
+  }    // For 4 lumps
 
   // Now we go through and normalize each group by the denom, and calculate Et
   for (std::size_t g = 0; g < ngroups_; g++) {
@@ -401,7 +414,6 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
         Es(l, g, g_out) *= invs_denom;
       }
     }
-
 
     Et(g) = Ea(g) + xt::sum(xt::view(Es, 0, g, xt::all()))();
   }

@@ -166,9 +166,11 @@ void init_PWRAssembly(py::module& m) {
       .def_property("plot_assembly", &PWRAssembly::plot_assembly,
                     &PWRAssembly::set_plot_assembly)
 
-      .def_property_readonly("fuel_dancoff_corrections", &PWRAssembly::fuel_dancoff_corrections)
+      .def_property_readonly("fuel_dancoff_corrections",
+                             &PWRAssembly::fuel_dancoff_corrections)
 
-      .def_property_readonly("clad_dancoff_corrections", &PWRAssembly::clad_dancoff_corrections)
+      .def_property_readonly("clad_dancoff_corrections",
+                             &PWRAssembly::clad_dancoff_corrections)
 
       .def_property_readonly("moderator_xs", &PWRAssembly::moderator_xs)
 
@@ -177,7 +179,7 @@ void init_PWRAssembly(py::module& m) {
       .def_property_readonly("form_factors", &PWRAssembly::form_factors)
 
       .def_property_readonly("adf", &PWRAssembly::adf)
-      
+
       .def_property_readonly("cdf", &PWRAssembly::cdf)
 
       .def_property_readonly("diffusion_xs", &PWRAssembly::diffusion_xs)

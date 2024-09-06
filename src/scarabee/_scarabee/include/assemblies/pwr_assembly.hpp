@@ -107,8 +107,12 @@ class PWRAssembly {
   double keff_tolerance() const { return keff_tolerance_; }
   void set_keff_tolerance(double ftol);
 
-  const std::vector<double>& fuel_dancoff_corrections() const { return fuel_dancoff_corrections_; };
-  const std::vector<double>& clad_dancoff_corrections() const { return clad_dancoff_corrections_; };
+  const std::vector<double>& fuel_dancoff_corrections() const {
+    return fuel_dancoff_corrections_;
+  };
+  const std::vector<double>& clad_dancoff_corrections() const {
+    return clad_dancoff_corrections_;
+  };
 
   const xt::xtensor<double, 2>& form_factors() const { return form_factors_; }
   const xt::xtensor<double, 2>& adf() const { return adf_; }
@@ -178,8 +182,10 @@ class PWRAssembly {
   double isolated_guide_tube_flux() const;
   double isolated_burnable_poison_tube_flux() const;
 
-  std::vector<double> compute_avg_surface_flx(const std::vector<std::pair<std::size_t, double>>& segments) const;
-  std::vector<double> compute_avg_flx(const Vector& r, const Direction& u) const;
+  std::vector<double> compute_avg_surface_flx(
+      const std::vector<std::pair<std::size_t, double>>& segments) const;
+  std::vector<double> compute_avg_flx(const Vector& r,
+                                      const Direction& u) const;
 };
 
 };  // namespace scarabee

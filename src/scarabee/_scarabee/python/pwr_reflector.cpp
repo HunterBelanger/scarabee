@@ -30,7 +30,8 @@ void init_PWRReflector(py::module& m) {
       "baffle_width : float\n"
       "    Width of the core baffle. Can be zero if baffle is None.\n"
       "baffle : Material\n"
-      "    Material respresenting the core baffle. Can be None is baffle_width is zero.\n"
+      "    Material respresenting the core baffle. Can be None is baffle_width "
+      "is zero.\n"
       "ndl : NDLibrary\n"
       "    The nuclear data library to be used in the calculations.\n\n"
       "Attributes\n"
@@ -108,10 +109,12 @@ void init_PWRReflector(py::module& m) {
                     std::shared_ptr<Material> /*baffle*/,
                     std::shared_ptr<NDLibrary> /*ndl*/>(),
            py::arg("pitch"), py::arg("moderator"), py::arg("shape"),
-           py::arg("gap_width"), py::arg("baffle_width"), py::arg("baffle"), py::arg("ndl"))
+           py::arg("gap_width"), py::arg("baffle_width"), py::arg("baffle"),
+           py::arg("ndl"))
 
       .def("solve", &PWRReflector::solve,
-           "Solve the assembly-reflector, generating few-group diffusion constants.")
+           "Solve the assembly-reflector, generating few-group diffusion "
+           "constants.")
 
       .def("save_diffusion_data", &PWRReflector::save_diffusion_data,
            "Saves the diffusion data to a numpy zip file.\n\n"
@@ -163,21 +166,26 @@ void init_PWRReflector(py::module& m) {
       .def_property("plot_assembly", &PWRReflector::plot_assembly,
                     &PWRReflector::set_plot_assembly)
 
-      .def_property_readonly("fuel_dancoff_corrections", &PWRReflector::fuel_dancoff_corrections)
+      .def_property_readonly("fuel_dancoff_corrections",
+                             &PWRReflector::fuel_dancoff_corrections)
 
-      .def_property_readonly("clad_dancoff_corrections", &PWRReflector::clad_dancoff_corrections)
+      .def_property_readonly("clad_dancoff_corrections",
+                             &PWRReflector::clad_dancoff_corrections)
 
       .def_property_readonly("moderator_xs", &PWRReflector::moderator_xs)
 
-      .def_property_readonly("average_fuel_pin", &PWRReflector::average_fuel_pin)
+      .def_property_readonly("average_fuel_pin",
+                             &PWRReflector::average_fuel_pin)
 
       .def_property_readonly("adf", &PWRReflector::adf)
-      
+
       .def_property_readonly("cdf", &PWRReflector::cdf)
 
-      .def_property_readonly("assembly_diffusion_xs", &PWRReflector::assembly_diffusion_xs)
+      .def_property_readonly("assembly_diffusion_xs",
+                             &PWRReflector::assembly_diffusion_xs)
 
-      .def_property_readonly("reflector_diffusion_xs", &PWRReflector::reflector_diffusion_xs)
+      .def_property_readonly("reflector_diffusion_xs",
+                             &PWRReflector::reflector_diffusion_xs)
 
       .def_property_readonly("moc", &PWRReflector::moc)
 

@@ -47,7 +47,7 @@ class CrossSection {
 
   bool anisotropic() const { return Es_.shape()[0] > 1; }
 
-  std::size_t max_legendre_order() const { return Es_.shape()[0]-1; }
+  std::size_t max_legendre_order() const { return Es_.shape()[0] - 1; }
 
   const xt::xtensor<double, 1>& Etr() const { return Etr_; }
 
@@ -55,9 +55,7 @@ class CrossSection {
 
   double Dtr(std::size_t g) const { return Dtr_(g); }
 
-  double Et(std::size_t g) const {
-    return Etr_(g) + Dtr_(g);
-  }
+  double Et(std::size_t g) const { return Etr_(g) + Dtr_(g); }
 
   double Ea(std::size_t g) const { return Ea_(g); }
 
@@ -86,8 +84,7 @@ class CrossSection {
   }
 
   double Es(std::size_t l, std::size_t gin, std::size_t gout) const {
-    if (l > this->max_legendre_order())
-      return 0.;
+    if (l > this->max_legendre_order()) return 0.;
 
     double Es_l_gin_gout = Es_(l, gin, gout);
     if (l == 0 && gin == gout) {
@@ -97,8 +94,7 @@ class CrossSection {
   }
 
   double Es(std::size_t l, std::size_t gin) const {
-    if (l > this->max_legendre_order())
-      return 0.;
+    if (l > this->max_legendre_order()) return 0.;
 
     double Es = xt::sum(xt::view(Es_, l, gin, xt::all()))();
     if (l == 0) {
@@ -118,12 +114,12 @@ class CrossSection {
   CrossSection& operator*=(double N);
 
  private:
-  xt::xtensor<double, 1> Etr_; // Transport xs
-  xt::xtensor<double, 1> Dtr_; // Transport Correction xs
-  xt::xtensor<double, 1> Ea_;  // Absorption xs
-  xt::xtensor<double, 1> Ef_;  // Fission xs
-  xt::xtensor<double, 1> vEf_; // Fission xs * yield
-  xt::xtensor<double, 1> chi_; // Fission spectrum
+  xt::xtensor<double, 1> Etr_;  // Transport xs
+  xt::xtensor<double, 1> Dtr_;  // Transport Correction xs
+  xt::xtensor<double, 1> Ea_;   // Absorption xs
+  xt::xtensor<double, 1> Ef_;   // Fission xs
+  xt::xtensor<double, 1> vEf_;  // Fission xs * yield
+  xt::xtensor<double, 1> chi_;  // Fission spectrum
   // Scattering Matrices. [0,:,:] is the TRANSPORT corrected P0 scatter matrix
   // while [1,:,:] is the P1 scatter matrix, [2,:,:] is the P2 matrix, etc.
   xt::xtensor<double, 3> Es_;

@@ -67,7 +67,8 @@ void init_DiffusionData(py::module& m) {
            "cdf : ndarray\n"
            "    A 2D array of CDFs. The first axis is energy group, and the "
            "second axis is the corner (I, II, III, IV).\n\n",
-           py::arg("xs"), py::arg("form_factors"), py::arg("adf"), py::arg("cdf"))
+           py::arg("xs"), py::arg("form_factors"), py::arg("adf"),
+           py::arg("cdf"))
 
       .def_property_readonly("ngroups", &DiffusionData::ngroups,
                              "Number of energy groups.")
@@ -244,22 +245,24 @@ void init_DiffusionData(py::module& m) {
            "rotation of the assembly in the counter clockwise direction.")
 
       .def("save", &DiffusionData::save,
-          "Saves the diffuion data to a numpy zip file.\n\n"
-          "Parameters\n"
-          "----------\n"
-          "fname : str\n"
-          "        Name of file in which to save data.",
-          py::arg("fname"))
+           "Saves the diffuion data to a numpy zip file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : str\n"
+           "        Name of file in which to save data.",
+           py::arg("fname"))
 
       .def_static("load", &DiffusionData::load,
-          "Loads diffusion data from a numpy zip file.\n\n"
-          "Parameters\n"
-          "----------\n"
-          "fname : str\n"
-          "        Name of file from which to load data.\n\n"
-          "Returns\n"
-          "-------\n"
-          "DiffusionData\n"
-          "    Diffusion cross sections, form factors, and ADF from the file.\n",
-          py::arg("fname"));;
+                  "Loads diffusion data from a numpy zip file.\n\n"
+                  "Parameters\n"
+                  "----------\n"
+                  "fname : str\n"
+                  "        Name of file from which to load data.\n\n"
+                  "Returns\n"
+                  "-------\n"
+                  "DiffusionData\n"
+                  "    Diffusion cross sections, form factors, and ADF from "
+                  "the file.\n",
+                  py::arg("fname"));
+  ;
 }

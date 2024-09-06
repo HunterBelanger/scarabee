@@ -11,10 +11,16 @@
 namespace scarabee {
 
 PWRReflector::PWRReflector(double pitch, std::shared_ptr<Material> moderator,
-                         std::pair<std::size_t, std::size_t> shape,
-                         double gap_width, double baffle_width, std::shared_ptr<Material> baffle,
-                         std::shared_ptr<NDLibrary> ndl)
-    : pitch_(pitch), shape_(shape), ndl_(ndl), gap_width_(gap_width), baffle_width_(baffle_width), baffle_(baffle) {
+                           std::pair<std::size_t, std::size_t> shape,
+                           double gap_width, double baffle_width,
+                           std::shared_ptr<Material> baffle,
+                           std::shared_ptr<NDLibrary> ndl)
+    : pitch_(pitch),
+      shape_(shape),
+      ndl_(ndl),
+      gap_width_(gap_width),
+      baffle_width_(baffle_width),
+      baffle_(baffle) {
   this->set_moderator(moderator);
 
   if (pitch_ <= 0.) {
@@ -51,7 +57,8 @@ PWRReflector::PWRReflector(double pitch, std::shared_ptr<Material> moderator,
   after_baffle_ref_width_ = assembly_width - gap_width_ - baffle_width_;
 
   if (after_baffle_ref_width_ <= 0.) {
-    auto mssg = "The gap width + baffle width is greater than the assembly width.";
+    auto mssg =
+        "The gap width + baffle width is greater than the assembly width.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -411,7 +418,7 @@ void PWRReflector::build_reflector_dancoff_geometry() {
   xt::xtensor<double, 2> Es = {{0.}};
   auto mod = std::make_shared<CrossSection>(Et, Ea, Es, "Moderator");
 
-  std::shared_ptr<CrossSection> baff {nullptr};
+  std::shared_ptr<CrossSection> baff{nullptr};
   if (baffle_) {
     Et(0) = baffle_->potential_xs();
     Ea(0) = Et(0);
@@ -438,26 +445,31 @@ void PWRReflector::build_reflector_dancoff_geometry() {
   const double delta_y = asmbly_y / static_cast<double>(NY);
 
   // Create base tiles
-  std::shared_ptr<EmptyCell> gap_tile = std::make_shared<EmptyCell>(mod, dx_gap, delta_y);
-  std::shared_ptr<EmptyCell> baff_tile {nullptr};
+  std::shared_ptr<EmptyCell> gap_tile =
+      std::make_shared<EmptyCell>(mod, dx_gap, delta_y);
+  std::shared_ptr<EmptyCell> baff_tile{nullptr};
   if (baffle_)
     baff_tile = std::make_shared<EmptyCell>(baff, dx_baffle, delta_y);
-  std::shared_ptr<EmptyCell> ref_tile = std::make_shared<EmptyCell>(mod, dx_ref, delta_y);
+  std::shared_ptr<EmptyCell> ref_tile =
+      std::make_shared<EmptyCell>(mod, dx_ref, delta_y);
 
   // Create the dx and dy arrays
   std::vector<double> dy(NY, delta_y);
   std::vector<double> dx;
-  dx.reserve(NG+NB+NR);
-  for (std::size_t i = 0; i < NG+NB+NR; i++) {
-    if (i < NG) dx.push_back(dx_gap);
-    else if (i < NG+NB) dx.push_back(dx_baffle);
-    else dx.push_back(dx_ref);
+  dx.reserve(NG + NB + NR);
+  for (std::size_t i = 0; i < NG + NB + NR; i++) {
+    if (i < NG)
+      dx.push_back(dx_gap);
+    else if (i < NG + NB)
+      dx.push_back(dx_baffle);
+    else
+      dx.push_back(dx_ref);
   }
 
   reflector_dancoff_geom_ = std::make_shared<Cartesian2D>(dx, dy);
 
   std::vector<Cartesian2D::TileFill> tiles;
-  tiles.reserve((NG+NB+NR)*NY);
+  tiles.reserve((NG + NB + NR) * NY);
   for (std::size_t j = 0; j < NY; j++) {
     for (std::size_t i = 0; i < NG; i++) tiles.push_back(gap_tile);
     for (std::size_t i = 0; i < NB; i++) tiles.push_back(baff_tile);
@@ -488,26 +500,32 @@ void PWRReflector::build_reflector_geometry() {
   const double delta_y = asmbly_y / static_cast<double>(NY);
 
   // Create base tiles
-  std::shared_ptr<EmptyCell> gap_tile = std::make_shared<EmptyCell>(macro_gap_xs_, dx_gap, delta_y);
-  std::shared_ptr<EmptyCell> baff_tile {nullptr};
+  std::shared_ptr<EmptyCell> gap_tile =
+      std::make_shared<EmptyCell>(macro_gap_xs_, dx_gap, delta_y);
+  std::shared_ptr<EmptyCell> baff_tile{nullptr};
   if (baffle_)
-    baff_tile = std::make_shared<EmptyCell>(macro_baffle_xs_, dx_baffle, delta_y);
-  std::shared_ptr<EmptyCell> ref_tile = std::make_shared<EmptyCell>(macro_ref_xs_, dx_ref, delta_y);
+    baff_tile =
+        std::make_shared<EmptyCell>(macro_baffle_xs_, dx_baffle, delta_y);
+  std::shared_ptr<EmptyCell> ref_tile =
+      std::make_shared<EmptyCell>(macro_ref_xs_, dx_ref, delta_y);
 
   // Create the dx and dy arrays
   std::vector<double> dy(NY, delta_y);
   std::vector<double> dx;
-  dx.reserve(NG+NB+NR);
-  for (std::size_t i = 0; i < NG+NB+NR; i++) {
-    if (i < NG) dx.push_back(dx_gap);
-    else if (i < NG+NB) dx.push_back(dx_baffle);
-    else dx.push_back(dx_ref);
+  dx.reserve(NG + NB + NR);
+  for (std::size_t i = 0; i < NG + NB + NR; i++) {
+    if (i < NG)
+      dx.push_back(dx_gap);
+    else if (i < NG + NB)
+      dx.push_back(dx_baffle);
+    else
+      dx.push_back(dx_ref);
   }
 
   moc_refl_geom_ = std::make_shared<Cartesian2D>(dx, dy);
 
   std::vector<Cartesian2D::TileFill> tiles;
-  tiles.reserve((NG+NB+NR)*NY);
+  tiles.reserve((NG + NB + NR) * NY);
   for (std::size_t j = 0; j < NY; j++) {
     for (std::size_t i = 0; i < NG; i++) tiles.push_back(gap_tile);
     for (std::size_t i = 0; i < NB; i++) tiles.push_back(baff_tile);
@@ -541,11 +559,12 @@ void PWRReflector::get_fuel_dancoff_corrections() {
                                     std::vector<double>(shape_.first, pitch_));
   asmbly_geom->set_tiles(fuel_df_pins);
 
-  const double asmbly_dx = static_cast<double>(shape_.first)  * pitch_;
+  const double asmbly_dx = static_cast<double>(shape_.first) * pitch_;
   const double asmbly_dy = static_cast<double>(shape_.second) * pitch_;
-  std::shared_ptr<Cartesian2D> geom = std::make_shared<Cartesian2D>(std::vector<double>(2, asmbly_dx),
-                                                                    std::vector<double>(1, asmbly_dy));
-  std::vector<Cartesian2D::TileFill> tiles {asmbly_geom, reflector_dancoff_geom_};
+  std::shared_ptr<Cartesian2D> geom = std::make_shared<Cartesian2D>(
+      std::vector<double>(2, asmbly_dx), std::vector<double>(1, asmbly_dy));
+  std::vector<Cartesian2D::TileFill> tiles{asmbly_geom,
+                                           reflector_dancoff_geom_};
   geom->set_tiles(tiles);
   std::shared_ptr<MOCDriver> moc = std::make_shared<MOCDriver>(geom);
 
@@ -615,11 +634,12 @@ void PWRReflector::get_clad_dancoff_corrections() {
                                     std::vector<double>(shape_.first, pitch_));
   asmbly_geom->set_tiles(fuel_df_pins);
 
-  const double asmbly_dx = static_cast<double>(shape_.first)  * pitch_;
+  const double asmbly_dx = static_cast<double>(shape_.first) * pitch_;
   const double asmbly_dy = static_cast<double>(shape_.second) * pitch_;
-  std::shared_ptr<Cartesian2D> geom = std::make_shared<Cartesian2D>(std::vector<double>(2, asmbly_dx),
-                                                                    std::vector<double>(1, asmbly_dy));
-  std::vector<Cartesian2D::TileFill> tiles {asmbly_geom, reflector_dancoff_geom_};
+  std::shared_ptr<Cartesian2D> geom = std::make_shared<Cartesian2D>(
+      std::vector<double>(2, asmbly_dx), std::vector<double>(1, asmbly_dy));
+  std::vector<Cartesian2D::TileFill> tiles{asmbly_geom,
+                                           reflector_dancoff_geom_};
   geom->set_tiles(tiles);
   std::shared_ptr<MOCDriver> moc = std::make_shared<MOCDriver>(geom);
 
@@ -789,18 +809,18 @@ void PWRReflector::baffle_spectrum_calc() {
     NB = static_cast<std::size_t>(baffle_width_ / 0.3);
     dx_baffle = baffle_width_ / static_cast<double>(NB);
     baffle_regions.resize(NB);
-    std::iota(baffle_regions.begin(), baffle_regions.end(), NF+NG);
+    std::iota(baffle_regions.begin(), baffle_regions.end(), NF + NG);
   }
 
   std::size_t NR = static_cast<std::size_t>(after_baffle_ref_width_ / 0.3) + 1;
   double dx_ref = after_baffle_ref_width_ / static_cast<double>(NR);
   std::vector<std::size_t> ref_regions(NR);
-  std::iota(ref_regions.begin(), ref_regions.end(), NF+NG+NB);
+  std::iota(ref_regions.begin(), ref_regions.end(), NF + NG + NB);
 
   std::vector<double> radii;
   std::vector<std::shared_ptr<CrossSection>> mats;
-  radii.reserve(NF+NG+NB+NR);
-  mats.reserve(NF+NG+NB+NR);
+  radii.reserve(NF + NG + NB + NR);
+  mats.reserve(NF + NG + NB + NR);
 
   for (std::size_t i = 0; i < NF; i++) {
     radii.push_back(dx_fuel);
@@ -821,23 +841,28 @@ void PWRReflector::baffle_spectrum_calc() {
 
   reflector_cyl_cell_ = std::make_shared<CylindricalCell>(radii, mats);
   reflector_cyl_flux_cell_->solve();
-  reflector_cyl_flux_cell_ = std::make_shared<CylindricalFluxSolver>(reflector_cyl_cell_);
+  reflector_cyl_flux_cell_ =
+      std::make_shared<CylindricalFluxSolver>(reflector_cyl_cell_);
   reflector_cyl_flux_cell_->set_albedo(0.);
-  reflector_cyl_flux_cell_->solve(true); // Solve in parallel
+  reflector_cyl_flux_cell_->solve(true);  // Solve in parallel
 
   // Now we condense the macro cross sections
   auto gap_homog_xs = reflector_cyl_flux_cell_->homogenize(gap_regions);
-  auto gap_spectrum = reflector_cyl_flux_cell_->homogenize_flux_spectrum(gap_regions);
+  auto gap_spectrum =
+      reflector_cyl_flux_cell_->homogenize_flux_spectrum(gap_regions);
   macro_gap_xs_ = gap_homog_xs->condense(condensation_scheme_, gap_spectrum);
 
   auto ref_homog_xs = reflector_cyl_flux_cell_->homogenize(ref_regions);
-  auto ref_spectrum = reflector_cyl_flux_cell_->homogenize_flux_spectrum(ref_regions);
+  auto ref_spectrum =
+      reflector_cyl_flux_cell_->homogenize_flux_spectrum(ref_regions);
   macro_ref_xs_ = ref_homog_xs->condense(condensation_scheme_, ref_spectrum);
 
   if (baffle_) {
     auto baf_homog_xs = reflector_cyl_flux_cell_->homogenize(baffle_regions);
-    auto baf_spectrum = reflector_cyl_flux_cell_->homogenize_flux_spectrum(baffle_regions);
-    macro_baffle_xs_ = baf_homog_xs->condense(condensation_scheme_, baf_spectrum);
+    auto baf_spectrum =
+        reflector_cyl_flux_cell_->homogenize_flux_spectrum(baffle_regions);
+    macro_baffle_xs_ =
+        baf_homog_xs->condense(condensation_scheme_, baf_spectrum);
   }
 
   set_logging_level(LogLevel::info);
@@ -892,10 +917,11 @@ void PWRReflector::moc_calc() {
 
   build_reflector_geometry();
 
-  const double asmbly_dx = static_cast<double>(shape_.first)  * pitch_;
+  const double asmbly_dx = static_cast<double>(shape_.first) * pitch_;
   const double asmbly_dy = static_cast<double>(shape_.second) * pitch_;
-  moc_geom_ = std::make_shared<Cartesian2D>(std::vector<double>(2, asmbly_dx), std::vector<double>(1, asmbly_dy));
-  std::vector<Cartesian2D::TileFill> tiles {moc_asmbly_geom_, moc_refl_geom_};
+  moc_geom_ = std::make_shared<Cartesian2D>(std::vector<double>(2, asmbly_dx),
+                                            std::vector<double>(1, asmbly_dy));
+  std::vector<Cartesian2D::TileFill> tiles{moc_asmbly_geom_, moc_refl_geom_};
   moc_geom_->set_tiles(tiles);
 
   moc_ = std::make_shared<MOCDriver>(moc_geom_);
@@ -905,7 +931,7 @@ void PWRReflector::moc_calc() {
     guiplotter.push_layer(std::make_unique<MOCPlotter>(moc_.get()));
     guiplotter.run();
   }
-  
+
   moc_->x_max_bc() = BoundaryCondition::Vacuum;
   moc_->generate_tracks(num_azimuthal_angles_, track_spacing_,
                         polar_quadrature_);
@@ -954,7 +980,8 @@ void PWRReflector::few_group_xs() {
   }
 }
 
-std::shared_ptr<DiffusionCrossSection> PWRReflector::make_diffusion_xs(const std::vector<std::size_t>& regions) const {
+std::shared_ptr<DiffusionCrossSection> PWRReflector::make_diffusion_xs(
+    const std::vector<std::size_t>& regions) const {
   const auto homog_xs = moc_->homogenize(regions);
   const auto flux_spectrum = moc_->homogenize_flux_spectrum(regions);
   auto NG = homog_xs->ngroups();
@@ -1002,14 +1029,10 @@ std::shared_ptr<DiffusionCrossSection> PWRReflector::make_diffusion_xs(const std
   return diff_xs->condense(few_group_condensation_scheme_, flux_spectrum);
 }
 
-void PWRReflector::compute_adf_cdf() {
-  
-}
+void PWRReflector::compute_adf_cdf() {}
 
 void PWRReflector::save_diffusion_data(const std::string& fname) const {
-  if (refl_diffusion_xs_ == nullptr ||
-      adf_.size() == 0 ||
-      cdf_.size() == 0) {
+  if (refl_diffusion_xs_ == nullptr || adf_.size() == 0 || cdf_.size() == 0) {
     auto mssg = "Cannot save DiffusionData. Assembly has not been solved.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -1049,7 +1072,7 @@ std::vector<double> PWRReflector::compute_avg_surface_flx(
 }
 
 std::vector<double> PWRReflector::compute_avg_flx(const Vector& r,
-                                                 const Direction& u) const {
+                                                  const Direction& u) const {
   const auto fsr = moc_->get_fsr(r, u);
   const std::size_t i = moc_->get_fsr_indx(fsr);
 

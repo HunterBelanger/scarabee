@@ -57,15 +57,21 @@ class Material {
   bool resonant() const { return resonant_; }
 
   std::shared_ptr<CrossSection> carlvik_xs(
-      double C, double Ee, std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l = std::nullopt) const;
+      double C, double Ee, std::shared_ptr<NDLibrary> ndl,
+      std::optional<std::size_t> max_l = std::nullopt) const;
 
-  std::shared_ptr<CrossSection> roman_xs(double C, double Ee, std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l = std::nullopt) const;
+  std::shared_ptr<CrossSection> roman_xs(
+      double C, double Ee, std::shared_ptr<NDLibrary> ndl,
+      std::optional<std::size_t> max_l = std::nullopt) const;
 
-  std::shared_ptr<CrossSection> dilution_xs(const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l = std::nullopt) const;
+  std::shared_ptr<CrossSection> dilution_xs(
+      const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl,
+      std::optional<std::size_t> max_l = std::nullopt) const;
 
   std::shared_ptr<CrossSection> ring_carlvik_xs(
       double C, double Rfuel, double Rin, double Rout,
-      std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l = std::nullopt) const;
+      std::shared_ptr<NDLibrary> ndl,
+      std::optional<std::size_t> max_l = std::nullopt) const;
 
   void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
 
@@ -76,16 +82,18 @@ class Material {
   double atoms_per_bcm_;
   double grams_per_cm3_;
   double potential_xs_;
-  std::size_t max_l_ {1};
+  std::size_t max_l_{1};
   bool fissile_;
   bool resonant_;
 
   double calc_avg_molar_mass(const NDLibrary& ndl) const;
   void normalize_fractions();
 
-  std::shared_ptr<CrossSection> two_term_xs(
-      const double a1, const double a2, const double b1, const double b2,
-      const double Ee, std::shared_ptr<NDLibrary> ndl, std::size_t max_l) const;
+  std::shared_ptr<CrossSection> two_term_xs(const double a1, const double a2,
+                                            const double b1, const double b2,
+                                            const double Ee,
+                                            std::shared_ptr<NDLibrary> ndl,
+                                            std::size_t max_l) const;
 };
 
 }  // namespace scarabee

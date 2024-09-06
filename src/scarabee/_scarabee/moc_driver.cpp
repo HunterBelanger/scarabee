@@ -266,7 +266,7 @@ void MOCDriver::solve() {
           src.flat(i) = 0.;
           set_neg_src_to_zero = true;
         }
-      } 
+      }
     }
 
     next_flux.fill(0.);
@@ -276,7 +276,7 @@ void MOCDriver::solve() {
     for (std::size_t g = 0; g < ngroups_; g++) {
       for (std::size_t i = 0; i < nfsrs_; i++) {
         if (D(g, i) != 0.) {
-          next_flux(g, i) += flux_(g, i)*D(g, i);
+          next_flux(g, i) += flux_(g, i) * D(g, i);
           next_flux(g, i) /= (1. + D(g, i));
         }
       }
@@ -286,7 +286,7 @@ void MOCDriver::solve() {
       prev_keff = keff_;
       keff_ = calc_keff(next_flux, flux_);
       rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
-    } 
+    }
 
     // Get difference
     max_flx_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
@@ -313,7 +313,7 @@ void MOCDriver::solve() {
     spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
     spdlog::info("     Iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
-    
+
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
       spdlog::warn("Negative source values set to zero.");
@@ -400,7 +400,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
           xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
         }
       }  // For all tracks
-    }  // For all azimuthal angles
+    }    // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
@@ -639,7 +639,8 @@ void MOCDriver::generate_tracks() {
   }
 }
 
-std::vector<std::pair<std::size_t, double>> MOCDriver::trace_fsr_segments(const Vector r_start, const Direction& u) const {
+std::vector<std::pair<std::size_t, double>> MOCDriver::trace_fsr_segments(
+    const Vector r_start, const Direction& u) const {
   std::vector<std::pair<std::size_t, double>> out;
 
   Vector r_end = r_start;
@@ -1053,7 +1054,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
   xt::xtensor<double, 1> Et = xt::zeros<double>({NG});
   xt::xtensor<double, 1> Dtr = xt::zeros<double>({NG});
   xt::xtensor<double, 1> Ea = xt::zeros<double>({NG});
-  xt::xtensor<double, 3> Es = xt::zeros<double>({max_l+1, NG, NG});
+  xt::xtensor<double, 3> Es = xt::zeros<double>({max_l + 1, NG, NG});
   xt::xtensor<double, 1> Ef = xt::zeros<double>({NG});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({NG});
   xt::xtensor<double, 1> chi = xt::zeros<double>({NG});
@@ -1066,7 +1067,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
     const auto& mat = this->xs(i);
     const double V = this->volume(i);
     for (std::size_t g = 0; g < NG; g++) {
-      fiss_prod[j] += mat->vEf(g) * flux(i, g) * V; 
+      fiss_prod[j] += mat->vEf(g) * flux(i, g) * V;
     }
     j++;
   }

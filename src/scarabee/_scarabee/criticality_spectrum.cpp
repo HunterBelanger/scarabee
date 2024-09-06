@@ -46,21 +46,20 @@ void fill_alphas(xt::xtensor<double, 1>& a,
   for (std::size_t g = 0; g < NG; g++) {
     const double Et2 = xs->Et(g) * xs->Et(g);
     const double y = B2 / Et2;
-  
+
     if (std::abs(y) < 0.01) {
-      const double x = (1./3.) - y*(0.2 - (1./7.)*y);
-      a[g] = (1. / 3.) * ((1./x) - y);
+      const double x = (1. / 3.) - y * (0.2 - (1. / 7.) * y);
+      a[g] = (1. / 3.) * ((1. / x) - y);
     } else if (y < 0.) {
       const double x = std::min(std::sqrt(-y), 0.999);
-      const double xx = 0.5*std::log((1. + x)/(1. - x));
-      a[g] = (1./3.) * y * xx / (x - xx);
+      const double xx = 0.5 * std::log((1. + x) / (1. - x));
+      a[g] = (1. / 3.) * y * xx / (x - xx);
     } else {
       // y > 0
       const double x = std::sqrt(y);
       const double xx = std::atan(x);
-      a[g] = (1./3.) * y * xx / (x - xx);
+      a[g] = (1. / 3.) * y * xx / (x - xx);
     }
-
 
     const double x2 = std::abs(B2 / Et2);
     const double x = std::sqrt(x2);
@@ -156,7 +155,8 @@ P1CriticalitySpectrum::P1CriticalitySpectrum(std::shared_ptr<CrossSection> xs) {
   }
 }
 
-P1CriticalitySpectrum::P1CriticalitySpectrum(std::shared_ptr<CrossSection> xs, double B) {
+P1CriticalitySpectrum::P1CriticalitySpectrum(std::shared_ptr<CrossSection> xs,
+                                             double B) {
   const std::size_t NG = xs->ngroups();
 
   // For P1 approximation, alphas are all 1
@@ -177,7 +177,7 @@ P1CriticalitySpectrum::P1CriticalitySpectrum(std::shared_ptr<CrossSection> xs, d
   fill_Dinvs(Dinvs, xs, a);
   const Eigen::MatrixXd D = Dinvs.inverse();
 
-  B2_ = B*B;
+  B2_ = B * B;
   fill_A(A, xs, D, B2_);
   auto A_solver = A.colPivHouseholderQr();
   flx = A_solver.solve(chi);
@@ -286,7 +286,8 @@ B1CriticalitySpectrum::B1CriticalitySpectrum(std::shared_ptr<CrossSection> xs) {
   }
 }
 
-B1CriticalitySpectrum::B1CriticalitySpectrum(std::shared_ptr<CrossSection> xs, double B) {
+B1CriticalitySpectrum::B1CriticalitySpectrum(std::shared_ptr<CrossSection> xs,
+                                             double B) {
   const std::size_t NG = xs->ngroups();
 
   xt::xtensor<double, 1> a = xt::zeros<double>({NG});
@@ -311,7 +312,7 @@ B1CriticalitySpectrum::B1CriticalitySpectrum(std::shared_ptr<CrossSection> xs, d
   // Create the A matrix
   Eigen::MatrixXd A(NG, NG);
 
-  B2_ = B*B;
+  B2_ = B * B;
   fill_alphas(a, xs, B2_);
   fill_Dinvs(Dinvs, xs, a);
   D = Dinvs.inverse();

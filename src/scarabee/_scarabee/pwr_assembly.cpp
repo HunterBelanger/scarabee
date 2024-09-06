@@ -683,9 +683,11 @@ void PWRAssembly::criticality_spectrum() {
   const auto homogenized_moc = moc_->homogenize();
 
   if (criticality_spectrum_method_.value() == "P1") {
-    criticality_spectrum_ = std::make_shared<P1CriticalitySpectrum>(homogenized_moc);
+    criticality_spectrum_ =
+        std::make_shared<P1CriticalitySpectrum>(homogenized_moc);
   } else {
-    criticality_spectrum_ = std::make_shared<B1CriticalitySpectrum>(homogenized_moc);
+    criticality_spectrum_ =
+        std::make_shared<B1CriticalitySpectrum>(homogenized_moc);
   }
 
   moc_->apply_criticality_spectrum(criticality_spectrum_->flux());
@@ -884,7 +886,7 @@ void PWRAssembly::compute_adf_cdf() {
     cdf_(G, DiffusionData::CDF::III) = III_flx[G] / homog_flx[G];
     cdf_(G, DiffusionData::CDF::IV) = IV_flx[G] / homog_flx[G];
   }
-  
+
   std::stringstream str;
   str << "ADF : " << xt::view(adf_, 0, xt::all());
   spdlog::info(str.str());
@@ -894,7 +896,7 @@ void PWRAssembly::compute_adf_cdf() {
     spdlog::info(str.str());
   }
   str.str(std::string());
-  
+
   str << "CDF : " << xt::view(cdf_, 0, xt::all());
   spdlog::info(str.str());
   for (std::size_t G = 1; G < NG; G++) {
@@ -905,10 +907,8 @@ void PWRAssembly::compute_adf_cdf() {
 }
 
 void PWRAssembly::save_diffusion_data(const std::string& fname) const {
-  if (diffusion_xs_ == nullptr ||
-      form_factors_.size() == 0 ||
-      adf_.size() == 0 ||
-      cdf_.size() == 0) {
+  if (diffusion_xs_ == nullptr || form_factors_.size() == 0 ||
+      adf_.size() == 0 || cdf_.size() == 0) {
     auto mssg = "Cannot save DiffusionData. Assembly has not been solved.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);

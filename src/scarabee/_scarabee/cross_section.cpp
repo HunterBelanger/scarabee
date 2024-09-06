@@ -31,7 +31,8 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
   Dtr_ = xt::zeros<double>({Etr_.size()});
 
   // Now will initialize the scatter matrix
-  Es_ = xt::zeros<double>({static_cast<std::size_t>(1), Es_tr.shape()[0], Es_tr.shape()[1]});
+  Es_ = xt::zeros<double>(
+      {static_cast<std::size_t>(1), Es_tr.shape()[0], Es_tr.shape()[1]});
   xt::view(Es_, 0, xt::all(), xt::all()) = Es_tr;
 
   this->check_xs();
@@ -77,9 +78,10 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
   Ef_ = xt::zeros<double>({ngroups()});
   vEf_ = xt::zeros<double>({ngroups()});
   chi_ = xt::zeros<double>({ngroups()});
-  
+
   // Now will initialize the scatter matrix
-  Es_ = xt::zeros<double>({static_cast<std::size_t>(1), Es_tr.shape()[0], Es_tr.shape()[1]});
+  Es_ = xt::zeros<double>(
+      {static_cast<std::size_t>(1), Es_tr.shape()[0], Es_tr.shape()[1]});
   xt::view(Es_, 0, xt::all(), xt::all()) = Es_tr;
 
   this->check_xs();
@@ -163,7 +165,8 @@ std::shared_ptr<CrossSection> CrossSection::condense(
   xt::xtensor<double, 1> Ef = xt::zeros<double>({NGOUT});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({NGOUT});
   xt::xtensor<double, 1> chi = xt::zeros<double>({NGOUT});
-  xt::xtensor<double, 3> Es = xt::zeros<double>({max_legendre_order()+1, NGOUT, NGOUT});
+  xt::xtensor<double, 3> Es =
+      xt::zeros<double>({max_legendre_order() + 1, NGOUT, NGOUT});
 
   for (std::size_t G = 0; G < NGOUT; G++) {  // Incoming macro groups
     const std::size_t g_min = groups[G].first;
@@ -192,7 +195,8 @@ std::shared_ptr<CrossSection> CrossSection::condense(
 
         for (std::size_t g = g_min; g <= g_max; g++) {  // Incoming micro groups
           const double fluxg_fluxG = flux(g) * invs_flux_G;
-          for (std::size_t gg = gg_min; gg <= gg_max; gg++) {  // Outgoing micro groups
+          for (std::size_t gg = gg_min; gg <= gg_max;
+               gg++) {  // Outgoing micro groups
             Es(l, G, GG) += fluxg_fluxG * this->Es(l, g, gg);
           }
         }
@@ -244,8 +248,9 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
   // We now fill a temporary scattering matrix array which contains the P0,
   // P1, ..., Pl scattering matrices where the P0 IS NOT transport corrected.
   xt::xtensor<double, 3> temp_Es;
-  const std::size_t max_legendre_order = std::max(this->max_legendre_order(), R.max_legendre_order());
-  temp_Es = xt::zeros<double>({max_legendre_order+1, ngroups(), ngroups()});
+  const std::size_t max_legendre_order =
+      std::max(this->max_legendre_order(), R.max_legendre_order());
+  temp_Es = xt::zeros<double>({max_legendre_order + 1, ngroups(), ngroups()});
   for (std::size_t l = 0; l <= max_legendre_order; l++) {
     for (std::size_t gin = 0; gin < ngroups(); gin++) {
       for (std::size_t gout = 0; gout < ngroups(); gout++) {
@@ -448,7 +453,8 @@ void CrossSection::check_xs() {
       for (std::size_t l = 0; l <= max_legendre_order(); l++) {
         if (std::isnan(Es_(gin, gout))) {
           std::stringstream mssg;
-          mssg << "Es_ has NaN value in l = " << l << ", " << gin << " -> " << gout << ".";
+          mssg << "Es_ has NaN value in l = " << l << ", " << gin << " -> "
+               << gout << ".";
           spdlog::error(mssg.str());
           throw ScarabeeException(mssg.str());
         }

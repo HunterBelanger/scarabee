@@ -18,9 +18,8 @@ void init_DiffusionGeometry(py::module& m) {
       .def_readwrite("albedo", &DiffusionGeometry::Tile::albedo,
                      "The albedo if the tile is a boundary condition.")
 
-      .def_readwrite(
-          "xs", &DiffusionGeometry::Tile::xs,
-          "The DiffusionData if the tile represents a material.");
+      .def_readwrite("xs", &DiffusionGeometry::Tile::xs,
+                     "The DiffusionData if the tile represents a material.");
 
   py::enum_<DiffusionGeometry::Neighbor>(m, "Neighbor")
       .value("XN", DiffusionGeometry::Neighbor::XN)

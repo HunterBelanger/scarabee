@@ -802,7 +802,7 @@ std::optional<std::size_t> DiffusionGeometry::geom_to_mat_indx(
 double DiffusionGeometry::adf_xp(std::size_t m, std::size_t g) const {
   // Get geometry index for m
   const auto geo_indx_m = geom_indx(m);
-  if (geo_indx_m[0] == nx()-1) {
+  if (geo_indx_m[0] == nx() - 1) {
     return mat(m)->adf_xp(g);
   }
 
@@ -815,15 +815,15 @@ double DiffusionGeometry::adf_xp(std::size_t m, std::size_t g) const {
     // Use the current tile ADF.
     return mat(m)->adf_xp(g);
   }
-  
+
   // The the x-index of the tile for the current m and the neighbor mat.
   const std::size_t tile_indx_m = geom_x_indx_to_tile_x_indx(geo_indx_m[0]);
   const std::size_t tile_indx_n = geom_x_indx_to_tile_x_indx(geo_indx_n[0]);
-  
+
   // If the current m and neighbor n are in the same tile, we don't have a
   // discontinuity, so the ADF is 1.
   if (tile_indx_m == tile_indx_n) return 1.;
-  
+
   // We are at the boarder of a tile, so we return the mat ADF.
   return mat(m)->adf_xp(g);
 }
@@ -844,15 +844,15 @@ double DiffusionGeometry::adf_xn(std::size_t m, std::size_t g) const {
     // Use the current tile ADF.
     return mat(m)->adf_xn(g);
   }
-  
+
   // The the x-index of the tile for the current m and the neighbor mat.
   const std::size_t tile_indx_m = geom_x_indx_to_tile_x_indx(geo_indx_m[0]);
   const std::size_t tile_indx_n = geom_x_indx_to_tile_x_indx(geo_indx_n[0]);
-  
+
   // If the current m and neighbor n are in the same tile, we don't have a
   // discontinuity, so the ADF is 1.
   if (tile_indx_m == tile_indx_n) return 1.;
-  
+
   // We are at the boarder of a tile, so we return the mat ADF.
   return mat(m)->adf_xn(g);
 }
@@ -860,7 +860,7 @@ double DiffusionGeometry::adf_xn(std::size_t m, std::size_t g) const {
 double DiffusionGeometry::adf_yp(std::size_t m, std::size_t g) const {
   // Get geometry index for m
   const auto geo_indx_m = geom_indx(m);
-  if (geo_indx_m[1] == ny()-1) {
+  if (geo_indx_m[1] == ny() - 1) {
     return mat(m)->adf_yp(g);
   }
 
@@ -873,15 +873,15 @@ double DiffusionGeometry::adf_yp(std::size_t m, std::size_t g) const {
     // Use the current tile ADF.
     return mat(m)->adf_yp(g);
   }
-  
+
   // The the y-index of the tile for the current m and the neighbor mat.
   const std::size_t tile_indx_m = geom_y_indx_to_tile_y_indx(geo_indx_m[1]);
   const std::size_t tile_indx_n = geom_y_indx_to_tile_y_indx(geo_indx_n[1]);
-  
+
   // If the current m and neighbor n are in the same tile, we don't have a
   // discontinuity, so the ADF is 1.
   if (tile_indx_m == tile_indx_n) return 1.;
-  
+
   // We are at the boarder of a tile, so we return the mat ADF.
   return mat(m)->adf_yp(g);
 }
@@ -902,15 +902,15 @@ double DiffusionGeometry::adf_yn(std::size_t m, std::size_t g) const {
     // Use the current tile ADF.
     return mat(m)->adf_yn(g);
   }
-  
+
   // The the y-index of the tile for the current m and the neighbor mat.
   const std::size_t tile_indx_m = geom_y_indx_to_tile_y_indx(geo_indx_m[1]);
   const std::size_t tile_indx_n = geom_y_indx_to_tile_y_indx(geo_indx_n[1]);
-  
+
   // If the current m and neighbor n are in the same tile, we don't have a
   // discontinuity, so the ADF is 1.
   if (tile_indx_m == tile_indx_n) return 1.;
-  
+
   // We are at the boarder of a tile, so we return the mat ADF.
   return mat(m)->adf_yn(g);
 }
@@ -919,7 +919,7 @@ double DiffusionGeometry::cdf_I(std::size_t m, std::size_t g) const {
   // Get geometry index for m
   const auto geo_indx_m = geom_indx(m);
 
-  if (geo_indx_m[0] == nx()-1 || geo_indx_m[1] == ny()-1) {
+  if (geo_indx_m[0] == nx() - 1 || geo_indx_m[1] == ny() - 1) {
     return mat(m)->cdf_I(g);
   }
 
@@ -941,7 +941,7 @@ double DiffusionGeometry::cdf_I(std::size_t m, std::size_t g) const {
   // The the y-index of the tile for the current m and the neighbor mat.
   const std::size_t tile_y_indx_m = geom_y_indx_to_tile_y_indx(geo_indx_m[1]);
   const std::size_t tile_y_indx_n = geom_y_indx_to_tile_y_indx(geo_indx_n[1]);
-  
+
   // If the current m and neighbor n are in the same tile, we don't have a
   // discontinuity, so the CDF is 1.
   if (tile_x_indx_m == tile_x_indx_n && tile_y_indx_m == tile_y_indx_n) {
@@ -960,7 +960,7 @@ double DiffusionGeometry::cdf_II(std::size_t m, std::size_t g) const {
   // Get geometry index for m
   const auto geo_indx_m = geom_indx(m);
 
-  if (geo_indx_m[0] == 0 || geo_indx_m[1] == ny()-1) {
+  if (geo_indx_m[0] == 0 || geo_indx_m[1] == ny() - 1) {
     return mat(m)->cdf_II(g);
   }
 
@@ -982,7 +982,7 @@ double DiffusionGeometry::cdf_II(std::size_t m, std::size_t g) const {
   // The the y-index of the tile for the current m and the neighbor mat.
   const std::size_t tile_y_indx_m = geom_y_indx_to_tile_y_indx(geo_indx_m[1]);
   const std::size_t tile_y_indx_n = geom_y_indx_to_tile_y_indx(geo_indx_n[1]);
-  
+
   // If the current m and neighbor n are in the same tile, we don't have a
   // discontinuity, so the CDF is 1.
   if (tile_x_indx_m == tile_x_indx_n && tile_y_indx_m == tile_y_indx_n) {
@@ -1023,7 +1023,7 @@ double DiffusionGeometry::cdf_III(std::size_t m, std::size_t g) const {
   // The the y-index of the tile for the current m and the neighbor mat.
   const std::size_t tile_y_indx_m = geom_y_indx_to_tile_y_indx(geo_indx_m[1]);
   const std::size_t tile_y_indx_n = geom_y_indx_to_tile_y_indx(geo_indx_n[1]);
-  
+
   // If the current m and neighbor n are in the same tile, we don't have a
   // discontinuity, so the CDF is 1.
   if (tile_x_indx_m == tile_x_indx_n && tile_y_indx_m == tile_y_indx_n) {
@@ -1042,7 +1042,7 @@ double DiffusionGeometry::cdf_IV(std::size_t m, std::size_t g) const {
   // Get geometry index for m
   const auto geo_indx_m = geom_indx(m);
 
-  if (geo_indx_m[0] == nx()-1 || geo_indx_m[1] == 0) {
+  if (geo_indx_m[0] == nx() - 1 || geo_indx_m[1] == 0) {
     return mat(m)->cdf_IV(g);
   }
 
@@ -1064,7 +1064,7 @@ double DiffusionGeometry::cdf_IV(std::size_t m, std::size_t g) const {
   // The the y-index of the tile for the current m and the neighbor mat.
   const std::size_t tile_y_indx_m = geom_y_indx_to_tile_y_indx(geo_indx_m[1]);
   const std::size_t tile_y_indx_n = geom_y_indx_to_tile_y_indx(geo_indx_n[1]);
-  
+
   // If the current m and neighbor n are in the same tile, we don't have a
   // discontinuity, so the CDF is 1.
   if (tile_x_indx_m == tile_x_indx_n && tile_y_indx_m == tile_y_indx_n) {
@@ -1132,12 +1132,12 @@ std::optional<std::size_t> DiffusionGeometry::z_to_k(double z) const {
 
 double DiffusionGeometry::form_factor(double x, double y, double z) const {
   if (ndims() == 1) return 1.;
-  
+
   xt::svector<std::size_t> ti;
   if (ndims() == 2) {
     const auto oi = x_to_i(x);
     const auto oj = y_to_j(y);
-    
+
     if (oi.has_value() == false || oj.has_value() == false) return 1.;
 
     ti = geom_to_tile_indx({oi.value(), oj.value()});
@@ -1146,17 +1146,19 @@ double DiffusionGeometry::form_factor(double x, double y, double z) const {
     const auto oj = y_to_j(y);
     const auto ok = z_to_k(z);
 
-    if (oi.has_value() == false || oj.has_value() == false || ok.has_value() == false) return 1.;
+    if (oi.has_value() == false || oj.has_value() == false ||
+        ok.has_value() == false)
+      return 1.;
 
     ti = geom_to_tile_indx({oi.value(), oj.value(), ok.value()});
   }
-  
+
   const auto tile = tiles_.element(ti.begin(), ti.end());
 
   if (tile.xs == nullptr) return 1.;
 
   if (tile.xs->form_factors().size() == 0) return 1.;
-  
+
   const std::size_t nx = tile.xs->form_factors().shape()[1];
   const std::size_t ny = tile.xs->form_factors().shape()[0];
   const double dx = tile_dx_[ti[0]];
@@ -1173,7 +1175,8 @@ double DiffusionGeometry::form_factor(double x, double y, double z) const {
   }
 
   const std::size_t i = static_cast<std::size_t>(x / px);
-  const std::size_t j = tile.xs->form_factors().shape()[0] - 1 - static_cast<std::size_t>(y / py);
+  const std::size_t j =
+      tile.xs->form_factors().shape()[0] - 1 - static_cast<std::size_t>(y / py);
 
   return tile.xs->form_factors()(j, i);
 }

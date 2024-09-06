@@ -280,7 +280,9 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
   // UPDATE INCOMING CURRENTS IN NEIGHBORING NODES / B.C.
   // x+ surface
   if (n_xp.second) {
-    const double a = 0.5 * (1. - (adf_(n_xp.second.value(), g, DiffusionData::ADF::XN) / adf_(m, g, DiffusionData::ADF::XP)));
+    const double a =
+        0.5 * (1. - (adf_(n_xp.second.value(), g, DiffusionData::ADF::XN) /
+                     adf_(m, g, DiffusionData::ADF::XP)));
 
     j_in_out_(g, n_xp.second.value(), 0)(CurrentIndx::XM) =
         (1. / (1. - a)) *
@@ -294,7 +296,9 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
 
   // x- surface
   if (n_xm.second) {
-    const double a = 0.5 * (1. - (adf_(n_xm.second.value(), g, DiffusionData::ADF::XP) / adf_(m, g, DiffusionData::ADF::XN)));
+    const double a =
+        0.5 * (1. - (adf_(n_xm.second.value(), g, DiffusionData::ADF::XP) /
+                     adf_(m, g, DiffusionData::ADF::XN)));
 
     j_in_out_(g, n_xm.second.value(), 0)(CurrentIndx::XP) =
         (1. / (1. - a)) *
@@ -308,7 +312,9 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
 
   // y+ surface
   if (n_yp.second) {
-    const double a = 0.5 * (1. - (adf_(n_yp.second.value(), g, DiffusionData::ADF::YN) / adf_(m, g, DiffusionData::ADF::YP)));
+    const double a =
+        0.5 * (1. - (adf_(n_yp.second.value(), g, DiffusionData::ADF::YN) /
+                     adf_(m, g, DiffusionData::ADF::YP)));
 
     j_in_out_(g, n_yp.second.value(), 0)(CurrentIndx::YM) =
         (1. / (1. - a)) *
@@ -322,7 +328,9 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
 
   // y- surface
   if (n_ym.second) {
-    const double a = 0.5 * (1. - (adf_(n_ym.second.value(), g, DiffusionData::ADF::YP) / adf_(m, g, DiffusionData::ADF::YN)));
+    const double a =
+        0.5 * (1. - (adf_(n_ym.second.value(), g, DiffusionData::ADF::YP) /
+                     adf_(m, g, DiffusionData::ADF::YN)));
 
     j_in_out_(g, n_ym.second.value(), 0)(CurrentIndx::YP) =
         (1. / (1. - a)) *
@@ -1026,7 +1034,9 @@ xt::xtensor<double, 3> NEMDiffusionDriver::power(
   return pwr_out;
 }
 
-std::tuple<xt::xtensor<double, 3>, xt::xtensor<double, 1>, xt::xtensor<double, 1>> NEMDiffusionDriver::pin_power(const xt::xtensor<double, 1>& z) const {
+std::tuple<xt::xtensor<double, 3>, xt::xtensor<double, 1>,
+           xt::xtensor<double, 1>>
+NEMDiffusionDriver::pin_power(const xt::xtensor<double, 1>& z) const {
   // First, we need to make sure all the assemblies have the same form factor
   // shapes. If not, we cannot build a conforming mesh, and we complain.
   std::optional<std::size_t> x_oshp = std::nullopt, y_oshp = std::nullopt;
@@ -1037,8 +1047,9 @@ std::tuple<xt::xtensor<double, 3>, xt::xtensor<double, 1>, xt::xtensor<double, 1
         if (x_oshp && y_oshp) {
           if (y_oshp.value() != ff.shape()[0] ||
               x_oshp.value() != ff.shape()[1]) {
-            auto mssg = "Assemblies have varrying form factor shapes. "
-              "Cannot create a conformal mesh for pin power reconstruction.";
+            auto mssg =
+                "Assemblies have varrying form factor shapes. "
+                "Cannot create a conformal mesh for pin power reconstruction.";
             spdlog::error(mssg);
             throw ScarabeeException(mssg);
           }
@@ -1051,8 +1062,9 @@ std::tuple<xt::xtensor<double, 3>, xt::xtensor<double, 1>, xt::xtensor<double, 1
   }
 
   if (x_oshp.has_value() == false || y_oshp.has_value() == false) {
-    auto mssg = "No form factors provided on any assembly. "
-      "Cannot reconstruct pin powers.";
+    auto mssg =
+        "No form factors provided on any assembly. "
+        "Cannot reconstruct pin powers.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -1061,32 +1073,35 @@ std::tuple<xt::xtensor<double, 3>, xt::xtensor<double, 1>, xt::xtensor<double, 1
   const std::size_t y_shp = y_oshp.value();
 
   // First, we need to create a mesh for the x and y points
-  xt::xtensor<double, 1> x = xt::zeros<double>({x_shp*geom_->tile_dx().size() + 1});
+  xt::xtensor<double, 1> x =
+      xt::zeros<double>({x_shp * geom_->tile_dx().size() + 1});
   std::size_t i = 1;
   for (std::size_t xt = 0; xt < geom_->tile_dx().size(); xt++) {
     const double tile_pitch = geom_->tile_dx()[xt] / static_cast<double>(x_shp);
     for (std::size_t p = 0; p < x_shp; p++) {
-      x[i] = x[i-1] + tile_pitch;
+      x[i] = x[i - 1] + tile_pitch;
       i++;
     }
   }
-  
-  xt::xtensor<double, 1> y = xt::zeros<double>({y_shp*geom_->tile_dy().size() + 1});
+
+  xt::xtensor<double, 1> y =
+      xt::zeros<double>({y_shp * geom_->tile_dy().size() + 1});
   i = 1;
   for (std::size_t yt = 0; yt < geom_->tile_dy().size(); yt++) {
     const double tile_pitch = geom_->tile_dy()[yt] / static_cast<double>(y_shp);
     for (std::size_t p = 0; p < y_shp; p++) {
-      y[i] = y[i-1] + tile_pitch;
+      y[i] = y[i - 1] + tile_pitch;
       i++;
     }
   }
 
   // We now load the powers
-  xt::xtensor<double, 3> pwr_out = xt::zeros<double>({x.size()-1, y.size()-1, z.size()});
-  for (std::size_t i = 0; i < x.size()-1; i++) {
-    const double xx = 0.5*(x[i+1] + x[i]);
-    for (std::size_t j = 0; j < y.size()-1; j++) {
-      const double yy = 0.5*(y[j+1] + y[j]);
+  xt::xtensor<double, 3> pwr_out =
+      xt::zeros<double>({x.size() - 1, y.size() - 1, z.size()});
+  for (std::size_t i = 0; i < x.size() - 1; i++) {
+    const double xx = 0.5 * (x[i + 1] + x[i]);
+    for (std::size_t j = 0; j < y.size() - 1; j++) {
+      const double yy = 0.5 * (y[j + 1] + y[j]);
       for (std::size_t k = 0; k < z.size(); k++) {
         const double zz = z[k];
 
@@ -1313,8 +1328,9 @@ void NEMDiffusionDriver::fit_node_recon_params_corners(std::size_t g,
   nf.cxy22 = 0.25 * (pp + pm + mm + mp);
 }
 
-double NEMDiffusionDriver::eval_heter_xy_corner_flux(std::size_t g, std::size_t m,
-                                               Corner c) const {
+double NEMDiffusionDriver::eval_heter_xy_corner_flux(std::size_t g,
+                                                     std::size_t m,
+                                                     Corner c) const {
   const NodeFlux& nf = recon_params(g, m);
   const double dx = 1. / nf.invs_dx;
   const double x_hi = nf.xm + 0.5 * dx;

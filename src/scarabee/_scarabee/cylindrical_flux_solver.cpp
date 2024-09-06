@@ -248,7 +248,8 @@ void CylindricalFluxSolver::solve_single_thread() {
     k_ = calc_keff(next_flux);
     spdlog::info("-------------------------------------");
     spdlog::info("Iteration {:>4d}          keff: {:.5f}", outer_iter, k_);
-    spdlog::info("     keff difference:     {:.5E}", std::abs((old_keff - k_) / k_));
+    spdlog::info("     keff difference:     {:.5E}",
+                 std::abs((old_keff - k_) / k_));
     spdlog::info("     max flux difference: {:.5E}", max_outer_flux_diff);
 
     // Assign next_flux to be the flux
@@ -344,7 +345,8 @@ void CylindricalFluxSolver::solve_parallel() {
     k_ = calc_keff(next_flux);
     spdlog::info("-------------------------------------");
     spdlog::info("Iteration {:>4d}          keff: {:.5f}", outer_iter, k_);
-    spdlog::info("     keff difference:     {:.5E}", std::abs((old_keff - k_) / k_));
+    spdlog::info("     keff difference:     {:.5E}",
+                 std::abs((old_keff - k_) / k_));
     spdlog::info("     max flux difference: {:.5E}", max_outer_flux_diff);
 
     // Assign next_flux to be the flux
@@ -432,7 +434,7 @@ std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize(
   xt::xtensor<double, 1> Et = xt::zeros<double>({NG});
   xt::xtensor<double, 1> Dtr = xt::zeros<double>({NG});
   xt::xtensor<double, 1> Ea = xt::zeros<double>({NG});
-  xt::xtensor<double, 3> Es = xt::zeros<double>({max_l+1, NG, NG});
+  xt::xtensor<double, 3> Es = xt::zeros<double>({max_l + 1, NG, NG});
   xt::xtensor<double, 1> Ef = xt::zeros<double>({NG});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({NG});
   xt::xtensor<double, 1> chi = xt::zeros<double>({NG});

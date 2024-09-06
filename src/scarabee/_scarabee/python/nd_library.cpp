@@ -81,7 +81,8 @@ void init_NDLibrary(py::module& m) {
            "-------\n"
            "CrossSection\n"
            "  Interpolated cross sections.",
-           py::arg("name"), py::arg("temp"), py::arg("dil"), py::arg("max_l") = 1)
+           py::arg("name"), py::arg("temp"), py::arg("dil"),
+           py::arg("max_l") = 1)
 
       .def(
           "two_term_xs", &NDLibrary::two_term_xs,
@@ -162,7 +163,8 @@ void init_NDLibrary(py::module& m) {
            "  Self-shielded cross sections.",
            py::arg("name"), py::arg("temp"), py::arg("a1"), py::arg("a2"),
            py::arg("b1"), py::arg("b2"), py::arg("mat_pot_xs"), py::arg("N"),
-           py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"), py::arg("max_l") = 1)
+           py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"),
+           py::arg("max_l") = 1)
 
       .def("unload", &NDLibrary::unload,
            "Deallocates all NuclideHandles which contained raw nuclear data.")

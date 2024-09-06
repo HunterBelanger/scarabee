@@ -34,9 +34,9 @@ using Pin = std::variant<std::shared_ptr<FuelPin>, std::shared_ptr<GuideTube>,
 class PWRReflector {
  public:
   PWRReflector(double pitch, std::shared_ptr<Material> moderator,
-              std::pair<std::size_t, std::size_t> shape,
-              double gap_width, double baffle_width, std::shared_ptr<Material> baffle,
-              std::shared_ptr<NDLibrary> ndl);
+               std::pair<std::size_t, std::size_t> shape, double gap_width,
+               double baffle_width, std::shared_ptr<Material> baffle,
+               std::shared_ptr<NDLibrary> ndl);
 
   const std::vector<std::pair<std::size_t, std::size_t>>& condensation_scheme()
       const {
@@ -103,8 +103,12 @@ class PWRReflector {
   double keff_tolerance() const { return keff_tolerance_; }
   void set_keff_tolerance(double ftol);
 
-  const std::vector<double>& fuel_dancoff_corrections() const { return fuel_dancoff_corrections_; };
-  const std::vector<double>& clad_dancoff_corrections() const { return clad_dancoff_corrections_; };
+  const std::vector<double>& fuel_dancoff_corrections() const {
+    return fuel_dancoff_corrections_;
+  };
+  const std::vector<double>& clad_dancoff_corrections() const {
+    return clad_dancoff_corrections_;
+  };
 
   const xt::xtensor<double, 2>& adf() const { return adf_; }
   const xt::xtensor<double, 2>& cdf() const { return cdf_; }
@@ -190,10 +194,13 @@ class PWRReflector {
   double isolated_guide_tube_flux() const;
   double isolated_burnable_poison_tube_flux() const;
 
-  std::vector<double> compute_avg_surface_flx(const std::vector<std::pair<std::size_t, double>>& segments) const;
-  std::vector<double> compute_avg_flx(const Vector& r, const Direction& u) const;
+  std::vector<double> compute_avg_surface_flx(
+      const std::vector<std::pair<std::size_t, double>>& segments) const;
+  std::vector<double> compute_avg_flx(const Vector& r,
+                                      const Direction& u) const;
 
-  std::shared_ptr<DiffusionCrossSection> make_diffusion_xs(const std::vector<std::size_t>& regions) const;
+  std::shared_ptr<DiffusionCrossSection> make_diffusion_xs(
+      const std::vector<std::size_t>& regions) const;
 };
 
 };  // namespace scarabee

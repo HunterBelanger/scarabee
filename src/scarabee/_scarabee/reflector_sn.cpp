@@ -332,7 +332,7 @@ std::shared_ptr<CrossSection> ReflectorSN::homogenize(
   xt::xtensor<double, 1> Et = xt::zeros<double>({NG});
   xt::xtensor<double, 1> Dtr = xt::zeros<double>({NG});
   xt::xtensor<double, 1> Ea = xt::zeros<double>({NG});
-  xt::xtensor<double, 3> Es = xt::zeros<double>({max_l+1, NG, NG});
+  xt::xtensor<double, 3> Es = xt::zeros<double>({max_l + 1, NG, NG});
   xt::xtensor<double, 1> Ef = xt::zeros<double>({NG});
   xt::xtensor<double, 1> vEf = xt::zeros<double>({NG});
   xt::xtensor<double, 1> chi = xt::zeros<double>({NG});

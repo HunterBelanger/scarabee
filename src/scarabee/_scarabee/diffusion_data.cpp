@@ -10,8 +10,7 @@
 
 namespace scarabee {
 
-DiffusionData::DiffusionData(
-    std::shared_ptr<DiffusionCrossSection> xs)
+DiffusionData::DiffusionData(std::shared_ptr<DiffusionCrossSection> xs)
     : xs_(xs), form_factors_(), adf_(), cdf_(), name_() {
   if (xs_ == nullptr) {
     auto mssg = "Diffusion cross section is None.";
@@ -20,9 +19,8 @@ DiffusionData::DiffusionData(
   }
 }
 
-DiffusionData::DiffusionData(
-    std::shared_ptr<DiffusionCrossSection> xs,
-    const xt::xtensor<double, 2>& form_factors)
+DiffusionData::DiffusionData(std::shared_ptr<DiffusionCrossSection> xs,
+                             const xt::xtensor<double, 2>& form_factors)
     : xs_(xs), form_factors_(), adf_(), cdf_(), name_() {
   if (xs_ == nullptr) {
     auto mssg = "Diffusion cross section is None.";
@@ -33,11 +31,10 @@ DiffusionData::DiffusionData(
   this->set_form_factors(form_factors);
 }
 
-DiffusionData::DiffusionData(
-    std::shared_ptr<DiffusionCrossSection> xs,
-    const xt::xtensor<double, 2>& form_factors,
-    const xt::xtensor<double, 2>& adf,
-    const xt::xtensor<double, 2>& cdf)
+DiffusionData::DiffusionData(std::shared_ptr<DiffusionCrossSection> xs,
+                             const xt::xtensor<double, 2>& form_factors,
+                             const xt::xtensor<double, 2>& adf,
+                             const xt::xtensor<double, 2>& cdf)
     : xs_(xs), form_factors_(), adf_(), cdf_(), name_() {
   if (xs_ == nullptr) {
     auto mssg = "Diffusion cross section is None.";
@@ -171,7 +168,7 @@ void DiffusionData::rotate_counterclockwise() {
       adf_(g, ADF::XP) = adf_(g, ADF::YN);
       adf_(g, ADF::YP) = temp2;
     }
-  } 
+  }
 
   // Finally, swap CDF
   if (cdf_.size() > 0) {
@@ -206,7 +203,7 @@ void DiffusionData::save(const std::string& fname) const {
       xs_data(5 + g, gout) = this->Es(g, gout);
     }
   }
-  
+
   // Save the xs data to the npz
   xt::dump_npz(fname, "xs", xs_data);
 
@@ -225,7 +222,7 @@ void DiffusionData::save(const std::string& fname) const {
 
 std::shared_ptr<DiffusionData> DiffusionData::load(const std::string& fname) {
   auto npz = xt::load_npz(fname);
- 
+
   // First, read in and create the DiffsuionCrossSection
   if (npz.find("xs") == npz.end()) {
     auto mssg = "No \"xs\" entry in the DiffusionData NPZ \"" + fname + "\".";
@@ -239,17 +236,18 @@ std::shared_ptr<DiffusionData> DiffusionData::load(const std::string& fname) {
   xt::xtensor<double, 1> Ef = xt::view(xs_data, 2, xt::all());
   xt::xtensor<double, 1> vEf = xt::view(xs_data, 3, xt::all());
   xt::xtensor<double, 1> chi = xt::view(xs_data, 4, xt::all());
-  xt::xtensor<double, 2> Es = xt::view(xs_data, xt::range(5, 5 + NG), xt::all());
+  xt::xtensor<double, 2> Es =
+      xt::view(xs_data, xt::range(5, 5 + NG), xt::all());
   auto xs = std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi);
-  
+
   std::unique_ptr<xt::xtensor<double, 2>> form_factors, adf, cdf;
-  
+
   // Load form factors
   if (npz.find("form_factors") != npz.end()) {
     form_factors = std::make_unique<xt::xtensor<double, 2>>();
     *form_factors = npz.at("form_factors").cast<double>();
   }
-  
+
   // Load ADF
   if (npz.find("adf") != npz.end()) {
     adf = std::make_unique<xt::xtensor<double, 2>>();
@@ -261,7 +259,7 @@ std::shared_ptr<DiffusionData> DiffusionData::load(const std::string& fname) {
     cdf = std::make_unique<xt::xtensor<double, 2>>();
     *cdf = npz.at("cdf").cast<double>();
   }
-  
+
   // Return data
   if (form_factors && adf && cdf) {
     return std::make_shared<DiffusionData>(xs, *form_factors, *adf, *cdf);

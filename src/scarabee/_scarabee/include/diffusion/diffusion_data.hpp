@@ -69,7 +69,7 @@ class DiffusionData {
     if (cdf_.size() > 0) {
       return cdf_(g, CDF::I);
     } else if (adf_.size() > 0) {
-      return 0.5*(adf_xp(g) + adf_yp(g));
+      return 0.5 * (adf_xp(g) + adf_yp(g));
     } else {
       return 1.;
     }
@@ -79,7 +79,7 @@ class DiffusionData {
     if (cdf_.size() > 0) {
       return cdf_(g, CDF::II);
     } else if (adf_.size() > 0) {
-      return 0.5*(adf_xn(g) + adf_yp(g));
+      return 0.5 * (adf_xn(g) + adf_yp(g));
     } else {
       return 1.;
     }
@@ -89,7 +89,7 @@ class DiffusionData {
     if (cdf_.size() > 0) {
       return cdf_(g, CDF::III);
     } else if (adf_.size() > 0) {
-      return 0.5*(adf_xn(g) + adf_yn(g));
+      return 0.5 * (adf_xn(g) + adf_yn(g));
     } else {
       return 1.;
     }
@@ -99,7 +99,7 @@ class DiffusionData {
     if (cdf_.size() > 0) {
       return cdf_(g, CDF::IV);
     } else if (adf_.size() > 0) {
-      return 0.5*(adf_xp(g) + adf_yn(g));
+      return 0.5 * (adf_xp(g) + adf_yn(g));
     } else {
       return 1.;
     }
