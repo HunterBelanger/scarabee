@@ -843,11 +843,11 @@ void PWRReflector::baffle_spectrum_calc() {
   }
 
   reflector_cyl_cell_ = std::make_shared<CylindricalCell>(radii, mats);
-  reflector_cyl_flux_cell_->solve();
+  reflector_cyl_cell_->solve(true); // Solve in parallel
   reflector_cyl_flux_cell_ =
       std::make_shared<CylindricalFluxSolver>(reflector_cyl_cell_);
   reflector_cyl_flux_cell_->set_albedo(0.);
-  reflector_cyl_flux_cell_->solve(true);  // Solve in parallel
+  reflector_cyl_flux_cell_->solve(true); // Solve in parallel
 
   // Now we condense the macro cross sections
   auto gap_homog_xs = reflector_cyl_flux_cell_->homogenize(gap_regions);
