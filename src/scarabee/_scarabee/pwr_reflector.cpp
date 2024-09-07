@@ -231,6 +231,7 @@ void PWRReflector::solve() {
   get_clad_dancoff_corrections();
   pin_cell_calc();
   condense_xs();
+  baffle_spectrum_calc();
   moc_calc();
   few_group_xs();
   compute_adf_cdf();
@@ -822,20 +823,22 @@ void PWRReflector::baffle_spectrum_calc() {
   radii.reserve(NF + NG + NB + NR);
   mats.reserve(NF + NG + NB + NR);
 
-  for (std::size_t i = 0; i < NF; i++) {
-    radii.push_back(dx_fuel);
+  radii.push_back(dx_fuel);
+  mats.push_back(avg_fp_);
+  for (std::size_t i = 1; i < NF; i++) {
+    radii.push_back(radii.back() + dx_fuel);
     mats.push_back(avg_fp_);
   }
   for (std::size_t i = 0; i < NG; i++) {
-    radii.push_back(dx_gap);
+    radii.push_back(radii.back() + dx_gap);
     mats.push_back(moderator_xs_);
   }
   for (std::size_t i = 0; i < NB; i++) {
-    radii.push_back(dx_baffle);
+    radii.push_back(radii.back() + dx_baffle);
     mats.push_back(baffle_xs_);
   }
   for (std::size_t i = 0; i < NR; i++) {
-    radii.push_back(dx_ref);
+    radii.push_back(radii.back() + dx_ref);
     mats.push_back(moderator_xs_);
   }
 

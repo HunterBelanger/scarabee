@@ -10,6 +10,13 @@ namespace scarabee {
 EmptyCell::EmptyCell(const std::shared_ptr<CrossSection>& mat, double dx,
                      double dy)
     : Cell(dx, dy), mat_(mat) {
+  
+  if (mat_ == nullptr) {
+    auto mssg = "Material cross section cannot be None.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Just a single FSR
   fsrs_.emplace_back();
   fsrs_.back().volume() = dx * dy;

@@ -24,7 +24,7 @@ message(STATUS "Downloading zlib v1.3.1")
 FetchContent_Declare(ZLIB
   GIT_REPOSITORY https://github.com/madler/zlib.git
   GIT_TAG        v1.3.1
-  #OVERRIDE_FIND_PACKAGE
+  OVERRIDE_FIND_PACKAGE
 )
 set(ZLIB_BUILD_EXAMPLES OFF)
 FetchContent_MakeAvailable(ZLIB)
