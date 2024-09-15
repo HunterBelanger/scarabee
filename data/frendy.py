@@ -228,6 +228,7 @@ class KRAMXS:
     fl.readline()
 
     # Read P1-scattering matrix
+    Es1 = None
     if max_l >= 1:
       Es1 = []
       line_num = 0
@@ -238,6 +239,7 @@ class KRAMXS:
       Es1 = np.copy(np.swapaxes(Es1, 0, 1))
 
     # Read P2-scattering matrix
+    Es2 = None
     if max_l >= 2:
       Es2 = []
       line_num = 0
@@ -248,6 +250,7 @@ class KRAMXS:
       Es2 = np.copy(np.swapaxes(Es2, 0, 1))
     
     # Read P3-scattering matrix
+    Es3 = None
     if max_l >= 3:
       Es3 = []
       line_num = 0
