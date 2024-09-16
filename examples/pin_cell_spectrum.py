@@ -2,7 +2,8 @@ from scarabee import *
 import numpy as np
 import matplotlib.pyplot as plt
 
-ndl = NDLibrary("endf8_shem281.h5")
+#ndl = NDLibrary("endf8_shem281.h5")
+ndl = NDLibrary("C:\\Users\\hunte\\Documents\\nuclear_data\\endf8_shem281.h5")
 
 def get_fuel_dancoff_correction(Zirc, Water):
   Et = np.array([1.E5])
@@ -40,8 +41,8 @@ def get_fuel_dancoff_correction(Zirc, Water):
     else:
       iso_moc.set_extern_src(i, 0, Water.potential_xs)
   iso_moc.sim_mode = SimulationMode.FixedSource
-  iso_moc.generate_tracks(128, 0.001, YamamotoTabuchi6())
-  iso_moc.flux_tolerance = 1.E-6
+  iso_moc.generate_tracks(128, 0.01, YamamotoTabuchi6())
+  iso_moc.flux_tolerance = 1.E-5
   iso_moc.solve()
 
   # Simulate real geomemtry
@@ -60,8 +61,8 @@ def get_fuel_dancoff_correction(Zirc, Water):
       moc.set_extern_src(i, 0, Zirc.potential_xs)
     else:
       moc.set_extern_src(i, 0, Water.potential_xs)
-  moc.generate_tracks(128, 0.001, YamamotoTabuchi6())
-  moc.flux_tolerance = 1.E-6
+  moc.generate_tracks(128, 0.01, YamamotoTabuchi6())
+  moc.flux_tolerance = 1.E-5
   moc.sim_mode = SimulationMode.FixedSource
   moc.solve()
 
@@ -107,8 +108,8 @@ def get_clad_dancoff_correction(UO2, Water):
     else:
       iso_moc.set_extern_src(i, 0, Water.potential_xs)
   iso_moc.sim_mode = SimulationMode.FixedSource
-  iso_moc.generate_tracks(128, 0.001, YamamotoTabuchi6())
-  iso_moc.flux_tolerance = 1.E-6
+  iso_moc.generate_tracks(128, 0.01, YamamotoTabuchi6())
+  iso_moc.flux_tolerance = 1.E-5
   iso_moc.solve()
 
   # Simulate real geomemtry
@@ -127,8 +128,8 @@ def get_clad_dancoff_correction(UO2, Water):
       moc.set_extern_src(i, 0, 0.)
     else:
       moc.set_extern_src(i, 0, Water.potential_xs)
-  moc.generate_tracks(128, 0.001, YamamotoTabuchi6())
-  moc.flux_tolerance = 1.E-6
+  moc.generate_tracks(128, 0.01, YamamotoTabuchi6())
+  moc.flux_tolerance = 1.E-5
   moc.sim_mode = SimulationMode.FixedSource
   moc.solve()
 
@@ -190,23 +191,12 @@ mats  = [Fuel,         Fuel,         Fuel,     Clad,     Mod,         Mod]
 cell = CylindricalCell(radii, mats)
 cell.solve()
 cell_flux = CylindricalFluxSolver(cell)
-cell_flux.flux_tolerance = 1.E-6
+cell_flux.flux_tolerance = 1.E-5
 cell_flux.solve()
 
 # Get average flux from CP
-vol_sum = 0.
-for r in range(cell_flux.nregions):
-  vol_sum += cell_flux.volume(r)
-
-avg_flux_cp = np.zeros(cell.ngroups)
-for g in range(cell.ngroups):
-  for r in range(cell.nregions):
-    vol = cell_flux.volume(r)
-    flx = cell_flux.flux(r, g)
-    avg_flux_cp[g] += vol*flx
-
+avg_flux_cp = cell_flux.homogenize_flux_spectrum()
 avg_flux_cp = np.flip(avg_flux_cp)
-avg_flux_cp /= np.max(avg_flux_cp)
 
 # Create and run full real problem with MOC
 radii = [0.5*fuel_rad, 0.8*fuel_rad, fuel_rad, clad_rad, 1.2*clad_rad]
@@ -215,32 +205,37 @@ P = PinCell(radii, mats, pitch, pitch)
 c2d = Cartesian2D([pitch], [pitch])
 c2d.set_tiles([P])
 moc = MOCDriver(c2d)
-moc.generate_tracks(128, 0.001, YamamotoTabuchi6())
-moc.flux_tolerance = 1.E-6
+moc.generate_tracks(128, 0.01, YamamotoTabuchi6())
+moc.flux_tolerance = 1.E-5
 moc.solve()
 
 # Get average flux from MOC
-vol_sum = 0.
-for r in range(moc.nregions):
-  vol_sum += moc.volume(r)
-
-avg_flux_moc = np.zeros(moc.ngroups)
-for g in range(moc.ngroups):
-  for r in range(moc.nregions):
-    vol = moc.volume(r)
-    flx = moc.flux(r, g)
-    avg_flux_moc[g] += vol*flx
+avg_flux_moc = moc.homogenize_flux_spectrum()
 avg_flux_moc = np.flip(avg_flux_moc)
-avg_flux_moc /= np.max(avg_flux_moc)
 
 ebounds = ndl.group_bounds
 ebounds = np.flip(ebounds)
+
+# Now we convert to flux per unit lethargy, and compute the lethargy integral
+# of each for normalization of each spectrum.
+integral_cp = 0.
+integral_moc = 0.
+for g in range(len(avg_flux_cp)):
+    integral_cp += avg_flux_cp[g]
+    integral_moc += avg_flux_moc[g]
+    Emin = ebounds[g]
+    Emax = ebounds[g+1]
+    u = np.log(Emax/Emin)
+    avg_flux_cp[g] /= u
+    avg_flux_moc[g] /= u
+avg_flux_cp /= integral_cp
+avg_flux_moc /= integral_moc
 
 plt.stairs(avg_flux_cp, edges=ebounds, label="CP")
 plt.stairs(avg_flux_moc, edges=ebounds, label="MOC")
 plt.xscale('log')
 plt.xlabel("Energy [eV]")
-plt.ylabel("Flux [Arb. Units]")
+plt.ylabel("Flux per Unit Lethargy [Arb. Units]")
 plt.legend().set_draggable(True)
 plt.show()
 
