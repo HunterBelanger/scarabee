@@ -2,6 +2,7 @@
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/criticality_spectrum.hpp>
+#include <utils/timer.hpp>
 #include <moc/moc_plotter.hpp>
 #include <diffusion/diffusion_data.hpp>
 
@@ -529,6 +530,9 @@ void PWRAssembly::get_clad_dancoff_corrections() {
 }
 
 void PWRAssembly::pin_cell_calc() {
+  Timer pin_cell_calc_timer;
+  pin_cell_calc_timer.start();
+
   spdlog::info("");
   spdlog::info("Performing micro-group pin cell calcuations");
   spdlog::info("Please wait...");
@@ -606,7 +610,9 @@ void PWRAssembly::pin_cell_calc() {
   // to conserve memory
   ndl_->unload();
 
+  pin_cell_calc_timer.stop();
   set_logging_level(LogLevel::info);
+  spdlog::info("Pin cell calculation time: {:.5E} s", pin_cell_calc_timer.elapsed_time());
 }
 
 void PWRAssembly::condense_xs() {
