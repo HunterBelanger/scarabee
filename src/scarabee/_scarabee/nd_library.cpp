@@ -477,7 +477,7 @@ void NDLibrary::get_dil_interp_params(double dil, const NuclideHandle& nuc,
 }
 
 void NDLibrary::interp_1d(xt::xtensor<double, 1>& E,
-                          const xt::xtensor<double, 2> nE, std::size_t it,
+                          const xt::xtensor<double, 2>& nE, std::size_t it,
                           double f_temp) const {
   if (f_temp > 0.) {
     E = (1. - f_temp) * xt::view(nE, it, xt::all()) +
@@ -488,7 +488,7 @@ void NDLibrary::interp_1d(xt::xtensor<double, 1>& E,
 }
 
 void NDLibrary::interp_1d(xt::xtensor<double, 1>& E,
-                          const xt::xtensor<double, 3> nE, std::size_t it,
+                          const xt::xtensor<double, 3>& nE, std::size_t it,
                           double f_temp, std::size_t id, double f_dil) const {
   if (f_temp > 0.) {
     if (f_dil > 0.) {
@@ -511,7 +511,7 @@ void NDLibrary::interp_1d(xt::xtensor<double, 1>& E,
 }
 
 void NDLibrary::interp_2d(xt::xtensor<double, 2>& E,
-                          const xt::xtensor<double, 4> nE, std::size_t it,
+                          const xt::xtensor<double, 4>& nE, std::size_t it,
                           double f_temp, std::size_t id, double f_dil) const {
   if (f_temp > 0.) {
     if (f_dil > 0.) {

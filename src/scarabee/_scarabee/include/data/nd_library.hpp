@@ -99,12 +99,12 @@ class NDLibrary {
   void get_dil_interp_params(double dil, const NuclideHandle& nuc,
                              std::size_t& i, double& f) const;
 
-  void interp_1d(xt::xtensor<double, 1>& E, const xt::xtensor<double, 2> nE,
+  void interp_1d(xt::xtensor<double, 1>& E, const xt::xtensor<double, 2>& nE,
                  std::size_t it, double f_temp) const;
-  void interp_1d(xt::xtensor<double, 1>& E, const xt::xtensor<double, 3> nE,
+  void interp_1d(xt::xtensor<double, 1>& E, const xt::xtensor<double, 3>& nE,
                  std::size_t it, double f_temp, std::size_t id,
                  double f_dil) const;
-  void interp_2d(xt::xtensor<double, 2>& E, const xt::xtensor<double, 4> nE,
+  void interp_2d(xt::xtensor<double, 2>& E, const xt::xtensor<double, 4>& nE,
                  std::size_t it, double f_temp, std::size_t id,
                  double f_dil) const;
 
