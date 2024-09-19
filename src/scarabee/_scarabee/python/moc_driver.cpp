@@ -85,6 +85,9 @@ void init_MOCDriver(py::module& m) {
           &MOCDriver::set_flux_tolerance,
           "Maximum relative absolute difference in flux for convergence")
 
+      .def_property("cmfd", &MOCDriver::cmfd, &MOCDriver::set_cmfd,
+          "CMFD mesh for convergence acceleration.")
+
       .def("flux",
            py::overload_cast<const Vector&, const Direction&, std::size_t>(
                &MOCDriver::flux, py::const_),

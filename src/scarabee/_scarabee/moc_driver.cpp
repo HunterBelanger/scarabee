@@ -586,7 +586,24 @@ void MOCDriver::generate_tracks() {
           const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
           segments.emplace_back(fsr_r.first.fsr, d,
                                 this->get_fsr_indx(fsr_r.first));
+
+          if (cmfd_) {
+            // Insert the segment FSR
+            const auto tile = cmfd_->get_tile(r_end, u);
+            const auto fsr_indx = segments.back().fsr_indx();
+            cmfd_->insert_fsr(*tile, fsr_indx);
+
+            // Save the start surface
+            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+          }
+
           r_end = r_end + d * u;
+          
+          if (cmfd_) {
+            // Save the exit surface
+            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+          }
+
           ti = geometry_->get_tile_index(r_end, u);
           if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
         }
@@ -621,7 +638,24 @@ void MOCDriver::generate_tracks() {
           const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
           segments.emplace_back(fsr_r.first.fsr, d,
                                 this->get_fsr_indx(fsr_r.first));
+          
+          if (cmfd_) {
+            // Insert the segment FSR
+            const auto tile = cmfd_->get_tile(r_end, u);
+            const auto fsr_indx = segments.back().fsr_indx();
+            cmfd_->insert_fsr(*tile, fsr_indx);
+
+            // Save the start surface
+            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+          }
+
           r_end = r_end + d * u;
+
+          if (cmfd_) {
+            // Save the exit surface
+            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+          }
+
           ti = geometry_->get_tile_index(r_end, u);
           if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
         }
@@ -637,6 +671,8 @@ void MOCDriver::generate_tracks() {
       }
     }
   }
+
+  if (cmfd_) cmfd_->pack_fsr_lists();
 }
 
 std::vector<std::pair<std::size_t, double>> MOCDriver::trace_fsr_segments(

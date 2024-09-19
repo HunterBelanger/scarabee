@@ -2,6 +2,7 @@
 #define MOC_DRIVER_H
 
 #include <moc/cartesian_2d.hpp>
+#include <moc/cmfd.hpp>
 #include <moc/boundary_condition.hpp>
 #include <moc/simulation_mode.hpp>
 #include <moc/flat_source_region.hpp>
@@ -25,6 +26,9 @@ class MOCDriver {
             BoundaryCondition ymax = BoundaryCondition::Reflective);
 
   std::shared_ptr<Cartesian2D> geometry() const { return geometry_; }
+
+  const std::shared_ptr<CMFD>& cmfd() const { return cmfd_; }
+  void set_cmfd(std::shared_ptr<CMFD> cmfd) { cmfd_ = cmfd; }
 
   bool drawn() const { return !angle_info_.empty(); }
 
@@ -119,6 +123,7 @@ class MOCDriver {
   std::vector<AngleInfo> angle_info_;       // Information for all angles
   std::vector<std::vector<Track>> tracks_;  // All tracks, indexed by angle
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
+  std::shared_ptr<CMFD> cmfd_;              // CMFD for acceleration
   PolarQuadrature polar_quad_;              // Polar quadrature
   xt::xtensor<double, 2> flux_;             // Indexed by group then FSR
   xt::xtensor<double, 2> extern_src_;       // Indexed by group then FSR
