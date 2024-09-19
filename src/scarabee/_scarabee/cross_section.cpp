@@ -287,6 +287,9 @@ CrossSection& CrossSection::operator*=(double N) {
   // Scale Etr_
   Etr_ *= N;
 
+  // Scale Dtr_
+  Dtr_ *= N;
+
   // Scale Ea_
   Ea_ *= N;
 
