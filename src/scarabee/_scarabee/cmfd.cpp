@@ -113,41 +113,36 @@ std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
 
 std::optional<std::size_t> CMFD::get_surface(const Vector& r,
                                              const Direction& u) const {
-  auto otile = this->get_tile(r, u);
+  // First, we check all the x surfaces, and see if we are on one
+  for (std::size_t xsi = 0; xsi < x_bounds_.size(); xsi++) {
+    if (std::abs(x_bounds_[xsi].x0() - r.x()) < SURFACE_COINCIDENT) {
+      // we are on this surface ! get our tile (just used for the y bin)
+      auto otile = this->get_tile(r, u);
+      if (otile.has_value() == false) otile = this->get_tile(r, -u);
+      if (otile.has_value() == false) return std::nullopt;
 
-  // If we aren't in a tile at all, we return none
-  if (otile.has_value() == false) return std::nullopt;
+      const auto& tile = otile.value();
 
-  const std::size_t i = (*otile)[0];
-  const std::size_t j = (*otile)[1];
-
-  // Get the surfaces that make up our tile
-  const auto& xl = x_bounds_[i];
-  const auto& xh = x_bounds_[i + 1];
-  const auto& yl = y_bounds_[j];
-  const auto& yh = y_bounds_[j + 1];
-
-  // Check the distance to each surface
-  const double dist_xl = std::abs(r.x() - xl.x0());
-  const double dist_xh = std::abs(r.x() - xh.x0());
-  const double dist_yl = std::abs(r.y() - yl.y0());
-  const double dist_yh = std::abs(r.y() - yh.y0());
-  const double min_dist =
-      std::min(dist_xl, std::min(dist_xh, std::min(dist_yl, dist_yh)));
-
-  // If we aren't that close to any surface, then we return none
-  if (min_dist > SURFACE_COINCIDENT) return std::nullopt;
-
-  if (dist_xl == min_dist) {
-    return j * x_bounds_.size() + i;
-  } else if (dist_xh == min_dist) {
-    return j * x_bounds_.size() + i + 1;
-  } else if (dist_yl == min_dist) {
-    return nx_surfs_ + i * y_bounds_.size() + j;
-  } else {
-    // yh
-    return nx_surfs_ + i * y_bounds_.size() + j + 1;
+      return tile[1] * x_bounds_.size() + xsi;
+    }
   }
+
+  // We apparently weren't on an x surface, so try all y surfaces.
+  for (std::size_t ysi = 0; ysi < y_bounds_.size(); ysi++) {
+    if (std::abs(y_bounds_[ysi].y0() - r.y()) < SURFACE_COINCIDENT) {
+      // we are on this surface ! get our tile (just used for the x bin)
+      auto otile = this->get_tile(r, u);
+      if (otile.has_value() == false) otile = this->get_tile(r, -u);
+      if (otile.has_value() == false) return std::nullopt;
+
+      const auto& tile = otile.value();
+      
+      return nx_surfs_ + tile[0] * y_bounds_.size() + ysi;
+    }
+  }
+
+  // If we get here, we aren't on a surface
+  return std::nullopt;
 }
 
 std::size_t CMFD::tile_to_indx(const std::array<std::size_t, 2>& tile) const {
@@ -171,6 +166,14 @@ void CMFD::pack_fsr_lists() {
 
   temp_fsrs_.clear();
   temp_fsrs_.shrink_to_fit();
+
+  for (std::size_t t = 0; t < fsrs_.size(); t++) {
+    std::cout << "CMFD " << t << ", size = " << fsrs_[t].size() << ": ";
+    for (std::size_t tt = 0; tt < fsrs_[t].size(); tt++) {
+      std::cout << fsrs_[t][tt] << "  ";
+    }
+    std::cout << "\n";
+  }
 }
 
 double& CMFD::current(const std::size_t g, const std::size_t surface) {

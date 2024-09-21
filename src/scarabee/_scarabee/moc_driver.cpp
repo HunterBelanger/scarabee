@@ -588,20 +588,19 @@ void MOCDriver::generate_tracks() {
                                 this->get_fsr_indx(fsr_r.first));
 
           if (cmfd_) {
-            // Insert the segment FSR
+            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
             const auto tile = cmfd_->get_tile(r_end, u);
             const auto fsr_indx = segments.back().fsr_indx();
             cmfd_->insert_fsr(*tile, fsr_indx);
-
-            // Save the start surface
-            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
           }
 
           r_end = r_end + d * u;
           
           if (cmfd_) {
-            // Save the exit surface
-            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+            segments.back().exit_cmfd_surface() = cmfd_->get_surface(r_end, -u);
+            const auto tile = cmfd_->get_tile(r_end, -u);
+            const auto fsr_indx = segments.back().fsr_indx();
+            cmfd_->insert_fsr(*tile, fsr_indx);
           }
 
           ti = geometry_->get_tile_index(r_end, u);
@@ -640,20 +639,19 @@ void MOCDriver::generate_tracks() {
                                 this->get_fsr_indx(fsr_r.first));
           
           if (cmfd_) {
-            // Insert the segment FSR
+            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
             const auto tile = cmfd_->get_tile(r_end, u);
             const auto fsr_indx = segments.back().fsr_indx();
             cmfd_->insert_fsr(*tile, fsr_indx);
-
-            // Save the start surface
-            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
           }
 
           r_end = r_end + d * u;
 
           if (cmfd_) {
-            // Save the exit surface
-            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+            segments.back().exit_cmfd_surface() = cmfd_->get_surface(r_end, -u);
+            const auto tile = cmfd_->get_tile(r_end, -u);
+            const auto fsr_indx = segments.back().fsr_indx();
+            cmfd_->insert_fsr(*tile, fsr_indx);
           }
 
           ti = geometry_->get_tile_index(r_end, u);
