@@ -1,6 +1,8 @@
 #ifndef SCARABEE_CROSS_SECTIONS_H
 #define SCARABEE_CROSS_SECTIONS_H
 
+#include <diffusion_cross_section.hpp>
+
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xview.hpp>
 
@@ -106,6 +108,8 @@ class CrossSection {
   std::shared_ptr<CrossSection> condense(
       const std::vector<std::pair<std::size_t, std::size_t>>& groups,
       const xt::xtensor<double, 1>& flux) const;
+
+  std::shared_ptr<DiffusionCrossSection> diffusion_xs() const;
 
   // Operators for constructing compound cross sections
   CrossSection operator+(const CrossSection& R) const;

@@ -735,6 +735,7 @@ void PWRAssembly::few_group_xs() {
   spdlog::info("Generating few group cross sections");
 
   const auto homog_xs = moc_->homogenize();
+  const auto diff_xs = homog_xs->diffusion_xs();
   const auto flux_spectrum = moc_->homogenize_flux_spectrum();
   auto NG = homog_xs->ngroups();
   const bool fissile = homog_xs->fissile();
@@ -743,33 +744,6 @@ void PWRAssembly::few_group_xs() {
   xt::xtensor<double, 1> Ea = xt::zeros<double>({NG});
   xt::xtensor<double, 2> Es = xt::zeros<double>({NG, NG});
   xt::xtensor<double, 1> Ef, vEf, chi;
-  if (fissile) {
-    Ef = xt::zeros<double>({NG});
-    vEf = xt::zeros<double>({NG});
-    chi = xt::zeros<double>({NG});
-  }
-
-  for (std::size_t g = 0; g < NG; g++) {
-    D(g) = 1. / (3. * homog_xs->Etr(g));
-    Ea(g) = homog_xs->Ea(g);
-
-    if (fissile) {
-      Ef(g) = homog_xs->Ef(g);
-      vEf(g) = homog_xs->vEf(g);
-      chi(g) = homog_xs->chi(g);
-    }
-
-    for (std::size_t gg = 0; gg < NG; gg++) {
-      Es(g, gg) = homog_xs->Es_tr(g, gg);
-    }
-  }
-
-  std::unique_ptr<DiffusionCrossSection> diff_xs{nullptr};
-  if (fissile) {
-    diff_xs = std::make_unique<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi);
-  } else {
-    diff_xs = std::make_unique<DiffusionCrossSection>(D, Ea, Es);
-  }
 
   // According to Smith, one should do energy condensation on the
   // diffusion coefficients, and not on the transport cross sections which

@@ -589,18 +589,34 @@ void MOCDriver::generate_tracks() {
 
           if (cmfd_) {
             segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+
             const auto tile = cmfd_->get_tile(r_end, u);
-            const auto fsr_indx = segments.back().fsr_indx();
-            cmfd_->insert_fsr(*tile, fsr_indx);
+            if (tile) {
+              const auto fsr_indx = segments.back().fsr_indx();
+              #pragma omp critical (cmfd_fsr_insertion)
+              cmfd_->insert_fsr(*tile, fsr_indx);
+            } else {
+              auto mssg = "Tile for segment position was nullopt.";
+              spdlog::error(mssg);
+              throw ScarabeeException(mssg);
+            }
           }
 
           r_end = r_end + d * u;
           
           if (cmfd_) {
             segments.back().exit_cmfd_surface() = cmfd_->get_surface(r_end, -u);
+            
             const auto tile = cmfd_->get_tile(r_end, -u);
-            const auto fsr_indx = segments.back().fsr_indx();
-            cmfd_->insert_fsr(*tile, fsr_indx);
+            if (tile) {
+              const auto fsr_indx = segments.back().fsr_indx();
+              #pragma omp critical (cmfd_fsr_insertion)
+              cmfd_->insert_fsr(*tile, fsr_indx);
+            } else {
+              auto mssg = "Tile for segment position was nullopt.";
+              spdlog::error(mssg);
+              throw ScarabeeException(mssg);
+            }
           }
 
           ti = geometry_->get_tile_index(r_end, u);
@@ -640,18 +656,34 @@ void MOCDriver::generate_tracks() {
           
           if (cmfd_) {
             segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+
             const auto tile = cmfd_->get_tile(r_end, u);
-            const auto fsr_indx = segments.back().fsr_indx();
-            cmfd_->insert_fsr(*tile, fsr_indx);
+            if (tile) {
+              const auto fsr_indx = segments.back().fsr_indx();
+              #pragma omp critical (cmfd_fsr_insertion)
+              cmfd_->insert_fsr(*tile, fsr_indx);
+            } else {
+              auto mssg = "Tile for segment position was nullopt.";
+              spdlog::error(mssg);
+              throw ScarabeeException(mssg);
+            }
           }
 
           r_end = r_end + d * u;
 
           if (cmfd_) {
             segments.back().exit_cmfd_surface() = cmfd_->get_surface(r_end, -u);
+
             const auto tile = cmfd_->get_tile(r_end, -u);
-            const auto fsr_indx = segments.back().fsr_indx();
-            cmfd_->insert_fsr(*tile, fsr_indx);
+            if (tile) {
+              const auto fsr_indx = segments.back().fsr_indx();
+              #pragma omp critical (cmfd_fsr_insertion)
+              cmfd_->insert_fsr(*tile, fsr_indx);
+            } else {
+              auto mssg = "Tile for segment position was nullopt.";
+              spdlog::error(mssg);
+              throw ScarabeeException(mssg);
+            }
           }
 
           ti = geometry_->get_tile_index(r_end, u);

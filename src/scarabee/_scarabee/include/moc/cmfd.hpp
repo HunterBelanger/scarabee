@@ -17,24 +17,30 @@ namespace scarabee {
 
 class CMFD {
  public:
-  CMFD(const std::vector<double>& dx, const std::vector<double>& dy);
+  CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
+       const std::vector<std::pair<std::size_t, std::size_t>>& groups);
 
   std::size_t nx() const { return nx_; };
   std::size_t ny() const { return ny_; };
 
-  std::optional<std::array<std::size_t, 2>> get_tile(const Vector& r, const Direction& u) const;
+  std::optional<std::array<std::size_t, 2>> get_tile(const Vector& r,
+                                                     const Direction& u) const;
   std::size_t tile_to_indx(const std::array<std::size_t, 2>& tile) const;
-  std::optional<std::size_t> get_surface(const Vector& r, const Direction& u) const;
+  std::optional<std::size_t> get_surface(const Vector& r,
+                                         const Direction& u) const;
 
   void insert_fsr(const std::array<std::size_t, 2>& tile, std::size_t fsr);
   void pack_fsr_lists();
 
-  double& current(const std::size_t g, const std::size_t surface);
-  const double& current(const std::size_t g, const std::size_t surface) const;
+  std::size_t moc_to_cmfd_group(std::size_t g) const;
+
+  double& current(const std::size_t G, const std::size_t surface);
+  const double& current(const std::size_t G, const std::size_t surface) const;
 
  private:
   std::vector<Surface> x_bounds_;
   std::vector<Surface> y_bounds_;
+  std::vector<std::size_t> moc_to_cmfd_group_map_;
   std::size_t nx_, ny_;
   std::size_t nx_surfs_, ny_surfs_;
 

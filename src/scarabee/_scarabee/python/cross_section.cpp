@@ -270,6 +270,13 @@ void init_CrossSection(py::module& m) {
            "            Condensed set of cross sections.\n",
            py::arg("groups"), py::arg("flux"))
 
+      .def("diffusion_xs", &CrossSection::diffusion_xs,
+           "Creates a :py:class:`DiffusionCrossSection` from the cross section.\n\n"
+           "Returns\n"
+           "-------\n"
+           "DiffusionCrossSection\n"
+           "    Diffusion cross sections.\n")
+
       .def("__mul__", &CrossSection::operator*)
       .def("__rmul__", [](const CrossSection& xs, double N) { return xs * N; })
       .def("__add__", &CrossSection::operator+)

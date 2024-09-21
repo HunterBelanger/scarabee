@@ -7,9 +7,10 @@
 
 namespace scarabee {
 
-CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy)
+CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const std::vector<std::pair<std::size_t, std::size_t>>& groups)
     : x_bounds_(),
       y_bounds_(),
+      moc_to_cmfd_group_map_(),
       nx_(),
       ny_(),
       nx_surfs_(),
@@ -82,8 +83,47 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy)
   nx_ = dx.size();
   ny_ = dy.size();
 
+  nx_surfs_ = x_bounds_.size() * (y_bounds_.size()-1);
+  ny_surfs_ = y_bounds_.size() * (x_bounds_.size()-1);
+
   // Allocate temp_fsrs_ 
   temp_fsrs_.resize(nx_*ny_);
+
+  // Check group condensation scheme
+  if (groups.size() == 0) {
+    auto mssg = "Empty energy condensation scheme provided.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (groups.front().first != 0) {
+    auto mssg = "The energy condensation scheme does not start with 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  for (std::size_t i = 0; i < groups.size() - 1; i++) {
+    if (groups[i].second + 1 != groups[i + 1].first) {
+      std::stringstream mssg;
+      mssg << "Condensed groups " << i << " and " << i + 1
+           << " are not continuous.";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    }
+  }
+
+  moc_to_cmfd_group_map_.resize(groups.back().second);
+  for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
+    for (std::size_t G = 0; G < groups.size(); G++) {
+      if (groups[G].first <= g && g <= groups[G].second) {
+        moc_to_cmfd_group_map_[g] = G;
+        break;
+      }
+    }
+  }
+
+  // Allocate surfaces array
+  surface_currents_ = xt::zeros<double>({groups.size(), nx_surfs_+ny_surfs_});
 }
 
 std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
@@ -152,8 +192,7 @@ std::size_t CMFD::tile_to_indx(const std::array<std::size_t, 2>& tile) const {
 void CMFD::insert_fsr(const std::array<std::size_t, 2>& tile, std::size_t fsr) {
   // Compute linear index
   const std::size_t i = this->tile_to_indx(tile);
-
-  temp_fsrs_[i].insert(fsr);
+  temp_fsrs_.at(i).insert(fsr);
 }
 
 void CMFD::pack_fsr_lists() {
@@ -168,25 +207,18 @@ void CMFD::pack_fsr_lists() {
   temp_fsrs_.shrink_to_fit();
 }
 
-double& CMFD::current(const std::size_t g, const std::size_t surface) {
-  if (g >= surface_currents_.shape()[0]) {
-    auto mssg = "Group index out of range.";
+std::size_t CMFD::moc_to_cmfd_group(std::size_t g) const {
+  if (g >= moc_to_cmfd_group_map_.size()) {
+    auto mssg = "";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (surface >= surface_currents_.shape()[1]) {
-    auto mssg = "Surface index out of range.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  return surface_currents_(g, surface);
+  return moc_to_cmfd_group_map_[g];
 }
 
-const double& CMFD::current(const std::size_t g,
-                            const std::size_t surface) const {
-  if (g >= surface_currents_.shape()[0]) {
+double& CMFD::current(const std::size_t G, const std::size_t surface) {
+  if (G >= surface_currents_.shape()[0]) {
     auto mssg = "Group index out of range.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -198,7 +230,24 @@ const double& CMFD::current(const std::size_t g,
     throw ScarabeeException(mssg);
   }
 
-  return surface_currents_(g, surface);
+  return surface_currents_(G, surface);
+}
+
+const double& CMFD::current(const std::size_t G,
+                            const std::size_t surface) const {
+  if (G >= surface_currents_.shape()[0]) {
+    auto mssg = "Group index out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (surface >= surface_currents_.shape()[1]) {
+    auto mssg = "Surface index out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  return surface_currents_(G, surface);
 }
 
 }  // namespace scarabee
