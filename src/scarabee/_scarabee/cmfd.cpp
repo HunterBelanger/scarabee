@@ -166,14 +166,6 @@ void CMFD::pack_fsr_lists() {
 
   temp_fsrs_.clear();
   temp_fsrs_.shrink_to_fit();
-
-  for (std::size_t t = 0; t < fsrs_.size(); t++) {
-    std::cout << "CMFD " << t << ", size = " << fsrs_[t].size() << ": ";
-    for (std::size_t tt = 0; tt < fsrs_[t].size(); tt++) {
-      std::cout << fsrs_[t][tt] << "  ";
-    }
-    std::cout << "\n";
-  }
 }
 
 double& CMFD::current(const std::size_t g, const std::size_t surface) {
