@@ -112,7 +112,7 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const s
     }
   }
 
-  moc_to_cmfd_group_map_.resize(groups.back().second);
+  moc_to_cmfd_group_map_.resize(groups.back().second+1);
   for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
     for (std::size_t G = 0; G < groups.size(); G++) {
       if (groups[G].first <= g && g <= groups[G].second) {
@@ -209,7 +209,7 @@ void CMFD::pack_fsr_lists() {
 
 std::size_t CMFD::moc_to_cmfd_group(std::size_t g) const {
   if (g >= moc_to_cmfd_group_map_.size()) {
-    auto mssg = "";
+    auto mssg = "Group index is out of range.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -248,6 +248,28 @@ const double& CMFD::current(const std::size_t G,
   }
 
   return surface_currents_(G, surface);
+}
+
+void CMFD::tally_current(double aflx, const Direction& u, std::size_t G, const std::size_t surf) {
+  if (G >= surface_currents_.shape()[0]) {
+    auto mssg = "Group index out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (surf >= surface_currents_.shape()[1]) {
+    auto mssg = "Surface index out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (surf < nx_surfs_) {
+#pragma omp atomic
+    surface_currents_(G, surf) += std::copysign(aflx , u.x());
+  } else {
+#pragma omp atomic
+    surface_currents_(G, surf) += std::copysign(aflx , u.y());
+  }
 }
 
 }  // namespace scarabee

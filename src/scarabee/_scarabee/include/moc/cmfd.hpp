@@ -23,6 +23,9 @@ class CMFD {
   std::size_t nx() const { return nx_; };
   std::size_t ny() const { return ny_; };
 
+  std::size_t nx_surfs() const { return nx_surfs_; }
+  std::size_t ny_surfs() const { return ny_surfs_; }
+
   std::optional<std::array<std::size_t, 2>> get_tile(const Vector& r,
                                                      const Direction& u) const;
   std::size_t tile_to_indx(const std::array<std::size_t, 2>& tile) const;
@@ -36,6 +39,10 @@ class CMFD {
 
   double& current(const std::size_t G, const std::size_t surface);
   const double& current(const std::size_t G, const std::size_t surface) const;
+
+  void tally_current(double aflx, const Direction& u, std::size_t G, const std::size_t surf);
+
+  void zero_currents() { surface_currents_.fill(0.); }
 
  private:
   std::vector<Surface> x_bounds_;
