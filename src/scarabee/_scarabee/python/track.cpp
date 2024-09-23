@@ -8,7 +8,8 @@ using namespace scarabee;
 
 void init_Track(py::module& m) {
   py::class_<Track>(m, "Track")
-      .def("weight", &Track::weight)
+      .def("wgt", &Track::wgt)
+      .def("width", &Track::width)
       .def("phi", &Track::phi)
       .def("entry_pos", &Track::entry_pos)
       .def("exit_pos", &Track::exit_pos)

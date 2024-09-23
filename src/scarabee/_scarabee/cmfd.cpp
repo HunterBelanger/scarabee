@@ -265,10 +265,10 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G, const s
 
   if (surf < nx_surfs_) {
 #pragma omp atomic
-    surface_currents_(G, surf) += std::copysign(aflx , u.x());
+    surface_currents_(G, surf) += aflx * u.x();
   } else {
 #pragma omp atomic
-    surface_currents_(G, surf) += std::copysign(aflx , u.y());
+    surface_currents_(G, surf) += aflx * u.y();
   }
 }
 

@@ -270,6 +270,7 @@ void MOCDriver::solve() {
     }
 
     next_flux.fill(0.);
+    if (cmfd_) cmfd_->zero_currents();
     sweep(next_flux, src);
 
     // Apply stabalization (see [1])
@@ -335,17 +336,37 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
 #pragma omp parallel for
   for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
     std::size_t g = static_cast<std::size_t>(ig);
+
+    // Get the group for CMFD    
+    std::size_t G = g;
+    if (cmfd_) G = cmfd_->moc_to_cmfd_group(g);
+
     for (auto& tracks : tracks_) {
       for (std::size_t t = 0; t < tracks.size(); t++) {
         auto& track = tracks[t];
+        const double tw = 4. * PI * track.wgt() * track.width();  // Azimuthal weight * track width
+
+        // Get the azimuthal angle (phi) and its cosine for CMFD current
+        const Direction u_forw = track.dir();
+        const Direction u_back = -u_forw;
+
+        // Load the angular flux for forward direction
         htl::static_vector<double, 6> angflux;
         for (std::size_t p = 0; p < n_pol_angles_; p++)
           angflux.push_back(track.entry_flux()(g, p));
-        const double tw =
-            4. * PI * track.weight();  // Azimuthal weight * track width
+
+        // Accumulate entry angular flux into CMFD current
+        if (cmfd_ && track.begin()->entry_cmfd_surface()) {
+          const auto surf_indx = track.begin()->entry_cmfd_surface().value();
+          for (std::size_t p = 0; p < n_pol_angles_; p++) {
+            const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
+            cmfd_->tally_current(flx, u_forw, G, surf_indx);
+          }
+        }
 
         // Follow track in forward direction
         for (auto& seg : track) {
+          const auto cmfd_surf = seg.exit_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
@@ -357,6 +378,11 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
+
+            if (cmfd_surf) {
+              const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
+              cmfd_->tally_current(flx, u_forw, G, *cmfd_surf);
+            }
           }  // For all polar angles
           sflux(g, i) += tw * delta_sum;
         }  // For all segments along forward direction of track
@@ -371,10 +397,23 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
         }
 
         // Follow track in backwards direction
+        // First, load the backwards angular flux
         for (std::size_t p = 0; p < n_pol_angles_; p++)
           angflux[p] = track.exit_flux()(g, p);
+
+        // Accumulate entry angular flux into CMFD current for backwards direction
+        if (cmfd_ && track.rbegin()->exit_cmfd_surface()) {
+          std::size_t surf_indx = track.rbegin()->exit_cmfd_surface().value();
+          for (std::size_t p = 0; p < n_pol_angles_; p++) {
+            const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
+            cmfd_->tally_current(flx, u_back, G, surf_indx);
+          }
+        }
+
+        // Iterate over segments in backwards direction 
         for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
           auto& seg = *seg_it;
+          const auto cmfd_surf = seg.entry_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
@@ -386,6 +425,11 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
+
+            if (cmfd_surf) {
+              const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
+              cmfd_->tally_current(flx, u_back, G, *cmfd_surf);
+            }
           }  // For all polar angles
           sflux(g, i) += tw * delta_sum;
         }  // For all segments along forward direction of track
@@ -623,8 +667,7 @@ void MOCDriver::generate_tracks() {
           if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
         }
 
-        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt * ai.d,
-                                segments);
+        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d, segments);
 
         if (t < ai.ny) {
           y -= dy;
@@ -690,8 +733,7 @@ void MOCDriver::generate_tracks() {
           if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
         }
 
-        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt * ai.d,
-                                segments);
+        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d, segments);
 
         if (t < ai.nx) {
           x += dx;

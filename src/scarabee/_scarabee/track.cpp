@@ -5,7 +5,7 @@
 namespace scarabee {
 
 Track::Track(const Vector& entry, const Vector& exit, const Direction& dir,
-             double phi, double wgt, const std::vector<Segment>& segments)
+             double phi, double wgt, double width, const std::vector<Segment>& segments)
     : entry_flux_(),
       exit_flux_(),
       segments_(segments),
@@ -14,7 +14,8 @@ Track::Track(const Vector& entry, const Vector& exit, const Direction& dir,
       dir_(dir),
       entry_track_flux_(nullptr),
       exit_track_flux_(nullptr),
-      weight_(wgt),
+      wgt_(wgt),
+      width_(width),
       phi_(phi),
       entry_bc_(BoundaryCondition::Reflective),
       exit_bc_(BoundaryCondition::Reflective) {}
