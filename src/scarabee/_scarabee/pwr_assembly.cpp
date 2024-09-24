@@ -612,7 +612,8 @@ void PWRAssembly::pin_cell_calc() {
 
   pin_cell_calc_timer.stop();
   set_logging_level(LogLevel::info);
-  spdlog::info("Pin cell calculation time: {:.5E} s", pin_cell_calc_timer.elapsed_time());
+  spdlog::info("Pin cell calculation time: {:.5E} s",
+               pin_cell_calc_timer.elapsed_time());
 }
 
 void PWRAssembly::condense_xs() {

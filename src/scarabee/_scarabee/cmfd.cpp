@@ -8,7 +8,8 @@
 
 namespace scarabee {
 
-CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const std::vector<std::pair<std::size_t, std::size_t>>& groups)
+CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
+           const std::vector<std::pair<std::size_t, std::size_t>>& groups)
     : dx_(dx),
       dy_(dy),
       x_bounds_(),
@@ -85,11 +86,11 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const s
     y_bounds_.back().y0() = new_y0;
   }
 
-  nx_surfs_ = x_bounds_.size() * (y_bounds_.size()-1);
-  ny_surfs_ = y_bounds_.size() * (x_bounds_.size()-1);
+  nx_surfs_ = x_bounds_.size() * (y_bounds_.size() - 1);
+  ny_surfs_ = y_bounds_.size() * (x_bounds_.size() - 1);
 
-  // Allocate temp_fsrs_ 
-  temp_fsrs_.resize(nx_*ny_);
+  // Allocate temp_fsrs_
+  temp_fsrs_.resize(nx_ * ny_);
 
   // Check group condensation scheme
   if (group_condensation_.size() == 0) {
@@ -114,10 +115,11 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const s
     }
   }
 
-  moc_to_cmfd_group_map_.resize(group_condensation_.back().second+1);
+  moc_to_cmfd_group_map_.resize(group_condensation_.back().second + 1);
   for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
     for (std::size_t G = 0; G < group_condensation_.size(); G++) {
-      if (group_condensation_[G].first <= g && g <= group_condensation_[G].second) {
+      if (group_condensation_[G].first <= g &&
+          g <= group_condensation_[G].second) {
         moc_to_cmfd_group_map_[g] = G;
         break;
       }
@@ -125,7 +127,8 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const s
   }
 
   // Allocate surfaces array
-  surface_currents_ = xt::zeros<double>({group_condensation_.size(), nx_surfs_+ny_surfs_});
+  surface_currents_ =
+      xt::zeros<double>({group_condensation_.size(), nx_surfs_ + ny_surfs_});
 
   // Allocate the xs array
   xs_.resize({nx_, ny_});
@@ -185,7 +188,7 @@ std::optional<std::size_t> CMFD::get_surface(const Vector& r,
       if (otile.has_value() == false) return std::nullopt;
 
       const auto& tile = otile.value();
-      
+
       return nx_surfs_ + tile[0] * y_bounds_.size() + ysi;
     }
   }
@@ -198,7 +201,8 @@ std::size_t CMFD::tile_to_indx(const std::array<std::size_t, 2>& tile) const {
   return this->tile_to_indx(tile[0], tile[1]);
 }
 
-std::size_t CMFD::tile_to_indx(const std::size_t& i, const std::size_t& j) const {
+std::size_t CMFD::tile_to_indx(const std::size_t& i,
+                               const std::size_t& j) const {
   return j * nx_ + i;
 }
 
@@ -263,7 +267,8 @@ const double& CMFD::current(const std::size_t G,
   return surface_currents_(G, surface);
 }
 
-void CMFD::tally_current(double aflx, const Direction& u, std::size_t G, const std::size_t surf) {
+void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
+                         const std::size_t surf) {
   if (G >= surface_currents_.shape()[0]) {
     auto mssg = "Group index out of range.";
     spdlog::error(mssg);
@@ -291,7 +296,7 @@ void CMFD::normalize_currents() {
   // First, go through all y-levels, and normalize the x surfaces
   std::size_t s = 0;
   for (std::size_t j = 0; j < ny_; j++) {
-    const double dy = y_bounds_[j+1].y0() - y_bounds_[j].y0();
+    const double dy = y_bounds_[j + 1].y0() - y_bounds_[j].y0();
     const double invs_dy = 1. / dy;
 
     for (std::size_t xs = 0; xs < x_bounds_.size(); xs++) {
@@ -303,7 +308,7 @@ void CMFD::normalize_currents() {
 
   // Now go through all x-levels, and normalize the y surfaces
   for (std::size_t i = 0; i < nx_; i++) {
-    const double dx = x_bounds_[i+1].x0() - x_bounds_[i].x0();
+    const double dx = x_bounds_[i + 1].x0() - x_bounds_[i].x0();
     const double invs_dx = 1. / dx;
 
     for (std::size_t ys = 0; ys < y_bounds_.size(); ys++) {
@@ -337,8 +342,6 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
   }
 }
 
-void CMFD::solve(MOCDriver& moc) {
-  this->compute_homogenized_xs_and_flux(moc);
-}
+void CMFD::solve(MOCDriver& moc) { this->compute_homogenized_xs_and_flux(moc); }
 
 }  // namespace scarabee

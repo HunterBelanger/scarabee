@@ -281,7 +281,7 @@ void MOCDriver::solve() {
           next_flux(g, i) /= (1. + D(g, i));
         }
       }
-    } 
+    }
 
     if (mode_ == SimulationMode::Keff) {
       prev_keff = keff_;
@@ -342,14 +342,15 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
   for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
     std::size_t g = static_cast<std::size_t>(ig);
 
-    // Get the group for CMFD    
+    // Get the group for CMFD
     std::size_t G = g;
     if (cmfd_) G = cmfd_->moc_to_cmfd_group(g);
 
     for (auto& tracks : tracks_) {
       for (std::size_t t = 0; t < tracks.size(); t++) {
         auto& track = tracks[t];
-        const double tw = 4. * PI * track.wgt() * track.width();  // Azimuthal weight * track width
+        const double tw = 4. * PI * track.wgt() *
+                          track.width();  // Azimuthal weight * track width
 
         // Get the azimuthal angle (phi) and its cosine for CMFD current
         const Direction u_forw = track.dir();
@@ -406,7 +407,8 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
         for (std::size_t p = 0; p < n_pol_angles_; p++)
           angflux[p] = track.exit_flux()(g, p);
 
-        // Accumulate entry angular flux into CMFD current for backwards direction
+        // Accumulate entry angular flux into CMFD current for backwards
+        // direction
         if (cmfd_ && track.rbegin()->exit_cmfd_surface()) {
           std::size_t surf_indx = track.rbegin()->exit_cmfd_surface().value();
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
@@ -415,7 +417,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
           }
         }
 
-        // Iterate over segments in backwards direction 
+        // Iterate over segments in backwards direction
         for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
           auto& seg = *seg_it;
           const auto cmfd_surf = seg.entry_cmfd_surface();
@@ -642,7 +644,7 @@ void MOCDriver::generate_tracks() {
             const auto tile = cmfd_->get_tile(r_end, u);
             if (tile) {
               const auto fsr_indx = segments.back().fsr_indx();
-              #pragma omp critical (cmfd_fsr_insertion)
+#pragma omp critical(cmfd_fsr_insertion)
               cmfd_->insert_fsr(*tile, fsr_indx);
             } else {
               auto mssg = "Tile for segment position was nullopt.";
@@ -652,14 +654,14 @@ void MOCDriver::generate_tracks() {
           }
 
           r_end = r_end + d * u;
-          
+
           if (cmfd_) {
             segments.back().exit_cmfd_surface() = cmfd_->get_surface(r_end, -u);
-            
+
             const auto tile = cmfd_->get_tile(r_end, -u);
             if (tile) {
               const auto fsr_indx = segments.back().fsr_indx();
-              #pragma omp critical (cmfd_fsr_insertion)
+#pragma omp critical(cmfd_fsr_insertion)
               cmfd_->insert_fsr(*tile, fsr_indx);
             } else {
               auto mssg = "Tile for segment position was nullopt.";
@@ -672,7 +674,8 @@ void MOCDriver::generate_tracks() {
           if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
         }
 
-        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d, segments);
+        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
+                                segments);
 
         if (t < ai.ny) {
           y -= dy;
@@ -701,14 +704,14 @@ void MOCDriver::generate_tracks() {
           const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
           segments.emplace_back(fsr_r.first.fsr, d,
                                 this->get_fsr_indx(fsr_r.first));
-          
+
           if (cmfd_) {
             segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
 
             const auto tile = cmfd_->get_tile(r_end, u);
             if (tile) {
               const auto fsr_indx = segments.back().fsr_indx();
-              #pragma omp critical (cmfd_fsr_insertion)
+#pragma omp critical(cmfd_fsr_insertion)
               cmfd_->insert_fsr(*tile, fsr_indx);
             } else {
               auto mssg = "Tile for segment position was nullopt.";
@@ -725,7 +728,7 @@ void MOCDriver::generate_tracks() {
             const auto tile = cmfd_->get_tile(r_end, -u);
             if (tile) {
               const auto fsr_indx = segments.back().fsr_indx();
-              #pragma omp critical (cmfd_fsr_insertion)
+#pragma omp critical(cmfd_fsr_insertion)
               cmfd_->insert_fsr(*tile, fsr_indx);
             } else {
               auto mssg = "Tile for segment position was nullopt.";
@@ -738,7 +741,8 @@ void MOCDriver::generate_tracks() {
           if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
         }
 
-        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d, segments);
+        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
+                                segments);
 
         if (t < ai.nx) {
           x += dx;

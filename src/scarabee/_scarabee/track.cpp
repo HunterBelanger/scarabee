@@ -5,7 +5,8 @@
 namespace scarabee {
 
 Track::Track(const Vector& entry, const Vector& exit, const Direction& dir,
-             double phi, double wgt, double width, const std::vector<Segment>& segments)
+             double phi, double wgt, double width,
+             const std::vector<Segment>& segments)
     : entry_flux_(),
       exit_flux_(),
       segments_(segments),

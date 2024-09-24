@@ -16,7 +16,8 @@ namespace scarabee {
 class Track {
  public:
   Track(const Vector& entry, const Vector& exit, const Direction& dir,
-        double phi, double wgt, double width, const std::vector<Segment>& segments);
+        double phi, double wgt, double width,
+        const std::vector<Segment>& segments);
 
   double wgt() const { return wgt_; }
   double width() const { return width_; }
@@ -90,9 +91,9 @@ class Track {
   Direction dir_;
   xt::xtensor<double, 2>* entry_track_flux_;
   xt::xtensor<double, 2>* exit_track_flux_;
-  double wgt_;   // Track weight
-  double width_; // Track width
-  double phi_;   // Azimuthal angle of Track
+  double wgt_;    // Track weight
+  double width_;  // Track width
+  double phi_;    // Azimuthal angle of Track
   BoundaryCondition entry_bc_;
   BoundaryCondition exit_bc_;
 };

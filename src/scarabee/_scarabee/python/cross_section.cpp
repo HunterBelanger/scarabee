@@ -271,7 +271,8 @@ void init_CrossSection(py::module& m) {
            py::arg("groups"), py::arg("flux"))
 
       .def("diffusion_xs", &CrossSection::diffusion_xs,
-           "Creates a :py:class:`DiffusionCrossSection` from the cross section.\n\n"
+           "Creates a :py:class:`DiffusionCrossSection` from the cross "
+           "section.\n\n"
            "Returns\n"
            "-------\n"
            "DiffusionCrossSection\n"

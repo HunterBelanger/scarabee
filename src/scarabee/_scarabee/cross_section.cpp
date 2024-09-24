@@ -281,7 +281,9 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
 }
 
 std::shared_ptr<DiffusionCrossSection> CrossSection::diffusion_xs() const {
-  return std::make_shared<DiffusionCrossSection>(1./(3.*Etr_), Ea_, xt::view(Es_, 0, xt::all(), xt::all()), Ef_, vEf_, chi_);
+  return std::make_shared<DiffusionCrossSection>(
+      1. / (3. * Etr_), Ea_, xt::view(Es_, 0, xt::all(), xt::all()), Ef_, vEf_,
+      chi_);
 }
 
 CrossSection& CrossSection::operator*=(double N) {
