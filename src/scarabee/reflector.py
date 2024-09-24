@@ -197,7 +197,7 @@ class Reflector:
         ref_macro_xs = ref_homog_xs.condense(self.condensation_scheme, ref_spectrum)
 
         # We make a 1D MOC geometry for computing the reflector data
-        dy = 2.
+        dy = 2.*self.assembly_width + self.gap_width + self.baffle_width + ref_width
         dx = []
         moc_1d_cells = []
         NF = 2 * 17 * 2 # 17 pins, 2 FSR per pin cell

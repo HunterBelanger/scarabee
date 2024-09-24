@@ -1,4 +1,5 @@
 #include <moc/cmfd.hpp>
+#include <moc/moc_driver.hpp>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
@@ -8,23 +9,27 @@
 namespace scarabee {
 
 CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const std::vector<std::pair<std::size_t, std::size_t>>& groups)
-    : x_bounds_(),
+    : dx_(dx),
+      dy_(dy),
+      x_bounds_(),
       y_bounds_(),
       moc_to_cmfd_group_map_(),
-      nx_(),
-      ny_(),
+      group_condensation_(groups),
+      nx_(dx_.size()),
+      ny_(dy_.size()),
+      ng_(groups.size()),
       nx_surfs_(),
       ny_surfs_(),
       temp_fsrs_(),
       fsrs_() {
   // Make sure we have at least 1 bin in each direction
-  if (dx.size() == 0) {
+  if (dx_.size() == 0) {
     auto mssg = "Must provide at least 1 x width.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (dy.size() == 0) {
+  if (dy_.size() == 0) {
     auto mssg = "Must provide at least 1 y width.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -32,35 +37,35 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const s
 
   // Make sure all widths > 0
   double dx_tot = 0.;
-  for (std::size_t i = 0; i < dx.size(); i++) {
-    if (dx[i] <= 0.) {
+  for (std::size_t i = 0; i < dx_.size(); i++) {
+    if (dx_[i] <= 0.) {
       std::stringstream mssg;
       mssg << "dx at index " << i << " is <= 0.";
       spdlog::error(mssg.str());
       throw ScarabeeException(mssg.str());
     }
 
-    dx_tot += dx[i];
+    dx_tot += dx_[i];
   }
 
   double dy_tot = 0.;
-  for (std::size_t j = 0; j < dy.size(); j++) {
-    if (dy[j] <= 0.) {
+  for (std::size_t j = 0; j < dy_.size(); j++) {
+    if (dy_[j] <= 0.) {
       std::stringstream mssg;
       mssg << "dy at index " << j << " is <= 0.";
       spdlog::error(mssg.str());
       throw ScarabeeException(mssg.str());
     }
 
-    dy_tot += dy[j];
+    dy_tot += dy_[j];
   }
 
   // Create surfaces
-  x_bounds_.reserve(dx.size() + 1);
+  x_bounds_.reserve(dx_.size() + 1);
   x_bounds_.emplace_back();
   x_bounds_.back().type() = Surface::Type::XPlane;
   x_bounds_.back().x0() = -0.5 * dx_tot;
-  for (const auto& d : dx) {
+  for (const auto& d : dx_) {
     const double new_x0 = x_bounds_.back().x0() + d;
 
     x_bounds_.emplace_back();
@@ -68,20 +73,17 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const s
     x_bounds_.back().x0() = new_x0;
   }
 
-  y_bounds_.reserve(dy.size() + 1);
+  y_bounds_.reserve(dy_.size() + 1);
   y_bounds_.emplace_back();
   y_bounds_.back().type() = Surface::Type::YPlane;
   y_bounds_.back().y0() = -0.5 * dy_tot;
-  for (const auto& d : dy) {
+  for (const auto& d : dy_) {
     const double new_y0 = y_bounds_.back().y0() + d;
 
     y_bounds_.emplace_back();
     y_bounds_.back().type() = Surface::Type::YPlane;
     y_bounds_.back().y0() = new_y0;
   }
-
-  nx_ = dx.size();
-  ny_ = dy.size();
 
   nx_surfs_ = x_bounds_.size() * (y_bounds_.size()-1);
   ny_surfs_ = y_bounds_.size() * (x_bounds_.size()-1);
@@ -90,20 +92,20 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const s
   temp_fsrs_.resize(nx_*ny_);
 
   // Check group condensation scheme
-  if (groups.size() == 0) {
+  if (group_condensation_.size() == 0) {
     auto mssg = "Empty energy condensation scheme provided.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (groups.front().first != 0) {
+  if (group_condensation_.front().first != 0) {
     auto mssg = "The energy condensation scheme does not start with 0.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  for (std::size_t i = 0; i < groups.size() - 1; i++) {
-    if (groups[i].second + 1 != groups[i + 1].first) {
+  for (std::size_t i = 0; i < group_condensation_.size() - 1; i++) {
+    if (group_condensation_[i].second + 1 != group_condensation_[i + 1].first) {
       std::stringstream mssg;
       mssg << "Condensed groups " << i << " and " << i + 1
            << " are not continuous.";
@@ -112,10 +114,10 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const s
     }
   }
 
-  moc_to_cmfd_group_map_.resize(groups.back().second+1);
+  moc_to_cmfd_group_map_.resize(group_condensation_.back().second+1);
   for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
-    for (std::size_t G = 0; G < groups.size(); G++) {
-      if (groups[G].first <= g && g <= groups[G].second) {
+    for (std::size_t G = 0; G < group_condensation_.size(); G++) {
+      if (group_condensation_[G].first <= g && g <= group_condensation_[G].second) {
         moc_to_cmfd_group_map_[g] = G;
         break;
       }
@@ -123,7 +125,14 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy, const s
   }
 
   // Allocate surfaces array
-  surface_currents_ = xt::zeros<double>({groups.size(), nx_surfs_+ny_surfs_});
+  surface_currents_ = xt::zeros<double>({group_condensation_.size(), nx_surfs_+ny_surfs_});
+
+  // Allocate the xs array
+  xs_.resize({nx_, ny_});
+  xs_.fill(nullptr);
+
+  // Allocate the flux array
+  flux_ = xt::zeros<double>({ng_, nx_, ny_});
 }
 
 std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
@@ -186,7 +195,11 @@ std::optional<std::size_t> CMFD::get_surface(const Vector& r,
 }
 
 std::size_t CMFD::tile_to_indx(const std::array<std::size_t, 2>& tile) const {
-  return tile[1] * nx_ + tile[0];
+  return this->tile_to_indx(tile[0], tile[1]);
+}
+
+std::size_t CMFD::tile_to_indx(const std::size_t& i, const std::size_t& j) const {
+  return j * nx_ + i;
 }
 
 void CMFD::insert_fsr(const std::array<std::size_t, 2>& tile, std::size_t fsr) {
@@ -270,6 +283,62 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G, const s
 #pragma omp atomic
     surface_currents_(G, surf) += aflx * u.y();
   }
+}
+
+void CMFD::normalize_currents() {
+  // We must normalize the currents by the lengths of each surface
+
+  // First, go through all y-levels, and normalize the x surfaces
+  std::size_t s = 0;
+  for (std::size_t j = 0; j < ny_; j++) {
+    const double dy = y_bounds_[j+1].y0() - y_bounds_[j].y0();
+    const double invs_dy = 1. / dy;
+
+    for (std::size_t xs = 0; xs < x_bounds_.size(); xs++) {
+      for (std::size_t g = 0; g < ng_; g++)
+        surface_currents_.at(g, s) *= invs_dy;
+      s++;
+    }
+  }
+
+  // Now go through all x-levels, and normalize the y surfaces
+  for (std::size_t i = 0; i < nx_; i++) {
+    const double dx = x_bounds_[i+1].x0() - x_bounds_[i].x0();
+    const double invs_dx = 1. / dx;
+
+    for (std::size_t ys = 0; ys < y_bounds_.size(); ys++) {
+      for (std::size_t g = 0; g < ng_; g++)
+        surface_currents_.at(g, s) *= invs_dx;
+      s++;
+    }
+  }
+
+  surface_currents_normalized_ = true;
+}
+
+void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
+  for (std::size_t i = 0; i < nx_; i++) {
+    for (std::size_t j = 0; j < ny_; j++) {
+      const auto indx = this->tile_to_indx(i, j);
+      const auto fg_xs = moc.homogenize(fsrs_[indx])->diffusion_xs();
+      const auto flux_spec = moc.homogenize_flux_spectrum(fsrs_[indx]);
+      auto& xs = xs_(i, j);
+      if (xs)
+        *xs = *fg_xs->condense(group_condensation_, flux_spec);
+      else
+        xs = fg_xs->condense(group_condensation_, flux_spec);
+
+      // Generate the flux values for the tile
+      xt::view(flux_, xt::all(), i, j) = 0.;
+      for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
+        flux_(moc_to_cmfd_group_map_[g], i, j) += flux_spec(g);
+      }
+    }
+  }
+}
+
+void CMFD::solve(MOCDriver& moc) {
+  this->compute_homogenized_xs_and_flux(moc);
 }
 
 }  // namespace scarabee

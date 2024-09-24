@@ -4,16 +4,21 @@
 #include <moc/surface.hpp>
 #include <moc/vector.hpp>
 #include <moc/direction.hpp>
+#include <diffusion_cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
+#include <Eigen/Sparse>
 
 #include <array>
+#include <memory>
 #include <utility>
 #include <optional>
 #include <vector>
 #include <set>
 
 namespace scarabee {
+
+class MOCDriver;
 
 class CMFD {
  public:
@@ -29,6 +34,8 @@ class CMFD {
   std::optional<std::array<std::size_t, 2>> get_tile(const Vector& r,
                                                      const Direction& u) const;
   std::size_t tile_to_indx(const std::array<std::size_t, 2>& tile) const;
+  std::size_t tile_to_indx(const std::size_t& i, const std::size_t& j) const;
+
   std::optional<std::size_t> get_surface(const Vector& r,
                                          const Direction& u) const;
 
@@ -42,13 +49,20 @@ class CMFD {
 
   void tally_current(double aflx, const Direction& u, std::size_t G, const std::size_t surf);
 
-  void zero_currents() { surface_currents_.fill(0.); }
+  void zero_currents() {
+     surface_currents_.fill(0.);
+     surface_currents_normalized_ = false;
+  }
+
+  void solve(MOCDriver& moc);
 
  private:
+  std::vector<double> dx_, dy_;
   std::vector<Surface> x_bounds_;
   std::vector<Surface> y_bounds_;
   std::vector<std::size_t> moc_to_cmfd_group_map_;
-  std::size_t nx_, ny_;
+  std::vector<std::pair<std::size_t, std::size_t>> group_condensation_;
+  std::size_t nx_, ny_, ng_;
   std::size_t nx_surfs_, ny_surfs_;
 
   // List of flat source region indices for each CMFD cell
@@ -60,6 +74,16 @@ class CMFD {
   // Surfaces are ordered as all x surfaces, then all y surfaces.
   // Number of surfaces is then ny_*x_bounds_.size() + nx_*y_bounds_.size().
   xt::xtensor<double, 2> surface_currents_;  // group, surface
+  bool surface_currents_normalized_ = false;
+
+  xt::xtensor<std::shared_ptr<DiffusionCrossSection>, 2> xs_;
+  xt::xtensor<double, 3> D_transp_corr_; // Diffusion Coefficients for Transport Correction
+  xt::xtensor<double, 3> flux_; // group, x, y
+
+  Eigen::SparseMatrix<double> M; // Loss Matrix
+
+  void normalize_currents();
+  void compute_homogenized_xs_and_flux(const MOCDriver& moc);
 };
 
 }  // namespace scarabee

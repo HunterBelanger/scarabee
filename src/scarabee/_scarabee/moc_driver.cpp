@@ -281,7 +281,7 @@ void MOCDriver::solve() {
           next_flux(g, i) /= (1. + D(g, i));
         }
       }
-    }
+    } 
 
     if (mode_ == SimulationMode::Keff) {
       prev_keff = keff_;
@@ -302,6 +302,11 @@ void MOCDriver::solve() {
     }
 
     flux_ = next_flux;
+
+    // Apply CMFD
+    if (cmfd_) {
+      cmfd_->solve(*this);
+    }
 
     iteration_timer.stop();
     spdlog::info("-------------------------------------");
@@ -359,7 +364,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
         if (cmfd_ && track.begin()->entry_cmfd_surface()) {
           const auto surf_indx = track.begin()->entry_cmfd_surface().value();
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
+            const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
             cmfd_->tally_current(flx, u_forw, G, surf_indx);
           }
         }
@@ -380,7 +385,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
 
             if (cmfd_surf) {
-              const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
+              const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
               cmfd_->tally_current(flx, u_forw, G, *cmfd_surf);
             }
           }  // For all polar angles
@@ -405,7 +410,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
         if (cmfd_ && track.rbegin()->exit_cmfd_surface()) {
           std::size_t surf_indx = track.rbegin()->exit_cmfd_surface().value();
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
+            const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
             cmfd_->tally_current(flx, u_back, G, surf_indx);
           }
         }
@@ -427,7 +432,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
 
             if (cmfd_surf) {
-              const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
+              const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
               cmfd_->tally_current(flx, u_back, G, *cmfd_surf);
             }
           }  // For all polar angles
@@ -1123,14 +1128,6 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize() const {
 
 std::shared_ptr<CrossSection> MOCDriver::homogenize(
     const std::vector<std::size_t>& regions) const {
-  // We can only perform a homogenization if we have a flux spectrum
-  if (solved() == false) {
-    auto mssg =
-        "Cannot perform homogenization when problem has not been solved.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
   // Check all regions are valid
   if (regions.size() > this->nregions()) {
     auto mssg =
@@ -1233,15 +1230,6 @@ xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum() const {
 
 xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum(
     const std::vector<std::size_t>& regions) const {
-  // We can only perform a homogenization if we have a flux spectrum
-  if (solved() == false) {
-    auto mssg =
-        "Cannot perform spectrum homogenization when problem has not been "
-        "solved.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
   // Check all regions are valid
   if (regions.size() > this->nfsr()) {
     auto mssg =
