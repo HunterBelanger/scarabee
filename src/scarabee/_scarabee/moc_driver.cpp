@@ -79,6 +79,17 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
 
   ngroups_ = geometry_->ngroups();
 
+  // get the max-legendre-order for given scattering moments
+  max_L_ = 0;
+  for (std::size_t i = 0; i < nfsrs_; i++){
+    const auto& mat = *fsrs_[i]->xs();
+    const std::size_t l = mat.max_legendre_order();
+    if (l > max_L_) max_L_ = l;
+  }
+  if (max_L_ > 0) anisotropic_ = true;
+
+  N_lj_ = (max_L_+1)*(max_L_+1); 
+
   // Allocate arrays and assign indices
   flux_.resize({ngroups_, nfsrs_, 1});
   flux_.fill(0.);
@@ -131,6 +142,10 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
 
   polar_quad_ = polar_quad;
   n_pol_angles_ = polar_quad_.sin().size();
+  // take all polar angles in case of anisotropic scattering
+  if (anisotropic_ == true)[
+    n_pol_angles_ *= 2;
+  ]
 
   if (n_angles % 2 != 0) {
     // If the number of angles is odd, an angle will be lost
@@ -206,6 +221,33 @@ void MOCDriver::solve() {
     }
   }
 
+  // get the max-legendre-order for given scattering moments
+  max_L_ = 0;
+  for (std::size_t i = 0; i < nfsrs_; i++){
+    const auto& mat = *fsrs_[i]->xs();
+    const std::size_t l = mat.max_legendre_order();
+    if (l > max_L_) max_L_ = l;
+  }
+  if (max_L_ > 0) anisotropic_ = true;
+
+  N_lj_ = (max_L_+1)*(max_L_+1); 
+
+  if (anisotropic_ == false){
+    // isotropic
+    solve_isotropic();
+  } else {
+    // anisotropic
+    // solve_anisotropic();
+  }
+
+  solved_ = true;
+
+  sim_timer.stop();
+  spdlog::info("");
+  spdlog::info("Simulation Time: {:.5E} s", sim_timer.elapsed_time());
+}
+
+void MOCDriver::solve_isotropic() {
   flux_.resize({ngroups_, nfsrs_, 1});
   xt::xtensor<double, 2> src;
   src.resize({ngroups_, nfsrs_});
@@ -328,12 +370,6 @@ void MOCDriver::solve() {
       spdlog::warn("Negative flux values set to zero.");
     }
   }
-
-  solved_ = true;
-
-  sim_timer.stop();
-  spdlog::info("");
-  spdlog::info("Simulation Time: {:.5E} s", sim_timer.elapsed_time());
 }
 
 void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
@@ -562,6 +598,8 @@ void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
     angle_info_[i].d = (Dx / nx) * std::sin(angle_info_[i].phi);
     angle_info_[i].nx = static_cast<std::uint32_t>(nx);
     angle_info_[i].ny = static_cast<std::uint32_t>(ny);
+    angle_info_[i].forward_index = i;
+    angle_info_[i].backward_index = i + n_track_angles_;
   }
 
   // Go through and calculate the angle weights
@@ -675,7 +713,7 @@ void MOCDriver::generate_tracks() {
         }
 
         tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
-                                segments);
+                                segments, ai.forward_index, ai.backward_index);
 
         if (t < ai.ny) {
           y -= dy;
@@ -742,7 +780,7 @@ void MOCDriver::generate_tracks() {
         }
 
         tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
-                                segments);
+                                segments, ai.forward_index, ai.backward_index);
 
         if (t < ai.nx) {
           x += dx;

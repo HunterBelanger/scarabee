@@ -119,6 +119,8 @@ class MOCDriver {
     double wgt;        // Weight for tracks with this angle
     std::uint32_t nx;  // Number of tracks starting on the -y boundary
     std::uint32_t ny;  // Number of tracks starting on the -x boundary
+    std::size_t forward_index;  // azimuthal angle index in forward 
+    std::size_t backward_index; // azimuthal angle index in backward
   };
 
   std::vector<AngleInfo> angle_info_;       // Information for all angles
@@ -133,6 +135,9 @@ class MOCDriver {
   std::size_t ngroups_;
   std::size_t nfsrs_;
   std::size_t n_pol_angles_;
+  std::size_t max_L_ = 0;   // max-legendre-order in scattering moments
+  std::size_t N_lj_ = 1; // total number of j (-l ro l)
+  bool anisotropic_ = false; // to account for anisotropic scattering
   double flux_tol_ = 1.E-5;
   double keff_tol_ = 1.E-5;
   double keff_ = 1.;
@@ -146,6 +151,8 @@ class MOCDriver {
   void allocate_track_fluxes();
   void segment_renormalization();
 
+  // isotropic
+  void solve_isotropic();
   void sweep(xt::xtensor<double, 3>& flux, const xt::xtensor<double, 2>& src);
 
   double calc_keff(const xt::xtensor<double, 3>& flux,
