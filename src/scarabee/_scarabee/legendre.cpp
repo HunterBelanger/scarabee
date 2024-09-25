@@ -15,6 +15,8 @@ const std::array<double, 1> Legendre<2>::wgt_ = {
     1.00000000000000000000000000000000000e+00};
 template <>
 const std::array<double, 1> Legendre<2>::wsin_ = {wgt_[0] * sin_[0]};
+template <>
+const std::array<double, 1> Legendre<2>::polar_angle_ = {std::asin(sin_[0])};
 
 // N = 4
 template <>
@@ -31,6 +33,8 @@ const std::array<double, 2> Legendre<4>::wgt_ = {
 template <>
 const std::array<double, 2> Legendre<4>::wsin_ = {wgt_[0] * sin_[0],
                                                   wgt_[1] * sin_[1]};
+template <>
+const std::array<double, 2> Legendre<4>::polar_angle_ = {std::asin(sin_[0]), std::asin(sin_[1])};
 
 // N = 6
 template <>
@@ -49,6 +53,8 @@ const std::array<double, 3> Legendre<6>::wgt_ = {
 template <>
 const std::array<double, 3> Legendre<6>::wsin_ = {
     wgt_[0] * sin_[0], wgt_[1] * sin_[1], wgt_[2] * sin_[2]};
+template <>
+const std::array<double, 3> Legendre<6>::polar_angle_ = {std::asin(sin_[0]), std::asin(sin_[1]), std::asin(sin_[2])};
 
 // N = 8
 template <>
@@ -69,6 +75,8 @@ const std::array<double, 4> Legendre<8>::wgt_ = {
 template <>
 const std::array<double, 4> Legendre<8>::wsin_ = {
     wgt_[0] * sin_[0], wgt_[1] * sin_[1], wgt_[2] * sin_[2], wgt_[3] * sin_[3]};
+template <>
+const std::array<double, 4> Legendre<8>::polar_angle_ = {std::asin(sin_[0]), std::asin(sin_[1]), std::asin(sin_[2]), std::asin(sin_[3])};
 
 // N = 10
 template <>
@@ -92,6 +100,8 @@ template <>
 const std::array<double, 5> Legendre<10>::wsin_ = {
     wgt_[0] * sin_[0], wgt_[1] * sin_[1], wgt_[2] * sin_[2], wgt_[3] * sin_[3],
     wgt_[4] * sin_[4]};
+template <>
+const std::array<double, 5> Legendre<10>::polar_angle_ = {std::asin(sin_[0]), std::asin(sin_[1]), std::asin(sin_[2]), std::asin(sin_[3]), std::asin(sin_[4])};
 
 // N = 12
 template <>
@@ -118,5 +128,7 @@ template <>
 const std::array<double, 6> Legendre<12>::wsin_ = {
     wgt_[0] * sin_[0], wgt_[1] * sin_[1], wgt_[2] * sin_[2],
     wgt_[3] * sin_[3], wgt_[4] * sin_[4], wgt_[5] * sin_[5]};
+template <>
+const std::array<double, 6> Legendre<12>::polar_angle_ = {std::asin(sin_[0]), std::asin(sin_[1]), std::asin(sin_[2]), std::asin(sin_[3]), std::asin(sin_[4]), std::asin(sin_[5])};
 
 }  // namespace scarabee
