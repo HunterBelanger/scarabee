@@ -165,33 +165,32 @@ std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
 
 std::optional<std::size_t> CMFD::get_surface(const Vector& r,
                                              const Direction& u) const {
-  // First, we check all the x surfaces, and see if we are on one
-  for (std::size_t xsi = 0; xsi < x_bounds_.size(); xsi++) {
-    if (std::abs(x_bounds_[xsi].x0() - r.x()) < SURFACE_COINCIDENT) {
-      // we are on this surface ! get our tile (just used for the y bin)
-      auto otile = this->get_tile(r, u);
-      if (otile.has_value() == false) otile = this->get_tile(r, -u);
-      if (otile.has_value() == false) return std::nullopt;
-
-      const auto& tile = otile.value();
-
-      return tile[1] * x_bounds_.size() + xsi;
-    }
+  // First, we try to get a tile
+  auto otile = this->get_tile(r, u);
+  if (otile.has_value() == false) {
+    otile = this->get_tile(r, -u);
   }
+  if (otile.has_value() == false) return std::nullopt;
 
-  // We apparently weren't on an x surface, so try all y surfaces.
-  for (std::size_t ysi = 0; ysi < y_bounds_.size(); ysi++) {
-    if (std::abs(y_bounds_[ysi].y0() - r.y()) < SURFACE_COINCIDENT) {
-      // we are on this surface ! get our tile (just used for the x bin)
-      auto otile = this->get_tile(r, u);
-      if (otile.has_value() == false) otile = this->get_tile(r, -u);
-      if (otile.has_value() == false) return std::nullopt;
+  const std::size_t i = (*otile)[0];
+  const std::size_t j = (*otile)[1];
 
-      const auto& tile = otile.value();
+  // Now we get our surfaces for this tile 
+  const auto& x_n = x_bounds_[i];
+  const auto& x_p = x_bounds_[i+1];
+  const auto& y_n = y_bounds_[j];
+  const auto& y_p = y_bounds_[j+1];
 
-      return nx_surfs_ + tile[0] * y_bounds_.size() + ysi;
-    }
-  }
+  // Get the distances
+  const double dx_n = std::abs(x_n.x0() - r.x());
+  const double dx_p = std::abs(x_p.x0() - r.x());
+  const double dy_n = std::abs(y_n.y0() - r.y());
+  const double dy_p = std::abs(y_p.y0() - r.y());
+
+  if (dx_n < SURFACE_COINCIDENT) return j*x_bounds_.size() + i;
+  if (dx_p < SURFACE_COINCIDENT) return j*x_bounds_.size() + i+1;
+  if (dy_n < SURFACE_COINCIDENT) return nx_surfs_ + i*y_bounds_.size() + j;
+  if (dy_p < SURFACE_COINCIDENT) return nx_surfs_ + i*y_bounds_.size() + j+1;
 
   // If we get here, we aren't on a surface
   return std::nullopt;
@@ -283,10 +282,10 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
 
   if (surf < nx_surfs_) {
 #pragma omp atomic
-    surface_currents_(G, surf) += aflx * u.x();
+    surface_currents_(G, surf) += std::copysign(aflx, u.x());
   } else {
 #pragma omp atomic
-    surface_currents_(G, surf) += aflx * u.y();
+    surface_currents_(G, surf) += std::copysign(aflx, u.y());
   }
 }
 
@@ -342,6 +341,9 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
   }
 }
 
-void CMFD::solve(MOCDriver& moc) { this->compute_homogenized_xs_and_flux(moc); }
+void CMFD::solve(MOCDriver& moc) {
+  this->normalize_currents();
+  this->compute_homogenized_xs_and_flux(moc);
+}
 
 }  // namespace scarabee
