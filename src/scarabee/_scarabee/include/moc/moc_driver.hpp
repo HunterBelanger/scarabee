@@ -8,6 +8,7 @@
 #include <moc/flat_source_region.hpp>
 #include <moc/track.hpp>
 #include <moc/quadrature/polar_quadrature.hpp>
+#include <utils/spherical_harmonics.hpp>
 
 #include <xtensor/xtensor.hpp>
 
@@ -125,7 +126,7 @@ class MOCDriver {
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
   std::shared_ptr<CMFD> cmfd_;              // CMFD for acceleration
   PolarQuadrature polar_quad_;              // Polar quadrature
-  xt::xtensor<double, 2> flux_;             // Indexed by group then FSR
+  xt::xtensor<double, 3> flux_;             // Indexed by group then FSR
   xt::xtensor<double, 2> extern_src_;       // Indexed by group then FSR
   std::vector<const FlatSourceRegion*> fsrs_;
   std::map<std::size_t, std::size_t> fsr_offsets_;  // Indexed by id -> offset
@@ -145,12 +146,14 @@ class MOCDriver {
   void allocate_track_fluxes();
   void segment_renormalization();
 
-  void sweep(xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& src);
+  void sweep(xt::xtensor<double, 3>& flux, const xt::xtensor<double, 2>& src);
 
-  double calc_keff(const xt::xtensor<double, 2>& flux,
-                   const xt::xtensor<double, 2>& old_flux) const;
+  double calc_keff(const xt::xtensor<double, 3>& flux,
+                   const xt::xtensor<double, 3>& old_flux) const;
   void fill_source(xt::xtensor<double, 2>& src,
-                   const xt::xtensor<double, 2>& flux) const;
+                   const xt::xtensor<double, 3>& flux) const;
+
+  SphericalHarmonics sph_harm;
 };
 
 }  // namespace scarabee

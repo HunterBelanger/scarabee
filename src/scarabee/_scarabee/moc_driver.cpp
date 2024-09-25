@@ -80,7 +80,7 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
   ngroups_ = geometry_->ngroups();
 
   // Allocate arrays and assign indices
-  flux_.resize({ngroups_, nfsrs_});
+  flux_.resize({ngroups_, nfsrs_, 1});
   flux_.fill(0.);
   extern_src_.resize({ngroups_, nfsrs_});
   extern_src_.fill(0.);
@@ -206,7 +206,7 @@ void MOCDriver::solve() {
     }
   }
 
-  flux_.resize({ngroups_, nfsrs_});
+  flux_.resize({ngroups_, nfsrs_, 1});
   xt::xtensor<double, 2> src;
   src.resize({ngroups_, nfsrs_});
   src.fill(0.);
@@ -277,8 +277,8 @@ void MOCDriver::solve() {
     for (std::size_t g = 0; g < ngroups_; g++) {
       for (std::size_t i = 0; i < nfsrs_; i++) {
         if (D(g, i) != 0.) {
-          next_flux(g, i) += flux_(g, i) * D(g, i);
-          next_flux(g, i) /= (1. + D(g, i));
+          next_flux(g, i, 0) += flux_(g, i, 0) * D(g, i);
+          next_flux(g, i, 0) /= (1. + D(g, i));
         }
       }
     }
@@ -336,7 +336,7 @@ void MOCDriver::solve() {
   spdlog::info("Simulation Time: {:.5E} s", sim_timer.elapsed_time());
 }
 
-void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
+void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
                       const xt::xtensor<double, 2>& src) {
 #pragma omp parallel for
   for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
@@ -390,7 +390,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
               cmfd_->tally_current(flx, u_forw, G, *cmfd_surf);
             }
           }  // For all polar angles
-          sflux(g, i) += tw * delta_sum;
+          sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
@@ -438,7 +438,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
               cmfd_->tally_current(flx, u_back, G, *cmfd_surf);
             }
           }  // For all polar angles
-          sflux(g, i) += tw * delta_sum;
+          sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
@@ -457,14 +457,14 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
       const auto& mat = *fsrs_[i]->xs();
       const double Vi = fsrs_[i]->volume();
       const double Et = mat.Etr(g);
-      sflux(g, i) *= 1. / (Vi * Et);
-      sflux(g, i) += 4. * PI * src(g, i) / Et;
+      sflux(g, i, 0) *= 1. / (Vi * Et);
+      sflux(g, i, 0) += 4. * PI * src(g, i) / Et;
     }
   }  // For all groups
 }
 
-double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
-                            const xt::xtensor<double, 2>& old_flux) const {
+double MOCDriver::calc_keff(const xt::xtensor<double, 3>& flux,
+                            const xt::xtensor<double, 3>& old_flux) const {
   double num = 0.;
   double denom = 0.;
 
@@ -480,8 +480,8 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
       const auto& mat = *fsrs_[i]->xs();
       for (std::uint32_t g = 0; g < ngroups_; g++) {
         const double VvEf = Vr * mat.vEf(g);
-        const double flx = flux(g, i);
-        const double oflx = old_flux(g, i);
+        const double flx = flux(g, i, 0);
+        const double oflx = old_flux(g, i, 0);
 
         num_thrd += VvEf * flx;
         denom_thrd += VvEf * oflx;
@@ -499,7 +499,7 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
 }
 
 void MOCDriver::fill_source(xt::xtensor<double, 2>& src,
-                            const xt::xtensor<double, 2>& flux) const {
+                            const xt::xtensor<double, 3>& flux) const {
   const double inv_k = 1. / keff_;
   const double isotropic = 1. / (4. * PI);
 
@@ -513,7 +513,7 @@ void MOCDriver::fill_source(xt::xtensor<double, 2>& src,
 
       for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
         // Sccatter source
-        const double flux_gg_i = flux(gg, i);
+        const double flux_gg_i = flux(gg, i, 0);
         const double Es_gg_to_g = mat.Es_tr(gg, g);
         Qout += Es_gg_to_g * flux_gg_i;
 
@@ -923,7 +923,7 @@ double MOCDriver::flux(const Vector& r, const Direction& u,
 
   try {
     const auto& fsr = this->get_fsr(r, u);
-    return flux_(g, get_fsr_indx(fsr));
+    return flux_(g, get_fsr_indx(fsr), 0);
   } catch (ScarabeeException& err) {
     std::stringstream mssg;
     mssg << "Could not find flat source region at r = " << r << " u = " << u
@@ -947,7 +947,7 @@ double MOCDriver::flux(std::size_t i, std::size_t g) const {
     throw ScarabeeException(mssg.str());
   }
 
-  return flux_(g, i);
+  return flux_(g, i, 0);
 }
 
 double MOCDriver::volume(const Vector& r, const Direction& u) const {
@@ -1291,7 +1291,7 @@ void MOCDriver::apply_criticality_spectrum(const xt::xtensor<double, 1>& flux) {
 
   for (std::size_t g = 0; g < this->ngroups(); g++) {
     for (std::size_t i = 0; i < this->nfsr(); i++) {
-      flux_(g, i) *= group_mult(g);
+      flux_(g, i, 0) *= group_mult(g);
     }
   }
 }
