@@ -143,9 +143,9 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   polar_quad_ = polar_quad;
   n_pol_angles_ = polar_quad_.sin().size();
   // take all polar angles in case of anisotropic scattering
-  if (anisotropic_ == true)[
+  if (anisotropic_ == true){
     n_pol_angles_ *= 2;
-  ]
+  }
 
   if (n_angles % 2 != 0) {
     // If the number of angles is odd, an angle will be lost
@@ -237,7 +237,7 @@ void MOCDriver::solve() {
     solve_isotropic();
   } else {
     // anisotropic
-    // solve_anisotropic();
+    solve_anisotropic();
   }
 
   solved_ = true;
@@ -247,6 +247,7 @@ void MOCDriver::solve() {
   spdlog::info("Simulation Time: {:.5E} s", sim_timer.elapsed_time());
 }
 
+// solve for the isotropic
 void MOCDriver::solve_isotropic() {
   flux_.resize({ngroups_, nfsrs_, 1});
   xt::xtensor<double, 2> src;
@@ -368,6 +369,99 @@ void MOCDriver::solve_isotropic() {
     }
     if (set_neg_flux_to_zero) {
       spdlog::warn("Negative flux values set to zero.");
+    }
+  }
+}
+
+// solve for anisotropic
+void MOCDriver::solve_anisotropic(){
+
+  N_lj_ = (max_L_ + 1) * (max_L_ + 1);
+  flux_.resize({ngroups_, nfsrs_, N_lj_});
+
+  xt::xtensor<double, 3> src;
+  src.resize({ngroups_, nfsrs_, N_lj_});
+  src.fill(0.);
+
+  // get the polar angles and azimuthal angle 
+  // to pre-caluculate the spherical harmonics
+  std::span<const double> pol_angl = polar_quad_.polar_angle();
+  std::vector<double> polar_angles(pol_angl.begin(), pol_angl.end());  
+  std::vector<double> azimuthal_angles;
+  const std::size_t n_track_angles_ = angle_info_.size();
+  azimuthal_angles.reserve(n_track_angles_);
+  for (auto& ai : angle_info_){
+    azimuthal_angles.push_back(ai.phi);
+  }
+
+  sph_harm = SphericalHarmonics(max_L_, azimuthal_angles, polar_angles);
+  
+
+  // Initialize flux and keff
+  if (mode_ == SimulationMode::Keff) {
+    flux_.fill(1.);
+  } else {
+    flux_.fill(0.);
+  }
+  keff_ = 1.;
+  auto next_flux = flux_;
+  double prev_keff = keff_;
+
+  // Initialize angular flux
+  for (auto& tracks : tracks_) {
+    for (auto& track : tracks) {
+      track.entry_flux().fill(1. / std::sqrt(4. * PI));
+      track.exit_flux().fill(1. / std::sqrt(4. * PI));
+    }
+  }
+  
+  double rel_diff_keff = 100.;
+  if (mode_ == SimulationMode::FixedSource) {
+    rel_diff_keff = 0.;
+  }
+
+  // Check for negative source values at beginning of simulation
+  bool set_neg_src_to_zero = false;
+
+  double max_flx_diff = 100;
+  std::size_t iteration = 0;
+  Timer iteration_timer;
+  while (rel_diff_keff > keff_tol_ || max_flx_diff > flux_tol_) {
+    iteration_timer.reset();
+    iteration_timer.start();
+    iteration++;
+
+    fill_source_anisotropic(src, flux_);
+
+    next_flux.fill(0.);
+    sweep_anisotropic(next_flux, src);
+
+    if (mode_ == SimulationMode::Keff) {
+      prev_keff = keff_;
+      keff_ = calc_keff(next_flux, flux_);
+      rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+    } 
+
+    // Get difference
+    max_flx_diff = xt::amax(xt::abs(next_flux - flux_))(); // / next_flux)();
+
+    flux_ = next_flux;
+
+    iteration_timer.stop();
+    spdlog::info("-------------------------------------");
+    if (mode_ == SimulationMode::Keff) {
+      spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff_);
+      spdlog::info("     keff difference:     {:.5E}", rel_diff_keff);
+    } else if (mode_ == SimulationMode::FixedSource) {
+      spdlog::info("Iteration {:>4d}", iteration);
+    }
+    spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
+    spdlog::info("     Iteration time: {:.5E} s",
+                 iteration_timer.elapsed_time());
+    
+    // Write warnings about negative flux and source
+    if (set_neg_src_to_zero) {
+      spdlog::warn("Negative source values set to zero.");
     }
   }
 }
@@ -499,6 +593,124 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
   }  // For all groups
 }
 
+// anisotropic sweep
+void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux, const xt::xtensor<double, 3>& src) {
+#pragma omp parallel for
+  for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
+    std::size_t g = static_cast<std::size_t>(ig);
+    for (auto& tracks : tracks_) {
+      for (std::size_t t = 0; t < tracks.size(); t++) {
+        auto& track = tracks[t];
+        htl::static_vector<double, 12> angflux;
+        for (std::size_t pp = 0; pp < n_pol_angles_; pp++)
+          angflux.push_back(track.entry_flux()(g, pp));
+        const double tw =
+            4. * PI * track.wgt() * track.width();  // Azimuthal weight * track width
+
+        // Follow track in forward direction
+        for (auto& seg : track) {
+          const std::size_t i = seg.fsr_indx();
+          const double l = seg.length();
+          const double Et = seg.xs()->Etr(g);
+          const double lEt = l * Et;
+          const std::size_t phi_forward_index = track.phi_index_forward();
+          
+          // loop over all polar angles
+          std::size_t p = 0; // index for polar angle
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++){
+            if (pp < n_pol_angles_ / 2){
+              p = pp;
+            } else {
+              p = pp - n_pol_angles_ / 2;
+            }
+
+            double Q = 0.;
+            std::span<const double> Y_ljs = sph_harm.spherical_harmonics(phi_forward_index, pp);
+            for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++){
+              Q += src(g, i, it_lj) * Y_ljs[it_lj]; 
+            }
+
+            const double exp_m1 = mexp(lEt * polar_quad_.invs_sin()[p]);
+            const double delta_flx = (angflux[pp] - (Q / Et)) * exp_m1; 
+            angflux[pp] -= delta_flx;
+            const double delta_sum = polar_quad_.wsin()[p] * delta_flx;
+
+            for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++){
+              sflux(g, i, it_lj) += tw * (delta_sum + l * Q * polar_quad_.wgt()[p]) * Y_ljs[it_lj] * 0.5;
+            }
+          } // For all polar angles
+        }  // For all segments along forward direction of track
+
+        // Set incoming flux for next track
+        if (track.exit_bc() == BoundaryCondition::Reflective) {
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++)
+            track.exit_track_flux()(g, pp) = angflux[pp];
+        } else {
+          // Vacuum
+          xt::view(track.exit_track_flux(), g, xt::all()).fill(0.);
+        }
+
+        // Follow track in backwards direction
+        for (std::size_t pp = 0; pp < n_pol_angles_; pp++)
+          angflux[pp] = track.exit_flux()(g, pp);
+
+        for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
+          auto& seg = *seg_it;
+          const std::size_t i = seg.fsr_indx();
+          const double l = seg.length();
+          const double Et = seg.xs()->Etr(g);
+          const double lEt = l * Et;
+          const std::size_t phi_backward_index = track.phi_index_backward();
+
+          // loop over all polar angles
+          std::size_t p = 0;
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
+            if (pp < n_pol_angles_ / 2){
+              p = pp;
+            } else {
+              p = pp - n_pol_angles_ / 2;
+            }
+
+            double Q = 0.;
+            std::span<const double> Y_ljs = sph_harm.spherical_harmonics(phi_backward_index, pp); 
+            for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++){
+              Q += src(g, i, it_lj) * Y_ljs[it_lj]; 
+            }
+
+            const double exp_m1 = mexp(lEt * polar_quad_.invs_sin()[p]);
+            const double delta_flx = (angflux[pp] - (Q / Et)) * exp_m1;
+            angflux[pp] -= delta_flx;
+            const double delta_sum = polar_quad_.wsin()[p] * delta_flx;
+
+            for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++){
+              sflux(g, i, it_lj) += tw * (delta_sum + l * Q * polar_quad_.wgt()[p]) * Y_ljs[it_lj] * 0.5;
+            }
+          }  // For all polar angles
+        }  // For all segments along forward direction of track
+
+        // Set incoming flux for next track
+        if (track.entry_bc() == BoundaryCondition::Reflective) {
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
+            track.entry_track_flux()(g, pp) = angflux[pp];
+          }
+        } else {
+          // Vacuum
+          xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
+        }
+      }  // For all tracks
+    }  // For all azimuthal angles
+
+    for (std::size_t i = 0; i < nfsrs_; i++) {
+      const auto& mat = *fsrs_[i]->xs();
+      const double Vi = fsrs_[i]->volume();
+      const double Et = mat.Etr(g);
+      for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++){
+        sflux(g, i, it_lj) *= 1. / (Vi * Et);
+      }
+    }
+  }  // For all groups
+}
+
 double MOCDriver::calc_keff(const xt::xtensor<double, 3>& flux,
                             const xt::xtensor<double, 3>& old_flux) const {
   double num = 0.;
@@ -563,6 +775,47 @@ void MOCDriver::fill_source(xt::xtensor<double, 2>& src,
   }
 }
 
+void MOCDriver::fill_source_anisotropic(xt::xtensor<double, 3>& src, const xt::xtensor<double, 3>& flux) const{
+  const double inv_k = 1. / keff_;
+
+#pragma omp parallel for
+  for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
+    const std::size_t g = static_cast<std::size_t>(ig);
+    for (std::size_t i = 0; i < fsrs_.size(); i++) {
+      //std::cout << "i = " << i << "<<\n";
+      const auto& mat = *fsrs_[i]->xs();
+      const double chi_g = mat.chi(g);
+      
+      std::size_t it_lj = 0;
+      for (std::size_t l = 0; l <= max_L_; l++){
+        for (int j = -static_cast<int>(l); j <= static_cast<int>(l); j++){
+
+          double Qout = 0.;
+          for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
+            // Sccatter source
+            const double flux_gg_i = flux(gg, i, it_lj);
+            const double Es_gg_to_g = mat.Es(l, gg, g);
+            //std::cout << "Es = " << Es_gg_to_g << "\t" << mat.chi(gg) << "\t" << mat.Ea(gg) << "\t" << mat.vEf(gg) << "\t" << mat.Ef(gg) << "\t" << mat.Etr(gg) << "\t" << l << std::endl;
+            Qout += Es_gg_to_g * flux_gg_i;
+
+            // Fission source
+            if (l == 0){
+              const double vEf_gg = mat.vEf(gg);
+              Qout += inv_k * chi_g * vEf_gg * flux_gg_i;
+            }
+          }
+
+          src(g, i, it_lj) = Qout;
+          it_lj++;
+
+        } // -l to l
+      }// all scattering moments L
+      //std::cout << std::endl;
+      //std::abort();
+    } // all flat souce regions
+  } // all groups
+}
+
 void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
                                               double d) {
   spdlog::info("Creating quadrature");
@@ -577,7 +830,7 @@ void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
   // we only need [0, pi], and we can use tracks in the opposite direction.
   std::uint32_t n_track_angles_ = n_angles / 2;
 
-  angle_info_.resize(n_track_angles_, {0., 0., 0., 0, 0});
+  angle_info_.resize(n_track_angles_, {0., 0., 0., 0, 0, 0, 0});
   const double Dx = geometry_->x_max() - geometry_->x_min();
   const double Dy = geometry_->y_max() - geometry_->y_min();
   for (std::uint32_t i = 0; i < n_track_angles_; i++) {

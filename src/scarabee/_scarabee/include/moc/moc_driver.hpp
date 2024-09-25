@@ -154,11 +154,19 @@ class MOCDriver {
   // isotropic
   void solve_isotropic();
   void sweep(xt::xtensor<double, 3>& flux, const xt::xtensor<double, 2>& src);
+  void fill_source(xt::xtensor<double, 2>& src,
+                   const xt::xtensor<double, 3>& flux) const;
+
+  // anisotropic
+  void solve_anisotropic();
+  void sweep_anisotropic(xt::xtensor<double, 3>& flux, const xt::xtensor<double, 3>& src);
+  void fill_source_anisotropic(xt::xtensor<double, 3>& src,
+                   const xt::xtensor<double, 3>& flux) const;
+
 
   double calc_keff(const xt::xtensor<double, 3>& flux,
                    const xt::xtensor<double, 3>& old_flux) const;
-  void fill_source(xt::xtensor<double, 2>& src,
-                   const xt::xtensor<double, 3>& flux) const;
+  
 
   SphericalHarmonics sph_harm;
 };
