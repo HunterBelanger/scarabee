@@ -26,7 +26,9 @@ class YamamotoTabuchi {
 
   std::span<const double> wsin() const { return {wsin_.begin(), wsin_.end()}; }
 
-  std::span<const double> polar_angle() const { return {polar_angle_.begin(), polar_angle_.end()}; }
+  std::span<const double> polar_angle() const {
+    return {polar_angle_.begin(), polar_angle_.end()};
+  }
 
  private:
   static const std::array<double, N / 2> invs_sin_;
