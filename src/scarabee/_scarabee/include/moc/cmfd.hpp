@@ -86,6 +86,7 @@ class CMFD {
 
   void normalize_currents();
   void compute_homogenized_xs_and_flux(const MOCDriver& moc);
+  void check_neutron_balance(const std::size_t i, const std::size_t j, std::size_t g, const double keff) const;
 };
 
 }  // namespace scarabee

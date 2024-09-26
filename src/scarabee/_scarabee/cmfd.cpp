@@ -341,6 +341,44 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
   }
 }
 
+void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::size_t g, const double keff) const {
+  // First, we get the spacing of the tile
+  const double dx = dx_[i];
+  const double dy = dy_[j];
+
+  // Next, get the surfaces for out tile
+  const double J_xn = surface_currents_.at(g, j*x_bounds_.size() + i);
+  const double J_xp = surface_currents_.at(g, j*x_bounds_.size() + i + 1);
+  const double J_yn = surface_currents_.at(g, nx_surfs_ + i*y_bounds_.size() + j);
+  const double J_yp = surface_currents_.at(g, nx_surfs_ + i*y_bounds_.size() + j + 1);
+
+  // Get the xs for our tile
+  const auto& xs = *xs_(i, j);
+  const double chi_g_keff = xs.chi(g) / keff;
+
+  // Compute the fission and scatter sources
+  double fiss_source = 0.;
+  double scat_source = 0.;
+  for (std::size_t gg = 0; gg < ng_; gg++) {
+    const double flx_gg = flux_.at(gg, i, j);
+    fiss_source += chi_g_keff * xs.vEf(g) * flx_gg;
+    scat_source += xs.Es(gg, g) * flx_gg;
+  }
+
+  // Compute the total leakage from the currents
+  const double leak_rate = ((J_xp - J_xn) / dx) + ((J_yp - J_yn) / dy);
+
+  // Now compute the removal reaction rate
+  const double tot_reac_rate = (1. / (3.*xs.D(g))) * flux_.at(g, i, j);
+
+  // Compute the residual of the balance equation
+  const double residual = std::abs(leak_rate + tot_reac_rate - (scat_source + fiss_source));
+
+  if (residual >= 1.E-7) {
+    spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a neutron balance residual of {:.5E}.", i, j, g, residual);
+  }
+}
+
 void CMFD::solve(MOCDriver& moc) {
   this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
