@@ -1,4 +1,5 @@
 #include <utils/spherical_harmonics.hpp>
+#include <utils/constants.hpp>
 
 #include <cmath>
 

@@ -1,8 +1,6 @@
 #ifndef SPHERICAL_HARMONICS_V2_H
 #define SPHERICAL_HARMONICS_V2_H
 
-#include <utils/constants.hpp>
-
 #include <cstdint>
 #include <span>
 

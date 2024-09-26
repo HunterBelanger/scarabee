@@ -441,7 +441,9 @@ void MOCDriver::solve_anisotropic() {
     }
 
     // Get difference
-    max_flx_diff = xt::amax(xt::abs(next_flux - flux_))();  // / next_flux)();
+    auto new_flux = xt::view(next_flux, xt::all(), xt::all(), 0);
+    auto old_flux = xt::view(flux_, xt::all(), xt::all(), 0);
+    max_flx_diff = xt::amax(xt::abs(new_flux - old_flux) / new_flux)();
 
     flux_ = next_flux;
 
@@ -503,7 +505,7 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
           const auto cmfd_surf = seg.exit_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
-          const double Et = seg.xs()->Etr(g);
+          const double Et = seg.xs()->Et(g);
           const double lEt = l * Et;
           const double Q = src(g, i);
           double delta_sum = 0.;
@@ -673,6 +675,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
               p = pp - n_pol_angles_ / 2;
             }
 
+            // source term evaluation for given azimuthal and polar angle
             double Q = 0.;
             std::span<const double> Y_ljs =
                 sph_harm.spherical_harmonics(phi_backward_index, pp);
@@ -788,7 +791,6 @@ void MOCDriver::fill_source_anisotropic(
   for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
     const std::size_t g = static_cast<std::size_t>(ig);
     for (std::size_t i = 0; i < fsrs_.size(); i++) {
-      // std::cout << "i = " << i << "<<\n";
       const auto& mat = *fsrs_[i]->xs();
       const double chi_g = mat.chi(g);
 
@@ -800,9 +802,6 @@ void MOCDriver::fill_source_anisotropic(
             // Sccatter source
             const double flux_gg_i = flux(gg, i, it_lj);
             const double Es_gg_to_g = mat.Es(l, gg, g);
-            // std::cout << "Es = " << Es_gg_to_g << "\t" << mat.chi(gg) << "\t"
-            // << mat.Ea(gg) << "\t" << mat.vEf(gg) << "\t" << mat.Ef(gg) <<
-            // "\t" << mat.Etr(gg) << "\t" << l << std::endl;
             Qout += Es_gg_to_g * flux_gg_i;
 
             // Fission source
@@ -817,10 +816,8 @@ void MOCDriver::fill_source_anisotropic(
 
         }  // -l to l
       }    // all scattering moments L
-      // std::cout << std::endl;
-      // std::abort();
-    }  // all flat souce regions
-  }    // all groups
+    }      // all flat souce regions
+  }        // all groups
 }
 
 void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
