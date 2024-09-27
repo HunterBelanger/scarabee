@@ -29,11 +29,12 @@ slab = EmptyCell(fuel, dx, dy)
 fuel_slab = Cartesian2D(Nx*[dx], [dy])
 fuel_slab.set_tiles([slab] * Nx)
 
-moc = MOCDriver(fuel_slab)
+moc = MOCDriver(fuel_slab, anisotropic = True)
 moc.x_min_bc = BoundaryCondition.Vacuum
 moc.x_max_bc = BoundaryCondition.Vacuum
 moc.y_min_bc = BoundaryCondition.Reflective
 moc.y_max_bc = BoundaryCondition.Reflective
+
 moc.generate_tracks(128, 0.005, YamamotoTabuchi6())
 #moc.generate_tracks(128, 0.01, Legendre12())
 moc.flux_tolerance = 1.E-5

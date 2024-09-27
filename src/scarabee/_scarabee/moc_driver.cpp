@@ -14,7 +14,8 @@ namespace scarabee {
 
 MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
                      BoundaryCondition xmin, BoundaryCondition xmax,
-                     BoundaryCondition ymin, BoundaryCondition ymax)
+                     BoundaryCondition ymin, BoundaryCondition ymax,
+                     bool anisotropic)
     : angle_info_(),
       tracks_(),
       geometry_(geometry),
@@ -27,7 +28,8 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
       x_min_bc_(xmin),
       x_max_bc_(xmax),
       y_min_bc_(ymin),
-      y_max_bc_(ymax) {
+      y_max_bc_(ymax),
+      anisotropic_(anisotropic) {
   if (geometry_ == nullptr) {
     auto mssg = "MOCDriver provided with nullptr geometry.";
     spdlog::error(mssg);
@@ -81,17 +83,18 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
 
   // get the max-legendre-order for given scattering moments
   max_L_ = 0;
-  for (std::size_t i = 0; i < nfsrs_; i++) {
-    const auto& mat = *fsrs_[i]->xs();
-    const std::size_t l = mat.max_legendre_order();
-    if (l > max_L_) max_L_ = l;
+  if (anisotropic_ == true) {
+    for (std::size_t i = 0; i < nfsrs_; i++) {
+      const auto& mat = *fsrs_[i]->xs();
+      const std::size_t l = mat.max_legendre_order();
+      if (l > max_L_) max_L_ = l;
+    }
   }
-  if (max_L_ > 0) anisotropic_ = true;
 
   N_lj_ = (max_L_ + 1) * (max_L_ + 1);
 
   // Allocate arrays and assign indices
-  flux_.resize({ngroups_, nfsrs_, 1});
+  flux_.resize({ngroups_, nfsrs_, N_lj_});
   flux_.fill(0.);
   extern_src_.resize({ngroups_, nfsrs_});
   extern_src_.fill(0.);
@@ -221,17 +224,6 @@ void MOCDriver::solve() {
     }
   }
 
-  // get the max-legendre-order for given scattering moments
-  max_L_ = 0;
-  for (std::size_t i = 0; i < nfsrs_; i++) {
-    const auto& mat = *fsrs_[i]->xs();
-    const std::size_t l = mat.max_legendre_order();
-    if (l > max_L_) max_L_ = l;
-  }
-  if (max_L_ > 0) anisotropic_ = true;
-
-  N_lj_ = (max_L_ + 1) * (max_L_ + 1);
-
   if (anisotropic_ == false) {
     // isotropic
     solve_isotropic();
@@ -250,6 +242,7 @@ void MOCDriver::solve() {
 // solve for the isotropic
 void MOCDriver::solve_isotropic() {
   flux_.resize({ngroups_, nfsrs_, 1});
+  flux_.fill(0.);
   xt::xtensor<double, 2> src;
   src.resize({ngroups_, nfsrs_});
   src.fill(0.);
@@ -377,6 +370,7 @@ void MOCDriver::solve_isotropic() {
 void MOCDriver::solve_anisotropic() {
   N_lj_ = (max_L_ + 1) * (max_L_ + 1);
   flux_.resize({ngroups_, nfsrs_, N_lj_});
+  flux_.fill(0.);
 
   xt::xtensor<double, 3> src;
   src.resize({ngroups_, nfsrs_, N_lj_});
@@ -393,7 +387,7 @@ void MOCDriver::solve_anisotropic() {
     azimuthal_angles.push_back(ai.phi);
   }
 
-  sph_harm = SphericalHarmonics(max_L_, azimuthal_angles, polar_angles);
+  sph_harm_ = SphericalHarmonics(max_L_, azimuthal_angles, polar_angles);
 
   // Initialize flux and keff
   if (mode_ == SimulationMode::Keff) {
@@ -418,9 +412,6 @@ void MOCDriver::solve_anisotropic() {
     rel_diff_keff = 0.;
   }
 
-  // Check for negative source values at beginning of simulation
-  bool set_neg_src_to_zero = false;
-
   double max_flx_diff = 100;
   std::size_t iteration = 0;
   Timer iteration_timer;
@@ -430,6 +421,19 @@ void MOCDriver::solve_anisotropic() {
     iteration++;
 
     fill_source_anisotropic(src, flux_);
+
+    // Check for negative zero moment source values at beginning of simulation
+    bool set_neg_src_to_zero = false;
+    if (iteration <= 20) {
+      for (std::size_t g = 0; g < ngroups_; g++) {
+        for (std::size_t i = 0; i < nfsrs_; i++) {
+          if (src(g, i, 0) < 0.) {
+            src(g, i, 0) = 0;
+            set_neg_src_to_zero = true;
+          }
+        }
+      }
+    }
 
     next_flux.fill(0.);
     sweep_anisotropic(next_flux, src);
@@ -444,6 +448,17 @@ void MOCDriver::solve_anisotropic() {
     auto new_flux = xt::view(next_flux, xt::all(), xt::all(), 0);
     auto old_flux = xt::view(flux_, xt::all(), xt::all(), 0);
     max_flx_diff = xt::amax(xt::abs(new_flux - old_flux) / new_flux)();
+
+    // Make sure that the zero-moment flux is positive everywhere !
+    bool set_neg_flux_to_zero = false;
+    for (std::size_t g = 0; g < ngroups_; g++) {
+      for (std::size_t i = 0; i < nfsrs_; i++) {
+        if (next_flux(g, i, 0) < 0.) {
+          next_flux(g, i, 0) = 0;
+          set_neg_flux_to_zero = true;
+        }
+      }
+    }
 
     flux_ = next_flux;
 
@@ -461,7 +476,10 @@ void MOCDriver::solve_anisotropic() {
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative source values set to zero.");
+      spdlog::warn("Negative zero-mometn-source values set to zero.");
+    }
+    if (set_neg_flux_to_zero) {
+      spdlog::warn("Negative zero-moment-flux values set to zero.");
     }
   }
 }
@@ -505,7 +523,7 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
           const auto cmfd_surf = seg.exit_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
-          const double Et = seg.xs()->Et(g);
+          const double Et = seg.xs()->Etr(g);
           const double lEt = l * Et;
           const double Q = src(g, i);
           double delta_sum = 0.;
@@ -612,7 +630,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
         for (auto& seg : track) {
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
-          const double Et = seg.xs()->Etr(g);
+          const double Et = seg.xs()->Et(g);
           const double lEt = l * Et;
           const std::size_t phi_forward_index = track.phi_index_forward();
 
@@ -627,7 +645,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
 
             double Q = 0.;
             std::span<const double> Y_ljs =
-                sph_harm.spherical_harmonics(phi_forward_index, pp);
+                sph_harm_.spherical_harmonics(phi_forward_index, pp);
             for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++) {
               Q += src(g, i, it_lj) * Y_ljs[it_lj];
             }
@@ -662,7 +680,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
           auto& seg = *seg_it;
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
-          const double Et = seg.xs()->Etr(g);
+          const double Et = seg.xs()->Et(g);
           const double lEt = l * Et;
           const std::size_t phi_backward_index = track.phi_index_backward();
 
@@ -678,7 +696,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
             // source term evaluation for given azimuthal and polar angle
             double Q = 0.;
             std::span<const double> Y_ljs =
-                sph_harm.spherical_harmonics(phi_backward_index, pp);
+                sph_harm_.spherical_harmonics(phi_backward_index, pp);
             for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++) {
               Q += src(g, i, it_lj) * Y_ljs[it_lj];
             }

@@ -162,4 +162,127 @@ double Ki3_quad(double x) {
   return integral.first;
 }
 
+double legendre(const unsigned int& order, const double& x) {
+  switch (order) {
+    case 0:
+      return 1.0;
+      break;
+    case 1:
+      return x;
+      break;
+    case 2:
+      return (0.5 * (3.0 * x * x - 1.0));
+      break;
+    case 3:
+      return (0.5 * (5.0 * x * x * x - 3.0 * x));
+      break;
+    case 4:
+      return (0.125 * (35.0 * x * x * x * x - 30.0 * x * x + 3.0));
+      break;
+    case 5: {
+      const double x3 = x * x * x;
+      const double x5 = x3 * x * x;
+      return (0.125 * (63.0 * x5 - 70.0 * x3 + 15.0 * x));
+      break;
+    }
+    case 6: {
+      const double x4 = x * x * x * x;
+      const double x6 = x4 * x * x;
+      return (0.0625 * (231.0 * x6 - 315.0 * x4 + 105.0 * x * x - 5.0));
+      break;
+    }
+    case 7: {
+      const double x3 = x * x * x;
+      const double x5 = x3 * x * x;
+      const double x7 = x5 * x * x;
+      return (0.0625 * (429.0 * x7 - 693.0 * x5 + 315.0 * x3 - 35.0 * x));
+      break;
+    }
+    default: {
+      // For 8th or more than 8th order legendre polynomial
+      const double x4 = x * x * x * x;
+      const double x6 = x4 * x * x;
+      double p6 = (0.0625 * (231.0 * x6 - 315.0 * x4 + 105.0 * x * x - 5.0));
+
+      const double x3 = x * x * x;
+      const double x5 = x3 * x * x;
+      const double x7 = x5 * x * x;
+      double p7 = (0.0625 * (429.0 * x7 - 693.0 * x5 + 315.0 * x3 - 35.0 * x));
+
+      unsigned n_ = 7;
+      while (n_ < order) {
+        p6 = ((2.0 * n_ + 1.0) * x * p7 - n_ * p6) / (n_ + 1.0);
+        std::swap(p6, p7);
+        n_++;
+      }
+      return p7;
+      break;
+    }
+  }
+}
+
+double derivative_legendre(const unsigned int& order, const unsigned int& n,
+                           const double& x) {
+  if (n > 0) {
+    if (order > 1) {  // a recursion relation for order > 1 and n > 0
+      const double term1 = derivative_legendre(order - 1, n, x) * x;
+      const double term2 =
+          static_cast<double>(n) * derivative_legendre(order - 1, n - 1, x);
+      const double term3 = derivative_legendre(order - 2, n, x);
+      return (static_cast<double>(2 * order - 1) * (term1 + term2) -
+              static_cast<double>(order - 1) * term3) /
+             static_cast<double>(order);
+    } else if (order == 1 && n == 1) {
+      return 1.;
+    }
+  } else if (n == 0) {  // special case
+    return legendre(order, x);
+  }
+
+  // for any n > 0, at order 0 and 1 return 0.
+  return 0.;
+}
+
+double assoc_legendre(const unsigned int& order, const int& j,
+                      const double& x) {
+  unsigned int abs_j = std::abs(j);
+  const double associated_l = derivative_legendre(order, abs_j, x);
+  double factor = std::pow(-1., abs_j) *
+                  std::pow(1. - x * x, static_cast<double>(abs_j) / 2);
+
+  if (j < 0) {
+    factor *=
+        std::pow(-1., j) * factorial(order - abs_j) / factorial(order + abs_j);
+  }
+  return factor * associated_l;
+}
+
+double spherical_hamonics(const unsigned int& l, const int& j,
+                          const double& phi, const double& theta) {
+  // theta is the polar angle, get the cosine of it.
+  const double u = std::cos(theta);
+  if (std::abs(j) > l) {
+    return 0.;
+  } else if (j > 0) {
+    const double factor =
+        std::sqrt((2. * static_cast<double>(l) + 1.) * factorial(l - j) /
+                  (2. * PI * factorial(l + j)));
+    return factor * assoc_legendre(l, j, u) * std::cos(j * phi);
+  } else if (j == 0) {
+    const double factor =
+        std::sqrt((2. * static_cast<double>(l) + 1.) / (4. * PI));
+    return factor * assoc_legendre(l, j, u);
+  } else {
+    // j < 1
+    const auto abs_j = std::abs(j);
+    const double factor =
+        std::sqrt((2. * static_cast<double>(l) + 1.) * factorial(l - abs_j) /
+                  (2. * PI * factorial(l + abs_j)));
+    return factor * assoc_legendre(l, abs_j, u) * std::sin(abs_j * phi);
+  }
+
+  // it should not get here.
+  return 0.;
+}
+
 }  // namespace scarabee

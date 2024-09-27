@@ -35,8 +35,8 @@ radius = 5.514296811
 length_x = 2 * radius
 length_y = 2 * radius
 # number of elements in x and y
-Nx = 200
-Ny = 200
+Nx = 100
+Ny = 100
 # delta x and y for element
 dx = length_x / Nx
 dy = length_y / Ny
@@ -71,12 +71,12 @@ for j in range(0, Ny):
             
 root_univ.set_tiles(lattice)
 
-moc = MOCDriver(root_univ)
+moc = MOCDriver(root_univ, anisotropic = True)
 moc.x_min_bc = BoundaryCondition.Vacuum
 moc.x_max_bc = BoundaryCondition.Vacuum
 moc.y_min_bc = BoundaryCondition.Vacuum
 moc.y_max_bc = BoundaryCondition.Vacuum
-moc.generate_tracks(128, 0.005, YamamotoTabuchi6())
+moc.generate_tracks(128, 0.01, YamamotoTabuchi6())
 moc.flux_tolerance = 1.E-5
 
 # moc.plot()

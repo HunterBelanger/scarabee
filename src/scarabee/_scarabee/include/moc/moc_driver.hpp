@@ -24,7 +24,8 @@ class MOCDriver {
             BoundaryCondition xmin = BoundaryCondition::Reflective,
             BoundaryCondition xmax = BoundaryCondition::Reflective,
             BoundaryCondition ymin = BoundaryCondition::Reflective,
-            BoundaryCondition ymax = BoundaryCondition::Reflective);
+            BoundaryCondition ymax = BoundaryCondition::Reflective,
+            bool anisotropic = false);
 
   std::shared_ptr<Cartesian2D> geometry() const { return geometry_; }
 
@@ -128,6 +129,7 @@ class MOCDriver {
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
   std::shared_ptr<CMFD> cmfd_;              // CMFD for acceleration
   PolarQuadrature polar_quad_;              // Polar quadrature
+  SphericalHarmonics sph_harm_;              // Spherical harmonics
   xt::xtensor<double, 3> flux_;             // Indexed by group then FSR
   xt::xtensor<double, 2> extern_src_;       // Indexed by group then FSR
   std::vector<const FlatSourceRegion*> fsrs_;
@@ -135,13 +137,13 @@ class MOCDriver {
   std::size_t ngroups_;
   std::size_t nfsrs_;
   std::size_t n_pol_angles_;
-  std::size_t max_L_ = 0;     // max-legendre-order in scattering moments
-  std::size_t N_lj_ = 1;      // total number of j (-l ro l)
-  bool anisotropic_ = false;  // to account for anisotropic scattering
   double flux_tol_ = 1.E-5;
   double keff_tol_ = 1.E-5;
   double keff_ = 1.;
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
+  std::size_t max_L_ = 0;     // max-legendre-order in scattering moments
+  std::size_t N_lj_ = 1;      // total number of j (-l ro l)
+  bool anisotropic_ = false;  // to account for anisotropic scattering
   SimulationMode mode_{SimulationMode::Keff};
   bool solved_{false};
 
@@ -166,8 +168,6 @@ class MOCDriver {
 
   double calc_keff(const xt::xtensor<double, 3>& flux,
                    const xt::xtensor<double, 3>& old_flux) const;
-
-  SphericalHarmonics sph_harm;
 };
 
 }  // namespace scarabee

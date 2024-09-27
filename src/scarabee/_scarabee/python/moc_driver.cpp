@@ -22,7 +22,8 @@ void init_MOCDriver(py::module& m) {
                BoundaryCondition /*xmin = BoundaryCondition::Reflective*/,
                BoundaryCondition /*xmax = BoundaryCondition::Reflective*/,
                BoundaryCondition /*ymin = BoundaryCondition::Reflective*/,
-               BoundaryCondition /*ymax = BoundaryCondition::Reflective*/>(),
+               BoundaryCondition /*ymax = BoundaryCondition::Reflective*/,
+               bool /*anisotropic = false*/>(),
            "Initializes a Method of Characteristics problem.\n\n"
            "Parameters\n"
            "----------\n"
@@ -35,12 +36,15 @@ void init_MOCDriver(py::module& m) {
            "yminbc : BoundaryCondition\n"
            "         Boundary condition at the lower y boundary.\n"
            "ymaxbc : BoundaryCondition\n"
-           "         Boundary condition at the upper y boundary.\n",
+           "         Boundary condition at the upper y boundary.\n"
+           "anisotropic: Anisotropic Scattering\n"
+           "             Enable the anisotropic scattering solver.\n",
            py::arg("geometry"),
            py::arg("xminbc") = BoundaryCondition::Reflective,
            py::arg("xmaxbc") = BoundaryCondition::Reflective,
            py::arg("yminbc") = BoundaryCondition::Reflective,
-           py::arg("ymaxbc") = BoundaryCondition::Reflective)
+           py::arg("ymaxbc") = BoundaryCondition::Reflective,
+           py::arg("anisotropic") = false)
 
       .def("generate_tracks",
            py::overload_cast<std::uint32_t, double, PolarQuadrature>(
