@@ -192,6 +192,10 @@ void init_MOCDriver(py::module& m) {
       .def_property_readonly("ngroups", &MOCDriver::ngroups,
                              "Number of energy groups.")
 
+      .def_property_readonly(
+          "num_spherical_harmonics", &MOCDriver::num_spherical_harmonics,
+          "Number of spherical harmonics for storing the flux moments.")
+
       .def_property_readonly("polar_quadrature", &MOCDriver::polar_quadrature,
                              "Quadrature used for polar angle integration.")
 

@@ -38,6 +38,8 @@ class MOCDriver {
 
   std::size_t ngroups() const { return ngroups_; }
 
+  std::size_t num_spherical_harmonics() const { return N_lj_; }
+
   double keff() const { return keff_; }
 
   SimulationMode& sim_mode() { return mode_; }
