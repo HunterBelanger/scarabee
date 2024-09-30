@@ -423,6 +423,7 @@ void MOCDriver::solve_anisotropic() {
     iteration++;
 
     fill_source_anisotropic(src, flux_);
+    xt::view(src, xt::all(), xt::all(), 0) += extern_src_;
 
     // Check for negative zero moment source values at beginning of simulation
     bool set_neg_src_to_zero = false;
