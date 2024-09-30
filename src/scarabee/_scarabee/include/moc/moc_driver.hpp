@@ -72,8 +72,8 @@ class MOCDriver {
   std::size_t nregions() const { return this->nfsr(); }
 
   double flux(const Vector& r, const Direction& u, std::size_t g,
-              std::size_t lg = 0) const;
-  double flux(std::size_t i, std::size_t g, std::size_t lg = 0) const;
+              std::size_t lj = 0) const;
+  double flux(std::size_t i, std::size_t g, std::size_t lj = 0) const;
 
   double volume(const Vector& r, const Direction& u) const;
   double volume(std::size_t i) const;

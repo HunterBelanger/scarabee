@@ -103,13 +103,13 @@ void init_MOCDriver(py::module& m) {
            "    Direction vector for disambiguating the cell region.\n"
            "g : int\n"
            "    Energy group index.\n"
-           "lg : int\n"
+           "lj : int\n"
            "    Spherical harmonic index. Default is zero.\n\n",
            "Returns\n"
            "-------\n"
            "float\n"
            "     Flux at position r and in group g.\n",
-           py::arg("r"), py::arg("u"), py::arg("g"), py::arg("lg") = 0)
+           py::arg("r"), py::arg("u"), py::arg("g"), py::arg("lj") = 0)
 
       .def("flux",
            py::overload_cast<std::size_t, std::size_t, std::size_t>(
@@ -121,13 +121,13 @@ void init_MOCDriver(py::module& m) {
            "    Flat Source Region index.\n"
            "g : int\n"
            "    Energy group index.\n"
-           "lg : int\n"
+           "lj : int\n"
            "    Spherical harmonic index. Default is zero.\n\n",
            "Returns\n"
            "-------\n"
            "float\n"
            "     Flux FSR i and in group g.\n",
-           py::arg("i"), py::arg("g"), py::arg("lg") = 0)
+           py::arg("i"), py::arg("g"), py::arg("lj") = 0)
 
       .def("volume",
            py::overload_cast<const Vector&, const Direction&>(
