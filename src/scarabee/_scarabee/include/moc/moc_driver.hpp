@@ -69,8 +69,9 @@ class MOCDriver {
   std::size_t nfsr() const { return this->size(); }
   std::size_t nregions() const { return this->nfsr(); }
 
-  double flux(const Vector& r, const Direction& u, std::size_t g) const;
-  double flux(std::size_t i, std::size_t g) const;
+  double flux(const Vector& r, const Direction& u, std::size_t g,
+              std::size_t lg = 0) const;
+  double flux(std::size_t i, std::size_t g, std::size_t lg = 0) const;
 
   double volume(const Vector& r, const Direction& u) const;
   double volume(std::size_t i) const;
@@ -129,9 +130,10 @@ class MOCDriver {
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
   std::shared_ptr<CMFD> cmfd_;              // CMFD for acceleration
   PolarQuadrature polar_quad_;              // Polar quadrature
-  SphericalHarmonics sph_harm_;              // Spherical harmonics
-  xt::xtensor<double, 3> flux_;             // Indexed by group then FSR
-  xt::xtensor<double, 2> extern_src_;       // Indexed by group then FSR
+  SphericalHarmonics sph_harm_;             // Spherical harmonics
+  xt::xtensor<double, 3>
+      flux_;  // Indexed by group, FSR, and spherical harmonic
+  xt::xtensor<double, 2> extern_src_;  // Indexed by group then FSR
   std::vector<const FlatSourceRegion*> fsrs_;
   std::map<std::size_t, std::size_t> fsr_offsets_;  // Indexed by id -> offset
   std::size_t ngroups_;

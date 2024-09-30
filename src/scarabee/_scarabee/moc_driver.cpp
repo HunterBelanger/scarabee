@@ -82,16 +82,18 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
   ngroups_ = geometry_->ngroups();
 
   // get the max-legendre-order for given scattering moments
-  max_L_ = 0;
-  if (anisotropic_ == true) {
-    for (std::size_t i = 0; i < nfsrs_; i++) {
-      const auto& mat = *fsrs_[i]->xs();
-      const std::size_t l = mat.max_legendre_order();
-      if (l > max_L_) max_L_ = l;
+  if (anisotropic_) {
+    max_L_ = 0;
+    if (anisotropic_ == true) {
+      for (std::size_t i = 0; i < nfsrs_; i++) {
+        const auto& mat = *fsrs_[i]->xs();
+        const std::size_t l = mat.max_legendre_order();
+        if (l > max_L_) max_L_ = l;
+      }
     }
-  }
 
-  N_lj_ = (max_L_ + 1) * (max_L_ + 1);
+    N_lj_ = (max_L_ + 1) * (max_L_ + 1);
+  }
 
   // Allocate arrays and assign indices
   flux_.resize({ngroups_, nfsrs_, N_lj_});
@@ -1225,8 +1227,8 @@ void MOCDriver::segment_renormalization() {
   }
 }
 
-double MOCDriver::flux(const Vector& r, const Direction& u,
-                       std::size_t g) const {
+double MOCDriver::flux(const Vector& r, const Direction& u, std::size_t g,
+                       std::size_t lj) const {
   if (g >= ngroups()) {
     std::stringstream mssg;
     mssg << "Group index g = " << g << " is out of range.";
@@ -1234,9 +1236,16 @@ double MOCDriver::flux(const Vector& r, const Direction& u,
     throw ScarabeeException(mssg.str());
   }
 
+  if (lj >= N_lj_) {
+    std::stringstream mssg;
+    mssg << "Spherical harmonic index lj = " << lj << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
   try {
     const auto& fsr = this->get_fsr(r, u);
-    return flux_(g, get_fsr_indx(fsr), 0);
+    return flux_(g, get_fsr_indx(fsr), lj);
   } catch (ScarabeeException& err) {
     std::stringstream mssg;
     mssg << "Could not find flat source region at r = " << r << " u = " << u
@@ -1252,10 +1261,24 @@ double MOCDriver::flux(const Vector& r, const Direction& u,
   return 0.;
 }
 
-double MOCDriver::flux(std::size_t i, std::size_t g) const {
+double MOCDriver::flux(std::size_t i, std::size_t g, std::size_t lj) const {
   if (i >= this->size()) {
     std::stringstream mssg;
     mssg << "FSR index i=" << i << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  if (g >= ngroups()) {
+    std::stringstream mssg;
+    mssg << "Group index g = " << g << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  if (lj >= N_lj_) {
+    std::stringstream mssg;
+    mssg << "Spherical harmonic index lj = " << lj << " is out of range.";
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
