@@ -24,6 +24,8 @@ void init_PinCell(py::module& m) {
            "dy : float\n"
            "     Width of the cell along y.\n"
            "pin_type : PinCellType\n"
-           "     Wether is a full or half or quarter pin cell. Default is Full.\n",
-           py::arg("radii"), py::arg("mats"), py::arg("dx"), py::arg("dy"), py::arg("pin_type") = PinCellType::Full);
+           "     Wether is a full or half or quarter pin cell. Default is "
+           "Full.\n",
+           py::arg("radii"), py::arg("mats"), py::arg("dx"), py::arg("dy"),
+           py::arg("pin_type") = PinCellType::Full);
 }

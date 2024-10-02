@@ -5,7 +5,7 @@
 
 namespace scarabee {
 
-enum class PinCellType : std::uint8_t {Full, XP, XN, YP, YN, I, II, III, IV};
+enum class PinCellType : std::uint8_t { Full, XP, XN, YP, YN, I, II, III, IV };
 
 }
 

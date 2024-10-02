@@ -35,36 +35,46 @@ void PinCell::build() {
   double x0_ = 0.;
   double y0_ = 0.;
 
-  if (pin_type_ == PinCellType::XN || pin_type_ == PinCellType::II || pin_type_ == PinCellType:: III) {
-    x0_ = 0.5*dx;
-  } else if (pin_type_ == PinCellType::XP || pin_type_ == PinCellType::I || pin_type_ == PinCellType::IV) {
-    x0_ = -0.5*dx;
+  if (pin_type_ == PinCellType::XN || pin_type_ == PinCellType::II ||
+      pin_type_ == PinCellType::III) {
+    x0_ = 0.5 * dx;
+  } else if (pin_type_ == PinCellType::XP || pin_type_ == PinCellType::I ||
+             pin_type_ == PinCellType::IV) {
+    x0_ = -0.5 * dx;
   }
-  
-  if (pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III || pin_type_ == PinCellType::IV) {
-    y0_ = 0.5*dy;
-  } else if (pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I || pin_type_ == PinCellType::II) {
-    y0_ = -0.5*dy;
+
+  if (pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III ||
+      pin_type_ == PinCellType::IV) {
+    y0_ = 0.5 * dy;
+  } else if (pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I ||
+             pin_type_ == PinCellType::II) {
+    y0_ = -0.5 * dy;
   }
 
   // Create the 4 surfaces which give us our 8 angular sections
-  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::YN || pin_type_ == PinCellType::YP) {
+  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::YN ||
+      pin_type_ == PinCellType::YP) {
     xm_ = std::make_shared<Surface>();
     xm_->type() = Surface::Type::XPlane;
     xm_->x0() = x0_;
-  } else if (pin_type_ == PinCellType::XP || pin_type_ == PinCellType::I || pin_type_ == PinCellType::IV) {
+  } else if (pin_type_ == PinCellType::XP || pin_type_ == PinCellType::I ||
+             pin_type_ == PinCellType::IV) {
     xm_ = x_min_;
-  } else if (pin_type_ == PinCellType::XN || pin_type_ == PinCellType::II || pin_type_ == PinCellType::III) {
+  } else if (pin_type_ == PinCellType::XN || pin_type_ == PinCellType::II ||
+             pin_type_ == PinCellType::III) {
     xm_ = x_max_;
   }
 
-  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN || pin_type_ == PinCellType::XP) {
+  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN ||
+      pin_type_ == PinCellType::XP) {
     ym_ = std::make_shared<Surface>();
     ym_->type() = Surface::Type::YPlane;
     ym_->y0() = y0_;
-  } else if (pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I || pin_type_ == PinCellType::II) {
+  } else if (pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I ||
+             pin_type_ == PinCellType::II) {
     ym_ = y_min_;
-  } else if (pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III || pin_type_ == PinCellType::IV) {
+  } else if (pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III ||
+             pin_type_ == PinCellType::IV) {
     ym_ = y_max_;
   }
 
@@ -219,7 +229,8 @@ void PinCell::build() {
     vol /= 8.;
 
     // NNE
-    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP || pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I) {
+    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP ||
+        pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I) {
       fsrs_.emplace_back();
       fsrs_.back().volume() = vol;
       fsrs_.back().xs() = mats_[i];
@@ -227,12 +238,14 @@ void PinCell::build() {
       fsrs_.back().tokens().push_back({xm_, Surface::Side::Positive});
       fsrs_.back().tokens().push_back({pd_, Surface::Side::Positive});
       if (i > 0) {
-        fsrs_.back().tokens().push_back({radii_[i - 1], Surface::Side::Positive});
+        fsrs_.back().tokens().push_back(
+            {radii_[i - 1], Surface::Side::Positive});
       }
     }
 
     // NEE
-    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP || pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I) {
+    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP ||
+        pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I) {
       fsrs_.emplace_back();
       fsrs_.back().volume() = vol;
       fsrs_.back().xs() = mats_[i];
@@ -240,12 +253,14 @@ void PinCell::build() {
       fsrs_.back().tokens().push_back({ym_, Surface::Side::Positive});
       fsrs_.back().tokens().push_back({pd_, Surface::Side::Negative});
       if (i > 0) {
-        fsrs_.back().tokens().push_back({radii_[i - 1], Surface::Side::Positive});
+        fsrs_.back().tokens().push_back(
+            {radii_[i - 1], Surface::Side::Positive});
       }
     }
 
     // SEE
-    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP || pin_type_ == PinCellType::YN || pin_type_ == PinCellType::IV) {
+    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP ||
+        pin_type_ == PinCellType::YN || pin_type_ == PinCellType::IV) {
       fsrs_.emplace_back();
       fsrs_.back().volume() = vol;
       fsrs_.back().xs() = mats_[i];
@@ -253,12 +268,14 @@ void PinCell::build() {
       fsrs_.back().tokens().push_back({ym_, Surface::Side::Negative});
       fsrs_.back().tokens().push_back({nd_, Surface::Side::Positive});
       if (i > 0) {
-        fsrs_.back().tokens().push_back({radii_[i - 1], Surface::Side::Positive});
+        fsrs_.back().tokens().push_back(
+            {radii_[i - 1], Surface::Side::Positive});
       }
     }
 
     // SSE
-    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP || pin_type_ == PinCellType::YN || pin_type_ == PinCellType::IV) {
+    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP ||
+        pin_type_ == PinCellType::YN || pin_type_ == PinCellType::IV) {
       fsrs_.emplace_back();
       fsrs_.back().volume() = vol;
       fsrs_.back().xs() = mats_[i];
@@ -266,12 +283,14 @@ void PinCell::build() {
       fsrs_.back().tokens().push_back({xm_, Surface::Side::Positive});
       fsrs_.back().tokens().push_back({nd_, Surface::Side::Negative});
       if (i > 0) {
-        fsrs_.back().tokens().push_back({radii_[i - 1], Surface::Side::Positive});
+        fsrs_.back().tokens().push_back(
+            {radii_[i - 1], Surface::Side::Positive});
       }
     }
-    
+
     // SSW
-    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN || pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III) {
+    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN ||
+        pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III) {
       fsrs_.emplace_back();
       fsrs_.back().volume() = vol;
       fsrs_.back().xs() = mats_[i];
@@ -279,12 +298,14 @@ void PinCell::build() {
       fsrs_.back().tokens().push_back({xm_, Surface::Side::Negative});
       fsrs_.back().tokens().push_back({pd_, Surface::Side::Negative});
       if (i > 0) {
-        fsrs_.back().tokens().push_back({radii_[i - 1], Surface::Side::Positive});
+        fsrs_.back().tokens().push_back(
+            {radii_[i - 1], Surface::Side::Positive});
       }
     }
 
     // SWW
-    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN || pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III) {
+    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN ||
+        pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III) {
       fsrs_.emplace_back();
       fsrs_.back().volume() = vol;
       fsrs_.back().xs() = mats_[i];
@@ -292,12 +313,14 @@ void PinCell::build() {
       fsrs_.back().tokens().push_back({ym_, Surface::Side::Negative});
       fsrs_.back().tokens().push_back({pd_, Surface::Side::Positive});
       if (i > 0) {
-        fsrs_.back().tokens().push_back({radii_[i - 1], Surface::Side::Positive});
+        fsrs_.back().tokens().push_back(
+            {radii_[i - 1], Surface::Side::Positive});
       }
     }
 
     // NWW
-    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN || pin_type_ == PinCellType::YP || pin_type_ == PinCellType::II) {
+    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN ||
+        pin_type_ == PinCellType::YP || pin_type_ == PinCellType::II) {
       fsrs_.emplace_back();
       fsrs_.back().volume() = vol;
       fsrs_.back().xs() = mats_[i];
@@ -305,12 +328,14 @@ void PinCell::build() {
       fsrs_.back().tokens().push_back({ym_, Surface::Side::Positive});
       fsrs_.back().tokens().push_back({nd_, Surface::Side::Negative});
       if (i > 0) {
-        fsrs_.back().tokens().push_back({radii_[i - 1], Surface::Side::Positive});
+        fsrs_.back().tokens().push_back(
+            {radii_[i - 1], Surface::Side::Positive});
       }
     }
 
     // NNW
-    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN || pin_type_ == PinCellType::YP || pin_type_ == PinCellType::II) {
+    if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN ||
+        pin_type_ == PinCellType::YP || pin_type_ == PinCellType::II) {
       fsrs_.emplace_back();
       fsrs_.back().volume() = vol;
       fsrs_.back().xs() = mats_[i];
@@ -318,7 +343,8 @@ void PinCell::build() {
       fsrs_.back().tokens().push_back({xm_, Surface::Side::Negative});
       fsrs_.back().tokens().push_back({nd_, Surface::Side::Positive});
       if (i > 0) {
-        fsrs_.back().tokens().push_back({radii_[i - 1], Surface::Side::Positive});
+        fsrs_.back().tokens().push_back(
+            {radii_[i - 1], Surface::Side::Positive});
       }
     }
   }
@@ -334,12 +360,16 @@ void PinCell::build() {
   // ------------> x
   const double vol_ang = (PI * mat_radii_.back() * mat_radii_.back()) / 8.;
   double px = dx;
-  if (pin_type_ == PinCellType::XN || pin_type_ == PinCellType::XP || pin_type_ == PinCellType::I || pin_type_ == PinCellType::II || pin_type_ == PinCellType::III || pin_type_ == PinCellType::IV) {
-    px = 2.*dx;
+  if (pin_type_ == PinCellType::XN || pin_type_ == PinCellType::XP ||
+      pin_type_ == PinCellType::I || pin_type_ == PinCellType::II ||
+      pin_type_ == PinCellType::III || pin_type_ == PinCellType::IV) {
+    px = 2. * dx;
   }
   double py = dy;
-  if (pin_type_ == PinCellType::YN || pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I || pin_type_ == PinCellType::II || pin_type_ == PinCellType::III || pin_type_ == PinCellType::IV) {
-    py = 2.*dy;
+  if (pin_type_ == PinCellType::YN || pin_type_ == PinCellType::YP ||
+      pin_type_ == PinCellType::I || pin_type_ == PinCellType::II ||
+      pin_type_ == PinCellType::III || pin_type_ == PinCellType::IV) {
+    py = 2. * dy;
   }
   const double d = 0.5 * std::min(px, py);
   const double dd = 0.5 * std::max(px, py);
@@ -347,7 +377,8 @@ void PinCell::build() {
   const double vol_max = vol_min + (d * (dd - d));
 
   // NNE
-  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP || pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I) {
+  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP ||
+      pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I) {
     fsrs_.emplace_back();
     fsrs_.back().volume() = px > py ? vol_min : vol_max;
     fsrs_.back().xs() = mats_.back();
@@ -358,7 +389,8 @@ void PinCell::build() {
   }
 
   // NEE
-  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP || pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I) {
+  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP ||
+      pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I) {
     fsrs_.emplace_back();
     fsrs_.back().volume() = px > py ? vol_max : vol_min;
     fsrs_.back().xs() = mats_.back();
@@ -369,7 +401,8 @@ void PinCell::build() {
   }
 
   // SEE
-  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP || pin_type_ == PinCellType::YN || pin_type_ == PinCellType::IV) {
+  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP ||
+      pin_type_ == PinCellType::YN || pin_type_ == PinCellType::IV) {
     fsrs_.emplace_back();
     fsrs_.back().volume() = px > py ? vol_max : vol_min;
     fsrs_.back().xs() = mats_.back();
@@ -380,7 +413,8 @@ void PinCell::build() {
   }
 
   // SSE
-  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP || pin_type_ == PinCellType::YN || pin_type_ == PinCellType::IV) {
+  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XP ||
+      pin_type_ == PinCellType::YN || pin_type_ == PinCellType::IV) {
     fsrs_.emplace_back();
     fsrs_.back().volume() = px > py ? vol_min : vol_max;
     fsrs_.back().xs() = mats_.back();
@@ -391,7 +425,8 @@ void PinCell::build() {
   }
 
   // SSW
-  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN || pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III) {
+  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN ||
+      pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III) {
     fsrs_.emplace_back();
     fsrs_.back().volume() = px > py ? vol_min : vol_max;
     fsrs_.back().xs() = mats_.back();
@@ -402,7 +437,8 @@ void PinCell::build() {
   }
 
   // SWW
-  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN || pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III) {
+  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN ||
+      pin_type_ == PinCellType::YN || pin_type_ == PinCellType::III) {
     fsrs_.emplace_back();
     fsrs_.back().volume() = px > py ? vol_max : vol_min;
     fsrs_.back().xs() = mats_.back();
@@ -413,7 +449,8 @@ void PinCell::build() {
   }
 
   // NWW
-  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN || pin_type_ == PinCellType::YP || pin_type_ == PinCellType::II) {
+  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN ||
+      pin_type_ == PinCellType::YP || pin_type_ == PinCellType::II) {
     fsrs_.emplace_back();
     fsrs_.back().volume() = px > py ? vol_max : vol_min;
     fsrs_.back().xs() = mats_.back();
@@ -424,7 +461,8 @@ void PinCell::build() {
   }
 
   // NNW
-  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN || pin_type_ == PinCellType::YP || pin_type_ == PinCellType::II) {
+  if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN ||
+      pin_type_ == PinCellType::YP || pin_type_ == PinCellType::II) {
     fsrs_.emplace_back();
     fsrs_.back().volume() = px > py ? vol_min : vol_max;
     fsrs_.back().xs() = mats_.back();

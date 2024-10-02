@@ -11,8 +11,11 @@ SimplePinCell::SimplePinCell(
     const std::vector<double>& mat_rads,
     const std::vector<std::shared_ptr<CrossSection>>& mats, double dx,
     double dy, PinCellType pin_type)
-    : Cell(dx, dy), mat_radii_(mat_rads), mats_(mats), radii_(), pin_type_(pin_type) {
-
+    : Cell(dx, dy),
+      mat_radii_(mat_rads),
+      mats_(mats),
+      radii_(),
+      pin_type_(pin_type) {
   switch (pin_type_) {
     case PinCellType::Full:
       build_full();
@@ -21,7 +24,7 @@ SimplePinCell::SimplePinCell(
     case PinCellType::XN:
       build_xn();
       break;
-    
+
     case PinCellType::XP:
       build_xp();
       break;
@@ -29,7 +32,7 @@ SimplePinCell::SimplePinCell(
     case PinCellType::YN:
       build_yn();
       break;
-    
+
     case PinCellType::YP:
       build_yp();
       break;
@@ -37,7 +40,7 @@ SimplePinCell::SimplePinCell(
     case PinCellType::I:
       build_i();
       break;
-    
+
     case PinCellType::II:
       build_ii();
       break;
@@ -164,7 +167,7 @@ void SimplePinCell::build_xn() {
   // Get variables
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
-  const double x0_ = 0.5*dx;
+  const double x0_ = 0.5 * dx;
   const double y0_ = 0.;
 
   // Make sure the numbers for mats and rads is coherent
@@ -268,7 +271,7 @@ void SimplePinCell::build_xp() {
   // Get variables
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
-  const double x0_ = -0.5*dx;
+  const double x0_ = -0.5 * dx;
   const double y0_ = 0.;
 
   // Make sure the numbers for mats and rads is coherent
@@ -373,7 +376,7 @@ void SimplePinCell::build_yn() {
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
   const double x0_ = 0.;
-  const double y0_ = 0.5*dy;
+  const double y0_ = 0.5 * dy;
 
   // Make sure the numbers for mats and rads is coherent
   if (mat_radii_.size() + 1 != mats_.size()) {
@@ -477,7 +480,7 @@ void SimplePinCell::build_yp() {
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
   const double x0_ = 0.;
-  const double y0_ = -0.5*dy;
+  const double y0_ = -0.5 * dy;
 
   // Make sure the numbers for mats and rads is coherent
   if (mat_radii_.size() + 1 != mats_.size()) {
@@ -580,8 +583,8 @@ void SimplePinCell::build_i() {
   // Get variables
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
-  const double x0_ = -0.5*dx;
-  const double y0_ = -0.5*dy;
+  const double x0_ = -0.5 * dx;
+  const double y0_ = -0.5 * dy;
 
   // Make sure the numbers for mats and rads is coherent
   if (mat_radii_.size() + 1 != mats_.size()) {
@@ -684,8 +687,8 @@ void SimplePinCell::build_ii() {
   // Get variables
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
-  const double x0_ = 0.5*dx;
-  const double y0_ = -0.5*dy;
+  const double x0_ = 0.5 * dx;
+  const double y0_ = -0.5 * dy;
 
   // Make sure the numbers for mats and rads is coherent
   if (mat_radii_.size() + 1 != mats_.size()) {
@@ -788,8 +791,8 @@ void SimplePinCell::build_iii() {
   // Get variables
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
-  const double x0_ = 0.5*dx;
-  const double y0_ = 0.5*dy;
+  const double x0_ = 0.5 * dx;
+  const double y0_ = 0.5 * dy;
 
   // Make sure the numbers for mats and rads is coherent
   if (mat_radii_.size() + 1 != mats_.size()) {
@@ -892,8 +895,8 @@ void SimplePinCell::build_iv() {
   // Get variables
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
-  const double x0_ = -0.5*dx;
-  const double y0_ = 0.5*dy;
+  const double x0_ = -0.5 * dx;
+  const double y0_ = 0.5 * dy;
 
   // Make sure the numbers for mats and rads is coherent
   if (mat_radii_.size() + 1 != mats_.size()) {
