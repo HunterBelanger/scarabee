@@ -49,6 +49,22 @@ inline double mexp(double x) {
 double Ki3(double x);
 double Ki3_quad(double x);
 
+double legendre(unsigned int order, double x);
+double derivative_legendre(unsigned int order, unsigned int n, double x);
+double assoc_legendre(unsigned int order, int j, double x);
+
+// // spherical harmonics
+// // phi: azimuthal angle and theta: polar angle
+double spherical_hamonics(unsigned int l, int j, double phi, double theta);
+
+inline double factorial(unsigned int N) {
+  double value = 1.;
+  for (unsigned int i = 1; i <= N; i++) {
+    value *= static_cast<double>(i);
+  }
+  return value;
+}
+
 }  // namespace scarabee
 
 #endif

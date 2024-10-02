@@ -8,6 +8,7 @@
 #include <moc/flat_source_region.hpp>
 #include <moc/track.hpp>
 #include <moc/quadrature/polar_quadrature.hpp>
+#include <utils/spherical_harmonics.hpp>
 
 #include <xtensor/xtensor.hpp>
 
@@ -23,7 +24,8 @@ class MOCDriver {
             BoundaryCondition xmin = BoundaryCondition::Reflective,
             BoundaryCondition xmax = BoundaryCondition::Reflective,
             BoundaryCondition ymin = BoundaryCondition::Reflective,
-            BoundaryCondition ymax = BoundaryCondition::Reflective);
+            BoundaryCondition ymax = BoundaryCondition::Reflective,
+            bool anisotropic = false);
 
   std::shared_ptr<Cartesian2D> geometry() const { return geometry_; }
 
@@ -35,6 +37,8 @@ class MOCDriver {
   const PolarQuadrature& polar_quadrature() const { return polar_quad_; }
 
   std::size_t ngroups() const { return ngroups_; }
+
+  std::size_t num_spherical_harmonics() const { return N_lj_; }
 
   double keff() const { return keff_; }
 
@@ -67,8 +71,9 @@ class MOCDriver {
   std::size_t nfsr() const { return this->size(); }
   std::size_t nregions() const { return this->nfsr(); }
 
-  double flux(const Vector& r, const Direction& u, std::size_t g) const;
-  double flux(std::size_t i, std::size_t g) const;
+  double flux(const Vector& r, const Direction& u, std::size_t g,
+              std::size_t lj = 0) const;
+  double flux(std::size_t i, std::size_t g, std::size_t lj = 0) const;
 
   double volume(const Vector& r, const Direction& u) const;
   double volume(std::size_t i) const;
@@ -113,11 +118,13 @@ class MOCDriver {
 
  private:
   struct AngleInfo {
-    double phi;        // Azimuthal angle for track
-    double d;          // Spacing for trackings of this angle
-    double wgt;        // Weight for tracks with this angle
-    std::uint32_t nx;  // Number of tracks starting on the -y boundary
-    std::uint32_t ny;  // Number of tracks starting on the -x boundary
+    double phi;                  // Azimuthal angle for track
+    double d;                    // Spacing for trackings of this angle
+    double wgt;                  // Weight for tracks with this angle
+    std::uint32_t nx;            // Number of tracks starting on the -y boundary
+    std::uint32_t ny;            // Number of tracks starting on the -x boundary
+    std::size_t forward_index;   // azimuthal angle index in forward
+    std::size_t backward_index;  // azimuthal angle index in backward
   };
 
   std::vector<AngleInfo> angle_info_;       // Information for all angles
@@ -125,8 +132,10 @@ class MOCDriver {
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
   std::shared_ptr<CMFD> cmfd_;              // CMFD for acceleration
   PolarQuadrature polar_quad_;              // Polar quadrature
-  xt::xtensor<double, 2> flux_;             // Indexed by group then FSR
-  xt::xtensor<double, 2> extern_src_;       // Indexed by group then FSR
+  SphericalHarmonics sph_harm_;             // Spherical harmonics
+  xt::xtensor<double, 3>
+      flux_;  // Indexed by group, FSR, and spherical harmonic
+  xt::xtensor<double, 2> extern_src_;  // Indexed by group then FSR
   std::vector<const FlatSourceRegion*> fsrs_;
   std::map<std::size_t, std::size_t> fsr_offsets_;  // Indexed by id -> offset
   std::size_t ngroups_;
@@ -136,6 +145,9 @@ class MOCDriver {
   double keff_tol_ = 1.E-5;
   double keff_ = 1.;
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
+  std::size_t max_L_ = 0;     // max-legendre-order in scattering moments
+  std::size_t N_lj_ = 1;      // total number of j (-l ro l)
+  bool anisotropic_ = false;  // to account for anisotropic scattering
   SimulationMode mode_{SimulationMode::Keff};
   bool solved_{false};
 
@@ -145,12 +157,21 @@ class MOCDriver {
   void allocate_track_fluxes();
   void segment_renormalization();
 
-  void sweep(xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& src);
-
-  double calc_keff(const xt::xtensor<double, 2>& flux,
-                   const xt::xtensor<double, 2>& old_flux) const;
+  // isotropic
+  void solve_isotropic();
+  void sweep(xt::xtensor<double, 3>& flux, const xt::xtensor<double, 2>& src);
   void fill_source(xt::xtensor<double, 2>& src,
-                   const xt::xtensor<double, 2>& flux) const;
+                   const xt::xtensor<double, 3>& flux) const;
+
+  // anisotropic
+  void solve_anisotropic();
+  void sweep_anisotropic(xt::xtensor<double, 3>& flux,
+                         const xt::xtensor<double, 3>& src);
+  void fill_source_anisotropic(xt::xtensor<double, 3>& src,
+                               const xt::xtensor<double, 3>& flux) const;
+
+  double calc_keff(const xt::xtensor<double, 3>& flux,
+                   const xt::xtensor<double, 3>& old_flux) const;
 };
 
 }  // namespace scarabee
