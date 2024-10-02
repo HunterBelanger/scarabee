@@ -14,7 +14,7 @@ Es = np.array([[[0.248064]],
 Ef = np.array([0.065280])
 vEf = np.array([2.70 * 0.065280])
 chi = np.array([1.])
-dtr = np.array([0.])
+dtr = np.array([0.042432])
 fuel = CrossSection(Et, dtr, Ea, Es, Ef, vEf, chi)
 
 # fictitious material

@@ -162,7 +162,7 @@ double Ki3_quad(double x) {
   return integral.first;
 }
 
-double legendre(const unsigned int& order, const double& x) {
+double legendre(unsigned int order, double x) {
   switch (order) {
     case 0:
       return 1.0;
@@ -221,8 +221,7 @@ double legendre(const unsigned int& order, const double& x) {
   }
 }
 
-double derivative_legendre(const unsigned int& order, const unsigned int& n,
-                           const double& x) {
+double derivative_legendre(unsigned int order, unsigned int n, double x) {
   if (n > 0) {
     if (order > 1) {  // a recursion relation for order > 1 and n > 0
       const double term1 = derivative_legendre(order - 1, n, x) * x;
@@ -243,8 +242,7 @@ double derivative_legendre(const unsigned int& order, const unsigned int& n,
   return 0.;
 }
 
-double assoc_legendre(const unsigned int& order, const int& j,
-                      const double& x) {
+double assoc_legendre(unsigned int order, int j, double x) {
   unsigned int abs_j = std::abs(j);
   const double associated_l = derivative_legendre(order, abs_j, x);
   double factor = std::pow(-1., abs_j) *
@@ -257,8 +255,7 @@ double assoc_legendre(const unsigned int& order, const int& j,
   return factor * associated_l;
 }
 
-double spherical_hamonics(const unsigned int& l, const int& j,
-                          const double& phi, const double& theta) {
+double spherical_hamonics(unsigned int l, int j, double phi, double theta) {
   // theta is the polar angle, get the cosine of it.
   const double u = std::cos(theta);
   if (std::abs(j) > l) {

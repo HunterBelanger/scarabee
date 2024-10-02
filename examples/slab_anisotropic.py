@@ -14,7 +14,7 @@ Ef = np.array([0.266667])
 vEf = np.array([2.5 * 0.266667])
 chi = np.array([1.])
 
-dtr = np.array([0.])
+dtr = np.array([0.333333])
 
 fuel = CrossSection(Et, dtr, Ea, Es, Ef, vEf, chi)
 

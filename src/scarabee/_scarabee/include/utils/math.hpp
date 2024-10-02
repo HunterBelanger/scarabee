@@ -49,17 +49,15 @@ inline double mexp(double x) {
 double Ki3(double x);
 double Ki3_quad(double x);
 
-double legendre(const unsigned int& order, const double& x);
-double derivative_legendre(const unsigned int& order, const unsigned int& n,
-                           const double& x);
-double assoc_legendre(const unsigned int& order, const int& j, const double& x);
+double legendre(unsigned int order, double x);
+double derivative_legendre(unsigned int order, unsigned int n, double x);
+double assoc_legendre(unsigned int order, int j, double x);
 
 // // spherical harmonics
 // // phi: azimuthal angle and theta: polar angle
-double spherical_hamonics(const unsigned int& l, const int& j,
-                          const double& phi, const double& theta);
+double spherical_hamonics(unsigned int l, int j, double phi, double theta);
 
-inline double factorial(const unsigned int& N) {
+inline double factorial(unsigned int N) {
   double value = 1.;
   for (unsigned int i = 1; i <= N; i++) {
     value *= static_cast<double>(i);

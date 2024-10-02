@@ -84,12 +84,10 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
   // get the max-legendre-order for given scattering moments
   if (anisotropic_) {
     max_L_ = 0;
-    if (anisotropic_ == true) {
-      for (std::size_t i = 0; i < nfsrs_; i++) {
-        const auto& mat = *fsrs_[i]->xs();
-        const std::size_t l = mat.max_legendre_order();
-        if (l > max_L_) max_L_ = l;
-      }
+    for (std::size_t i = 0; i < nfsrs_; i++) {
+      const auto& mat = *fsrs_[i]->xs();
+      const std::size_t l = mat.max_legendre_order();
+      if (l > max_L_) max_L_ = l;
     }
 
     N_lj_ = (max_L_ + 1) * (max_L_ + 1);
@@ -732,7 +730,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
       const double Vi = fsrs_[i]->volume();
-      const double Et = mat.Etr(g);
+      const double Et = mat.Et(g);
       for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++) {
         sflux(g, i, it_lj) *= 1. / (Vi * Et);
       }
