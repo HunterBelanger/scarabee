@@ -251,6 +251,7 @@ void MOCPlotter::render_controls() {
     ImGui::Text("FSR ID: %li", mufsr.fsr->id());
     ImGui::Text("FSR Instance: %li", mufsr.instance);
     ImGui::Text("FSR Index: %li", mfsri);
+    ImGui::Text("FSR Area: %f", mufsr.fsr->volume());
 
     if (colorby == ColorBy::Cell &&
         ImGui::ColorEdit3("", reinterpret_cast<float*>(&fcolor))) {

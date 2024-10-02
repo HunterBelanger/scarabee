@@ -17,6 +17,9 @@ Geometry
     :inherited-members:
     :special-members: __init__
 
+.. autoclass:: PinCellType
+    :members:
+
 .. autoclass:: SimplePinCell
     :members:
     :inherited-members:

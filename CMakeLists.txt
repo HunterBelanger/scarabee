@@ -210,6 +210,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/python/track.cpp 
                               src/scarabee/_scarabee/python/cell.cpp
                               src/scarabee/_scarabee/python/empty_cell.cpp
+                              src/scarabee/_scarabee/python/pin_cell_type.cpp
                               src/scarabee/_scarabee/python/simple_pin_cell.cpp
                               src/scarabee/_scarabee/python/pin_cell.cpp
                               src/scarabee/_scarabee/python/cartesian_2d.cpp
