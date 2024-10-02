@@ -12,7 +12,7 @@ void init_SimplePinCell(py::module& m) {
       m, "SimplePinCell")
       .def(py::init<const std::vector<double>& /*rads*/,
                     const std::vector<std::shared_ptr<CrossSection>>& /*mats*/,
-                    double /*dx*/, double /*dy*/>(),
+                    double /*dx*/, double /*dy*/, PinCellType /*pin_type*/>(),
            "An annular pin centered in a rectangular cell with no angular "
            "segments. Must provide one more CrossSection than radii, as that "
            "material will fill the cell out to the boundary.\n\n"
@@ -25,6 +25,8 @@ void init_SimplePinCell(py::module& m) {
            "dx : float\n"
            "     Width of cell along x.\n"
            "dy : float\n"
-           "     Width of cell along y.\n",
-           py::arg("radii"), py::arg("mats"), py::arg("dx"), py::arg("dy"));
+           "     Width of cell along y.\n"
+           "pin_type : PinCellType\n"
+           "     Wether is a full or half or quarter pin cell. Default is Full.\n",
+           py::arg("radii"), py::arg("mats"), py::arg("dx"), py::arg("dy"), py::arg("pin_type") = PinCellType::Full);
 }
