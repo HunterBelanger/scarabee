@@ -9,7 +9,7 @@ namespace scarabee {
 
 PinCell::PinCell(const std::vector<double>& mat_rads,
                  const std::vector<std::shared_ptr<CrossSection>>& mats,
-                 double dx, double dy)
+                 double dx, double dy, Type pin_type)
     : Cell(dx, dy),
       mat_radii_(mat_rads),
       mats_(mats),
@@ -17,7 +17,8 @@ PinCell::PinCell(const std::vector<double>& mat_rads,
       xm_(),
       pd_(),
       ym_(),
-      nd_() {
+      nd_(),
+      pin_type_(pin_type) {
   this->build();
 }
 
@@ -26,11 +27,25 @@ void PinCell::build() {
   radii_.clear();
   fsrs_.clear();
 
-  // Get variables
-  const double x0_ = 0.;
-  const double y0_ = 0.;
+  // Width of the cell in each direction
   const double dx = (x_max_->x0() - x_min_->x0());
   const double dy = (y_max_->y0() - y_min_->y0());
+
+  // The center point of the pin
+  double x0_ = 0.;
+  double y0_ = 0.;
+
+  if (pin_type_ == Type::XP || pin_type_ == Type::I || pin_type_ == Type:: IV) {
+    x0_ = 0.5*dx;
+  } else if (pin_type_ == Type::XN || pin_type_ == Type::II || pin_type_ == Type::III) {
+    x0_ = -0.5*dx;
+  }
+  
+  if (pin_type_ == Type::YP || pin_type_ == Type::I || pin_type_ == Type::II) {
+    y0_ = 0.5*dy;
+  } else if (pin_type_ == Type::YN || pin_type_ == Type::III || pin_type_ == Type::IV) {
+    y0_ = -0.5*dy;
+  }
 
   // Create the 4 surfaces which give us our 8 angular sections
   xm_ = std::make_shared<Surface>();
