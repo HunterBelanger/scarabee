@@ -116,6 +116,8 @@ class MOCDriver {
   double y_min() const { return geometry_->y_min(); }
   double y_max() const { return geometry_->y_max(); }
 
+  void save_hdf5(const std::string& fname, const std::string& group) const;
+
  private:
   struct AngleInfo {
     double phi;                  // Azimuthal angle for track

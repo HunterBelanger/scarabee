@@ -498,5 +498,15 @@ void init_MOCDriver(py::module& m) {
           "    Array of bounding x values.\n"
           "y : ndarray\n"
           "    Array of bounding y values.\n",
-          py::arg("nx"), py::arg("ny"));
+          py::arg("nx"), py::arg("ny"))
+
+      .def("save_hdf5", &MOCDriver::save_hdf5,
+           "Saves MOC results to an HDF5 file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : str\n"
+           "        Name of HDF5 file.\n"
+           "group : str\n"
+           "        Name of group in HDF5 file to save results.\n",
+           py::arg("fname"), py::arg("group"));
 }

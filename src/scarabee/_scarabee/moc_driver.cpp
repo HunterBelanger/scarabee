@@ -8,6 +8,11 @@
 #include <xtensor/xmath.hpp>
 #include <xtensor/xview.hpp>
 
+#include <highfive/highfive.hpp>
+#include <highfive/xtensor.hpp>
+
+namespace H5 = HighFive;
+
 #include <cmath>
 
 namespace scarabee {
@@ -1627,6 +1632,58 @@ void MOCDriver::apply_criticality_spectrum(const xt::xtensor<double, 1>& flux) {
   for (std::size_t g = 0; g < this->ngroups(); g++) {
     for (std::size_t i = 0; i < this->nfsr(); i++) {
       flux_(g, i, 0) *= group_mult(g);
+    }
+  }
+}
+
+void MOCDriver::save_hdf5(const std::string& fname,
+                          const std::string& group) const {
+  if (solved_ == false) {
+    auto mssg = "Problem not solved. Cannot save MOC results.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // First create the HDF5 file
+  auto h5 = H5::File(fname, H5::File::OpenOrCreate);
+
+  if (h5.exist(group)) {
+    std::stringstream mssg;
+    mssg << "HDF5 group with name \"" << group << "\" already exists.";
+    const auto mssg_str = mssg.str();
+    spdlog::error(mssg_str);
+    throw ScarabeeException(mssg_str);
+  }
+
+  // Now we create the desired group
+  auto grp = h5.createGroup(group);
+
+  // Create attributes for groups, azimuthal angles, and polar angles
+  grp.createAttribute("ngroups", ngroups_);
+  grp.createAttribute("nfsrs", nfsrs_);
+  grp.createAttribute("n_pol_angles", n_pol_angles_);
+  grp.createAttribute("keff", keff_);
+  grp.createAttribute("N_lj", N_lj_);
+  grp.createAttribute("anisotropic", anisotropic_);
+
+  // We first save the flux array
+  grp.createDataSet("flux", flux_);
+
+  // Now we go through all azimuthal angles
+  for (std::size_t a = 0; a < tracks_.size(); a++) {
+    const std::string trk_set_name = "track_set_" + std::to_string(a);
+
+    // Create a group for the track set
+    auto trk_set = grp.createGroup(trk_set_name);
+    const auto& trks = tracks_[a];
+
+    for (std::size_t t = 0; t < trks.size(); t++) {
+      const std::string trk_name = "track_" + std::to_string(t);
+      auto trk = trk_set.createGroup(trk_name);
+
+      // Save entry and exit flux
+      trk.createDataSet("entry", trks[t].entry_flux());
+      trk.createDataSet("exit", trks[t].exit_flux());
     }
   }
 }
