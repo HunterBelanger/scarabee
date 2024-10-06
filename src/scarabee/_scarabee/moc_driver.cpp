@@ -1688,6 +1688,94 @@ void MOCDriver::save_hdf5(const std::string& fname,
   }
 }
 
+void MOCDriver::load_hdf5(const std::string& fname, const std::string& group) {
+  if (this->drawn() == false) {
+    auto mssg = "Cannot load HDF5 file if tracks have not been drawn.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // First create the HDF5 file
+  auto h5 = H5::File(fname, H5::File::ReadOnly);
+
+  if (h5.exist(group) == false) {
+    std::stringstream mssg;
+    mssg << "The HDF5 group \"" << group << "\" does not exists.";
+    const auto mssg_str = mssg.str();
+    spdlog::error(mssg_str);
+    throw ScarabeeException(mssg_str);
+  }
+
+  // Now get the groups with results
+  auto grp = h5.getGroup(group);
+
+  // Load attributes, make sure they are the same
+  std::size_t ngroups = grp.getAttribute("ngroups").read<std::size_t>();
+  std::size_t nfsrs = grp.getAttribute("nfsrs").read<std::size_t>();
+  std::size_t n_pol_angles =
+      grp.getAttribute("n_pol_angles").read<std::size_t>();
+  std::size_t N_lj = grp.getAttribute("N_lj").read<std::size_t>();
+  bool anisotropic = grp.getAttribute("anisotropic").read<bool>();
+
+  if (ngroups != ngroups_) {
+    auto mssg = "Number of groups in MOCDriver and HDF5 file do not agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (nfsrs != nfsrs_) {
+    auto mssg =
+        "Number of flat source regions in MOCDriver and HDF5 file do not "
+        "agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (n_pol_angles != n_pol_angles_) {
+    auto mssg =
+        "Number of polar angles in MOCDriver and HDF5 file do not agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (N_lj != N_lj_) {
+    auto mssg =
+        "Number of spherical harmonics in MOCDriver and HDF5 file do not "
+        "agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (anisotropic != anisotropic_) {
+    auto mssg = "Anisotropic setting in MOCDriver and HDF5 file do not agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // If we get here, everything appears to match. We should be safe to load data
+  keff_ = grp.getAttribute("keff").read<double>();
+
+  flux_ = xt::zeros<double>({ngroups_, nfsrs_, N_lj_});
+  grp.getDataSet("flux").read_raw<double>(flux_.data());
+
+  // Now we go through all azimuthal angles. Since we are drawn, all the
+  // tracks have the angular flux allocated.
+  for (std::size_t a = 0; a < tracks_.size(); a++) {
+    const std::string trk_set_name = "track_set_" + std::to_string(a);
+
+    // Get the group for the track set
+    auto trk_set = grp.getGroup(trk_set_name);
+    auto& trks = tracks_[a];
+
+    for (std::size_t t = 0; t < trks.size(); t++) {
+      const std::string trk_name = "track_" + std::to_string(t);
+      auto trk = trk_set.getGroup(trk_name);
+
+      // Load entry and exit flux
+      trk.getDataSet("entry").read_raw<double>(trks[t].entry_flux().data());
+      trk.getDataSet("exit").read_raw<double>(trks[t].exit_flux().data());
+    }
+  }
+
+  solved_ = true;
+}
+
 }  // namespace scarabee
 
 // REFERENCES

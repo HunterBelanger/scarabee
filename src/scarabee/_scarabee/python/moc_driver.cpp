@@ -508,5 +508,15 @@ void init_MOCDriver(py::module& m) {
            "        Name of HDF5 file.\n"
            "group : str\n"
            "        Name of group in HDF5 file to save results.\n",
+           py::arg("fname"), py::arg("group"))
+
+      .def("load_hdf5", &MOCDriver::load_hdf5,
+           "Loads MOC results from an HDF5 file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : str\n"
+           "        Name of HDF5 file.\n"
+           "group : str\n"
+           "        Name of group in HDF5 file to save results.\n",
            py::arg("fname"), py::arg("group"));
 }

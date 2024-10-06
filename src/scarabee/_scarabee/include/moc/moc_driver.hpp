@@ -117,6 +117,7 @@ class MOCDriver {
   double y_max() const { return geometry_->y_max(); }
 
   void save_hdf5(const std::string& fname, const std::string& group) const;
+  void load_hdf5(const std::string& fname, const std::string& group);
 
  private:
   struct AngleInfo {
