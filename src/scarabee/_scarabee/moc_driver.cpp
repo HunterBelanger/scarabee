@@ -8,13 +8,19 @@
 #include <xtensor/xmath.hpp>
 #include <xtensor/xview.hpp>
 
+#include <highfive/highfive.hpp>
+#include <highfive/xtensor.hpp>
+
+namespace H5 = HighFive;
+
 #include <cmath>
 
 namespace scarabee {
 
 MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
                      BoundaryCondition xmin, BoundaryCondition xmax,
-                     BoundaryCondition ymin, BoundaryCondition ymax)
+                     BoundaryCondition ymin, BoundaryCondition ymax,
+                     bool anisotropic)
     : angle_info_(),
       tracks_(),
       geometry_(geometry),
@@ -27,7 +33,8 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
       x_min_bc_(xmin),
       x_max_bc_(xmax),
       y_min_bc_(ymin),
-      y_max_bc_(ymax) {
+      y_max_bc_(ymax),
+      anisotropic_(anisotropic) {
   if (geometry_ == nullptr) {
     auto mssg = "MOCDriver provided with nullptr geometry.";
     spdlog::error(mssg);
@@ -79,8 +86,20 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
 
   ngroups_ = geometry_->ngroups();
 
+  // get the max-legendre-order for given scattering moments
+  if (anisotropic_) {
+    max_L_ = 0;
+    for (std::size_t i = 0; i < nfsrs_; i++) {
+      const auto& mat = *fsrs_[i]->xs();
+      const std::size_t l = mat.max_legendre_order();
+      if (l > max_L_) max_L_ = l;
+    }
+
+    N_lj_ = (max_L_ + 1) * (max_L_ + 1);
+  }
+
   // Allocate arrays and assign indices
-  flux_.resize({ngroups_, nfsrs_});
+  flux_.resize({ngroups_, nfsrs_, N_lj_});
   flux_.fill(0.);
   extern_src_.resize({ngroups_, nfsrs_});
   extern_src_.fill(0.);
@@ -131,6 +150,10 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
 
   polar_quad_ = polar_quad;
   n_pol_angles_ = polar_quad_.sin().size();
+  // take all polar angles in case of anisotropic scattering
+  if (anisotropic_ == true) {
+    n_pol_angles_ *= 2;
+  }
 
   if (n_angles % 2 != 0) {
     // If the number of angles is odd, an angle will be lost
@@ -206,7 +229,25 @@ void MOCDriver::solve() {
     }
   }
 
-  flux_.resize({ngroups_, nfsrs_});
+  if (anisotropic_ == false) {
+    // isotropic
+    solve_isotropic();
+  } else {
+    // anisotropic
+    solve_anisotropic();
+  }
+
+  solved_ = true;
+
+  sim_timer.stop();
+  spdlog::info("");
+  spdlog::info("Simulation Time: {:.5E} s", sim_timer.elapsed_time());
+}
+
+// solve for the isotropic
+void MOCDriver::solve_isotropic() {
+  flux_.resize({ngroups_, nfsrs_, 1});
+  flux_.fill(0.);
   xt::xtensor<double, 2> src;
   src.resize({ngroups_, nfsrs_});
   src.fill(0.);
@@ -277,8 +318,8 @@ void MOCDriver::solve() {
     for (std::size_t g = 0; g < ngroups_; g++) {
       for (std::size_t i = 0; i < nfsrs_; i++) {
         if (D(g, i) != 0.) {
-          next_flux(g, i) += flux_(g, i) * D(g, i);
-          next_flux(g, i) /= (1. + D(g, i));
+          next_flux(g, i, 0) += flux_(g, i, 0) * D(g, i);
+          next_flux(g, i, 0) /= (1. + D(g, i));
         }
       }
     }
@@ -328,15 +369,128 @@ void MOCDriver::solve() {
       spdlog::warn("Negative flux values set to zero.");
     }
   }
-
-  solved_ = true;
-
-  sim_timer.stop();
-  spdlog::info("");
-  spdlog::info("Simulation Time: {:.5E} s", sim_timer.elapsed_time());
 }
 
-void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
+// solve for anisotropic
+void MOCDriver::solve_anisotropic() {
+  N_lj_ = (max_L_ + 1) * (max_L_ + 1);
+  flux_.resize({ngroups_, nfsrs_, N_lj_});
+  flux_.fill(0.);
+
+  xt::xtensor<double, 3> src;
+  src.resize({ngroups_, nfsrs_, N_lj_});
+  src.fill(0.);
+
+  // get the polar angles and azimuthal angle
+  // to pre-caluculate the spherical harmonics
+  std::span<const double> pol_angl = polar_quad_.polar_angle();
+  std::vector<double> polar_angles(pol_angl.begin(), pol_angl.end());
+  std::vector<double> azimuthal_angles;
+  const std::size_t n_track_angles_ = angle_info_.size();
+  azimuthal_angles.reserve(n_track_angles_);
+  for (auto& ai : angle_info_) {
+    azimuthal_angles.push_back(ai.phi);
+  }
+
+  sph_harm_ = SphericalHarmonics(max_L_, azimuthal_angles, polar_angles);
+
+  // Initialize flux and keff
+  if (mode_ == SimulationMode::Keff) {
+    flux_.fill(1.);
+  } else {
+    flux_.fill(0.);
+  }
+  keff_ = 1.;
+  auto next_flux = flux_;
+  double prev_keff = keff_;
+
+  // Initialize angular flux
+  for (auto& tracks : tracks_) {
+    for (auto& track : tracks) {
+      track.entry_flux().fill(1. / std::sqrt(4. * PI));
+      track.exit_flux().fill(1. / std::sqrt(4. * PI));
+    }
+  }
+
+  double rel_diff_keff = 100.;
+  if (mode_ == SimulationMode::FixedSource) {
+    rel_diff_keff = 0.;
+  }
+
+  double max_flx_diff = 100;
+  std::size_t iteration = 0;
+  Timer iteration_timer;
+  while (rel_diff_keff > keff_tol_ || max_flx_diff > flux_tol_) {
+    iteration_timer.reset();
+    iteration_timer.start();
+    iteration++;
+
+    fill_source_anisotropic(src, flux_);
+    xt::view(src, xt::all(), xt::all(), 0) += extern_src_;
+
+    // Check for negative zero moment source values at beginning of simulation
+    bool set_neg_src_to_zero = false;
+    if (iteration <= 20) {
+      for (std::size_t g = 0; g < ngroups_; g++) {
+        for (std::size_t i = 0; i < nfsrs_; i++) {
+          if (src(g, i, 0) < 0.) {
+            src(g, i, 0) = 0;
+            set_neg_src_to_zero = true;
+          }
+        }
+      }
+    }
+
+    next_flux.fill(0.);
+    sweep_anisotropic(next_flux, src);
+
+    if (mode_ == SimulationMode::Keff) {
+      prev_keff = keff_;
+      keff_ = calc_keff(next_flux, flux_);
+      rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+    }
+
+    // Get difference
+    auto new_flux = xt::view(next_flux, xt::all(), xt::all(), 0);
+    auto old_flux = xt::view(flux_, xt::all(), xt::all(), 0);
+    max_flx_diff = xt::amax(xt::abs(new_flux - old_flux) / new_flux)();
+
+    // Make sure that the zero-moment flux is positive everywhere !
+    bool set_neg_flux_to_zero = false;
+    for (std::size_t g = 0; g < ngroups_; g++) {
+      for (std::size_t i = 0; i < nfsrs_; i++) {
+        if (next_flux(g, i, 0) < 0.) {
+          next_flux(g, i, 0) = 0;
+          set_neg_flux_to_zero = true;
+        }
+      }
+    }
+
+    flux_ = next_flux;
+
+    iteration_timer.stop();
+    spdlog::info("-------------------------------------");
+    if (mode_ == SimulationMode::Keff) {
+      spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff_);
+      spdlog::info("     keff difference:     {:.5E}", rel_diff_keff);
+    } else if (mode_ == SimulationMode::FixedSource) {
+      spdlog::info("Iteration {:>4d}", iteration);
+    }
+    spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
+    spdlog::info("     Iteration time: {:.5E} s",
+                 iteration_timer.elapsed_time());
+
+    // Write warnings about negative flux and source
+    if (set_neg_src_to_zero) {
+      spdlog::warn("Negative zero-mometn-source values set to zero.");
+    }
+    if (set_neg_flux_to_zero) {
+      spdlog::warn("Negative zero-moment-flux values set to zero.");
+    }
+  }
+}
+
+void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
                       const xt::xtensor<double, 2>& src) {
 #pragma omp parallel for
   for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
@@ -390,7 +544,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
               cmfd_->tally_current(flx, u_forw, G, *cmfd_surf);
             }
           }  // For all polar angles
-          sflux(g, i) += tw * delta_sum;
+          sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
@@ -438,7 +592,7 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
               cmfd_->tally_current(flx, u_back, G, *cmfd_surf);
             }
           }  // For all polar angles
-          sflux(g, i) += tw * delta_sum;
+          sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
@@ -457,14 +611,140 @@ void MOCDriver::sweep(xt::xtensor<double, 2>& sflux,
       const auto& mat = *fsrs_[i]->xs();
       const double Vi = fsrs_[i]->volume();
       const double Et = mat.Etr(g);
-      sflux(g, i) *= 1. / (Vi * Et);
-      sflux(g, i) += 4. * PI * src(g, i) / Et;
+      sflux(g, i, 0) *= 1. / (Vi * Et);
+      sflux(g, i, 0) += 4. * PI * src(g, i) / Et;
     }
   }  // For all groups
 }
 
-double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
-                            const xt::xtensor<double, 2>& old_flux) const {
+// anisotropic sweep
+void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
+                                  const xt::xtensor<double, 3>& src) {
+#pragma omp parallel for
+  for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
+    std::size_t g = static_cast<std::size_t>(ig);
+    for (auto& tracks : tracks_) {
+      for (std::size_t t = 0; t < tracks.size(); t++) {
+        auto& track = tracks[t];
+        htl::static_vector<double, 12> angflux;
+        for (std::size_t pp = 0; pp < n_pol_angles_; pp++)
+          angflux.push_back(track.entry_flux()(g, pp));
+        const double tw = 4. * PI * track.wgt() *
+                          track.width();  // Azimuthal weight * track width
+
+        // Follow track in forward direction
+        for (auto& seg : track) {
+          const std::size_t i = seg.fsr_indx();
+          const double l = seg.length();
+          const double Et = seg.xs()->Et(g);
+          const double lEt = l * Et;
+          const std::size_t phi_forward_index = track.phi_index_forward();
+
+          // loop over all polar angles
+          std::size_t p = 0;  // index for polar angle
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
+            if (pp < n_pol_angles_ / 2) {
+              p = pp;
+            } else {
+              p = pp - n_pol_angles_ / 2;
+            }
+
+            double Q = 0.;
+            std::span<const double> Y_ljs =
+                sph_harm_.spherical_harmonics(phi_forward_index, pp);
+            for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++) {
+              Q += src(g, i, it_lj) * Y_ljs[it_lj];
+            }
+
+            const double exp_m1 = mexp(lEt * polar_quad_.invs_sin()[p]);
+            const double delta_flx = (angflux[pp] - (Q / Et)) * exp_m1;
+            angflux[pp] -= delta_flx;
+            const double delta_sum = polar_quad_.wsin()[p] * delta_flx;
+
+            for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++) {
+              sflux(g, i, it_lj) += tw *
+                                    (delta_sum + l * Q * polar_quad_.wgt()[p]) *
+                                    Y_ljs[it_lj] * 0.5;
+            }
+          }  // For all polar angles
+        }    // For all segments along forward direction of track
+
+        // Set incoming flux for next track
+        if (track.exit_bc() == BoundaryCondition::Reflective) {
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++)
+            track.exit_track_flux()(g, pp) = angflux[pp];
+        } else {
+          // Vacuum
+          xt::view(track.exit_track_flux(), g, xt::all()).fill(0.);
+        }
+
+        // Follow track in backwards direction
+        for (std::size_t pp = 0; pp < n_pol_angles_; pp++)
+          angflux[pp] = track.exit_flux()(g, pp);
+
+        for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
+          auto& seg = *seg_it;
+          const std::size_t i = seg.fsr_indx();
+          const double l = seg.length();
+          const double Et = seg.xs()->Et(g);
+          const double lEt = l * Et;
+          const std::size_t phi_backward_index = track.phi_index_backward();
+
+          // loop over all polar angles
+          std::size_t p = 0;
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
+            if (pp < n_pol_angles_ / 2) {
+              p = pp;
+            } else {
+              p = pp - n_pol_angles_ / 2;
+            }
+
+            // source term evaluation for given azimuthal and polar angle
+            double Q = 0.;
+            std::span<const double> Y_ljs =
+                sph_harm_.spherical_harmonics(phi_backward_index, pp);
+            for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++) {
+              Q += src(g, i, it_lj) * Y_ljs[it_lj];
+            }
+
+            const double exp_m1 = mexp(lEt * polar_quad_.invs_sin()[p]);
+            const double delta_flx = (angflux[pp] - (Q / Et)) * exp_m1;
+            angflux[pp] -= delta_flx;
+            const double delta_sum = polar_quad_.wsin()[p] * delta_flx;
+
+            for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++) {
+              sflux(g, i, it_lj) += tw *
+                                    (delta_sum + l * Q * polar_quad_.wgt()[p]) *
+                                    Y_ljs[it_lj] * 0.5;
+            }
+          }  // For all polar angles
+        }    // For all segments along forward direction of track
+
+        // Set incoming flux for next track
+        if (track.entry_bc() == BoundaryCondition::Reflective) {
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
+            track.entry_track_flux()(g, pp) = angflux[pp];
+          }
+        } else {
+          // Vacuum
+          xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
+        }
+      }  // For all tracks
+    }    // For all azimuthal angles
+
+    for (std::size_t i = 0; i < nfsrs_; i++) {
+      const auto& mat = *fsrs_[i]->xs();
+      const double Vi = fsrs_[i]->volume();
+      const double Et = mat.Et(g);
+      for (std::size_t it_lj = 0; it_lj < N_lj_; it_lj++) {
+        sflux(g, i, it_lj) *= 1. / (Vi * Et);
+      }
+    }
+  }  // For all groups
+}
+
+double MOCDriver::calc_keff(const xt::xtensor<double, 3>& flux,
+                            const xt::xtensor<double, 3>& old_flux) const {
   double num = 0.;
   double denom = 0.;
 
@@ -480,8 +760,8 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
       const auto& mat = *fsrs_[i]->xs();
       for (std::uint32_t g = 0; g < ngroups_; g++) {
         const double VvEf = Vr * mat.vEf(g);
-        const double flx = flux(g, i);
-        const double oflx = old_flux(g, i);
+        const double flx = flux(g, i, 0);
+        const double oflx = old_flux(g, i, 0);
 
         num_thrd += VvEf * flx;
         denom_thrd += VvEf * oflx;
@@ -499,7 +779,7 @@ double MOCDriver::calc_keff(const xt::xtensor<double, 2>& flux,
 }
 
 void MOCDriver::fill_source(xt::xtensor<double, 2>& src,
-                            const xt::xtensor<double, 2>& flux) const {
+                            const xt::xtensor<double, 3>& flux) const {
   const double inv_k = 1. / keff_;
   const double isotropic = 1. / (4. * PI);
 
@@ -513,7 +793,7 @@ void MOCDriver::fill_source(xt::xtensor<double, 2>& src,
 
       for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
         // Sccatter source
-        const double flux_gg_i = flux(gg, i);
+        const double flux_gg_i = flux(gg, i, 0);
         const double Es_gg_to_g = mat.Es_tr(gg, g);
         Qout += Es_gg_to_g * flux_gg_i;
 
@@ -525,6 +805,43 @@ void MOCDriver::fill_source(xt::xtensor<double, 2>& src,
       src(g, i) = isotropic * Qout;
     }
   }
+}
+
+void MOCDriver::fill_source_anisotropic(
+    xt::xtensor<double, 3>& src, const xt::xtensor<double, 3>& flux) const {
+  const double inv_k = 1. / keff_;
+
+#pragma omp parallel for
+  for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
+    const std::size_t g = static_cast<std::size_t>(ig);
+    for (std::size_t i = 0; i < fsrs_.size(); i++) {
+      const auto& mat = *fsrs_[i]->xs();
+      const double chi_g = mat.chi(g);
+
+      std::size_t it_lj = 0;
+      for (std::size_t l = 0; l <= max_L_; l++) {
+        for (int j = -static_cast<int>(l); j <= static_cast<int>(l); j++) {
+          double Qout = 0.;
+          for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
+            // Sccatter source
+            const double flux_gg_i = flux(gg, i, it_lj);
+            const double Es_gg_to_g = mat.Es(l, gg, g);
+            Qout += Es_gg_to_g * flux_gg_i;
+
+            // Fission source
+            if (l == 0) {
+              const double vEf_gg = mat.vEf(gg);
+              Qout += inv_k * chi_g * vEf_gg * flux_gg_i;
+            }
+          }
+
+          src(g, i, it_lj) = Qout;
+          it_lj++;
+
+        }  // -l to l
+      }    // all scattering moments L
+    }      // all flat souce regions
+  }        // all groups
 }
 
 void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
@@ -541,7 +858,7 @@ void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
   // we only need [0, pi], and we can use tracks in the opposite direction.
   std::uint32_t n_track_angles_ = n_angles / 2;
 
-  angle_info_.resize(n_track_angles_, {0., 0., 0., 0, 0});
+  angle_info_.resize(n_track_angles_, {0., 0., 0., 0, 0, 0, 0});
   const double Dx = geometry_->x_max() - geometry_->x_min();
   const double Dy = geometry_->y_max() - geometry_->y_min();
   for (std::uint32_t i = 0; i < n_track_angles_; i++) {
@@ -562,6 +879,8 @@ void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
     angle_info_[i].d = (Dx / nx) * std::sin(angle_info_[i].phi);
     angle_info_[i].nx = static_cast<std::uint32_t>(nx);
     angle_info_[i].ny = static_cast<std::uint32_t>(ny);
+    angle_info_[i].forward_index = i;
+    angle_info_[i].backward_index = i + n_track_angles_;
   }
 
   // Go through and calculate the angle weights
@@ -675,7 +994,7 @@ void MOCDriver::generate_tracks() {
         }
 
         tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
-                                segments);
+                                segments, ai.forward_index, ai.backward_index);
 
         if (t < ai.ny) {
           y -= dy;
@@ -742,7 +1061,7 @@ void MOCDriver::generate_tracks() {
         }
 
         tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
-                                segments);
+                                segments, ai.forward_index, ai.backward_index);
 
         if (t < ai.nx) {
           x += dx;
@@ -912,8 +1231,8 @@ void MOCDriver::segment_renormalization() {
   }
 }
 
-double MOCDriver::flux(const Vector& r, const Direction& u,
-                       std::size_t g) const {
+double MOCDriver::flux(const Vector& r, const Direction& u, std::size_t g,
+                       std::size_t lj) const {
   if (g >= ngroups()) {
     std::stringstream mssg;
     mssg << "Group index g = " << g << " is out of range.";
@@ -921,9 +1240,16 @@ double MOCDriver::flux(const Vector& r, const Direction& u,
     throw ScarabeeException(mssg.str());
   }
 
+  if (lj >= N_lj_) {
+    std::stringstream mssg;
+    mssg << "Spherical harmonic index lj = " << lj << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
   try {
     const auto& fsr = this->get_fsr(r, u);
-    return flux_(g, get_fsr_indx(fsr));
+    return flux_(g, get_fsr_indx(fsr), lj);
   } catch (ScarabeeException& err) {
     std::stringstream mssg;
     mssg << "Could not find flat source region at r = " << r << " u = " << u
@@ -939,7 +1265,7 @@ double MOCDriver::flux(const Vector& r, const Direction& u,
   return 0.;
 }
 
-double MOCDriver::flux(std::size_t i, std::size_t g) const {
+double MOCDriver::flux(std::size_t i, std::size_t g, std::size_t lj) const {
   if (i >= this->size()) {
     std::stringstream mssg;
     mssg << "FSR index i=" << i << " is out of range.";
@@ -947,7 +1273,21 @@ double MOCDriver::flux(std::size_t i, std::size_t g) const {
     throw ScarabeeException(mssg.str());
   }
 
-  return flux_(g, i);
+  if (g >= ngroups()) {
+    std::stringstream mssg;
+    mssg << "Group index g = " << g << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  if (lj >= N_lj_) {
+    std::stringstream mssg;
+    mssg << "Spherical harmonic index lj = " << lj << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  return flux_(g, i, 0);
 }
 
 double MOCDriver::volume(const Vector& r, const Direction& u) const {
@@ -1291,9 +1631,149 @@ void MOCDriver::apply_criticality_spectrum(const xt::xtensor<double, 1>& flux) {
 
   for (std::size_t g = 0; g < this->ngroups(); g++) {
     for (std::size_t i = 0; i < this->nfsr(); i++) {
-      flux_(g, i) *= group_mult(g);
+      flux_(g, i, 0) *= group_mult(g);
     }
   }
+}
+
+void MOCDriver::save_hdf5(const std::string& fname,
+                          const std::string& group) const {
+  if (solved_ == false) {
+    auto mssg = "Problem not solved. Cannot save MOC results.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // First create the HDF5 file
+  auto h5 = H5::File(fname, H5::File::OpenOrCreate);
+
+  if (h5.exist(group)) {
+    std::stringstream mssg;
+    mssg << "HDF5 group with name \"" << group << "\" already exists.";
+    const auto mssg_str = mssg.str();
+    spdlog::error(mssg_str);
+    throw ScarabeeException(mssg_str);
+  }
+
+  // Now we create the desired group
+  auto grp = h5.createGroup(group);
+
+  // Create attributes for groups, azimuthal angles, and polar angles
+  grp.createAttribute("ngroups", ngroups_);
+  grp.createAttribute("nfsrs", nfsrs_);
+  grp.createAttribute("n_pol_angles", n_pol_angles_);
+  grp.createAttribute("keff", keff_);
+  grp.createAttribute("N_lj", N_lj_);
+  grp.createAttribute("anisotropic", anisotropic_);
+
+  // We first save the flux array
+  grp.createDataSet("flux", flux_);
+
+  // Now we go through all azimuthal angles
+  for (std::size_t a = 0; a < tracks_.size(); a++) {
+    const std::string trk_set_name = "track_set_" + std::to_string(a);
+
+    // Create a group for the track set
+    auto trk_set = grp.createGroup(trk_set_name);
+    const auto& trks = tracks_[a];
+
+    for (std::size_t t = 0; t < trks.size(); t++) {
+      const std::string trk_name = "track_" + std::to_string(t);
+      auto trk = trk_set.createGroup(trk_name);
+
+      // Save entry and exit flux
+      trk.createDataSet("entry", trks[t].entry_flux());
+      trk.createDataSet("exit", trks[t].exit_flux());
+    }
+  }
+}
+
+void MOCDriver::load_hdf5(const std::string& fname, const std::string& group) {
+  if (this->drawn() == false) {
+    auto mssg = "Cannot load HDF5 file if tracks have not been drawn.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // First create the HDF5 file
+  auto h5 = H5::File(fname, H5::File::ReadOnly);
+
+  if (h5.exist(group) == false) {
+    std::stringstream mssg;
+    mssg << "The HDF5 group \"" << group << "\" does not exists.";
+    const auto mssg_str = mssg.str();
+    spdlog::error(mssg_str);
+    throw ScarabeeException(mssg_str);
+  }
+
+  // Now get the groups with results
+  auto grp = h5.getGroup(group);
+
+  // Load attributes, make sure they are the same
+  std::size_t ngroups = grp.getAttribute("ngroups").read<std::size_t>();
+  std::size_t nfsrs = grp.getAttribute("nfsrs").read<std::size_t>();
+  std::size_t n_pol_angles =
+      grp.getAttribute("n_pol_angles").read<std::size_t>();
+  std::size_t N_lj = grp.getAttribute("N_lj").read<std::size_t>();
+  bool anisotropic = grp.getAttribute("anisotropic").read<bool>();
+
+  if (ngroups != ngroups_) {
+    auto mssg = "Number of groups in MOCDriver and HDF5 file do not agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (nfsrs != nfsrs_) {
+    auto mssg =
+        "Number of flat source regions in MOCDriver and HDF5 file do not "
+        "agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (n_pol_angles != n_pol_angles_) {
+    auto mssg =
+        "Number of polar angles in MOCDriver and HDF5 file do not agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (N_lj != N_lj_) {
+    auto mssg =
+        "Number of spherical harmonics in MOCDriver and HDF5 file do not "
+        "agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  if (anisotropic != anisotropic_) {
+    auto mssg = "Anisotropic setting in MOCDriver and HDF5 file do not agree.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // If we get here, everything appears to match. We should be safe to load data
+  keff_ = grp.getAttribute("keff").read<double>();
+
+  flux_ = xt::zeros<double>({ngroups_, nfsrs_, N_lj_});
+  grp.getDataSet("flux").read_raw<double>(flux_.data());
+
+  // Now we go through all azimuthal angles. Since we are drawn, all the
+  // tracks have the angular flux allocated.
+  for (std::size_t a = 0; a < tracks_.size(); a++) {
+    const std::string trk_set_name = "track_set_" + std::to_string(a);
+
+    // Get the group for the track set
+    auto trk_set = grp.getGroup(trk_set_name);
+    auto& trks = tracks_[a];
+
+    for (std::size_t t = 0; t < trks.size(); t++) {
+      const std::string trk_name = "track_" + std::to_string(t);
+      auto trk = trk_set.getGroup(trk_name);
+
+      // Load entry and exit flux
+      trk.getDataSet("entry").read_raw<double>(trks[t].entry_flux().data());
+      trk.getDataSet("exit").read_raw<double>(trks[t].exit_flux().data());
+    }
+  }
+
+  solved_ = true;
 }
 
 }  // namespace scarabee

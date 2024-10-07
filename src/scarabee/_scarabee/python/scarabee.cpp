@@ -25,6 +25,7 @@ extern void init_SimulationMode(py::module&);
 extern void init_Track(py::module&);
 extern void init_Cell(py::module&);
 extern void init_EmptyCell(py::module&);
+extern void init_PinCellType(py::module&);
 extern void init_SimplePinCell(py::module&);
 extern void init_PinCell(py::module&);
 extern void init_Cartesian2D(py::module&);
@@ -63,6 +64,7 @@ PYBIND11_MODULE(_scarabee, m) {
   init_Track(m);
   init_Cell(m);
   init_EmptyCell(m);
+  init_PinCellType(m);
   init_SimplePinCell(m);
   init_PinCell(m);
   init_Cartesian2D(m);

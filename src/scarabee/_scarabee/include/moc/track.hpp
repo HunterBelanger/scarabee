@@ -17,12 +17,15 @@ class Track {
  public:
   Track(const Vector& entry, const Vector& exit, const Direction& dir,
         double phi, double wgt, double width,
-        const std::vector<Segment>& segments);
+        const std::vector<Segment>& segments, std::size_t forward_phi_index,
+        std::size_t backward_phi_index);
 
   double wgt() const { return wgt_; }
   double width() const { return width_; }
   double phi() const { return phi_; }
   const std::vector<Segment>& segments() const { return segments_; }
+  std::size_t phi_index_forward() const { return forward_phi_index_; }
+  std::size_t phi_index_backward() const { return backward_phi_index_; }
 
   const Vector& entry_pos() const { return entry_; }
   const Vector& exit_pos() const { return exit_; }
@@ -96,6 +99,9 @@ class Track {
   double phi_;    // Azimuthal angle of Track
   BoundaryCondition entry_bc_;
   BoundaryCondition exit_bc_;
+  std::size_t forward_phi_index_;  // azimuthal angle index in forward direction
+  std::size_t
+      backward_phi_index_;  // azimuthal angle index in backaward direction
 };
 
 }  // namespace scarabee

@@ -22,6 +22,8 @@ class PolarQuadrature {
     wsin_ = std::visit([](const auto& pq) { return pq.wsin(); }, pq_);
     sin_ = std::visit([](const auto& pq) { return pq.sin(); }, pq_);
     wgt_ = std::visit([](const auto& pq) { return pq.wgt(); }, pq_);
+    polar_angle_ =
+        std::visit([](const auto& pq) { return pq.polar_angle(); }, pq_);
   }
 
   PolarQuadrature(PolarQuadratureType pq)
@@ -30,12 +32,15 @@ class PolarQuadrature {
     wsin_ = std::visit([](const auto& pq) { return pq.wsin(); }, pq_);
     sin_ = std::visit([](const auto& pq) { return pq.sin(); }, pq_);
     wgt_ = std::visit([](const auto& pq) { return pq.wgt(); }, pq_);
+    polar_angle_ =
+        std::visit([](const auto& pq) { return pq.polar_angle(); }, pq_);
   }
 
   const std::span<const double>& invs_sin() const { return invs_sin_; }
   const std::span<const double>& wsin() const { return wsin_; }
   const std::span<const double>& sin() const { return sin_; }
   const std::span<const double>& wgt() const { return wgt_; }
+  const std::span<const double>& polar_angle() const { return polar_angle_; }
 
  private:
   PolarQuadratureType pq_;
@@ -43,6 +48,7 @@ class PolarQuadrature {
   std::span<const double> wsin_;
   std::span<const double> sin_;
   std::span<const double> wgt_;
+  std::span<const double> polar_angle_;
 };
 
 }  // namespace scarabee

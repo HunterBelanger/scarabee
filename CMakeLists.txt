@@ -193,6 +193,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/pwr_assembly.cpp
                               src/scarabee/_scarabee/pwr_reflector.cpp
                               src/scarabee/_scarabee/reflector_sn.cpp
+                              src/scarabee/_scarabee/spherical_harmonics.cpp
                               #=================================================
                               src/scarabee/_scarabee/python/scarabee.cpp
                               src/scarabee/_scarabee/python/vector.cpp
@@ -210,6 +211,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/python/track.cpp 
                               src/scarabee/_scarabee/python/cell.cpp
                               src/scarabee/_scarabee/python/empty_cell.cpp
+                              src/scarabee/_scarabee/python/pin_cell_type.cpp
                               src/scarabee/_scarabee/python/simple_pin_cell.cpp
                               src/scarabee/_scarabee/python/pin_cell.cpp
                               src/scarabee/_scarabee/python/cartesian_2d.cpp
