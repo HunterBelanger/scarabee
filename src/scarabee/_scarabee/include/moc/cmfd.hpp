@@ -55,7 +55,7 @@ class CMFD {
     surface_currents_normalized_ = false;
   }
 
-  void solve(MOCDriver& moc);
+  void solve(MOCDriver& moc, double keff);
 
  private:
   std::vector<double> dx_, dy_;
@@ -78,9 +78,9 @@ class CMFD {
   bool surface_currents_normalized_ = false;
 
   xt::xtensor<std::shared_ptr<DiffusionCrossSection>, 2> xs_;
-  xt::xtensor<double, 3>
-      D_transp_corr_;  // Diffusion Coefficients for Transport Correction
-  xt::xtensor<double, 3> flux_;  // group, x, y
+  xt::xtensor<double, 3> Et_; // g, i, j
+  xt::xtensor<double, 3> D_transp_corr_; // g, i, j
+  xt::xtensor<double, 3> flux_;  // g, x, y
 
   Eigen::SparseMatrix<double> M;  // Loss Matrix
 

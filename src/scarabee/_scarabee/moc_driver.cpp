@@ -346,7 +346,7 @@ void MOCDriver::solve_isotropic() {
 
     // Apply CMFD
     if (cmfd_) {
-      cmfd_->solve(*this);
+      cmfd_->solve(*this, prev_keff);
     }
 
     iteration_timer.stop();

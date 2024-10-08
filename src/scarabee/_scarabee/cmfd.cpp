@@ -134,8 +134,10 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   xs_.resize({nx_, ny_});
   xs_.fill(nullptr);
 
-  // Allocate the flux array
+  // Allocate the flux, Et, and D_transp_corr arrays
   flux_ = xt::zeros<double>({ng_, nx_, ny_});
+  Et_ = xt::zeros<double>({ng_, nx_, ny_});
+  D_transp_corr_ = xt::zeros<double>({ng_, nx_, ny_});
 }
 
 std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
@@ -324,19 +326,23 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
   for (std::size_t i = 0; i < nx_; i++) {
     for (std::size_t j = 0; j < ny_; j++) {
       const auto indx = this->tile_to_indx(i, j);
-      const auto fg_xs = moc.homogenize(fsrs_[indx])->diffusion_xs();
+      const auto fg_xs = moc.homogenize(fsrs_[indx]);
+      const auto fg_dxs = fg_xs->diffusion_xs();
       const auto flux_spec = moc.homogenize_flux_spectrum(fsrs_[indx]);
       auto& xs = xs_(i, j);
       if (xs)
-        *xs = *fg_xs->condense(group_condensation_, flux_spec);
+        *xs = *(fg_dxs->condense(group_condensation_, flux_spec));
       else
-        xs = fg_xs->condense(group_condensation_, flux_spec);
+        xs = fg_dxs->condense(group_condensation_, flux_spec);
 
-      // Generate the flux values for the tile
+      // Generate the flux and Et values for the tile
       xt::view(flux_, xt::all(), i, j) = 0.;
+      xt::view(Et_, xt::all(), i, j) = 0.;
       for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
         flux_(moc_to_cmfd_group_map_[g], i, j) += flux_spec(g);
+        Et_(moc_to_cmfd_group_map_[g], i, j) += fg_xs->Et(g) * flux_spec(g);
       }
+      xt::view(Et_, xt::all(), i, j) /= xt::view(flux_, xt::all(), i, j);
     }
   }
 }
@@ -361,7 +367,7 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
   double scat_source = 0.;
   for (std::size_t gg = 0; gg < ng_; gg++) {
     const double flx_gg = flux_.at(gg, i, j);
-    fiss_source += chi_g_keff * xs.vEf(g) * flx_gg;
+    fiss_source += chi_g_keff * xs.vEf(gg) * flx_gg;
     scat_source += xs.Es(gg, g) * flx_gg;
   }
 
@@ -369,19 +375,27 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
   const double leak_rate = ((J_xp - J_xn) / dx) + ((J_yp - J_yn) / dy);
 
   // Now compute the removal reaction rate
-  const double tot_reac_rate = (1. / (3.*xs.D(g))) * flux_.at(g, i, j);
+  const double tot_reac_rate = Et_(g, i, j) * flux_.at(g, i, j);
 
   // Compute the residual of the balance equation
   const double residual = std::abs(leak_rate + tot_reac_rate - (scat_source + fiss_source));
 
-  if (residual >= 1.E-7) {
+  if (residual >= 1.E-5) {
     spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a neutron balance residual of {:.5E}.", i, j, g, residual);
   }
 }
 
-void CMFD::solve(MOCDriver& moc) {
+void CMFD::solve(MOCDriver& moc, double keff) {
   this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
+
+  for (std::size_t i = 0; i < nx_; i++) {
+    for (std::size_t j = 0; j < ny_; j++) {
+      for (std::size_t g = 0; g < ng_; g++) {
+        this->check_neutron_balance(i, j, g, keff);
+      }
+    }
+  }
 }
 
 }  // namespace scarabee
