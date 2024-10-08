@@ -1287,7 +1287,7 @@ double MOCDriver::flux(std::size_t i, std::size_t g, std::size_t lj) const {
     throw ScarabeeException(mssg.str());
   }
 
-  return flux_(g, i, 0);
+  return flux_(g, i, lj);
 }
 
 double MOCDriver::volume(const Vector& r, const Direction& u) const {
