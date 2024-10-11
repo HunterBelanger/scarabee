@@ -7,6 +7,12 @@ build:
   apt_packages:
     - cmake
     - g++
+    - libx11-dev
+    - libxrandr-dev
+    - libxinerama-dev
+    - libxcursor-dev
+    - libxi-dev
+    - libgl-dev
   jobs:
     pre_build:
       - pip install -v .
