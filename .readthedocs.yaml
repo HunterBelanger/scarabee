@@ -15,7 +15,7 @@ build:
     - libgl-dev
   jobs:
     pre_build:
-      - pip install -v .
+      - python -m pip install --no-cache-dir -v .
 
 sphinx:
   configuration: docs/source/conf.py
