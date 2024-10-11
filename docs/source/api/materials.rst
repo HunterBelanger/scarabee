@@ -11,6 +11,16 @@ Materials
     :members:
     :special-members: __init__
 
+.. autoclass:: ADF
+   :members:
+
+.. autoclass:: CDF
+   :members:
+
+.. autoclass:: DiffusionData
+    :members:
+    :special-members: __init__
+
 .. autoclass:: NuclideHandle
    :members:
 
