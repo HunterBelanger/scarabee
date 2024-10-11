@@ -4,6 +4,11 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.11"
+  apt_packages:
+    - cmake
+    - g++
+  pre_build:
+    - pip install -v .
 
 sphinx:
   configuration: docs/source/conf.py
