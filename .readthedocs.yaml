@@ -7,8 +7,9 @@ build:
   apt_packages:
     - cmake
     - g++
-  pre_build:
-    - pip install -v .
+  jobs:
+    pre_build:
+      - pip install -v .
 
 sphinx:
   configuration: docs/source/conf.py
