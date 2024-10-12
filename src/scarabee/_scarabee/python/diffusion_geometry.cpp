@@ -22,12 +22,12 @@ void init_DiffusionGeometry(py::module& m) {
                      "The DiffusionData if the tile represents a material.");
 
   py::enum_<DiffusionGeometry::Neighbor>(m, "Neighbor")
-      .value("XN", DiffusionGeometry::Neighbor::XN)
-      .value("XP", DiffusionGeometry::Neighbor::XP)
-      .value("YN", DiffusionGeometry::Neighbor::YN)
-      .value("YP", DiffusionGeometry::Neighbor::YP)
-      .value("ZN", DiffusionGeometry::Neighbor::ZN)
-      .value("ZP", DiffusionGeometry::Neighbor::ZP);
+      .value("XN", DiffusionGeometry::Neighbor::XN, "Neighbor on the x < 0 side.")
+      .value("XP", DiffusionGeometry::Neighbor::XP, "Neighbor on the x > 0 side.")
+      .value("YN", DiffusionGeometry::Neighbor::YN, "Neighbor on the y < 0 side.")
+      .value("YP", DiffusionGeometry::Neighbor::YP, "Neighbor on the y > 0 side.")
+      .value("ZN", DiffusionGeometry::Neighbor::ZN, "Neighbor on the z < 0 side.")
+      .value("ZP", DiffusionGeometry::Neighbor::ZP, "Neighbor on the z > 0 side.");
 
   py::class_<DiffusionGeometry, std::shared_ptr<DiffusionGeometry>>(
       m, "DiffusionGeometry",

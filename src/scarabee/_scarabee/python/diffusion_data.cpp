@@ -10,16 +10,16 @@ using namespace scarabee;
 
 void init_DiffusionData(py::module& m) {
   py::enum_<DiffusionData::ADF>(m, "ADF")
-      .value("YP", DiffusionData::ADF::YP)
-      .value("XP", DiffusionData::ADF::XP)
-      .value("YN", DiffusionData::ADF::YN)
-      .value("XN", DiffusionData::ADF::XN);
+      .value("YP", DiffusionData::ADF::YP, "Assembly y > 0 side.")
+      .value("XP", DiffusionData::ADF::XP, "Assembly x > 0 side.")
+      .value("YN", DiffusionData::ADF::YN, "Assembly y < 0 side.")
+      .value("XN", DiffusionData::ADF::XN, "Assembly x < 0 side.");
 
   py::enum_<DiffusionData::CDF>(m, "CDF")
-      .value("I", DiffusionData::CDF::I)
-      .value("II", DiffusionData::CDF::II)
-      .value("III", DiffusionData::CDF::III)
-      .value("IV", DiffusionData::CDF::IV);
+      .value("I", DiffusionData::CDF::I, "Corner of assembly in quadrant I.")
+      .value("II", DiffusionData::CDF::II, "Corner of assembly in quadrant II.")
+      .value("III", DiffusionData::CDF::III, "Corner of assembly in quadrant III.")
+      .value("IV", DiffusionData::CDF::IV, "Corner of assembly in quadrant IV.");
 
   py::class_<DiffusionData, std::shared_ptr<DiffusionData>>(
       m, "DiffusionData",
