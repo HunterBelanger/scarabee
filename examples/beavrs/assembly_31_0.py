@@ -2,9 +2,9 @@ from scarabee import *
 
 name = "F31_0"
 
-set_output_file(name+"_out.txt")
+set_output_file(name+"_reflector_out.txt")
 
-ndl = NDLibrary('/home/hunter/projects/scarabee/data/endf8_shem281.h5')
+ndl = NDLibrary()
 
 cond_spec = [[0, 3], [4, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25], [26, 29],
              [30, 32], [33, 36], [37, 39], [40, 42], [43, 48], [49, 52], [53, 55],
@@ -101,7 +101,7 @@ asmbly = PWRAssembly(pitch=1.25984, moderator=Water, shape=(17, 17), ndl=ndl)
 asmbly.condensation_scheme = cond_spec
 asmbly.few_group_condensation_scheme = few_grp_cond_spec
 asmbly.num_azimuthal_angles = 64
-asmbly.track_spacing = 0.01
+asmbly.track_spacing = 0.03
 asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, fp, fp, fp,
@@ -128,5 +128,6 @@ refl = Reflector(asmbly.average_fuel_pin, moderator=asmbly.moderator_xs, assembl
 refl.condensation_scheme = cond_spec
 refl.few_group_condensation_scheme = few_grp_cond_spec
 refl.num_azimuthal_angles = 64
+refl.track_spacing = 0.03
 refl.solve()
 refl.save_diffusion_data("reflector.npz")
