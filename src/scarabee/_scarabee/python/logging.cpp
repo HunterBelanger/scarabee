@@ -46,24 +46,12 @@ void init_Logging(py::module& m) {
       .value("Warning", LogLevel::warn);
 
   m.def("set_logging_level", &set_logging_level,
-        R"(Sets the verbosity of logging output.
-     
-Parameters
-----------
-level : LogLevel
-        Minimmum logging information level written to console/file.
-     )",
+        "Sets the verbosity of logging output.\n\n"
+        "Parameters\n"
+        "----------\n"
+        "level : LogLevel\n"
+        "        Minimmum logging information level written to console/file.",
         py::arg("level"));
-
-  m.def("set_output_file", &set_output_file,
-        R"(Sets the name of an optional output file for logging.
-    
-Parameters
-----------
-fname : str
-        Name of the output file.
-    )",
-        py::arg("fname"));
 
   m.def("scarabee_log", &scarabee_log,
         "Logs program information.\n\n"
@@ -80,5 +68,6 @@ fname : str
         "Parameters\n"
         "----------\n"
         "fname : str\n"
-        "        Name of log file.\n");
+        "        Name of log file.\n",
+        py::arg("fname"));
 }
