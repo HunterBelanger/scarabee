@@ -2,8 +2,7 @@ from scarabee import *
 import numpy as np
 import matplotlib.pyplot as plt
 
-#ndl = NDLibrary("endf8_shem281.h5")
-ndl = NDLibrary("C:\\Users\\hunte\\Documents\\nuclear_data\\endf8_shem281.h5")
+ndl = NDLibrary()
 
 def get_fuel_dancoff_correction(Zirc, Water):
   Et = np.array([1.E5])
@@ -157,7 +156,7 @@ Zirc = Material(Zirccomp, 293.6, ndl)
 
 Watercomp = MaterialComposition()
 Watercomp.fractions = Fraction.Atoms
-Watercomp.add_nuclide("H1_H2O", 6.6630E-2)
+Watercomp.add_nuclide("H1_H2O_TC", 6.6630E-2)
 Watercomp.add_nuclide("O16",    3.3315E-2)
 Water = Material(Watercomp, 293.6, ndl)
 

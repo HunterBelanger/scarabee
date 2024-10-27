@@ -2,8 +2,7 @@ from scarabee import *
 import numpy as np
 import matplotlib.pyplot as plt
 
-#ndl = NDLibrary('/mnt/c/Users/BELANH2/Documents/nuclear_data/endf8_shem281.h5')
-ndl = NDLibrary("C:\\Users\\hunte\\Documents\\nuclear_data\\endf8_shem281.h5")
+ndl = NDLibrary()
 
 # Get U235 so we can steal the fission spectrum
 U235 = ndl.interp_xs("U235", 293.6, 1.E10)

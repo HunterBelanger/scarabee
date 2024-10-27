@@ -2,7 +2,7 @@ from scarabee import *
 import numpy as np
 import matplotlib.pyplot as plt
 
-ndl = NDLibrary("endf8_shem281.h5")
+ndl = NDLibrary()
 
 UO2comp = MaterialComposition()
 UO2comp.fractions = Fraction.Atoms
