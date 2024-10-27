@@ -36,7 +36,7 @@ extensions = [
   'sphinx.ext.intersphinx',
   'sphinx.ext.autosummary',
   'sphinx.ext.napoleon',
-  'sphinx.ext.autosectionlabel',
+  #'sphinx.ext.autosectionlabel',
   'sphinx.ext.todo',
   'sphinx.ext.coverage',
   'sphinx.ext.mathjax',
