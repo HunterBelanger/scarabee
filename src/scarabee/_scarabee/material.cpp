@@ -96,7 +96,8 @@ Material::Material(const MaterialComposition& comp, double temp,
   for (const auto& c : composition_.nuclides) {
     const auto& nuc = ndl->get_nuclide(c.name);
     potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
-    lambda_potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.ir_lambda * nuc.potential_xs;
+    lambda_potential_xs_ +=
+        atoms_per_bcm_ * c.fraction * nuc.ir_lambda * nuc.potential_xs;
 
     if (nuc.fissile) fissile_ = true;
 
@@ -178,7 +179,8 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
   for (const auto& c : composition_.nuclides) {
     const auto& nuc = ndl->get_nuclide(c.name);
     potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
-    lambda_potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.ir_lambda * nuc.potential_xs;
+    lambda_potential_xs_ +=
+        atoms_per_bcm_ * c.fraction * nuc.ir_lambda * nuc.potential_xs;
 
     if (nuc.fissile) fissile_ = true;
 
@@ -399,8 +401,10 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
     const double Ni = this->atom_density(namei);
     const double pot_xs = nuclide.ir_lambda * nuclide.potential_xs;
     const double macro_pot_xs = Ni * pot_xs;
-    const double bg_xs_1 = (lambda_potential_xs() - macro_pot_xs + a1 * Ee) / Ni;
-    const double bg_xs_2 = (lambda_potential_xs() - macro_pot_xs + a2 * Ee) / Ni;
+    const double bg_xs_1 =
+        (lambda_potential_xs() - macro_pot_xs + a1 * Ee) / Ni;
+    const double bg_xs_2 =
+        (lambda_potential_xs() - macro_pot_xs + a2 * Ee) / Ni;
 
     std::shared_ptr<CrossSection> xsi{nullptr};
 

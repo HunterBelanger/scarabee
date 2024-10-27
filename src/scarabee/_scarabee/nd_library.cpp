@@ -92,7 +92,7 @@ NDLibrary::NDLibrary()
       ngroups_(0),
       h5_(nullptr) {
   // Get the environment variable
-  const char* ndl_env = std::getenv(NDL_ENV_VAR); 
+  const char* ndl_env = std::getenv(NDL_ENV_VAR);
   if (ndl_env == nullptr) {
     auto mssg = "Environment variable " NDL_ENV_VAR " is not set.";
     spdlog::error(mssg);
@@ -163,7 +163,7 @@ void NDLibrary::init() {
     handle.temperatures =
         grp.getAttribute("temperatures").read<std::vector<double>>();
     handle.awr = grp.getAttribute("awr").read<double>();
-    handle.potential_xs = grp.getAttribute("potential-xs").read<double>(); 
+    handle.potential_xs = grp.getAttribute("potential-xs").read<double>();
 
     // Intermediate resonance parameter
     if (grp.hasAttribute("ir-lambda")) {
@@ -445,7 +445,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
         chi(g) = xs_1->chi(g);
       }
     }  // For all groups
-  }    // For 4 lumps
+  }  // For 4 lumps
 
   // Now we go through and normalize each group by the denom, and calculate Et
   for (std::size_t g = 0; g < ngroups_; g++) {

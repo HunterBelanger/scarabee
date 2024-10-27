@@ -255,7 +255,8 @@ void init_Material(py::module& m) {
 
       .def_property_readonly(
           "lambda_potential_xs", &Material::lambda_potential_xs,
-          "Intermediate resonance corrected macroscopic potential scattering cross section in units of 1/cm.")
+          "Intermediate resonance corrected macroscopic potential scattering "
+          "cross section in units of 1/cm.")
 
       .def_property_readonly(
           "grams_per_cm3", &Material::grams_per_cm3,

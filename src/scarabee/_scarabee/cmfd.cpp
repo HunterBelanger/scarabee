@@ -175,11 +175,11 @@ std::optional<std::size_t> CMFD::get_surface(const Vector& r,
   const std::size_t i = (*otile)[0];
   const std::size_t j = (*otile)[1];
 
-  // Now we get our surfaces for this tile 
+  // Now we get our surfaces for this tile
   const auto& x_n = x_bounds_[i];
-  const auto& x_p = x_bounds_[i+1];
+  const auto& x_p = x_bounds_[i + 1];
   const auto& y_n = y_bounds_[j];
-  const auto& y_p = y_bounds_[j+1];
+  const auto& y_p = y_bounds_[j + 1];
 
   // Get the distances
   const double dx_n = std::abs(x_n.x0() - r.x());
@@ -187,10 +187,11 @@ std::optional<std::size_t> CMFD::get_surface(const Vector& r,
   const double dy_n = std::abs(y_n.y0() - r.y());
   const double dy_p = std::abs(y_p.y0() - r.y());
 
-  if (dx_n < SURFACE_COINCIDENT) return j*x_bounds_.size() + i;
-  if (dx_p < SURFACE_COINCIDENT) return j*x_bounds_.size() + i+1;
-  if (dy_n < SURFACE_COINCIDENT) return nx_surfs_ + i*y_bounds_.size() + j;
-  if (dy_p < SURFACE_COINCIDENT) return nx_surfs_ + i*y_bounds_.size() + j+1;
+  if (dx_n < SURFACE_COINCIDENT) return j * x_bounds_.size() + i;
+  if (dx_p < SURFACE_COINCIDENT) return j * x_bounds_.size() + i + 1;
+  if (dy_n < SURFACE_COINCIDENT) return nx_surfs_ + i * y_bounds_.size() + j;
+  if (dy_p < SURFACE_COINCIDENT)
+    return nx_surfs_ + i * y_bounds_.size() + j + 1;
 
   // If we get here, we aren't on a surface
   return std::nullopt;
