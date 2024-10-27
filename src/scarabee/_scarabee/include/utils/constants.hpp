@@ -13,6 +13,7 @@ constexpr double VEC_FP_TOL{1.E-10};
 constexpr double N_MASS_AMU{1.00866491595};
 constexpr double N_AVAGADRO{0.6022140857};  // [10^24 / mol]
 constexpr std::size_t MAX_SURFS{5};
+#define NDL_ENV_VAR "SCARABEE_ND_LIBRARY"
 
 }  // namespace scarabee
 

@@ -39,6 +39,7 @@ Material::Material(const MaterialComposition& comp, double temp,
       atoms_per_bcm_(-1.),
       grams_per_cm3_(-1.),
       potential_xs_(0.),
+      lambda_potential_xs_(0.),
       fissile_(false),
       resonant_(false) {
   // Make sure quantities are positive/valid
@@ -95,6 +96,7 @@ Material::Material(const MaterialComposition& comp, double temp,
   for (const auto& c : composition_.nuclides) {
     const auto& nuc = ndl->get_nuclide(c.name);
     potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
+    lambda_potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.ir_lambda * nuc.potential_xs;
 
     if (nuc.fissile) fissile_ = true;
 
@@ -109,6 +111,7 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
       atoms_per_bcm_(-1.),
       grams_per_cm3_(-1.),
       potential_xs_(0.),
+      lambda_potential_xs_(0.),
       fissile_(false),
       resonant_(false) {
   // Make sure quantities are positive/valid
@@ -175,6 +178,7 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
   for (const auto& c : composition_.nuclides) {
     const auto& nuc = ndl->get_nuclide(c.name);
     potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
+    lambda_potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.ir_lambda * nuc.potential_xs;
 
     if (nuc.fissile) fissile_ = true;
 
@@ -353,7 +357,7 @@ std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
 
   std::shared_ptr<CrossSection> xsout(nullptr);
 
-  const double mat_pot_xs = this->potential_xs();
+  const double mat_pot_xs = this->lambda_potential_xs();
   for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
     const std::string& namei = composition_.nuclides[i].name;
     const auto& nuclide = ndl->get_nuclide(namei);
@@ -386,17 +390,17 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
     const double Ee, std::shared_ptr<NDLibrary> ndl, std::size_t max_l) const {
   std::shared_ptr<CrossSection> xsout(nullptr);
 
-  const double mat_pot_xs = this->potential_xs();
+  const double mat_pot_xs = this->lambda_potential_xs();
 
   // Add component from each nuclide
   for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
     const std::string& namei = composition_.nuclides[i].name;
     const auto& nuclide = ndl->get_nuclide(namei);
     const double Ni = this->atom_density(namei);
-    const double pot_xs = ndl->get_nuclide(namei).potential_xs;
+    const double pot_xs = nuclide.ir_lambda * nuclide.potential_xs;
     const double macro_pot_xs = Ni * pot_xs;
-    const double bg_xs_1 = (potential_xs() - macro_pot_xs + a1 * Ee) / Ni;
-    const double bg_xs_2 = (potential_xs() - macro_pot_xs + a2 * Ee) / Ni;
+    const double bg_xs_1 = (lambda_potential_xs() - macro_pot_xs + a1 * Ee) / Ni;
+    const double bg_xs_2 = (lambda_potential_xs() - macro_pot_xs + a2 * Ee) / Ni;
 
     std::shared_ptr<CrossSection> xsi{nullptr};
 

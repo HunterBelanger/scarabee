@@ -6,6 +6,7 @@
 #include <xtensor/xtensor.hpp>
 
 #include <cmath>
+#include <cstdlib>
 #include <sstream>
 
 namespace scarabee {
@@ -83,6 +84,38 @@ void NuclideHandle::unload() {
   nu = nullptr;
 }
 
+NDLibrary::NDLibrary()
+    : nuclide_handles_(),
+      group_bounds_(),
+      library_(),
+      group_structure_(),
+      ngroups_(0),
+      h5_(nullptr) {
+  // Get the environment variable
+  const char* ndl_env = std::getenv(NDL_ENV_VAR); 
+  if (ndl_env == nullptr) {
+    auto mssg = "Environment variable " NDL_ENV_VAR " is not set.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Get the string for the file name.
+  std::string fname(ndl_env);
+
+  // Make sure HDF5 file exists
+  if (std::filesystem::exists(fname) == false) {
+    std::stringstream mssg;
+    mssg << "The file \"" << fname << "\" does not exist.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  // Open the HDF5 file
+  h5_ = std::make_shared<H5::File>(fname, H5::File::ReadOnly);
+
+  this->init();
+}
+
 NDLibrary::NDLibrary(const std::string& fname)
     : nuclide_handles_(),
       group_bounds_(),
@@ -101,6 +134,10 @@ NDLibrary::NDLibrary(const std::string& fname)
   // Open the HDF5 file
   h5_ = std::make_shared<H5::File>(fname, H5::File::ReadOnly);
 
+  this->init();
+}
+
+void NDLibrary::init() {
   // Get info on library
   if (h5_->hasAttribute("library"))
     library_ = h5_->getAttribute("library").read<std::string>();
@@ -126,7 +163,15 @@ NDLibrary::NDLibrary(const std::string& fname)
     handle.temperatures =
         grp.getAttribute("temperatures").read<std::vector<double>>();
     handle.awr = grp.getAttribute("awr").read<double>();
-    handle.potential_xs = grp.getAttribute("potential-xs").read<double>();
+    handle.potential_xs = grp.getAttribute("potential-xs").read<double>(); 
+
+    // Intermediate resonance parameter
+    if (grp.hasAttribute("ir-lambda")) {
+      handle.ir_lambda = grp.getAttribute("ir-lambda").read<double>();
+    } else {
+      handle.ir_lambda = 1.;
+    }
+
     handle.ZA = grp.getAttribute("ZA").read<std::uint32_t>();
     handle.fissile = grp.getAttribute("fissile").read<bool>();
     handle.resonant = grp.getAttribute("resonant").read<bool>();
@@ -260,7 +305,8 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
   auto xs_1 = interp_xs(name, temp, bg_xs_1, max_l);
   auto xs_2 = interp_xs(name, temp, bg_xs_2, max_l);
 
-  const double pot_xs = get_nuclide(name).potential_xs;
+  const auto& nuclide = get_nuclide(name);
+  const double pot_xs = nuclide.ir_lambda * nuclide.potential_xs;
 
   xt::xtensor<double, 1> Et = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> Dtr = xt::zeros<double>({ngroups_});
@@ -334,7 +380,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
   }
 
   const auto& nuclide = get_nuclide(name);
-  const double pot_xs = nuclide.potential_xs;
+  const double pot_xs = nuclide.ir_lambda * nuclide.potential_xs;
   const double macro_pot_xs = N * pot_xs;
 
   if (max_l == 3 && nuclide.p3_scatter == nullptr) max_l--;

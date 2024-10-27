@@ -25,6 +25,7 @@ struct NuclideHandle {
   std::vector<double> temperatures;
   std::vector<double> dilutions;
   double awr;
+  double ir_lambda;
   double potential_xs;
   std::uint32_t ZA;
   bool fissile;
@@ -47,6 +48,7 @@ struct NuclideHandle {
 
 class NDLibrary {
  public:
+  NDLibrary();
   NDLibrary(const std::string& fname);
 
   std::size_t ngroups() const { return ngroups_; }
@@ -59,8 +61,6 @@ class NDLibrary {
 
   NuclideHandle& get_nuclide(const std::string& name);
   const NuclideHandle& get_nuclide(const std::string& name) const;
-
-  void convert_fractions(Material& mat) const;
 
   std::shared_ptr<CrossSection> interp_xs(const std::string& name,
                                           const double temp, const double dil,
@@ -93,6 +93,8 @@ class NDLibrary {
 
   NDLibrary(const NDLibrary&) = delete;
   NDLibrary& operator=(const NDLibrary&) = delete;
+
+  void init();
 
   void get_temp_interp_params(double temp, const NuclideHandle& nuc,
                               std::size_t& i, double& f) const;

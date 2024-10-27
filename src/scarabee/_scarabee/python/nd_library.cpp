@@ -2,6 +2,7 @@
 #include <pybind11/stl.h>
 
 #include <data/nd_library.hpp>
+#include <utils/constants.hpp>
 
 #include <memory>
 
@@ -33,6 +34,9 @@ void init_NuclideHandle(py::module& m) {
       .def_readonly("potential_xs", &NuclideHandle::potential_xs,
                     "Potential scattering cross section of the nuclide.")
 
+      .def_readonly("ir_lambda", &NuclideHandle::ir_lambda,
+                    "Intermediate resonance parameters of the nuclide.")
+
       .def_readonly("ZA", &NuclideHandle::ZA,
                     "The ZA number of the nuclide, constructed as Z*1000 + A.")
 
@@ -45,12 +49,16 @@ void init_NuclideHandle(py::module& m) {
 
 void init_NDLibrary(py::module& m) {
   py::class_<NDLibrary, std::shared_ptr<NDLibrary>>(m, "NDLibrary")
+      .def(py::init<>(),
+           "Creates a new NDLibrary object from the HDF5 file pointed to by "
+           "the environemnt variable " NDL_ENV_VAR ".\n\n")
+
       .def(py::init<const std::string&>(),
            "Creates a new NDLibrary object from an HDF5 file.\n\n"
            "Parameters\n"
            "----------\n"
            "fname : str\n"
-           "        Name of the hdf5 file with the library.",
+           "        Name of the hdf5 file with the library.\n\n",
            py::arg("fname"))
 
       .def("get_nuclide",
