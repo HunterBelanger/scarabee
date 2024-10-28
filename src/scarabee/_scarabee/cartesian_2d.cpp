@@ -133,72 +133,6 @@ Cartesian2D::Cartesian2D(const std::vector<double>& dx,
   fsr_offset_map_.resize({nx_, ny_});
 }
 
-bool Cartesian2D::inside(const Vector& r, const Direction& u) const {
-  return this->get_tile_index(r, u).has_value();
-}
-
-double Cartesian2D::distance(const Vector& r, const Direction& u) const {
-  Surface x, y;
-  x.type() = Surface::Type::XPlane;
-  y.type() = Surface::Type::YPlane;
-
-  x.x0() = x_min();
-  const double x_min_dist = x.distance(r, u);
-
-  x.x0() = x_max();
-  const double x_max_dist = x.distance(r, u);
-
-  y.y0() = y_min();
-  const double y_min_dist = y.distance(r, u);
-
-  y.y0() = y_max();
-  const double y_max_dist = y.distance(r, u);
-
-  return std::min(std::min(x_min_dist, x_max_dist),
-                  std::min(y_min_dist, y_max_dist));
-}
-
-std::optional<Cartesian2D::TileIndex> Cartesian2D::get_tile_index(
-    const Vector& r, const Direction& u) const {
-  for (std::size_t i = 0; i < nx(); i++) {
-    for (std::size_t j = 0; j < ny(); j++) {
-      // Get the surfaces that make up our tile
-      const auto& xl = x_bounds_[i];
-      const auto& xh = x_bounds_[i + 1];
-      const auto& yl = y_bounds_[j];
-      const auto& yh = y_bounds_[j + 1];
-
-      // Check if we are in the tile. If so, return index
-      if (xl->side(r, u) == Surface::Side::Positive &&
-          xh->side(r, u) == Surface::Side::Negative &&
-          yl->side(r, u) == Surface::Side::Positive &&
-          yh->side(r, u) == Surface::Side::Negative) {
-        return TileIndex{i, j};
-      }
-    }
-  }
-
-  // If we get here, we weren't in any tile.
-  // Return nullopt
-  return std::nullopt;
-}
-
-Vector Cartesian2D::get_tile_center(const TileIndex& ti) const {
-  // Get the lower and upper x and y bounds
-  const auto& xl = x_bounds_[ti.i];
-  const auto& xh = x_bounds_[ti.i + 1];
-  const auto& yl = y_bounds_[ti.j];
-  const auto& yh = y_bounds_[ti.j + 1];
-
-  return Vector(0.5 * (xl->x0() + xh->x0()), 0.5 * (yl->y0() + yh->y0()));
-}
-
-const Cartesian2D::Tile& Cartesian2D::tile(
-    const Cartesian2D::TileIndex& ti) const {
-  check_tile_index(ti);
-  return tiles_(ti.i, ti.j);
-}
-
 void Cartesian2D::set_tile(const TileIndex& ti,
                            const std::shared_ptr<Cartesian2D>& c2d) {
   check_tile_index(ti);
@@ -278,20 +212,6 @@ std::pair<double, double> Cartesian2D::tile_dx_dy(const TileIndex& ti) const {
   return {xh - xl, yh - yl};
 }
 
-void Cartesian2D::check_tile_index(const TileIndex& ti) const {
-  if (ti.i >= nx_) {
-    auto mssg = "TileIndex i out of range.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  if (ti.j >= ny_) {
-    auto mssg = "TileIndex j out of range.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-}
-
 bool Cartesian2D::tiles_valid() const {
   for (const auto& t : tiles_) {
     if (t.valid() == false) return false;
@@ -350,44 +270,6 @@ UniqueFSR Cartesian2D::get_fsr(const Vector& r, const Direction& u) const {
   // Get unique ID
   if (out.fsr) {
     out.instance += fsr_offset_map_(ti->i, ti->j).find(out.fsr->id())->second;
-  }
-
-  return out;
-}
-
-std::pair<UniqueFSR, Vector> Cartesian2D::get_fsr_r_local(
-    const Vector& r, const Direction& u) const {
-  auto ti = this->get_tile_index(r, u);
-
-  if (ti.has_value() == false) {
-    // We apparently are not in a tile
-    return {{nullptr, 0}, r};
-  }
-
-  const auto& t = this->tile(*ti);
-  const Vector tc = get_tile_center(*ti);
-  Vector r_tile = r - tc;
-
-  if (t.valid() == false) {
-    std::stringstream mssg;
-    mssg << "Tile for Position r = " << r << ", and Direction u = " << u
-         << " is empty.";
-    spdlog::error(mssg.str());
-    throw ScarabeeException(mssg.str());
-  }
-
-  std::pair<UniqueFSR, Vector> out{{nullptr, 0}, r_tile};
-
-  if (t.c2d) {
-    out = t.c2d->get_fsr_r_local(r_tile, u);
-  } else {
-    out.first = t.cell->get_fsr(r_tile, u);
-  }
-
-  // Get unique ID
-  if (out.first.fsr) {
-    out.first.instance +=
-        fsr_offset_map_(ti->i, ti->j).find(out.first.fsr->id())->second;
   }
 
   return out;

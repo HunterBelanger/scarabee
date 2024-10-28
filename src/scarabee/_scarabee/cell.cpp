@@ -77,41 +77,6 @@ void Cell::check_surfaces() const {
   }
 }
 
-bool Cell::inside(const Vector& r, const Direction& u) const {
-  if (x_min_->side(r, u) == Surface::Side::Negative) return false;
-  if (y_min_->side(r, u) == Surface::Side::Negative) return false;
-  if (x_max_->side(r, u) == Surface::Side::Positive) return false;
-  if (y_max_->side(r, u) == Surface::Side::Positive) return false;
-  return true;
-}
-
-double Cell::distance(const Vector& r, const Direction& u) const {
-  const double x_min_dist = x_min_->distance(r, u);
-  const double x_max_dist = x_max_->distance(r, u);
-  const double y_min_dist = y_min_->distance(r, u);
-  const double y_max_dist = y_max_->distance(r, u);
-  return std::min(std::min(x_min_dist, x_max_dist),
-                  std::min(y_min_dist, y_max_dist));
-}
-
-UniqueFSR Cell::get_fsr(const Vector& r, const Direction& u) const {
-  std::stringstream mssg;
-  if (this->inside(r, u) == false) {
-    return {nullptr, 0};
-  }
-
-  for (const auto& fsr : fsrs_) {
-    if (fsr.inside(r, u)) return {&fsr, 0};
-  }
-
-  mssg << "Could not find FSR at r = " << r << ", u = " << u << ".";
-  spdlog::error(mssg.str());
-  throw ScarabeeException(mssg.str());
-
-  // NEVER GETS HERE
-  return {&fsrs_.front(), 0};
-}
-
 std::vector<UniqueFSR> Cell::get_all_fsr_in_cell(const Vector& /*r*/,
                                                  const Direction& /*u*/) const {
   std::vector<UniqueFSR> out;
