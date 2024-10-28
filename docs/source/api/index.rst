@@ -1,7 +1,7 @@
 .. _api:
 
 ============
-Scarabée API
+API
 ============
 
 .. toctree::
