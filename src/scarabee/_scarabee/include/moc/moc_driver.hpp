@@ -4,10 +4,10 @@
 #include <moc/cartesian_2d.hpp>
 #include <moc/cmfd.hpp>
 #include <moc/boundary_condition.hpp>
-#include <moc/simulation_mode.hpp>
 #include <moc/flat_source_region.hpp>
 #include <moc/track.hpp>
 #include <moc/quadrature/polar_quadrature.hpp>
+#include <utils/simulation_mode.hpp>
 #include <utils/spherical_harmonics.hpp>
 
 #include <xtensor/xtensor.hpp>

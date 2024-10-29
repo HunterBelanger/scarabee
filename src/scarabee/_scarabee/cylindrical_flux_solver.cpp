@@ -10,6 +10,7 @@ namespace scarabee {
 CylindricalFluxSolver::CylindricalFluxSolver(
     std::shared_ptr<CylindricalCell> cell)
     : flux_(),
+      extern_source_(),
       j_ext_(),
       x_(),
       cell_(cell),
@@ -17,6 +18,7 @@ CylindricalFluxSolver::CylindricalFluxSolver(
       a_(1.),
       k_tol_(1.E-5),
       flux_tol_(1.E-5),
+      mode_(SimulationMode::Keff),
       solved_(false) {
   if (cell_ == nullptr) {
     auto mssg = "Provided CylindricalCell was a nullptr.";
@@ -31,6 +33,8 @@ CylindricalFluxSolver::CylindricalFluxSolver(
   j_ext_.fill(0.);
   x_.resize({ngroups()});
   x_.fill(0.);
+
+  extern_source_ = xt::zeros<double>({ngroups(), nregions()});
 }
 
 void CylindricalFluxSolver::set_albedo(double a) {
@@ -226,7 +230,7 @@ void CylindricalFluxSolver::solve_single_thread() {
           double Xr = 0.;
           for (std::size_t k = 0; k < nregions(); k++) {
             Xr +=
-                (fiss_source(g, k) + scat_source(g, k)) * cell_->X(a_, g, r, k);
+                (fiss_source(g, k) + scat_source(g, k) + extern_source_(g, k)) * cell_->X(a_, g, r, k);
           }
 
           next_flux(g, r) = Xr + j_ext_[g] * Yr;
@@ -235,22 +239,28 @@ void CylindricalFluxSolver::solve_single_thread() {
 
       // Calculate the max difference in the flux
       max_inner_flux_diff = calc_flux_rel_diff(flux_, next_flux);
-      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter,
-                    max_inner_flux_diff);
+      if (mode_ == SimulationMode::Keff) {
+        spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter, max_inner_flux_diff);
+      } else if (mode_ == SimulationMode::Keff) {
+        spdlog::info("-------------------------------------");
+        spdlog::info("Iteration {:>4d}     max flux difference: {:.5E}", inner_iter, max_inner_flux_diff);
+      }
 
       // Copy next_flux into flux for calculating next relative difference
       flux_ = next_flux;
     }  // End of Inner Iterations
     max_outer_flux_diff = calc_flux_rel_diff(old_outer_flux, flux_);
 
-    // Calculate keff
-    old_keff = k_;
-    k_ = calc_keff(next_flux);
-    spdlog::info("-------------------------------------");
-    spdlog::info("Iteration {:>4d}          keff: {:.5f}", outer_iter, k_);
-    spdlog::info("     keff difference:     {:.5E}",
-                 std::abs((old_keff - k_) / k_));
-    spdlog::info("     max flux difference: {:.5E}", max_outer_flux_diff);
+    if (mode_ == SimulationMode::Keff) {
+      // Calculate keff
+      old_keff = k_;
+      k_ = calc_keff(next_flux);
+      spdlog::info("-------------------------------------");
+      spdlog::info("Iteration {:>4d}          keff: {:.5f}", outer_iter, k_);
+      spdlog::info("     keff difference:     {:.5E}",
+                  std::abs((old_keff - k_) / k_));
+      spdlog::info("     max flux difference: {:.5E}", max_outer_flux_diff);
+    }
 
     // Assign next_flux to be the flux
     std::swap(next_flux, flux_);
@@ -261,7 +271,7 @@ void CylindricalFluxSolver::solve_single_thread() {
   // These are used when calculating the currents.
   for (std::uint32_t g = 0; g < ngroups(); g++) {
     for (std::size_t r = 0; r < nregions(); r++) {
-      x_[g] += (Qfiss(g, r, flux_) + Qscat(g, r, flux_)) * cell_->x(g, r);
+      x_[g] += (Qfiss(g, r, flux_) + Qscat(g, r, flux_) + extern_source_(g, r)) * cell_->x(g, r);
     }
   }
 
@@ -323,7 +333,7 @@ void CylindricalFluxSolver::solve_parallel() {
           double Xr = 0.;
           for (std::size_t k = 0; k < nregions(); k++) {
             Xr +=
-                (fiss_source(g, k) + scat_source(g, k)) * cell_->X(a_, g, r, k);
+                (fiss_source(g, k) + scat_source(g, k) + extern_source_(g, k)) * cell_->X(a_, g, r, k);
           }
 
           next_flux(g, r) = Xr + j_ext_[g] * Yr;
@@ -332,22 +342,28 @@ void CylindricalFluxSolver::solve_parallel() {
 
       // Calculate the max difference in the flux
       max_inner_flux_diff = calc_flux_rel_diff(flux_, next_flux);
-      spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter,
-                    max_inner_flux_diff);
+      if (mode_ == SimulationMode::Keff) {
+        spdlog::debug("Inner iteration {} flux diff {:.5E}", inner_iter, max_inner_flux_diff);
+      } else if (mode_ == SimulationMode::Keff) {
+        spdlog::info("-------------------------------------");
+        spdlog::info("Iteration {:>4d}     max flux difference: {:.5E}", inner_iter, max_inner_flux_diff);
+      }
 
       // Copy next_flux into flux for calculating next relative difference
       flux_ = next_flux;
     }  // End of Inner Iterations
     max_outer_flux_diff = calc_flux_rel_diff(old_outer_flux, flux_);
 
-    // Calculate keff
-    old_keff = k_;
-    k_ = calc_keff(next_flux);
-    spdlog::info("-------------------------------------");
-    spdlog::info("Iteration {:>4d}          keff: {:.5f}", outer_iter, k_);
-    spdlog::info("     keff difference:     {:.5E}",
-                 std::abs((old_keff - k_) / k_));
-    spdlog::info("     max flux difference: {:.5E}", max_outer_flux_diff);
+    if (mode_ == SimulationMode::Keff) {
+      // Calculate keff
+      old_keff = k_;
+      k_ = calc_keff(next_flux);
+      spdlog::info("-------------------------------------");
+      spdlog::info("Iteration {:>4d}          keff: {:.5f}", outer_iter, k_);
+      spdlog::info("     keff difference:     {:.5E}",
+                  std::abs((old_keff - k_) / k_));
+      spdlog::info("     max flux difference: {:.5E}", max_outer_flux_diff);
+    }
 
     // Assign next_flux to be the flux
     std::swap(next_flux, flux_);
@@ -358,7 +374,7 @@ void CylindricalFluxSolver::solve_parallel() {
   // These are used when calculating the currents.
   for (std::uint32_t g = 0; g < ngroups(); g++) {
     for (std::size_t r = 0; r < nregions(); r++) {
-      x_[g] += (Qfiss(g, r, flux_) + Qscat(g, r, flux_)) * cell_->x(g, r);
+      x_[g] += (Qfiss(g, r, flux_) + Qscat(g, r, flux_) + extern_source_(g, r)) * cell_->x(g, r);
     }
   }
 

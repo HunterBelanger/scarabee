@@ -3,6 +3,7 @@
 
 #include <cylindrical_cell.hpp>
 #include <cross_section.hpp>
+#include <utils/simulation_mode.hpp>
 
 #include <xtensor/xtensor.hpp>
 
@@ -26,6 +27,16 @@ class CylindricalFluxSolver {
   const std::shared_ptr<CrossSection>& xs(std::size_t i) const {
     return cell_->xs(i);
   }
+
+  double extern_src(std::size_t i, std::size_t g) const {
+    return extern_source_(g, i);
+  }
+  void set_extern_src(std::size_t i, std::size_t g, double src) {
+    extern_source_(g, i) = src;
+  }
+
+  SimulationMode& sim_mode() { return mode_; }
+  const SimulationMode& sim_mode() const { return mode_; }
 
   std::shared_ptr<CrossSection> homogenize() const;
   std::shared_ptr<CrossSection> homogenize(std::size_t i_max) const;
@@ -69,6 +80,7 @@ class CylindricalFluxSolver {
 
  private:
   xt::xtensor<double, 2> flux_;
+  xt::xtensor<double, 2> extern_source_;
   xt::xtensor<double, 1> j_ext_;
   xt::xtensor<double, 1> x_;
   std::shared_ptr<CylindricalCell> cell_;
@@ -76,6 +88,7 @@ class CylindricalFluxSolver {
   double a_;
   double k_tol_;
   double flux_tol_;
+  SimulationMode mode_;
   bool solved_;
 
   double calc_keff(const xt::xtensor<double, 2>& flux) const;
