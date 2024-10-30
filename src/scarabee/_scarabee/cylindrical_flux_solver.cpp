@@ -194,8 +194,13 @@ void CylindricalFluxSolver::solve_single_thread() {
   xt::xtensor<double, 2> fiss_source(flux_.shape());
   xt::xtensor<double, 2> next_flux(flux_.shape());
   xt::xtensor<double, 2> old_outer_flux(flux_.shape());
-  k_ = calc_keff(flux_);
   double old_keff = 100.;
+  if (mode_ == SimulationMode::Keff) {
+    k_ = calc_keff(flux_);
+  } else {
+    k_ = 1.;
+    old_keff = k_;
+  }
 
   std::size_t outer_iter = 0;
 
@@ -295,8 +300,13 @@ void CylindricalFluxSolver::solve_parallel() {
   xt::xtensor<double, 2> fiss_source(flux_.shape());
   xt::xtensor<double, 2> next_flux(flux_.shape());
   xt::xtensor<double, 2> old_outer_flux(flux_.shape());
-  k_ = calc_keff(flux_);
   double old_keff = 100.;
+  if (mode_ == SimulationMode::Keff) {
+    k_ = calc_keff(flux_);
+  } else {
+    k_ = 1.;
+    old_keff = k_;
+  }
 
   std::size_t outer_iter = 0;
 
