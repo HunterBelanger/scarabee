@@ -83,14 +83,18 @@ void init_CylindricalFluxSolver(py::module& m) {
                     &CylindricalFluxSolver::set_albedo,
                     "Albedo for outer cell boundary.")
 
-       .def_property(
+      .def_property(
           "sim_mode",
-          [](const CylindricalFluxSolver& cfs) -> SimulationMode { return cfs.sim_mode(); },
-          [](CylindricalFluxSolver& cfs, SimulationMode& m) { cfs.sim_mode() = m; },
+          [](const CylindricalFluxSolver& cfs) -> SimulationMode {
+            return cfs.sim_mode();
+          },
+          [](CylindricalFluxSolver& cfs, SimulationMode& m) {
+            cfs.sim_mode() = m;
+          },
           ":py:class:`SimulationMode` describing type of simulation "
           "(fixed-source or keff).")
 
-       .def("set_extern_src", &CylindricalFluxSolver::set_extern_src,
+      .def("set_extern_src", &CylindricalFluxSolver::set_extern_src,
            "Sets the external source in Flat Source Region with index i.\n\n"
            "Parameters\n"
            "----------\n"
@@ -102,7 +106,7 @@ void init_CylindricalFluxSolver(py::module& m) {
            "      Value of source in the FSR.\n",
            py::arg("i"), py::arg("g"), py::arg("src"))
 
-       .def("extern_src", &CylindricalFluxSolver::extern_src,
+      .def("extern_src", &CylindricalFluxSolver::extern_src,
            "Returns the external source in Flat Source Region i.\n\n"
            "Parameters\n"
            "----------\n"
