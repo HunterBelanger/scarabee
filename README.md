@@ -4,7 +4,7 @@ Scarabée is a simplified lattice physics code for light water reactor (LWR)
 neutronics calculations. It currently has the following features:
 
 * Resonance self-shielding according to Carlvik's 2-term rational approximation
-* 1D Annular pin cell collision probabilities solver for k-eigenvalue problems
+* 1D Annular pin cell collision probabilities solver for fixed-source and k-eigenvalue problems
 * 2D Method of characteristics solver for fixed-source and k-eigenvalue problems
 * Finite difference diffusion solver for 1D, 2D, and 3D k-eigenvalue problems
 * Nodal expansion method diffusion solver for 3D k-eigenvalue problems
