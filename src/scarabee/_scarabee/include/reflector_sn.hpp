@@ -60,8 +60,8 @@ class ReflectorSN {
   void fill_scatter_source(xt::xtensor<double, 2>& Qscat,
                            const xt::xtensor<double, 2>& flux) const;
 
-  static const std::array<double, 32> mu_;
-  static const std::array<double, 32> wgt_;
+  static const std::array<double, 64> mu_;
+  static const std::array<double, 64> wgt_;
 };
 
 }  // namespace scarabee
