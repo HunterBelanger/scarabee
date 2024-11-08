@@ -105,6 +105,10 @@ void ReflectorSN::solve() {
     }
   }
 
+  // Array to hold the incident flux at the reflective boundary. We create
+  // this here instead of in the sweep to avoid making memory allocations.
+  xt::xtensor<double, 2> incident_angular_flux = xt::zeros<double>({NG, mu_.size()});
+
   // Outer Iterations
   double keff_diff = 100.;
   double flux_diff = 100.;
@@ -129,7 +133,7 @@ void ReflectorSN::solve() {
     }
 
     next_flux.fill(0.);
-    sweep(next_flux, Q);
+    sweep(next_flux, incident_angular_flux, Q);
 
     // Apply stabalization (see [1])
     for (std::size_t i = 0; i < D.size(); i++) {
@@ -158,7 +162,7 @@ void ReflectorSN::solve() {
     keff_diff = std::abs((old_keff - keff_) / keff_);
 
     spdlog::info("-------------------------------------");
-    spdlog::info("Iteration {:>6d}         keff: {:.5f}", iteration, keff_);
+    spdlog::info("Iteration {:>6d}        keff: {:.5f}", iteration, keff_);
     spdlog::info("     keff difference:     {:.5E}", keff_diff);
     spdlog::info("     max flux difference: {:.5E}", flux_diff);
 
@@ -174,14 +178,16 @@ void ReflectorSN::solve() {
   solved_ = true;
 }
 
-void ReflectorSN::sweep(xt::xtensor<double, 2>& flux,
-                        const xt::xtensor<double, 2>& Q) {
+void ReflectorSN::sweep(xt::xtensor<double, 2>& flux, xt::xtensor<double,2>& incident_angular_flux, const xt::xtensor<double, 2>& Q) {
   const std::size_t NG = xs_.front()->ngroups();
+  const int iNG = static_cast<int>(NG);
 
-  xt::xtensor<double, 1> incident_angular_flux =
-      xt::zeros<double>({mu_.size()});
+  incident_angular_flux.fill(0.);
 
-  for (std::size_t g = 0; g < NG; g++) {
+#pragma omp parallel for
+  for (int ig = 0; ig < iNG; ig++) {
+    const std::size_t g = static_cast<std::size_t>(ig);
+
     for (std::size_t n = 0; n < mu_.size(); n++) {
       const double mu = mu_[n];
       double flux_in = 0.;
@@ -209,14 +215,14 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux,
 
           // Save outgoing flux as an incident flux
           if (i == 0) {
-            incident_angular_flux[mu_.size() - 1 - n] = flux_out;
+            incident_angular_flux(g, mu_.size() - 1 - n) = flux_out;
           }
 
           flux_in = flux_out;
         }
       } else {
         // Track from left to right (positive direction)
-        flux_in = incident_angular_flux[n];
+        flux_in = incident_angular_flux(g, n);
 
         for (std::size_t i = 0; i < xs_.size(); i++) {
           const double dx = dx_[i];
@@ -236,7 +242,7 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux,
         }
       }
     }  // for all mu
-    incident_angular_flux.fill(0.);
+    xt::view(incident_angular_flux, g, xt::all()) = 0.;
   }  // for all groups
 }
 

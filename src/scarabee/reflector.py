@@ -1,13 +1,16 @@
 from _scarabee import *
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 class Reflector:
     """
     A Reflector instance is responsible for performing transport calculations
     necessary to produce few-group cross sections for the reflector of an LWR.
     The core baffle cross sections are self-shielded as an infinite slab,
-    using the Roman two-term approximation.
+    using the Roman two-term approximation. The calculation is performed using
+    a 1D Sn simulation, in the group structure of the nuclear data library.
+    This removes the need to obtain a fine-group spectrum that would be used
+    to condense to an intermediate group structure.
 
     Parameters
     ----------
@@ -30,12 +33,8 @@ class Reflector:
 
     Attributes
     ----------
-    condensation_scheme : list of pairs of ints
-        Defines how the energy groups will be condensed from the microgroup
-        structure of the nuclear data library, to the macrogroup structure
-        used in the MOC calculation.
     few_group_condensation_scheme : list of pairs of ints
-        Defines how the energy groups will be condensed from the macrogroup
+        Defines how the energy groups will be condensed from the microgroup
         structure of to the few-group structure used in nodal calculations.
     fuel : CrossSection
         Cross sections for a homogenized fuel assembly.
@@ -76,7 +75,6 @@ class Reflector:
         self.assembly_width = assembly_width
         self.gap_width = gap_width
         self.baffle_width = baffle_width
-        self.condensation_scheme = None
         self.few_group_condensation_scheme = None
 
         # No Dancoff correction, as looking at 1D isolated slab for baffle
@@ -87,150 +85,58 @@ class Reflector:
         self.keff_tolerance = 1.0e-5
         self.flux_tolerance = 1.0e-5
 
-        self._num_azimuthal_angles = 64
-        self._track_spacing = 0.01
-
         if self.gap_width + self.baffle_width >= self.assembly_width:
             raise RuntimeError(
                 "The assembly width is smaller than the sum of the gap and baffle widths."
             )
 
-    @property
-    def track_spacing(self):
-        return self._track_spacing
-
-    @track_spacing.setter
-    def track_spacing(self, value: float):
-        if value <= 0.0:
-            raise RuntimeError("Track spacing must be > 0.")
-
-        if value >= 1.0:
-            raise RuntimeWarning("Track spacing should be < 1.")
-
-        self._track_spacing = value
-
-    @property
-    def num_azimuthal_angles(self):
-        return self._num_azimuthal_angles
-
-    @num_azimuthal_angles.setter
-    def num_azimuthal_angles(self, value: int):
-        if value < 4:
-            raise RuntimeError("Number of azimuthal angles must be >= 4.")
-
-        if value % 2 != 0:
-            raise RuntimeError("Number of azimuthal angles must be even.")
-
-        self._num_azimuthal_angles = value
-
     def solve(self):
         """
         Runs a 1D annular problem to generate few group cross sections for the reflector.
         """
-        if self.condensation_scheme is None:
-            raise RuntimeError("Cannot perform reflector calculation without condensation scheme.")
-        
         if self.few_group_condensation_scheme is None:
             raise RuntimeError("Cannot perform reflector calculation without few-group condensation scheme.")
 
-        # We start by making a cylindrical cell. This is just for condensation.
-        radii = []
+        # We start by making a ReflectorSn to do 1D calculation
+        dx = []
         mats = []
 
         # We add 2 fuel assemblies worth of homogenized core
-        NF = 2 * 17
-        dr = self.assembly_width / (17.0)
-        last_rad = 0.0
-        fuel_regions = list(range(NF))
-        for i in range(NF):
-            radii.append(last_rad + dr)
-            last_rad = radii[-1]
-            mats.append(self.fuel)
+        NF = 2 * 10 * 17
+        dr = 2. * self.assembly_width / (float(NF))
+        dx += [dr]*NF
+        mats += [self.fuel]*NF
 
         # We now add one ring for the gap
-        gap_regions = [NF]
-        radii.append(last_rad + self.gap_width)
-        last_rad = radii[-1]
-        mats.append(self.moderator)
+        NG = 3
+        dr = self.gap_width / (float(NG))
+        dx += [dr]*NG
+        mats += [self.moderator]*NG
 
-        # Now we add 6 regions for the baffle
-        NB = 6
-        baffle_regions = list(range(len(radii), len(radii) + NB))
+        # Now we add 20 regions for the baffle
+        NB = 20
         dr = self.baffle_width / float(NB)
-        for i in range(NB):
-            radii.append(last_rad + dr)
-            last_rad = radii[-1]
-            mats.append(self.baffle)
+        dx += [dr]*NB
+        mats += [self.baffle]*NB
 
         # Now we add the outer water reflector regions
         ref_width = self.assembly_width - self.gap_width - self.baffle_width
-        NR = int(ref_width / 0.3) + 1
+        NR = int(ref_width / 0.02) + 1
         dr = ref_width / float(NR)
-        ref_regions = list(range(len(radii), len(radii) + NR))
-        for i in range(NR):
-            radii.append(last_rad + dr)
-            last_rad = radii[-1]
-            mats.append(self.moderator)
+        dx += [dr]*NR
+        mats += [self.moderator]*NR
 
-        cell = CylindricalCell(radii, mats)
-        cell.solve(parallel=True)
-        cell_flux = CylindricalFluxSolver(cell)
-        cell_flux.albedo = 0.0
-        cell_flux.keff_tolerance = self.keff_tolerance
-        cell_flux.flux_tolerance = self.flux_tolerance
-        cell_flux.solve(parallel=True)
+        ref_sn = ReflectorSN(mats, dx) 
+        ref_sn.solve()
 
-        # We now get homogenized xs and spectrums
-        fuel_spectrum = cell_flux.homogenize_flux_spectrum(fuel_regions)
-        fuel_homog_xs = cell_flux.homogenize(fuel_regions)
-        gap_spectrum = cell_flux.homogenize_flux_spectrum(gap_regions)
-        gap_homog_xs = cell_flux.homogenize(gap_regions)
-        baffle_spectrum = cell_flux.homogenize_flux_spectrum(baffle_regions)
-        baffle_homog_xs = cell_flux.homogenize(baffle_regions)
-        ref_spectrum = cell_flux.homogenize_flux_spectrum(ref_regions)
-        ref_homog_xs = cell_flux.homogenize(ref_regions)
-
-        # Now condense cross sections for the assembly-reflector MOC calculation
-        fuel_macro_xs = fuel_homog_xs.condense(self.condensation_scheme, fuel_spectrum)
-        gap_macro_xs = gap_homog_xs.condense(self.condensation_scheme, gap_spectrum)
-        baffle_macro_xs = baffle_homog_xs.condense(self.condensation_scheme, baffle_spectrum)
-        ref_macro_xs = ref_homog_xs.condense(self.condensation_scheme, ref_spectrum)
-
-        # We make a 1D MOC geometry for computing the reflector data
-        dy = 2.*self.assembly_width + self.gap_width + self.baffle_width + ref_width
-        dx = []
-        moc_1d_cells = []
-        NF = 2 * 17 * 2 # 17 pins, 2 FSR per pin cell
-        dr = (2.*self.assembly_width) / NF
-        dx += NF*[dr]
-        moc_1d_cells += NF*[EmptyCell(fuel_macro_xs, dr, dy)]
-        dr = self.gap_width
-        dx += [dr]
-        moc_1d_cells += [EmptyCell(gap_macro_xs, dr, dy)]
-        dr = self.baffle_width / NB
-        dx += NB*[dr]
-        moc_1d_cells += NB*[EmptyCell(baffle_macro_xs, dr, dy)]
-        dr = ref_width / NR
-        dx += NR*[dr]
-        moc_1d_cells += NR * [EmptyCell(ref_macro_xs, dr, dy)]
-        moc_geom = Cartesian2D(dx, [dy])
-        moc_geom.set_tiles(moc_1d_cells)
-
-        moc = MOCDriver(moc_geom)
-        moc.x_max_bc = BoundaryCondition.Vacuum
-        moc.generate_tracks(self.num_azimuthal_angles, self.track_spacing, YamamotoTabuchi6())
-        moc.keff_tolerance = self.keff_tolerance
-        moc.flux_tolerance = self.flux_tolerance
-        moc.solve()
-
-        few_group_flux = np.zeros((len(self.few_group_condensation_scheme), NF+1+NB+NR))
+        few_group_flux = np.zeros((len(self.few_group_condensation_scheme), NF+NG+NB+NR))
         for i in range(NF+1+NB+NR):
             for G in range(len(self.few_group_condensation_scheme)):
                 g_min = self.few_group_condensation_scheme[G][0]
                 g_max = self.few_group_condensation_scheme[G][1]
 
                 for g in range(g_min, g_max+1):
-                    few_group_flux[G, i] += moc.flux(i, g)
+                    few_group_flux[G, i] += ref_sn.flux(i, g)
         dx = np.array(dx)
         x = np.zeros(len(dx))
         for i in range(len(dx)):
@@ -240,36 +146,44 @@ class Reflector:
                 x[i] = x[i-1] + 0.5*(dx[i-1] + dx[i])
 
         # Here we compute the cross sections
-        homog_xs = moc.homogenize(list(range(NF, NF+1+NB+NR)))
-        homog_spec = moc.homogenize_flux_spectrum(list(range(NF, NF+1+NB+NR)))
+        homog_xs   = ref_sn.homogenize(list(range(NF, NF+NG+NB+NR)))
+        homog_spec = ref_sn.homogenize_flux_spectrum(list(range(NF, NF+NG+NB+NR)))
         self.diffusion_xs = Reflector._get_diffusion_xs(homog_xs, homog_spec, self.few_group_condensation_scheme)
 
-        homog_xs = moc.homogenize(list(range(0, NF)))
-        homog_spec = moc.homogenize_flux_spectrum(list(range(0, NF)))
+        homog_xs   = ref_sn.homogenize(list(range(0, NF)))
+        homog_spec = ref_sn.homogenize_flux_spectrum(list(range(0, NF)))
         fuel_diffusion_xs = Reflector._get_diffusion_xs(homog_xs, homog_spec, self.few_group_condensation_scheme)
 
         # Do nodal calculation to obtain homogeneous flux
         nodal_tiles = [fuel_diffusion_xs, self.diffusion_xs]
         nodal_geom = DiffusionGeometry(nodal_tiles, [2.*self.assembly_width, self.assembly_width], [8, 4],
-                                       [10.], [1], [10.], [1], 1., 0., 1., 1., 1., 1.) 
+                                       [1.], [1], [1.], [1], 1., 0., 1., 1., 1., 1.) 
         nodal_solver = NEMDiffusionDriver(nodal_geom)
         nodal_solver.solve()
         nodal_flux = np.zeros((len(self.few_group_condensation_scheme), len(x)))
         for i in range(len(x)):
             for g in range(len(self.few_group_condensation_scheme)):
-                nodal_flux[g, i] = nodal_solver.flux(x[i], 5., 5., g)
+                nodal_flux[g, i] = nodal_solver.flux(x[i], 0.5, 0.5, g)
         
         # Normalize flux to fast group reflective boundary
-        few_group_flux /= few_group_flux[0,0]
-        nodal_flux /= nodal_flux[0,0]
+        norm_fg_flx = 0.
+        norm_nd_flx = 0.
+        for i in range(len(dx)):
+            #for g in range(len(self.few_group_condensation_scheme)):
+            #    norm_fg_flx += dx[i]*few_group_flux[g,i]
+            #    norm_nd_flx += dx[i]*nodal_flux[g,i]
+            norm_fg_flx += dx[i]*few_group_flux[0,i]
+            norm_nd_flx += dx[i]*nodal_flux[0,i]
+        few_group_flux /= norm_fg_flx
+        nodal_flux /= norm_nd_flx
         
         # Keep this commented, just in case it's needed later
-        #plt.plot(x, few_group_flux[0,:], label="Fast Hetero")
-        #plt.plot(x, few_group_flux[1,:], label="Thermal Hetero")
-        #plt.plot(x, nodal_flux[0,:], label="Fast Homo")
-        #plt.plot(x, nodal_flux[1,:], label="Thermal Homo")
-        #plt.legend().set_draggable(True)
-        #plt.show()
+        plt.plot(x, few_group_flux[0,:], label="Fast Hetero")
+        plt.plot(x, few_group_flux[1,:], label="Thermal Hetero")
+        plt.plot(x, nodal_flux[0,:], label="Fast Homo")
+        plt.plot(x, nodal_flux[1,:], label="Thermal Homo")
+        plt.legend().set_draggable(True)
+        plt.show()
 
         # Here, we compute the ADFs
         self.adf = np.zeros((len(self.few_group_condensation_scheme), 4))

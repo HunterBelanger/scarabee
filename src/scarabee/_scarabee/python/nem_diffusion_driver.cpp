@@ -42,7 +42,7 @@ void init_NEMDiffusionDriver(py::module& m) {
 
       .def_property(
           "flux_tolerance", &NEMDiffusionDriver::flux_tolerance,
-          &NEMDiffusionDriver::flux_tolerance,
+          &NEMDiffusionDriver::set_flux_tolerance,
           "Maximum relative error in the flux for problem convergence.")
 
       .def("flux",

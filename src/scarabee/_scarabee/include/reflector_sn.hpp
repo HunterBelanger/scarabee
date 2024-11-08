@@ -51,7 +51,7 @@ class ReflectorSN {
   std::size_t ngroups_;
   bool solved_{false};
 
-  void sweep(xt::xtensor<double, 2>& flux, const xt::xtensor<double, 2>& Q);
+  void sweep(xt::xtensor<double, 2>& flux, xt::xtensor<double,2>& incident_angular_flux, const xt::xtensor<double, 2>& Q);
   double calc_keff(const xt::xtensor<double, 2>& old_flux,
                    const xt::xtensor<double, 2>& new_flux,
                    const double keff) const;
