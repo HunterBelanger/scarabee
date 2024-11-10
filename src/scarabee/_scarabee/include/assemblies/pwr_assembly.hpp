@@ -145,8 +145,8 @@ class PWRAssembly {
   PolarQuadrature dancoff_polar_quadrature_{YamamotoTabuchi<6>()};
 
   // MOC parameters for assembly calculation
-  std::uint32_t num_azimuthal_angles_{32};
-  double track_spacing_{0.02};
+  std::uint32_t num_azimuthal_angles_{64};
+  double track_spacing_{0.05};
   double keff_tolerance_{1.0e-5};
   double flux_tolerance_{1.0e-5};
   PolarQuadrature polar_quadrature_{YamamotoTabuchi<6>()};

@@ -92,6 +92,7 @@ nz = np.array([1])
 
 geom = DiffusionGeometry(tiles, dx, nx, dy, ny, dz, nz, 0., 0., 0., 0., 1., 1.)
 solver = NEMDiffusionDriver(geom)
+solver.flux_tolerance = 1.E-8
 solver.solve()
 
 x_max = np.sum(dx)

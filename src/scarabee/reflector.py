@@ -1,6 +1,6 @@
 from _scarabee import *
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 class Reflector:
     """
@@ -134,7 +134,6 @@ class Reflector:
             for G in range(len(self.few_group_condensation_scheme)):
                 g_min = self.few_group_condensation_scheme[G][0]
                 g_max = self.few_group_condensation_scheme[G][1]
-
                 for g in range(g_min, g_max+1):
                     few_group_flux[G, i] += ref_sn.flux(i, g)
         dx = np.array(dx)
@@ -144,15 +143,25 @@ class Reflector:
                 x[0] = 0.5*dx[0]
             else:
                 x[i] = x[i-1] + 0.5*(dx[i-1] + dx[i])
+        
+        # Normalize flux to fission production
+        norm_few_group_flx = 0.
+        for i in range(NF):
+            v = dx[i]
+            for g in range(self.fuel.ngroups):
+                norm_few_group_flx += v*ref_sn.flux(i,g)*self.fuel.vEf(g)
+        few_group_flux /= norm_few_group_flx
 
         # Here we compute the cross sections
-        homog_xs   = ref_sn.homogenize(list(range(NF, NF+NG+NB+NR)))
-        homog_spec = ref_sn.homogenize_flux_spectrum(list(range(NF, NF+NG+NB+NR)))
-        self.diffusion_xs = Reflector._get_diffusion_xs(homog_xs, homog_spec, self.few_group_condensation_scheme)
+        ref_homog_xs   = ref_sn.homogenize(list(range(NF, NF+NG+NB+NR)))
+        ref_homog_spec = ref_sn.homogenize_flux_spectrum(list(range(NF, NF+NG+NB+NR)))
+        ref_homog_diff_xs = ref_homog_xs.diffusion_xs()
+        self.diffusion_xs = ref_homog_diff_xs.condense(self.few_group_condensation_scheme, ref_homog_spec)
 
-        homog_xs   = ref_sn.homogenize(list(range(0, NF)))
-        homog_spec = ref_sn.homogenize_flux_spectrum(list(range(0, NF)))
-        fuel_diffusion_xs = Reflector._get_diffusion_xs(homog_xs, homog_spec, self.few_group_condensation_scheme)
+        fuel_homog_xs   = ref_sn.homogenize(list(range(0, NF)))
+        fuel_homog_spec = ref_sn.homogenize_flux_spectrum(list(range(0, NF)))
+        fuel_homog_diff_xs = fuel_homog_xs.diffusion_xs()
+        fuel_diffusion_xs = fuel_homog_diff_xs.condense(self.few_group_condensation_scheme, fuel_homog_spec)
 
         # Do nodal calculation to obtain homogeneous flux
         nodal_tiles = [fuel_diffusion_xs, self.diffusion_xs]
@@ -165,25 +174,21 @@ class Reflector:
             for g in range(len(self.few_group_condensation_scheme)):
                 nodal_flux[g, i] = nodal_solver.flux(x[i], 0.5, 0.5, g)
         
-        # Normalize flux to fast group reflective boundary
-        norm_fg_flx = 0.
+        # Normalize flux to fission production
         norm_nd_flx = 0.
-        for i in range(len(dx)):
-            #for g in range(len(self.few_group_condensation_scheme)):
-            #    norm_fg_flx += dx[i]*few_group_flux[g,i]
-            #    norm_nd_flx += dx[i]*nodal_flux[g,i]
-            norm_fg_flx += dx[i]*few_group_flux[0,i]
-            norm_nd_flx += dx[i]*nodal_flux[0,i]
-        few_group_flux /= norm_fg_flx
+        for i in range(NF):
+            v = dx[i]
+            for g in range(len(self.few_group_condensation_scheme)):
+                norm_nd_flx += v*nodal_flux[g,i]*fuel_diffusion_xs.vEf(g)
         nodal_flux /= norm_nd_flx
         
-        # Keep this commented, just in case it's needed later
-        plt.plot(x, few_group_flux[0,:], label="Fast Hetero")
-        plt.plot(x, few_group_flux[1,:], label="Thermal Hetero")
-        plt.plot(x, nodal_flux[0,:], label="Fast Homo")
-        plt.plot(x, nodal_flux[1,:], label="Thermal Homo")
-        plt.legend().set_draggable(True)
-        plt.show()
+        ## Keep this commented, just in case it's needed later
+        #plt.plot(x, few_group_flux[0,:], label="Fast Hetero")
+        #plt.plot(x, few_group_flux[1,:], label="Thermal Hetero")
+        #plt.plot(x, nodal_flux[0,:], label="Fast Homo")
+        #plt.plot(x, nodal_flux[1,:], label="Thermal Homo")
+        #plt.legend().set_draggable(True)
+        #plt.show()
 
         # Here, we compute the ADFs
         self.adf = np.zeros((len(self.few_group_condensation_scheme), 4))
