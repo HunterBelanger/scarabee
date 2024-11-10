@@ -168,6 +168,12 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
     throw ScarabeeException(mssg);
   }
 
+  if (n_angles == 6) {
+    auto mssg = "MOCDriver cannot use 6 angles.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   if (d <= 0.) {
     auto mssg = "MOCDriver track spacing must be > 0.";
     spdlog::error(mssg);
