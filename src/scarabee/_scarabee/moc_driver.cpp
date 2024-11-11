@@ -155,24 +155,19 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
     n_pol_angles_ *= 2;
   }
 
-  if (n_angles % 2 != 0) {
-    // If the number of angles is odd, an angle will be lost
-    auto mssg = "MOCDriver must have an even number of angles.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
   if (n_angles < 4) {
     auto mssg = "MOCDriver must have at least 4 angles.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (n_angles == 6) {
-    auto mssg = "MOCDriver cannot use 6 angles.";
+  if (n_angles % 4 != 0) {
+    // If the number of angles isn't a multiple of 4, we won't be able to make
+    // all the boundary condition connections due to an odd number.
+    auto mssg = "MOCDriver number of angles must be a multiple of 4.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
-  }
+  } 
 
   if (d <= 0.) {
     auto mssg = "MOCDriver track spacing must be > 0.";
