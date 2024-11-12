@@ -122,7 +122,7 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
     throw ScarabeeException(mssg);
   }
 
-  if (density < 0. && du != DensityUnits::sum) {
+  if (density <= 0. && du != DensityUnits::sum) {
     auto mssg = "Material density must be >= 0.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
