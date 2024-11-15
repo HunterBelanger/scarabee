@@ -144,14 +144,6 @@ class Reflector:
             else:
                 x[i] = x[i-1] + 0.5*(dx[i-1] + dx[i])
         
-        # Normalize flux to fission production
-        norm_few_group_flx = 0.
-        for i in range(NF):
-            v = dx[i]
-            for g in range(self.fuel.ngroups):
-                norm_few_group_flx += v*ref_sn.flux(i,g)*self.fuel.vEf(g)
-        few_group_flux /= norm_few_group_flx
-
         # Here we compute the cross sections
         ref_homog_xs   = ref_sn.homogenize(list(range(NF, NF+NG+NB+NR)))
         ref_homog_spec = ref_sn.homogenize_flux_spectrum(list(range(NF, NF+NG+NB+NR)))
@@ -163,71 +155,145 @@ class Reflector:
         fuel_homog_diff_xs = fuel_homog_xs.diffusion_xs()
         fuel_diffusion_xs = fuel_homog_diff_xs.condense(self.few_group_condensation_scheme, fuel_homog_spec)
 
+        # Obtain net currents at node boundaries and average flux
+        avg_flx_ref = np.zeros(len(self.few_group_condensation_scheme))
+        avg_flx_fuel = np.zeros(len(self.few_group_condensation_scheme))
+        j_0   = np.zeros(len(self.few_group_condensation_scheme))
+        j_mid = np.zeros(len(self.few_group_condensation_scheme))
+        j_max = np.zeros(len(self.few_group_condensation_scheme))
+        s_mid = NF
+        s_max = ref_sn.nsurfaces - 1
+        for g in range(len(self.few_group_condensation_scheme)):
+            avg_flx_ref[g] = np.mean(few_group_flux[g,NF:])
+            avg_flx_fuel[g] = np.mean(few_group_flux[g,:NF])
+            
+            g_min = self.few_group_condensation_scheme[g][0]
+            g_max = self.few_group_condensation_scheme[g][1]
+            for gg in range(g_min, g_max+1):
+                j_mid[g] += ref_sn.current(s_mid, gg)
+                j_max[g] += ref_sn.current(s_max, gg)
+        
         # Do nodal calculation to obtain homogeneous flux
-        nodal_tiles = [fuel_diffusion_xs, self.diffusion_xs]
-        nodal_geom = DiffusionGeometry(nodal_tiles, [2.*self.assembly_width, self.assembly_width], [8, 4],
-                                       [1.], [1], [1.], [1], 1., 0., 1., 1., 1., 1.) 
-        nodal_solver = NEMDiffusionDriver(nodal_geom)
-        nodal_solver.solve()
-        nodal_flux = np.zeros((len(self.few_group_condensation_scheme), len(x)))
-        for i in range(len(x)):
-            for g in range(len(self.few_group_condensation_scheme)):
-                nodal_flux[g, i] = nodal_solver.flux(x[i], 0.5, 0.5, g)
+        a_fuel = self._nodal_calc(np.sum(dx[:NF]), ref_sn.keff, fuel_diffusion_xs, avg_flx_fuel, j_0, j_mid)
+        a_ref = self._nodal_calc(np.sum(dx[NF:]), ref_sn.keff, self.diffusion_xs, avg_flx_ref, j_mid, j_max)
         
-        # Normalize flux to fission production
-        norm_nd_flx = 0.
-        for i in range(NF):
-            v = dx[i]
-            for g in range(len(self.few_group_condensation_scheme)):
-                norm_nd_flx += v*nodal_flux[g,i]*fuel_diffusion_xs.vEf(g)
-        nodal_flux /= norm_nd_flx
-        
-        ## Keep this commented, just in case it's needed later
-        #plt.plot(x, few_group_flux[0,:], label="Fast Hetero")
-        #plt.plot(x, few_group_flux[1,:], label="Thermal Hetero")
-        #plt.plot(x, nodal_flux[0,:], label="Fast Homo")
-        #plt.plot(x, nodal_flux[1,:], label="Thermal Homo")
-        #plt.legend().set_draggable(True)
-        #plt.show()
-
-        # Here, we compute the ADFs
+        # Compute the ADFs
         self.adf = np.zeros((len(self.few_group_condensation_scheme), 4))
         for G in range(len(self.few_group_condensation_scheme)):
-            self.adf[G,:] = few_group_flux[G, NF] / nodal_flux[G, NF] 
+            heter_flx_fuel = few_group_flux[G, NF-1]
+            homog_flx_fuel = a_fuel[G, 0] + 0.5*a_fuel[G, 1] + 0.5*a_fuel[G, 2]
+
+            heter_flx_ref = few_group_flux[G, NF]
+            homog_flx_ref = a_ref[G,0] - 0.5*a_ref[G, 1] + 0.5*a_ref[G, 2]
+
+            f_fuel = heter_flx_fuel / homog_flx_fuel
+            f_ref = heter_flx_ref / homog_flx_ref
+
+            # Normalize to fuel DF
+            f_ref = f_ref / f_fuel
+
+            self.adf[G,:] = f_ref
         
         # Write data to terminal/output file
         self._write_data()
-    
-    def _get_diffusion_xs(homog_xs, homog_spec, cond_scheme):
-        NG = homog_xs.ngroups
-        fissile = homog_xs.fissile
 
-        D = np.zeros(NG)
-        Ea = np.zeros(NG)
-        Es = np.zeros((NG, NG))
-        if fissile:
-            Ef = np.zeros(NG)
-            vEf = np.zeros(NG)
-            chi = np.zeros(NG)
 
+    def _nodal_calc(self, dx: float, keff: float, xs: DiffusionCrossSection, avg_flx: np.ndarray, j_neg: np.ndarray, j_pos: np.ndarray):
+        """
+        Performs the nodal diffusion calculation with reference currents to return the reference nodal flux.
+
+        Paramters
+        ---------
+        dx : float
+             Width of the node.
+        keff : float
+             Multiplication factor from reference Sn calculation.
+        xs : DiffusionCrossSection
+             Diffusion cross sections homogenized for the node.
+        avg_flx : np.ndarray
+             Average flux in each group within the node from reference Sn
+             calculation.
+        j_neg : np.ndarray
+             Reference net current in each group on the negative boundary
+             from the reference Sn calculation.
+        j_pos : np.ndarray
+             Reference net current in each group on the positive boundary
+             from the reference Sn calculation.
+
+        Returns
+        -------
+        np.ndarray
+             A 2D numpy array containing the coefficients a_g,i. The first
+             index is the group, and the second is the coefficient, which
+             ranges from 0 (average flux) to 4.
+        """
+        NG = xs.ngroups
+        Na = NG * 4            # number of a coefficients to solve for
+        invs_dx = 1. / dx
+        A = np.zeros((Na, Na)) # Matrix to hold all coefficients
+        b = np.zeros((Na))     # Results array
+
+        # Load the coefficient matrix and results array
+        j = 0 # Matrix row
         for g in range(NG):
-            D[g] = 1.0 / (3.0 * homog_xs.Etr(g))
-            Ea[g] = homog_xs.Ea(g)
+            Dg_dx = xs.D(g) * invs_dx
+            Erf_g = 0.
+            chi_g_keff = xs.chi(g) / keff
 
-            if fissile:
-                Ef[g] = homog_xs.Ef(g)
-                vEf[g] = homog_xs.vEf(g)
-                chi[g] = homog_xs.chi(g)
-
+            # Each group has 4 equations. See reference [1].
+            
+            # Eq 2.54
+            A[j, g*4 + 2] -= 0.5*Dg_dx*invs_dx
+            A[j, g*4 + 0] += (Erf_g / 12.)
+            A[j, g*4 + 2] -= 0.1*(Erf_g / 12.)
             for gg in range(NG):
-                Es[g, gg] = homog_xs.Es_tr(g, gg)
+                if gg == g: continue
+                A[j, gg*4 + 0] -= (xs.Es(gg, g) / 12.)
+                A[j, gg*4 + 2] += 0.1*(xs.Es(gg, g) / 12.)
+                A[j, gg*4 + 0] -= chi_g_keff*(xs.vEf(gg) / 12.)
+                A[j, gg*4 + 2] += 0.1*chi_g_keff*(xs.vEf(gg) / 12.)
+            b[j] = 0.
+            j += 1
 
-        if fissile:
-            diff_xs = DiffusionCrossSection(D, Ea, Es, Ef, vEf, chi)
-        else:
-            diff_xs = DiffusionCrossSection(D, Ea, Es)
+            # Eq 2.55
+            A[j, g*4 + 3] -= 0.2*Dg_dx*invs_dx
+            A[j, g*4 + 1] += (Erf_g / 20.)
+            A[j, g*4 + 3] -= (Erf_g / (20. * 35.))
+            for gg in range(NG):
+                if gg == g: continue
+                A[j, gg*4 + 1] -= (xs.Es(gg, g) / 20.)
+                A[j, gg*4 + 3] += (xs.Es(gg, g) / (20. * 35.))
+                A[j, gg*4 + 1] -= chi_g_keff*(xs.vEf(gg) / 20.)
+                A[j, gg*4 + 3] += chi_g_keff*(xs.vEf(gg) / (20. * 35.))
+            b[j] = 0.
+            j += 1
 
-        return diff_xs.condense(cond_scheme, homog_spec)
+            # Eq 2.57
+            A[j, g*4 + 0] -= Dg_dx
+            A[j, g*4 + 1] += Dg_dx
+            A[j, g*4 + 2] -= 0.5*Dg_dx
+            A[j, g*4 + 3] += 0.2*Dg_dx
+            b[j] = j_neg[g]
+            j += 1
+
+            # Eq 2.58
+            A[j, g*4 + 0] -= Dg_dx
+            A[j, g*4 + 1] -= Dg_dx
+            A[j, g*4 + 2] -= 0.5*Dg_dx
+            A[j, g*4 + 3] -= 0.2*Dg_dx
+            b[j] = j_pos[g]
+            j += 1
+        
+        a_tmp = np.linalg.solve(A, b)
+        a_tmp = np.reshape(a_tmp, (NG, 4))
+
+        a = np.zeros((NG, 5))
+        for g in range(NG):
+            a[g,0] = avg_flx[g]
+            a[g,1:] = a_tmp[g,:]
+
+        return a
+
 
     def _write_data(self):
         NG = self.diffusion_xs.ngroups
@@ -276,6 +342,7 @@ class Reflector:
         for g in range(1, NG):
             scarabee_log(LogLevel.Info, "     {:}".format(self.adf[g,:]))
 
+
     def save_diffusion_data(self, fname):
         if self.diffusion_xs is None:
             raise RuntimeError("No diffusion cross sections.")
@@ -287,8 +354,7 @@ class Reflector:
         self.diffusion_data.adf = self.adf
         self.diffusion_data.save(fname)
 
-
 # REFERENCES
-# [1] S. Huy, M. Guillo, A. Calloo, C. Brosselard, and D. Couyras,
-#     “MULTI-GROUP 1D-REFLECTOR MODELLING FOR EDF PWR,” in
-#     PHYSOR 2016, Sun Valley, ID, 2016, pp. 74–83.
+# [1] S. Machach, “Étude des techniques d’équivalence nodale appliquées aux
+#     modèles de réflecteurs dans les réacteurs à eau pressurisée,”
+#     Polytechnique Montréal, 2022.

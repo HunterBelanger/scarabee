@@ -31,6 +31,9 @@ void init_ReflectorSN(py::module& m) {
       .def_property_readonly("nregions", &ReflectorSN::nregions,
                              "Number of regions.")
 
+      .def_property_readonly("nsurfaces", &ReflectorSN::nsurfaces,
+                             "Number of surfaces.")
+
       .def_property(
           "keff_tolerance", &ReflectorSN::keff_tolerance,
           &ReflectorSN::set_keff_tolerance,
@@ -53,6 +56,20 @@ void init_ReflectorSN(py::module& m) {
            "-------\n"
            "float\n"
            "     Flux in region i and in group g.\n",
+           py::arg("i"), py::arg("g"))
+
+      .def("current", &ReflectorSN::current,
+           "Returns the net current in group g at surface i.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "i : int\n"
+           "    Surface index.\n"
+           "g : int\n"
+           "    Energy group index.\n\n"
+           "Returns\n"
+           "-------\n"
+           "float\n"
+           "     Net current at surface i and in group g.\n",
            py::arg("i"), py::arg("g"))
 
       .def("volume", &ReflectorSN::volume,

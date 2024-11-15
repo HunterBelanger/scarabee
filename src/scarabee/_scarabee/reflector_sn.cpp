@@ -44,6 +44,7 @@ ReflectorSN::ReflectorSN(const std::vector<std::shared_ptr<CrossSection>>& xs,
 
   // Must allocate with zeros in case someone calls the flux method
   flux_ = xt::zeros<double>({ngroups_, xs_.size()});
+  J_ = xt::zeros<double>({ngroups_, xs_.size()+1});
 }
 
 void ReflectorSN::set_flux_tolerance(double ftol) {
@@ -133,6 +134,7 @@ void ReflectorSN::solve() {
     }
 
     next_flux.fill(0.);
+    J_.fill(0.);
     sweep(next_flux, incident_angular_flux, Q);
 
     // Apply stabalization (see [1])
@@ -168,10 +170,10 @@ void ReflectorSN::solve() {
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative source values set to zero.");
+      spdlog::warn("Negative source values set to zero");
     }
     if (set_neg_flux_to_zero) {
-      spdlog::warn("Negative flux values set to zero.");
+      spdlog::warn("Negative flux values set to zero");
     }
   }
 
@@ -189,14 +191,22 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux, xt::xtensor<double,2>& inc
     const std::size_t g = static_cast<std::size_t>(ig);
 
     for (std::size_t n = 0; n < mu_.size(); n++) {
-      const double mu = mu_[n];
+      const double mu_n = mu_[n];
+      const double wgt_n = wgt_[n];
       double flux_in = 0.;
       double flux_out = 0.;
       double flux_bin = 0.;
+      std::size_t s = 0; // surface index
 
-      if (mu < 0.) {
+      if (mu_n < 0.) {
+        s = dx_.size(); // Start at far right (last) surface
+
         // Track from right to left (negative direction)
         flux_in = 0.;
+
+        // Tally incident current
+        J_(g, s) += wgt_n * mu_n * flux_in;
+        s--;
 
         for (int ii = static_cast<int>(xs_.size()) - 1; ii >= 0; ii--) {
           const std::size_t i = static_cast<std::size_t>(ii);
@@ -206,23 +216,33 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux, xt::xtensor<double,2>& inc
 
           // Calculate outgoing flux and bin flux
           flux_out =
-              (2. * dx * Qni + (2. * std::abs(mu) - dx * Etr) * flux_in) /
-              (dx * Etr + 2. * std::abs(mu));
+              (2. * dx * Qni + (2. * std::abs(mu_n) - dx * Etr) * flux_in) /
+              (dx * Etr + 2. * std::abs(mu_n));
           flux_bin = 0.5 * (flux_in + flux_out);
 
           // Contribute to flux legendre moments
-          flux(g, i) += wgt_[n] * flux_bin;
+          flux(g, i) += wgt_n * flux_bin;
 
           // Save outgoing flux as an incident flux
           if (i == 0) {
             incident_angular_flux(g, mu_.size() - 1 - n) = flux_out;
           }
 
+          // Tally current at out surface
+          J_(g, s) += wgt_n * mu_n * flux_out;
+          s--;
+
           flux_in = flux_out;
         }
       } else {
+        s = 0.; // Start at far left (first) surface
+
         // Track from left to right (positive direction)
         flux_in = incident_angular_flux(g, n);
+
+        // Tally incident current
+        J_(g, s) += wgt_n * mu_n * flux_in;
+        s++;
 
         for (std::size_t i = 0; i < xs_.size(); i++) {
           const double dx = dx_[i];
@@ -231,12 +251,16 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux, xt::xtensor<double,2>& inc
 
           // Calculate outgoing flux and bin flux
           flux_out =
-              (2. * dx * Qni + (2. * std::abs(mu) - dx * Etr) * flux_in) /
-              (dx * Etr + 2. * std::abs(mu));
+              (2. * dx * Qni + (2. * std::abs(mu_n) - dx * Etr) * flux_in) /
+              (dx * Etr + 2. * std::abs(mu_n));
           flux_bin = 0.5 * (flux_in + flux_out);
 
           // Contribute to flux legendre moments
-          flux(g, i) += wgt_[n] * flux_bin;
+          flux(g, i) += wgt_n * flux_bin;
+
+          // Tally current at out surface
+          J_(g, s) += wgt_n * mu_n * flux_out;
+          s++;
 
           flux_in = flux_out;
         }
@@ -313,6 +337,24 @@ double ReflectorSN::flux(std::size_t i, std::size_t g) const {
   }
 
   return flux_(g, i);
+}
+
+double ReflectorSN::current(std::size_t i, std::size_t g) const {
+  if (i >= this->size() + 1) {
+    std::stringstream mssg;
+    mssg << "Surface index i =" << i << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  if (g >= this->ngroups()) {
+    std::stringstream mssg;
+    mssg << "Energy group index g =" << g << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  return J_(g, i);
 }
 
 const std::shared_ptr<CrossSection> ReflectorSN::xs(std::size_t i) const {

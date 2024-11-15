@@ -167,7 +167,7 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
     auto mssg = "MOCDriver number of angles must be a multiple of 4.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
-  } 
+  }
 
   if (d <= 0.) {
     auto mssg = "MOCDriver track spacing must be > 0.";
@@ -182,7 +182,13 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   generate_azimuthal_quadrature(n_angles, d);
   generate_tracks();
   segment_renormalization();
-  set_track_ends_bcs();
+
+  spdlog::info("Determining track connections");
+  set_ref_vac_bcs_x_max();
+  set_ref_vac_bcs_x_min();
+  set_ref_vac_bcs_y_max();
+  set_ref_vac_bcs_y_min();
+
   allocate_track_fluxes();
 
   draw_timer.stop();
@@ -364,10 +370,10 @@ void MOCDriver::solve_isotropic() {
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative source values set to zero.");
+      spdlog::warn("Negative source values set to zero");
     }
     if (set_neg_flux_to_zero) {
-      spdlog::warn("Negative flux values set to zero.");
+      spdlog::warn("Negative flux values set to zero");
     }
   }
 }
@@ -1094,9 +1100,7 @@ std::vector<std::pair<std::size_t, double>> MOCDriver::trace_fsr_segments(
   return out;
 }
 
-void MOCDriver::set_track_ends_bcs() {
-  spdlog::info("Determining track connections");
-
+void MOCDriver::set_ref_vac_bcs_y_max() {
   // We only go through the first half of the tracks, where phi < pi / 2.
   for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
     const auto& ai = angle_info_[a];
@@ -1109,18 +1113,19 @@ void MOCDriver::set_track_ends_bcs() {
       tracks.at(i).set_exit_track_flux(&comp_tracks.at(ai.ny + i).exit_flux());
       comp_tracks.at(ai.ny + i).set_exit_track_flux(&tracks.at(i).exit_flux());
 
-      // if (tracks.at(i).exit_pos() != comp_tracks.at(ai.ny + i).exit_pos()) {
-      //   std::stringstream mssg;
-      //   mssg << "Disagreement in track end alignments: "
-      //        << tracks.at(i).exit_pos() << " and "
-      //        << comp_tracks.at(ai.ny + i).exit_pos() << ".";
-      //   spdlog::error(mssg.str());
-      //   throw ScarabeeException(mssg.str());
-      // }
-
       tracks.at(i).exit_bc() = this->y_max_bc_;
       comp_tracks.at(ai.ny + i).exit_bc() = this->y_max_bc_;
     }
+  }
+}
+
+void MOCDriver::set_ref_vac_bcs_y_min() {
+  // We only go through the first half of the tracks, where phi < pi / 2.
+  for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
+    const auto& ai = angle_info_[a];
+    const std::uint32_t nt = ai.nx + ai.ny;
+    auto& tracks = tracks_[a];
+    auto& comp_tracks = *(tracks_.rbegin() + a);
 
     // Go through intersections on bottom side
     for (std::uint32_t i = 0; i < ai.nx; i++) {
@@ -1129,59 +1134,51 @@ void MOCDriver::set_track_ends_bcs() {
       comp_tracks.at(i).set_entry_track_flux(
           &tracks.at(ai.ny + i).entry_flux());
 
-      // if (tracks.at(ai.ny + i).entry_pos() != comp_tracks.at(i).entry_pos())
-      // {
-      //   std::stringstream mssg;
-      //   mssg << "Disagreement in track end alignments: "
-      //        << tracks.at(ai.ny + i).entry_pos() << " and "
-      //        << comp_tracks.at(i).entry_pos() << ".";
-      //   spdlog::error(mssg.str());
-      //   throw ScarabeeException(mssg.str());
-      // }
-
       tracks.at(ai.ny + i).entry_bc() = this->y_min_bc_;
       comp_tracks.at(i).entry_bc() = this->y_min_bc_;
     }
+  }
+}
 
-    // Go down left/right sides
+void MOCDriver::set_ref_vac_bcs_x_max() {
+  // We only go through the first half of the tracks, where phi < pi / 2.
+  for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
+    const auto& ai = angle_info_[a];
+    const std::uint32_t nt = ai.nx + ai.ny;
+    auto& tracks = tracks_[a];
+    auto& comp_tracks = *(tracks_.rbegin() + a);
+
+    // Go down right side
     for (std::uint32_t i = 0; i < ai.ny; i++) {
-      // Left
-      tracks.at(i).set_entry_track_flux(
-          &comp_tracks.at(ai.ny - 1 - i).exit_flux());
-      comp_tracks.at(ai.ny - 1 - i)
-          .set_exit_track_flux(&tracks.at(i).entry_flux());
-
-      // if (tracks.at(i).entry_pos() !=
-      //     comp_tracks.at(ai.ny - 1 - i).exit_pos()) {
-      //   std::stringstream mssg;
-      //   mssg << "Disagreement in track end alignments: "
-      //        << tracks.at(i).entry_pos() << " and "
-      //        << comp_tracks.at(ai.ny - 1 - i).exit_pos() << ".";
-      //   spdlog::error(mssg.str());
-      //   throw ScarabeeException(mssg.str());
-      // }
-
-      tracks.at(i).entry_bc() = this->x_min_bc_;
-      comp_tracks.at(ai.ny - 1 - i).exit_bc() = this->x_min_bc_;
-
-      // Right
       tracks.at(ai.nx + i).set_exit_track_flux(
           &comp_tracks.at(nt - 1 - i).entry_flux());
       comp_tracks.at(nt - 1 - i)
           .set_entry_track_flux(&tracks.at(ai.nx + i).exit_flux());
 
-      // if (tracks.at(ai.nx + i).exit_pos() !=
-      //     comp_tracks.at(nt - 1 - i).entry_pos()) {
-      //   std::stringstream mssg;
-      //   mssg << "Disagreement in track end alignments: "
-      //        << tracks.at(ai.nx + i).exit_pos() << " and "
-      //        << comp_tracks.at(nt - 1 - i).entry_pos() << ".";
-      //   spdlog::error(mssg.str());
-      //   throw ScarabeeException(mssg.str());
-      // }
-
       tracks.at(ai.nx + i).exit_bc() = this->x_max_bc_;
       comp_tracks.at(nt - 1 - i).entry_bc() = this->x_max_bc_;
+    }
+  }
+}
+
+void MOCDriver::set_ref_vac_bcs_x_min() {
+  // We only go through the first half of the tracks, where phi < pi / 2.
+  for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
+    const auto& ai = angle_info_[a];
+    const std::uint32_t nt = ai.nx + ai.ny;
+    auto& tracks = tracks_[a];
+    auto& comp_tracks = *(tracks_.rbegin() + a);
+
+    // Go down left side
+    // Go down left/right sides
+    for (std::uint32_t i = 0; i < ai.ny; i++) {
+      tracks.at(i).set_entry_track_flux(
+          &comp_tracks.at(ai.ny - 1 - i).exit_flux());
+      comp_tracks.at(ai.ny - 1 - i)
+          .set_exit_track_flux(&tracks.at(i).entry_flux());
+
+      tracks.at(i).entry_bc() = this->x_min_bc_;
+      comp_tracks.at(ai.ny - 1 - i).exit_bc() = this->x_min_bc_;
     }
   }
 }

@@ -156,7 +156,12 @@ class MOCDriver {
 
   void generate_azimuthal_quadrature(std::uint32_t n_angles, double d);
   void generate_tracks();
-  void set_track_ends_bcs();
+    
+  void set_ref_vac_bcs_x_max();
+  void set_ref_vac_bcs_x_min();
+  void set_ref_vac_bcs_y_max();
+  void set_ref_vac_bcs_y_min();
+
   void allocate_track_fluxes();
   void segment_renormalization();
 
