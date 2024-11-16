@@ -183,11 +183,38 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   generate_tracks();
   segment_renormalization();
 
+  if ((x_min_bc_ == BoundaryCondition::Periodic &&
+       x_max_bc_ != BoundaryCondition::Periodic) ||
+      (x_min_bc_ != BoundaryCondition::Periodic &&
+       x_max_bc_ == BoundaryCondition::Periodic)) {
+    auto mssg = "Only one x boundary has a periodic boundary condition.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  
+  if ((y_min_bc_ == BoundaryCondition::Periodic &&
+       y_max_bc_ != BoundaryCondition::Periodic) ||
+      (y_min_bc_ != BoundaryCondition::Periodic &&
+       y_max_bc_ == BoundaryCondition::Periodic)) {
+    auto mssg = "Only one y boundary has a periodic boundary condition.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   spdlog::info("Determining track connections");
-  set_ref_vac_bcs_x_max();
-  set_ref_vac_bcs_x_min();
-  set_ref_vac_bcs_y_max();
-  set_ref_vac_bcs_y_min();
+  if (x_min_bc_ == BoundaryCondition::Periodic) {
+    set_periodic_bcs_x();
+  } else {
+    set_ref_vac_bcs_x_max();
+    set_ref_vac_bcs_x_min();
+  }
+
+  if (y_min_bc_ == BoundaryCondition::Periodic) {
+    set_periodic_bcs_y();
+  } else {
+    set_ref_vac_bcs_y_max();
+    set_ref_vac_bcs_y_min();
+  }
 
   allocate_track_fluxes();
 
@@ -555,12 +582,12 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
         }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
-        if (track.exit_bc() == BoundaryCondition::Reflective) {
-          for (std::size_t p = 0; p < n_pol_angles_; p++)
-            track.exit_track_flux()(g, p) = angflux[p];
-        } else {
-          // Vacuum
+        if (track.exit_bc() == BoundaryCondition::Vacuum) {
           xt::view(track.exit_track_flux(), g, xt::all()).fill(0.);
+        } else {
+          for (std::size_t p = 0; p < n_pol_angles_; p++) {
+            track.exit_track_flux()(g, p) = angflux[p];
+          }
         }
 
         // Follow track in backwards direction
@@ -603,13 +630,12 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
         }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
-        if (track.entry_bc() == BoundaryCondition::Reflective) {
+        if (track.entry_bc() == BoundaryCondition::Vacuum) {
+          xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
+        } else {
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             track.entry_track_flux()(g, p) = angflux[p];
           }
-        } else {
-          // Vacuum
-          xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
         }
       }  // For all tracks
     }  // For all azimuthal angles
@@ -677,12 +703,12 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
         }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
-        if (track.exit_bc() == BoundaryCondition::Reflective) {
-          for (std::size_t pp = 0; pp < n_pol_angles_; pp++)
-            track.exit_track_flux()(g, pp) = angflux[pp];
-        } else {
-          // Vacuum
+        if (track.exit_bc() == BoundaryCondition::Vacuum) {
           xt::view(track.exit_track_flux(), g, xt::all()).fill(0.);
+        } else {
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
+            track.exit_track_flux()(g, pp) = angflux[pp];
+          }
         }
 
         // Follow track in backwards direction
@@ -728,13 +754,12 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
         }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
-        if (track.entry_bc() == BoundaryCondition::Reflective) {
+        if (track.entry_bc() == BoundaryCondition::Vacuum) {
+          xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
+        } else {
           for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
             track.entry_track_flux()(g, pp) = angflux[pp];
           }
-        } else {
-          // Vacuum
-          xt::view(track.entry_track_flux(), g, xt::all()).fill(0.);
         }
       }  // For all tracks
     }  // For all azimuthal angles
@@ -1098,6 +1123,60 @@ std::vector<std::pair<std::size_t, double>> MOCDriver::trace_fsr_segments(
   }
 
   return out;
+}
+
+void MOCDriver::set_periodic_bcs_x() {
+  // We are setting the boundarys a x_min and x_max, so we need to do all
+  // the y tracks that start and end on those sides.
+  for (std::size_t a = 0; a < angle_info_.size(); a++) {
+    const auto& ai = angle_info_[a];
+    auto& tracks = tracks_[a];
+
+    if (ai.phi < PI_2) {
+      for (std::size_t j = 0; j < ai.ny; j++) {
+        tracks[ai.nx + j].set_exit_track_flux(&tracks[j].entry_flux());
+        tracks[j].set_entry_track_flux(&tracks[ai.nx + j].exit_flux());
+
+        tracks[ai.nx + j].exit_bc() = BoundaryCondition::Periodic;
+        tracks[j].entry_bc() = BoundaryCondition::Periodic;
+      }
+    } else {
+      for (std::size_t j = 0; j < ai.ny; j++) {
+        tracks[j].set_exit_track_flux(&tracks[ai.nx + j].entry_flux());
+        tracks[ai.nx + j].set_entry_track_flux(&tracks[j].exit_flux());
+
+        tracks[j].exit_bc() = BoundaryCondition::Periodic;
+        tracks[ai.nx + j].entry_bc() = BoundaryCondition::Periodic;
+      }
+    }
+  }
+}
+
+void MOCDriver::set_periodic_bcs_y() {
+  // We are setting the boundarys a y_min and y_max, so we need to do all
+  // the x tracks that start and end on those sides.
+  for (std::size_t a = 0; a < angle_info_.size(); a++) {
+    const auto& ai = angle_info_[a];
+    auto& tracks = tracks_[a];
+
+    if (ai.phi < PI_2) {
+      for (std::size_t i = 0; i < ai.nx; i++) {
+        tracks[i].set_exit_track_flux(&tracks[ai.ny + i].entry_flux());
+        tracks[ai.ny + i].set_entry_track_flux(&tracks[i].exit_flux());
+
+        tracks[i].exit_bc() = BoundaryCondition::Periodic;
+        tracks[ai.ny + i].entry_bc() = BoundaryCondition::Periodic;
+      }
+    } else {
+      for (std::size_t i = 0; i < ai.nx; i++) {
+        tracks[i].set_entry_track_flux(&tracks[ai.ny + i].exit_flux());
+        tracks[ai.ny + i].set_exit_track_flux(&tracks[i].entry_flux());
+
+        tracks[i].entry_bc() = BoundaryCondition::Periodic;
+        tracks[ai.ny + i].exit_bc() = BoundaryCondition::Periodic;
+      }
+    }
+  }
 }
 
 void MOCDriver::set_ref_vac_bcs_y_max() {

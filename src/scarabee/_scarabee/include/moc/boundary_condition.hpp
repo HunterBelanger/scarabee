@@ -5,7 +5,7 @@
 
 namespace scarabee {
 
-enum class BoundaryCondition : std::uint8_t { Reflective, Vacuum };
+enum class BoundaryCondition : std::uint8_t { Reflective, Vacuum, Periodic };
 
 }
 
