@@ -199,7 +199,7 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux, xt::xtensor<double,2>& inc
       std::size_t s = 0; // surface index
 
       if (mu_n < 0.) {
-        s = dx_.size(); // Start at far right (last) surface
+        s = this->nsurfaces() - 1; // Start at far right (last) surface
 
         // Track from right to left (negative direction)
         flux_in = 0.;
@@ -235,7 +235,7 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux, xt::xtensor<double,2>& inc
           flux_in = flux_out;
         }
       } else {
-        s = 0.; // Start at far left (first) surface
+        s = 0; // Start at far left (first) surface
 
         // Track from left to right (positive direction)
         flux_in = incident_angular_flux(g, n);
