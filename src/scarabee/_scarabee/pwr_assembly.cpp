@@ -424,6 +424,10 @@ void PWRAssembly::get_fuel_dancoff_corrections() {
   }
 
   // Solve the lattice problem
+  moc->x_min_bc() = this->boundary_conditions();
+  moc->x_max_bc() = this->boundary_conditions();
+  moc->y_min_bc() = this->boundary_conditions();
+  moc->y_max_bc() = this->boundary_conditions();
   moc->generate_tracks(dancoff_num_azimuthal_angles_, dancoff_track_spacing_,
                        dancoff_polar_quadrature_);
   moc->sim_mode() = SimulationMode::FixedSource;
@@ -489,6 +493,10 @@ void PWRAssembly::get_clad_dancoff_corrections() {
   }
 
   // Solve the lattice problem
+  moc->x_min_bc() = this->boundary_conditions();
+  moc->x_max_bc() = this->boundary_conditions();
+  moc->y_min_bc() = this->boundary_conditions();
+  moc->y_max_bc() = this->boundary_conditions();
   moc->generate_tracks(dancoff_num_azimuthal_angles_, dancoff_track_spacing_,
                        dancoff_polar_quadrature_);
   moc->sim_mode() = SimulationMode::FixedSource;
@@ -670,7 +678,11 @@ void PWRAssembly::moc_calc() {
     guiplotter.push_layer(std::make_unique<MOCPlotter>(moc_.get()));
     guiplotter.run();
   }
-
+  
+  moc_->x_min_bc() = this->boundary_conditions();
+  moc_->x_max_bc() = this->boundary_conditions();
+  moc_->y_min_bc() = this->boundary_conditions();
+  moc_->y_max_bc() = this->boundary_conditions();
   moc_->generate_tracks(num_azimuthal_angles_, track_spacing_,
                         polar_quadrature_);
   moc_->set_keff_tolerance(keff_tolerance_);

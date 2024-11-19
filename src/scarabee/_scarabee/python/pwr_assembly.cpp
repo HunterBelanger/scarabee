@@ -75,6 +75,9 @@ void init_PWRAssembly(py::module& m) {
       "    Convergence criteria for keff. Default is 1.E-5.\n"
       "flux_tolerance : float\n"
       "    Convergence criteria for the flux. Default is 1.E-5.\n"
+      "boundary_conditions : BoundaryCondition\n"
+      "    Boundary condition to be applied to all sides of the assembly.\n"
+      "    Default value is Periodic.\n"
       "plot_assembly : bool\n"
       "    Indicates wether the GUI plotter for the assembly geometry will be\n"
       "    activated before performing the calcualtion.\n"
@@ -162,6 +165,9 @@ void init_PWRAssembly(py::module& m) {
 
       .def_property("flux_tolerance", &PWRAssembly::flux_tolerance,
                     &PWRAssembly::set_flux_tolerance)
+
+      .def_property("boundary_conditions", &PWRAssembly::boundary_conditions,
+                    &PWRAssembly::set_boundary_conditions)
 
       .def_property("plot_assembly", &PWRAssembly::plot_assembly,
                     &PWRAssembly::set_plot_assembly)
