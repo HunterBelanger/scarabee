@@ -68,9 +68,14 @@ void init_PWRAssembly(py::module& m) {
       "num_azimuthal_angles : int\n"
       "    Number of azimuthal angles in the assembly calculation. Default is "
       "32.\n"
-      "polar_quadrature: PolarQuadrature\n"
+      "polar_quadrature : PolarQuadrature\n"
       "    The polar quadrature used in the assembly calculation.\n"
       "    Default is YamamotoTabuchi6.\n"
+      "anisotropic : bool\n"
+      "    Indicates wether assembly calculation should be performed with "
+      "explicit anisotropic scattering (True) or transported corrected "
+      "isotropic scattering (False).\n"
+      "    Default value is False.\n"
       "keff_tolerance : float\n"
       "    Convergence criteria for keff. Default is 1.E-5.\n"
       "flux_tolerance : float\n"
@@ -147,6 +152,9 @@ void init_PWRAssembly(py::module& m) {
 
       .def_property("polar_quadrature", &PWRAssembly::polar_quadrature,
                     &PWRAssembly::set_polar_quadrature)
+
+      .def_property("anisotropic", &PWRAssembly::anisotropic,
+                    &PWRAssembly::set_anisotropic)
 
       .def_property("dancoff_num_azimuthal_angles",
                     &PWRAssembly::dancoff_num_azimuthal_angles,

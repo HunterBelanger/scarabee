@@ -1,7 +1,6 @@
 from scarabee import *
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
 
 # Get diffusion cross sections
 a1_00_  = DiffusionData.load("F16_0.npz")
