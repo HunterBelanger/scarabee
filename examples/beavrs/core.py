@@ -92,7 +92,6 @@ nz = np.array([1])
 
 geom = DiffusionGeometry(tiles, dx, nx, dy, ny, dz, nz, 0., 0., 0., 0., 1., 1.)
 solver = NEMDiffusionDriver(geom)
-solver.flux_tolerance = 1.E-8
 solver.solve()
 
 x_max = np.sum(dx)
@@ -140,3 +139,5 @@ print("Min Pin Power: {:.3f}".format(np.min(pin_power[nmsk])))
 plt.pcolormesh(y, x, pin_power[:,:,0], cmap='jet')
 plt.title("Pin Power Distribution")
 plt.show()
+
+np.save("scarabee_pin_powers.npy", pin_power)

@@ -119,10 +119,17 @@ Air = Material(AirComp, 575., ndl)
 gt = GuideTube(inner_radius=0.56134, outer_radius=0.60198, clad=Clad)
 
 # Define fuel pin
-fp = FuelPin(fuel=Fuel31, fuel_radius=0.39218, gap=He, gap_radius=0.40005, clad=Clad, clad_radius=0.45720)
+fp = FuelPin(fuel=Fuel31, fuel_radius=0.39218, gap=He,
+             gap_radius=0.40005, clad=Clad, clad_radius=0.45720)
 
 # Define a poison pin
-bp = BurnablePoisonPin(center=Air, center_radius=0.214, poison_clad=SS304, inner_poison_clad_radius=0.23051, gap=He, inner_gap_radius=0.24130, outer_gap_radius=0.43688, poison=BSiGlass, poison_radius=0.42672, outer_poison_clad_radius=0.48387, guide_tube_clad=Clad, inner_moderator_radius=0.56134, guide_tube_radius=0.60198)
+bp = BurnablePoisonPin(center=Air, center_radius=0.214, poison_clad=SS304,
+                       inner_poison_clad_radius=0.23051, gap=He,
+                       inner_gap_radius=0.24130, outer_gap_radius=0.43688,
+                       poison=BSiGlass, poison_radius=0.42672,
+                       outer_poison_clad_radius=0.48387, guide_tube_clad=Clad,
+                       inner_moderator_radius=0.56134,
+                       guide_tube_radius=0.60198)
 
 # Define assembly
 asmbly = PWRAssembly(pitch=1.25984, moderator=Water, shape=(17, 17), ndl=ndl)

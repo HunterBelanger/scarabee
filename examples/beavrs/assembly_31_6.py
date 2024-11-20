@@ -128,6 +128,7 @@ bp = BurnablePoisonPin(center=Air, center_radius=0.214, poison_clad=SS304, inner
 asmbly = PWRAssembly(pitch=1.25984, moderator=Water, shape=(17, 17), ndl=ndl)
 asmbly.condensation_scheme = cond_spec
 asmbly.few_group_condensation_scheme = few_grp_cond_spec
+asmbly.boundary_conditions = BoundaryCondition.Periodic
 asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, bp, fp, fp, gt, fp, fp, bp, fp, fp, fp, fp, fp,
