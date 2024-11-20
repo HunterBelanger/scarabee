@@ -140,4 +140,3 @@ plt.pcolormesh(y, x, pin_power[:,:,0], cmap='jet')
 plt.title("Pin Power Distribution")
 plt.show()
 
-np.save("scarabee_pin_powers.npy", pin_power)
