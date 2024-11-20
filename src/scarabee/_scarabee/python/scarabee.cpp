@@ -40,7 +40,6 @@ extern void init_FuelPin(py::module&);
 extern void init_GuideTube(py::module&);
 extern void init_BurnablePoisonPin(py::module&);
 extern void init_PWRAssembly(py::module&);
-extern void init_PWRReflector(py::module&);
 extern void init_ReflectorSN(py::module&);
 
 PYBIND11_MODULE(_scarabee, m) {
@@ -79,7 +78,6 @@ PYBIND11_MODULE(_scarabee, m) {
   init_GuideTube(m);
   init_BurnablePoisonPin(m);
   init_PWRAssembly(m);
-  init_PWRReflector(m);
   init_ReflectorSN(m);
 
   m.attr("__author__") = "Hunter Belanger";

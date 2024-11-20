@@ -80,8 +80,16 @@ class PWRAssembly {
   double track_spacing() const { return track_spacing_; }
   void set_track_spacing(double t);
 
+  bool anisotropic() const { return anisotropic_; }
+  void set_anisotropic(bool a) { anisotropic_ = a; }
+
   PolarQuadrature polar_quadrature() const { return polar_quadrature_; }
   void set_polar_quadrature(PolarQuadrature pq) { polar_quadrature_ = pq; }
+
+  BoundaryCondition boundary_conditions() const { return boundary_conditions_; }
+  void set_boundary_conditions(BoundaryCondition bc) {
+    boundary_conditions_ = bc;
+  }
 
   std::uint32_t dancoff_num_azimuthal_angles() const {
     return dancoff_num_azimuthal_angles_;
@@ -150,6 +158,8 @@ class PWRAssembly {
   double keff_tolerance_{1.0e-5};
   double flux_tolerance_{1.0e-5};
   PolarQuadrature polar_quadrature_{YamamotoTabuchi<6>()};
+  BoundaryCondition boundary_conditions_{BoundaryCondition::Reflective};
+  bool anisotropic_{false};
 
   bool plot_assembly_{false};
   std::shared_ptr<Cartesian2D> moc_geom_{nullptr};

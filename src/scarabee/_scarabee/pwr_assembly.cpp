@@ -424,6 +424,10 @@ void PWRAssembly::get_fuel_dancoff_corrections() {
   }
 
   // Solve the lattice problem
+  moc->x_min_bc() = this->boundary_conditions();
+  moc->x_max_bc() = this->boundary_conditions();
+  moc->y_min_bc() = this->boundary_conditions();
+  moc->y_max_bc() = this->boundary_conditions();
   moc->generate_tracks(dancoff_num_azimuthal_angles_, dancoff_track_spacing_,
                        dancoff_polar_quadrature_);
   moc->sim_mode() = SimulationMode::FixedSource;
@@ -489,6 +493,10 @@ void PWRAssembly::get_clad_dancoff_corrections() {
   }
 
   // Solve the lattice problem
+  moc->x_min_bc() = this->boundary_conditions();
+  moc->x_max_bc() = this->boundary_conditions();
+  moc->y_min_bc() = this->boundary_conditions();
+  moc->y_max_bc() = this->boundary_conditions();
   moc->generate_tracks(dancoff_num_azimuthal_angles_, dancoff_track_spacing_,
                        dancoff_polar_quadrature_);
   moc->sim_mode() = SimulationMode::FixedSource;
@@ -663,14 +671,15 @@ void PWRAssembly::moc_calc() {
   moc_geom_ = std::make_shared<Cartesian2D>(dx, dy);
   moc_geom_->set_tiles(moc_pins);
 
-  moc_ = std::make_shared<MOCDriver>(moc_geom_);
+  moc_ = std::make_shared<MOCDriver>(moc_geom_, boundary_conditions_,
+                                     boundary_conditions_, boundary_conditions_,
+                                     boundary_conditions_, anisotropic_);
   if (plot_assembly_) {
     ImApp::App guiplotter(1920, 1080, "Scarabee MOC Plotter");
     guiplotter.enable_docking();
     guiplotter.push_layer(std::make_unique<MOCPlotter>(moc_.get()));
     guiplotter.run();
   }
-
   moc_->generate_tracks(num_azimuthal_angles_, track_spacing_,
                         polar_quadrature_);
   moc_->set_keff_tolerance(keff_tolerance_);

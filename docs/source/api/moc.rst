@@ -3,6 +3,10 @@ Method of Characteristics
 
 .. currentmodule:: scarabee
 
+.. autoclass:: MOCDriver
+    :special-members: __init__
+    :members:
+
 .. autoclass:: BoundaryCondition
     :members:
 
@@ -10,42 +14,38 @@ Method of Characteristics
     :members:
 
 .. autoclass:: P1CriticalitySpectrum
+    :special-members: __init__
     :members:
     :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: B1CriticalitySpectrum
+    :special-members: __init__
     :members:
     :inherited-members:
-    :special-members: __init__
-
-.. autoclass:: MOCDriver
-    :members:
-    :special-members: __init__
 
 .. autoclass:: PolarQuadrature
-    :members:
     :special-members: __init__
+    :members:
 
 .. autoclass:: Legendre2
+    :special-members: __init__
     :members:
     :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: Legendre4
+    :special-members: __init__
     :members:
     :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: Legendre6
+    :special-members: __init__
     :members:
     :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: Legendre8
+    :special-members: __init__
     :members:
     :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: Legendre10
     :members:
@@ -53,21 +53,21 @@ Method of Characteristics
     :special-members: __init__
 
 .. autoclass:: Legendre12
+    :special-members: __init__
     :members:
     :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: YamamotoTabuchi2
+    :special-members: __init__
     :members:
     :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: YamamotoTabuchi4
+    :special-members: __init__
     :members:
     :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: YamamotoTabuchi6
+    :special-members: __init__
     :members:
     :inherited-members:
-    :special-members: __init__

@@ -75,7 +75,8 @@ Water = Material(WaterComp, 575., ndl)
 gt = GuideTube(inner_radius=0.56134, outer_radius=0.60198, clad=Clad)
 
 # Define fuel pin
-fp = FuelPin(fuel=Fuel16, fuel_radius=0.39218, gap=He, gap_radius=0.40005, clad=Clad, clad_radius=0.45720)
+fp = FuelPin(fuel=Fuel16, fuel_radius=0.39218, gap=He, gap_radius=0.40005,
+             clad=Clad, clad_radius=0.45720)
 
 # Define assembly
 asmbly = PWRAssembly(pitch=1.25984, moderator=Water, shape=(17, 17), ndl=ndl)

@@ -122,7 +122,9 @@ asmbly.save_diffusion_data(name+".npz")
 
 # Solve reflector
 print()
-refl = Reflector(asmbly.average_fuel_pin, moderator=asmbly.moderator_xs, assembly_width=21.50364, gap_width=0.1627, baffle_width=2.2225, baffle=Baffle, ndl=ndl)
+refl = Reflector(asmbly.average_fuel_pin, moderator=asmbly.moderator_xs,
+                 assembly_width=21.50364, gap_width=0.1627,
+                 baffle_width=2.2225, baffle=Baffle, ndl=ndl)
 refl.few_group_condensation_scheme = [[0, 246], [247, 280]]
 refl.solve()
 refl.save_diffusion_data("reflector.npz")

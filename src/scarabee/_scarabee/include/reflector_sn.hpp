@@ -28,12 +28,14 @@ class ReflectorSN {
 
   std::size_t size() const { return xs_.size(); }
   std::size_t nregions() const { return xs_.size(); }
+  std::size_t nsurfaces() const { return xs_.size() + 1; }
   std::size_t ngroups() const { return ngroups_; }
 
   const std::shared_ptr<CrossSection> xs(std::size_t i) const;
   double volume(std::size_t i) const;
 
   double flux(std::size_t i, std::size_t g) const;
+  double current(std::size_t i, std::size_t g) const;
 
   std::shared_ptr<CrossSection> homogenize(
       const std::vector<std::size_t>& regions) const;
@@ -45,13 +47,16 @@ class ReflectorSN {
   xt::xtensor<double, 1> dx_;
   xt::xtensor<double, 2> flux_;  // group, spatial bin
   xt::xtensor<double, 2> Q_;     // group, spatial bin
+  xt::xtensor<double, 2> J_;     // group, surface
   double keff_{1.};
   double keff_tol_{1.E-5};
   double flux_tol_{1.E-5};
   std::size_t ngroups_;
   bool solved_{false};
 
-  void sweep(xt::xtensor<double, 2>& flux, xt::xtensor<double,2>& incident_angular_flux, const xt::xtensor<double, 2>& Q);
+  void sweep(xt::xtensor<double, 2>& flux,
+             xt::xtensor<double, 2>& incident_angular_flux,
+             const xt::xtensor<double, 2>& Q);
   double calc_keff(const xt::xtensor<double, 2>& old_flux,
                    const xt::xtensor<double, 2>& new_flux,
                    const double keff) const;
