@@ -77,7 +77,7 @@ void init_PWRAssembly(py::module& m) {
       "    Convergence criteria for the flux. Default is 1.E-5.\n"
       "boundary_conditions : BoundaryCondition\n"
       "    Boundary condition to be applied to all sides of the assembly.\n"
-      "    Default value is Periodic.\n"
+      "    Default value is Reflective.\n"
       "plot_assembly : bool\n"
       "    Indicates wether the GUI plotter for the assembly geometry will be\n"
       "    activated before performing the calcualtion.\n"
