@@ -678,7 +678,7 @@ void PWRAssembly::moc_calc() {
     guiplotter.push_layer(std::make_unique<MOCPlotter>(moc_.get()));
     guiplotter.run();
   }
-  
+
   moc_->x_min_bc() = this->boundary_conditions();
   moc_->x_max_bc() = this->boundary_conditions();
   moc_->y_min_bc() = this->boundary_conditions();

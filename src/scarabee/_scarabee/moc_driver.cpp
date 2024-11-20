@@ -191,7 +191,7 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
-  
+
   if ((y_min_bc_ == BoundaryCondition::Periodic &&
        y_max_bc_ != BoundaryCondition::Periodic) ||
       (y_min_bc_ != BoundaryCondition::Periodic &&

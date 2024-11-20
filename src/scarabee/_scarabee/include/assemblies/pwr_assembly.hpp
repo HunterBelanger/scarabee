@@ -84,7 +84,9 @@ class PWRAssembly {
   void set_polar_quadrature(PolarQuadrature pq) { polar_quadrature_ = pq; }
 
   BoundaryCondition boundary_conditions() const { return boundary_conditions_; }
-  void set_boundary_conditions(BoundaryCondition bc) { boundary_conditions_ = bc; }
+  void set_boundary_conditions(BoundaryCondition bc) {
+    boundary_conditions_ = bc;
+  }
 
   std::uint32_t dancoff_num_azimuthal_angles() const {
     return dancoff_num_azimuthal_angles_;
