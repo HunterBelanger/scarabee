@@ -5,7 +5,7 @@ API
 ============
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    materials.rst
    annular_collision_prob.rst
