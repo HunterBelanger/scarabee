@@ -1183,7 +1183,6 @@ void MOCDriver::set_ref_vac_bcs_y_max() {
   // We only go through the first half of the tracks, where phi < pi / 2.
   for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
     const auto& ai = angle_info_[a];
-    const std::uint32_t nt = ai.nx + ai.ny;
     auto& tracks = tracks_[a];
     auto& comp_tracks = *(tracks_.rbegin() + a);
 
@@ -1202,7 +1201,6 @@ void MOCDriver::set_ref_vac_bcs_y_min() {
   // We only go through the first half of the tracks, where phi < pi / 2.
   for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
     const auto& ai = angle_info_[a];
-    const std::uint32_t nt = ai.nx + ai.ny;
     auto& tracks = tracks_[a];
     auto& comp_tracks = *(tracks_.rbegin() + a);
 
@@ -1244,7 +1242,6 @@ void MOCDriver::set_ref_vac_bcs_x_min() {
   // We only go through the first half of the tracks, where phi < pi / 2.
   for (std::size_t a = 0; a < angle_info_.size() / 2; a++) {
     const auto& ai = angle_info_[a];
-    const std::uint32_t nt = ai.nx + ai.ny;
     auto& tracks = tracks_[a];
     auto& comp_tracks = *(tracks_.rbegin() + a);
 
