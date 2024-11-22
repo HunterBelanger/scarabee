@@ -45,10 +45,10 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l) {
   if (this->fissile) {
     fission = std::make_shared<xt::xtensor<double, 3>>();
     fission->resize({temperatures.size(), dilutions.size(), ndl.ngroups()});
-    nu = std::make_shared<xt::xtensor<double, 2>>();
-    nu->resize({temperatures.size(), ndl.ngroups()});
-    chi = std::make_shared<xt::xtensor<double, 2>>();
-    chi->resize({temperatures.size(), ndl.ngroups()});
+    nu = std::make_shared<xt::xtensor<double, 1>>();
+    nu->resize({ndl.ngroups()});
+    chi = std::make_shared<xt::xtensor<double, 1>>();
+    chi->resize({ndl.ngroups()});
   }
 
   // Read in data
@@ -280,8 +280,8 @@ std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
   xt::xtensor<double, 1> chi = xt::zeros<double>({ngroups_});
   if (nuc.fissile) {
     this->interp_1d(Ef, *nuc.fission, it, f_temp, id, f_dil);
-    this->interp_1d(nu, *nuc.nu, it, f_temp);
-    this->interp_1d(chi, *nuc.chi, it, f_temp);
+    nu = *nuc.nu;
+    chi = *nuc.chi;
   }
 
   // Reconstruct total
@@ -345,18 +345,9 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     const double vEf1 = f1_g * xs_1->vEf(g);
     const double vEf2 = f2_g * xs_2->vEf(g);
     vEf(g) = vEf1 + vEf2;
-    vEf_sum_1 += vEf1;
-    vEf_sum_2 += vEf2;
-  }
 
-  if (vEf_sum_1 + vEf_sum_2 > 0.) {
-    double chi_sum = 0;
-    for (std::size_t g = 0; g < ngroups_; g++) {
-      chi(g) = (vEf_sum_1 * xs_1->chi(g) + vEf_sum_2 * xs_2->chi(g)) /
-               (vEf_sum_1 + vEf_sum_2);
-      chi_sum += chi(g);
-    }
-    if (chi_sum > 0.) chi /= chi_sum;
+    // Chi isn't stored on temp or dilution, so just assign value
+    chi(g) = xs_1->chi(g);
   }
 
   return std::make_shared<CrossSection>(Et, Dtr, Ea, Es, Ef, vEf, chi);
@@ -438,9 +429,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
       }
 
       // Save the fission spectrum if we are in the first lump.
-      // This assumes that the fission spectrum is dilution independent,
-      // which is an okay approximation. I am not sure how to completely
-      // handle the fission spectrum otherwise for this self shielding.
+      // This is fine to do as chi is not stored against temp or dilution.
       if (m == 1) {
         chi(g) = xs_1->chi(g);
       }

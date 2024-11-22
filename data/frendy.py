@@ -380,12 +380,14 @@ class FrendyMG:
     
     self.Dtr =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
     self.Ea =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
-    self.flux =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
     self.Es =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups, self.ngroups))
     if self.fissile:
       self.Ef = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
-      self.nu = np.zeros((len(self.temps), self.ngroups))
-      self.chi = np.zeros((len(self.temps), self.ngroups))
+
+      # Nu and chi are only very weakly dependent on temp and dilution.
+      # Because of this, we don't tabulate them on temp or dilution.
+      self.nu = np.zeros((self.ngroups))
+      self.chi = np.zeros((self.ngroups))
     else:
       self.Ef = None
       self.nu = None
@@ -489,7 +491,6 @@ class FrendyMG:
       grp.create_dataset("p2-scatter", data=self.Es2)
     if self.Es3 is not None:
       grp.create_dataset("p3-scatter", data=self.Es3)
-    grp.create_dataset("flux", data=self.flux)
     if self.fissile:
       grp.create_dataset("fission", data=self.Ef)
       grp.create_dataset("nu", data=self.nu)
@@ -615,14 +616,9 @@ class FrendyMG:
         self.Es3[itemp,-(d+1),:,:] = xs.Es3
       if self.fissile:
         self.Ef[itemp,-(d+1),:] = xs.Ef
-        if d == 0:
-          self.nu[itemp,:] = xs.nu
-          self.chi[itemp,:] = xs.chi
-
-    # Read flux, and save to file
-    fname = self.name + "_MGFlux.mg"
-    flux = read_1dxs(fname, 2)
-    self.flux[itemp,:,:] = flux
+        if itemp == 0 and d == 0:
+          self.nu = xs.nu
+          self.chi = xs.chi
 
 def read_1dxs(fname, nskip):
   fl = open(fname, 'r')
