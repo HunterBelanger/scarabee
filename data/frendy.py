@@ -2,7 +2,7 @@ import ENDFtk
 import subprocess
 import os
 import numpy as np
-from scarabee import *
+#from scarabee import *
 
 # Estimates of Intermediate-Resonance Lambda values as a function of mass
 # number, A, taken from "WIMS-D Library Update", by the IAEA.
@@ -408,6 +408,13 @@ class FrendyMG:
     else:
       self.Es3 = None
 
+    # Depletion related reactions
+    self.Egamma =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
+    self.En2n = None
+    self.En3n = None
+    self.Enp  = None
+    self.Ena  = None
+
   def process(self, h5=None, chi=None):
     if not self.initialized:
       self.initialize()
@@ -421,10 +428,17 @@ class FrendyMG:
     
     self.processed = True
 
+    # Truncate threshold reactions to remove zeros
+    self._remove_zeros() 
+
     if chi is not None:
       self.apply_P1_transport_correction(chi)
     else:
       self.apply_inscatter_transport_correction()
+
+    # Apply compression after computing the transport correction ! 
+    self._get_compressed_scatter_layout()
+    self._compress_scatter_matrices()
 
     if h5 is not None:
       self.add_to_hdf5(h5)
@@ -465,7 +479,95 @@ class FrendyMG:
           # Calculate the delta xs for the transport correction
           for g in range(self.ngroups):
               self.Dtr[iT, id, g] = np.sum(self.Es1[iT, id, g, :])
+
+  def _get_compressed_scatter_layout(self):
+    self.low_grps = []
+    self.high_grps = []
+    self.data_starts = []
+
+    for g in range(self.ngroups):
+      # Find the first outgoing group which isn't 0
+      g_low = 0
+      for gg in range(self.ngroups):
+        not_all_zeros = np.any(self.Es[:,:,g,:gg+1])
+        if not_all_zeros:
+          g_low = gg
+          break
+
+      # Find the last outgoing group which isn't 0
+      g_hi = 0
+      for gg in range(self.ngroups):
+        all_zeros = not np.any(self.Es[:,:,g,gg:])
+        if all_zeros:
+          g_hi = gg-1
+          break
+      if g_hi == 0:
+        g_hi = self.ngroups - 1
+      
+      self.low_grps.append(g_low)
+      self.high_grps.append(g_hi)
+
+      if g == 0:
+        self.data_starts.append(0)
+      else:
+        self.data_starts.append(self.data_starts[-1] + (self.high_grps[-2] - self.low_grps[-2]) + 1)
+
+    self.len_scatter_matrix_data = self.data_starts[-1] + (self.high_grps[-1] - self.low_grps[-1]) + 1
+
+  def _compress_scatter_matrices(self):
+    Es = np.zeros((len(self.temps), len(self.dilutions), self.len_scatter_matrix_data))
+    if self.Es1 is not None:
+      Es1 = np.zeros((len(self.temps), len(self.dilutions), self.len_scatter_matrix_data))
+    if self.Es2 is not None:
+      Es2 = np.zeros((len(self.temps), len(self.dilutions), self.len_scatter_matrix_data))
+    if self.Es3 is not None:
+      Es3 = np.zeros((len(self.temps), len(self.dilutions), self.len_scatter_matrix_data))
+
+    i = 0
+    for g in range(self.ngroups):
+      g_low = self.low_grps[g]
+      g_hi = self.high_grps[g]
+      l = g_hi - g_low + 1
+
+      Es[:,:,i:i+l] = self.Es[:,:,g, g_low:g_hi+1]
+
+      if self.Es1 is not None:
+        Es1[:,:,i:i+l] = self.Es1[:,:,g, g_low:g_hi+1] 
+      if self.Es2 is not None:
+        Es2[:,:,i:i+l] = self.Es2[:,:,g, g_low:g_hi+1] 
+      if self.Es3 is not None:
+        Es3[:,:,i:i+l] = self.Es3[:,:,g, g_low:g_hi+1] 
+
+      i += l
     
+    self.Es = Es
+    if self.Es1 is not None:
+      self.Es1 = Es1
+    if self.Es2 is not None:
+      self.Es2 = Es2
+    if self.Es3 is not None:
+      self.Es3 = Es3
+
+  def _remove_zeros(self):
+    self.En2n = self._cull_array(self.En2n) 
+    self.En3n = self._cull_array(self.En3n)
+    self.Enp  = self._cull_array(self.Enp)
+    self.Ena  = self._cull_array(self.Ena)
+  
+  def _cull_array(self, a):
+    if a is not None:
+      gmax = self.ngroups-1
+      for g in range(self.ngroups-1, -1, -1):
+        # Check if group is all zeros
+        not_all_zeros = np.any(a[:,:,g])
+        if not_all_zeros:
+          gmax = g
+          break
+      if gmax != self.ngroups-1:
+        return a[:,:,:gmax+1]
+      else:
+        return a
+
   def add_to_hdf5(self, h5):
     grp = h5.create_group(self.name)
 
@@ -481,6 +583,11 @@ class FrendyMG:
     grp.attrs['temperatures'] = self.temps
     grp.attrs['dilutions'] = self.dilutions
 
+    grp.attrs['sctr_data_starts'] = self.data_starts
+    grp.attrs['sctr_low_group'] = self.low_grps
+    grp.attrs['sctr_high_group'] = self.high_grps
+    grp.attrs['sctr_mat_len'] = self.len_scatter_matrix_data
+
     # Save cross section data
     grp.create_dataset("transport-correction", data=self.Dtr)
     grp.create_dataset("absorption", data=self.Ea)
@@ -495,6 +602,17 @@ class FrendyMG:
       grp.create_dataset("fission", data=self.Ef)
       grp.create_dataset("nu", data=self.nu)
       grp.create_dataset("chi", data=self.chi)
+
+    # Depletion data 
+    grp.create_dataset("(n,gamma)", data=self.Egamma)
+    if self.En2n is not None:
+      grp.create_dataset("(n,2n)", data=self.En2n)
+    if self.En3n is not None:
+      grp.create_dataset("(n,3n)", data=self.En3n)
+    if self.Enp is not None:
+      grp.create_dataset("(n,p)", data=self.Enp)
+    if self.Ena is not None:
+      grp.create_dataset("(n,a)", data=self.Ena)
 
   def _get_endf_info(self):
     # First, get MAT
@@ -523,8 +641,9 @@ class FrendyMG:
       self.pot_xs = 4. * np.pi * AP * AP
 
   def _frendy_input(self, temp): 
+    # Will write (n,2n), (n,3n), (n,gamma), (n,p), and (n,alpha)
     out = "mg_neutron_mode\n"
-    out += "mg_edit_option ( KRAMXS MGFlux )\n"
+    out += "mg_edit_option ( KRAMXS MGFlux 1DXS 16, 17, 102, 103, 107 )\n"
     out += "nucl_file_name ({endf})\n".format(endf=self.endf_file)
     if self.tsl_file is not None:
       out += "nucl_file_name_tsl ({tsl})\n".format(tsl=self.tsl_file)
@@ -619,6 +738,46 @@ class FrendyMG:
         if itemp == 0 and d == 0:
           self.nu = xs.nu
           self.chi = xs.chi
+      
+    # read in (n,gamma) data
+    fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT102.mg"
+    ngamma = read_1dxs(fname, 3)
+    self.Egamma[itemp,:,:] = ngamma
+
+    fls = os.listdir()
+
+    # Check for (n,2n) data
+    fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT16.mg"
+    if fname in fls:
+      if itemp == 0:
+        self.En2n = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
+      n2n = read_1dxs(fname, 3)
+      self.En2n[itemp,:,:] = n2n
+
+    # Check for (n,3n) data
+    fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT17.mg"
+    if fname in fls:
+      if itemp == 0:
+        self.En3n = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
+      n3n = read_1dxs(fname, 3)
+      self.En3n[itemp,:,:] = n3n
+
+    # Check for (n,p) data
+    fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT103.mg"
+    if fname in fls:
+      if itemp == 0:
+        self.Enp = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
+      nprt = read_1dxs(fname, 3)
+      self.Enp[itemp,:,:] = nprt
+
+    # Check for (n,a) data
+    fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT107.mg"
+    if fname in fls:
+      if itemp == 0:
+        self.Ena = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
+      na = read_1dxs(fname, 3)
+      self.Ena[itemp,:,:] = na
+
 
 def read_1dxs(fname, nskip):
   fl = open(fname, 'r')
