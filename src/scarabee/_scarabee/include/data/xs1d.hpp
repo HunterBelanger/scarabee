@@ -13,7 +13,7 @@ namespace scarabee {
 
 class XS1D {
  public:
-  XS1D(const xt::xtensor<double, 1>& E) : xs_(E) {}
+  XS1D(const xt::xtensor<double, 1>& xs) : xs_(xs) {}
 
   double operator()(const std::size_t g) const {
     if (g >= xs_.size()) {
@@ -50,6 +50,8 @@ class XS1D {
     }
 
     for (std::size_t g = 0; g < this->ngroups(); g++) xs_(g) += xs2(g);
+
+    return *this;
   }
 
   XS1D& operator-=(const XS1D xs2) {
@@ -58,11 +60,19 @@ class XS1D {
     }
 
     for (std::size_t g = 0; g < this->ngroups(); g++) xs_(g) -= xs2(g);
+
+    return *this;
   }
 
-  XS1D& operator*=(const double v) { xs_ *= v; }
+  XS1D& operator*=(const double v) {
+    xs_ *= v;
+    return *this;
+  }
 
-  XS1D& operator/=(const double v) { xs_ /= v; }
+  XS1D& operator/=(const double v) {
+    xs_ /= v;
+    return *this;
+  }
 
   XS1D operator+(const XS1D& xs2) const {
     XS1D out(*this);

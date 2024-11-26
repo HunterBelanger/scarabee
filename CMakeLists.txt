@@ -182,6 +182,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/python/vector.cpp
                               src/scarabee/_scarabee/python/direction.cpp
                               src/scarabee/_scarabee/python/logging.cpp
+                              src/scarabee/_scarabee/python/xs1d.cpp
                               src/scarabee/_scarabee/python/cross_section.cpp
                               src/scarabee/_scarabee/python/diffusion_cross_section.cpp
                               src/scarabee/_scarabee/python/material.cpp
