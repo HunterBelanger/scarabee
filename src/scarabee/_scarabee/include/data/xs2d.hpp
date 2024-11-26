@@ -63,7 +63,7 @@ class XS2D {
 
     const std::size_t NG = Es.shape()[0];
 
-    packing_.reshape({NG, 3});
+    packing_.resize({NG, 3});
     packing_.fill(0);
 
     for (std::size_t g = 0; g < NG; g++) {
@@ -80,13 +80,15 @@ class XS2D {
       for (int gg = static_cast<int>(NG) - 1; gg >= 0; gg--) {
         if (Es(g, static_cast<std::size_t>(gg)) != 0.) {
           g_max = static_cast<std::size_t>(gg);
+          break;
         }
       }
 
       if (g == 0) {
         packing_(g, 0) = 0;
       } else {
-        packing_(g, 0) = packing_(g - 1, 0) + g_max + 1 - g_min;
+        packing_(g, 0) =
+            packing_(g - 1, 0) + packing_(g - 1, 2) + 1 - packing_(g - 1, 1);
       }
       packing_(g, 1) = g_min;
       packing_(g, 2) = g_max;
@@ -115,7 +117,7 @@ class XS2D {
     }
     const std::size_t NG = Es.shape()[1];
 
-    packing_.reshape({NG, 3});
+    packing_.resize({NG, 3});
     packing_.fill(0);
 
     for (std::size_t g = 0; g < NG; g++) {
@@ -132,13 +134,15 @@ class XS2D {
       for (int gg = static_cast<int>(NG) - 1; gg >= 0; gg--) {
         if (Es(0, g, static_cast<std::size_t>(gg)) != 0.) {
           g_max = static_cast<std::size_t>(gg);
+          break;
         }
       }
 
       if (g == 0) {
         packing_(g, 0) = 0;
       } else {
-        packing_(g, 0) = packing_(g - 1, 0) + g_max + 1 - g_min;
+        packing_(g, 0) =
+            packing_(g - 1, 0) + packing_(g - 1, 2) + 1 - packing_(g - 1, 1);
       }
       packing_(g, 1) = g_min;
       packing_(g, 2) = g_max;
@@ -278,7 +282,7 @@ class XS2D {
         break;
       }
     }
-    if (not_compat == true) return;
+    if (not_compat == false) return;
 
     // Unfortunately, they are not compatible. We need to re-pack the data.
     auto new_data = packing_;
@@ -354,6 +358,8 @@ class XS2D {
         }
       }
     }
+
+    return *this;
   }
 
   XS2D& operator-=(const XS2D& xs2) {
@@ -388,6 +394,8 @@ class XS2D {
         }
       }
     }
+
+    return *this;
   }
 
   XS2D operator+(const XS2D& xs2) {
@@ -402,9 +410,15 @@ class XS2D {
     return out;
   }
 
-  XS2D& operator*=(const double v) { xs_ *= v; }
+  XS2D& operator*=(const double v) {
+    xs_ *= v;
+    return *this;
+  }
 
-  XS2D& operator/=(const double v) { xs_ /= v; }
+  XS2D& operator/=(const double v) {
+    xs_ /= v;
+    return *this;
+  }
 
   XS2D operator*(const double v) const {
     XS2D out(*this);

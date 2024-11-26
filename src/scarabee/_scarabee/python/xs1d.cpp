@@ -15,9 +15,8 @@ void init_XS1D(py::module& m) {
   py::class_<XS1D, std::shared_ptr<XS1D>>(
       m, "XS1D",
       "A XS1D objects holds a 1-dimensional cross section. It is generalized "
-      "to "
-      "hold threshold reactions, so that if you request the cross section for "
-      "group g where g >= the number of groups, zero is returned.")
+      "to hold threshold reactions, so that if you request the cross section "
+      "for group g where g >= the number of groups, zero is returned.")
 
       .def(py::init<const xt::xtensor<double, 1>& /*xs*/>(),
            "Creates an XS1D from a 1D numpy array.\n\n"
@@ -78,7 +77,7 @@ void init_XS1D(py::module& m) {
                out << xs(i);
                if (i < xs.ngroups() - 1) out << ", ";
              }
-             out << "]";
+             out << ']';
              return out.str();
            })
 
@@ -90,7 +89,7 @@ void init_XS1D(py::module& m) {
           out << xs(i);
           if (i < xs.ngroups() - 1) out << ", ";
         }
-        out << "]";
+        out << ']';
         return out.str();
       });
 }
