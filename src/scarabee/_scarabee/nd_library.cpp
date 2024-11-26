@@ -317,8 +317,6 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
   xt::xtensor<double, 1> vEf = xt::zeros<double>({ngroups_});
   xt::xtensor<double, 1> chi = xt::zeros<double>({ngroups_});
 
-  double vEf_sum_1 = 0.;
-  double vEf_sum_2 = 0.;
   for (std::size_t g = 0; g < ngroups_; g++) {
     // Calculate the two flux values
     const double flux_1_g =
