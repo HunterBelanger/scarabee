@@ -2,7 +2,7 @@
 #define SCARABEE_ND_LIBRARY_H
 
 #include <data/material.hpp>
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include <highfive/highfive.hpp>

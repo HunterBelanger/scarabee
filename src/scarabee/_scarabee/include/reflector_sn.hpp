@@ -1,7 +1,7 @@
 #ifndef REFLECTOR_SN_H
 #define REFLECTOR_SN_H
 
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 

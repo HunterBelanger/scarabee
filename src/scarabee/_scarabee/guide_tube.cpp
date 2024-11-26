@@ -1,5 +1,4 @@
 #include <assemblies/pins/guide_tube.hpp>
-#include <memory>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
@@ -7,9 +6,7 @@
 #include <xtensor/xtensor.hpp>
 
 #include <cmath>
-#include "cross_section.hpp"
-#include "cylindrical_flux_solver.hpp"
-#include "spdlog/spdlog.h"
+#include <memory>
 
 namespace scarabee {
 

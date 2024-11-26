@@ -2,7 +2,7 @@
 #include <pybind11/stl.h>
 #include <xtensor-python/pytensor.hpp>
 
-#include <diffusion_cross_section.hpp>
+#include <data/diffusion_cross_section.hpp>
 
 namespace py = pybind11;
 

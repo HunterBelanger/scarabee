@@ -2,7 +2,7 @@
 #include <pybind11/stl.h>
 #include <xtensor-python/pytensor.hpp>
 
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 
 namespace py = pybind11;
 

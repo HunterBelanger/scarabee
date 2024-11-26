@@ -1,7 +1,7 @@
 #ifndef SCARABEE_CYLINDRICAL_CELL_H
 #define SCARABEE_CYLINDRICAL_CELL_H
 
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 #include <utils/constants.hpp>
 
 #include <xtensor/xtensor.hpp>

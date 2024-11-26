@@ -3,10 +3,10 @@
 
 #include <data/nd_library.hpp>
 #include <data/material.hpp>
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 #include <cylindrical_cell.hpp>
 #include <cylindrical_flux_solver.hpp>
-#include <diffusion_cross_section.hpp>
+#include <data/diffusion_cross_section.hpp>
 #include <diffusion/diffusion_data.hpp>
 #include <assemblies/pins/fuel_pin.hpp>
 #include <assemblies/pins/guide_tube.hpp>

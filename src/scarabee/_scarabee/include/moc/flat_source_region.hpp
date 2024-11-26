@@ -4,7 +4,7 @@
 #include <moc/surface.hpp>
 #include <moc/vector.hpp>
 #include <moc/direction.hpp>
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 #include <utils/constants.hpp>
 
 #include <htl/static_vector.hpp>

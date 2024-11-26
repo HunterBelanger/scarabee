@@ -4,7 +4,7 @@
 #include <moc/surface.hpp>
 #include <moc/vector.hpp>
 #include <moc/direction.hpp>
-#include <diffusion_cross_section.hpp>
+#include <data/diffusion_cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include <Eigen/Sparse>

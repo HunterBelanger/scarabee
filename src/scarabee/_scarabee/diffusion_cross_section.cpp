@@ -1,4 +1,4 @@
-#include <diffusion_cross_section.hpp>
+#include <data/diffusion_cross_section.hpp>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>

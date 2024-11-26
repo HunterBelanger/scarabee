@@ -1,7 +1,7 @@
 #ifndef SCARABEE_CRITICALITY_SPECTRUM_H
 #define SCARABEE_CRITICALITY_SPECTRUM_H
 
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 
