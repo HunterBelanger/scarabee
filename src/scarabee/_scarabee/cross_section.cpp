@@ -226,7 +226,9 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
     // Renormalize chi
     if (chi_sum > 0.) chi_ /= chi_sum;
   } else {
-    chi_ = XS1D({}); // With no entries, all groups have chi(g) = 0
+    // With no entries, all groups have chi(g) = 0
+    for (std::size_t g = 0; g < chi_.ngroups(); g++)
+      chi_.set_value(g, 0.);
   }
 
   // Make sure that we are fissile if the other was also fissile
