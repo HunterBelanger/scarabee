@@ -1,6 +1,8 @@
 #ifndef SCARABEE_CROSS_SECTIONS_H
 #define SCARABEE_CROSS_SECTIONS_H
 
+#include <data/xs1d.hpp>
+#include <data/xs2d.hpp>
 #include <data/diffusion_cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
@@ -40,18 +42,16 @@ class CrossSection {
                const xt::xtensor<double, 1>& Ea,
                const xt::xtensor<double, 3>& Es, const std::string& name = "");
 
-  std::size_t ngroups() const { return Etr_.size(); }
+  std::size_t ngroups() const { return Etr_.ngroups(); }
 
   const std::string& name() const { return name_; }
   void set_name(const std::string& new_name) { name_ = new_name; }
 
   bool fissile() const { return fissile_; }
 
-  bool anisotropic() const { return Es_.shape()[0] > 1; }
+  bool anisotropic() const { return Es_.anisotropic(); }
 
-  std::size_t max_legendre_order() const { return Es_.shape()[0] - 1; }
-
-  const xt::xtensor<double, 1>& Etr() const { return Etr_; }
+  std::size_t max_legendre_order() const { return Es_.max_legendre_order(); }
 
   double Etr(std::size_t g) const { return Etr_(g); }
 
@@ -82,7 +82,7 @@ class CrossSection {
   }
 
   double Es_tr(std::size_t gin) const {
-    return xt::sum(xt::view(Es_, 0, gin, xt::all()))();
+    return Es_(0, gin);
   }
 
   double Es(std::size_t l, std::size_t gin, std::size_t gout) const {
@@ -98,9 +98,9 @@ class CrossSection {
   double Es(std::size_t l, std::size_t gin) const {
     if (l > this->max_legendre_order()) return 0.;
 
-    double Es = xt::sum(xt::view(Es_, l, gin, xt::all()))();
+    double Es = Es_(l, gin);
     if (l == 0) {
-      Es += Dtr_[gin];
+      Es += Dtr_(gin);
     }
     return Es;
   }
@@ -118,15 +118,15 @@ class CrossSection {
   CrossSection& operator*=(double N);
 
  private:
-  xt::xtensor<double, 1> Etr_;  // Transport xs
-  xt::xtensor<double, 1> Dtr_;  // Transport Correction xs
-  xt::xtensor<double, 1> Ea_;   // Absorption xs
-  xt::xtensor<double, 1> Ef_;   // Fission xs
-  xt::xtensor<double, 1> vEf_;  // Fission xs * yield
-  xt::xtensor<double, 1> chi_;  // Fission spectrum
+  XS1D Etr_;  // Transport xs
+  XS1D Dtr_;  // Transport Correction xs
+  XS1D Ea_;   // Absorption xs
+  XS1D Ef_;   // Fission xs
+  XS1D vEf_;  // Fission xs * yield
+  XS1D chi_;  // Fission spectrum
   // Scattering Matrices. [0,:,:] is the TRANSPORT corrected P0 scatter matrix
   // while [1,:,:] is the P1 scatter matrix, [2,:,:] is the P2 matrix, etc.
-  xt::xtensor<double, 3> Es_;
+  XS2D Es_;
   std::string name_;
   bool fissile_;
 
