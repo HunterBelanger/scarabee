@@ -29,7 +29,9 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l) {
   packing = std::make_shared<xt::xtensor<std::uint32_t, 2>>();
   packing->resize({ndl.ngroups(), static_cast<std::size_t>(3)});
   grp.getDataSet("matrix-compression").read_raw<std::uint32_t>(packing->data());
-  const std::size_t len_scat_data = (*packing)(ndl.ngroups()-1, 0) + (*packing)(ndl.ngroups()-1, 2) + 1 - (*packing)(ndl.ngroups()-1, 1);
+  const std::size_t len_scat_data = (*packing)(ndl.ngroups() - 1, 0) +
+                                    (*packing)(ndl.ngroups() - 1, 2) + 1 -
+                                    (*packing)(ndl.ngroups() - 1, 1);
 
   scatter = std::make_shared<xt::xtensor<double, 3>>();
   scatter->resize({temperatures.size(), dilutions.size(), len_scat_data});
@@ -59,7 +61,7 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l) {
   // Read in data
   grp.getDataSet("absorption").read_raw<double>(absorption->data());
   grp.getDataSet("transport-correction")
-      .read_raw<double>(transport_correction->data()); 
+      .read_raw<double>(transport_correction->data());
   grp.getDataSet("scatter").read_raw<double>(scatter->data());
   if (grp.exist("p1-scatter") && max_l >= 1) {
     grp.getDataSet("p1-scatter").read_raw<double>(p1_scatter->data());
@@ -297,7 +299,8 @@ std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
   }
 
   // Make temp CrossSection
-  return std::make_shared<CrossSection>(XS1D(Et), XS1D(Dtr), XS1D(Ea), Es_xs2d, XS1D(Ef), XS1D(nu * Ef), XS1D(chi));
+  return std::make_shared<CrossSection>(XS1D(Et), XS1D(Dtr), XS1D(Ea), Es_xs2d,
+                                        XS1D(Ef), XS1D(nu * Ef), XS1D(chi));
 }
 
 std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
@@ -343,7 +346,9 @@ std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
     const std::size_t gg_max = static_cast<std::size_t>(Es.packing()(g, 2));
     for (std::size_t l = 0; l <= xs_1->max_legendre_order(); l++) {
       for (std::size_t g_out = gg_min; g_out <= gg_max; g_out++) {
-        Es.set_value(l, g, g_out, f1_g * xs_1->Es(l, g, g_out) + f2_g * xs_2->Es(l, g, g_out));
+        Es.set_value(
+            l, g, g_out,
+            f1_g * xs_1->Es(l, g, g_out) + f2_g * xs_2->Es(l, g, g_out));
       }
     }
     Et.set_value(g, Ea(g) + Es(0, g));
@@ -387,7 +392,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
   XS1D Et(xt::zeros<double>({ngroups_}));
   XS1D Dtr(xt::zeros<double>({ngroups_}));
   XS1D Ea(xt::zeros<double>({ngroups_}));
-  std::optional<XS2D> Es {std::nullopt};
+  std::optional<XS2D> Es{std::nullopt};
   XS1D Ef(xt::zeros<double>({ngroups_}));
   XS1D vEf(xt::zeros<double>({ngroups_}));
   XS1D chi(xt::zeros<double>({ngroups_}));
@@ -410,7 +415,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
     auto xs_1 = interp_xs(name, temp, bg_xs_1, max_l);
     auto xs_2 = interp_xs(name, temp, bg_xs_2, max_l);
 
-    // Now that we have a xs instance, initialize the scatter matrix 
+    // Now that we have a xs instance, initialize the scatter matrix
     if (Es.has_value() == false) Es = xs_1->Es_XS2D().zeros_like();
 
     for (std::size_t g = 0; g < ngroups_; g++) {
@@ -425,13 +430,18 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
 
       // Add contributions to the xs
       // Compute the xs values
-      Dtr.set_value(g, Dtr(g) + eta_m * (b1 * xs_1->Dtr(g) + b2 * xs_2->Dtr(g)));
+      Dtr.set_value(g,
+                    Dtr(g) + eta_m * (b1 * xs_1->Dtr(g) + b2 * xs_2->Dtr(g)));
       Ea.set_value(g, Ea(g) + eta_m * (b1 * xs_1->Ea(g) + b2 * xs_2->Ea(g)));
       Ef.set_value(g, Ef(g) + eta_m * (b1 * xs_1->Ef(g) + b2 * xs_2->Ef(g)));
-      vEf.set_value(g, vEf(g) + eta_m * (b1 * xs_1->vEf(g) + b2 * xs_2->vEf(g)));
+      vEf.set_value(g,
+                    vEf(g) + eta_m * (b1 * xs_1->vEf(g) + b2 * xs_2->vEf(g)));
       for (std::size_t l = 0; l <= max_l; l++) {
         for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
-          Es->set_value(l, g, g_out, (*Es)(l, g, g_out) + eta_m * (b1 * xs_1->Es(l, g, g_out) + b2 * xs_2->Es(l, g, g_out)));
+          Es->set_value(
+              l, g, g_out,
+              (*Es)(l, g, g_out) + eta_m * (b1 * xs_1->Es(l, g, g_out) +
+                                            b2 * xs_2->Es(l, g, g_out)));
         }  // For all outgoing groups
       }
 
@@ -441,7 +451,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
         chi.set_value(g, xs_1->chi(g));
       }
     }  // For all groups
-  }  // For 4 lumps
+  }    // For 4 lumps
 
   // Now we go through and normalize each group by the denom, and calculate Et
   for (std::size_t g = 0; g < ngroups_; g++) {

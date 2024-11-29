@@ -36,18 +36,16 @@ class CrossSection {
                const xt::xtensor<double, 1>& vEf,
                const xt::xtensor<double, 1>& chi, const std::string& name = "");
 
-  CrossSection(const XS1D& Et, const XS1D& Dtr, const XS1D& Ea,
-               const XS2D& Es, const XS1D& Ef, const XS1D& vEf,
-               const XS1D& chi, const std::string& name = "");
+  CrossSection(const XS1D& Et, const XS1D& Dtr, const XS1D& Ea, const XS2D& Es,
+               const XS1D& Ef, const XS1D& vEf, const XS1D& chi,
+               const std::string& name = "");
 
   CrossSection(const xt::xtensor<double, 1>& Etr,
                const xt::xtensor<double, 1>& Ea,
                const xt::xtensor<double, 2>& Es_tr,
                const std::string& name = "");
 
-  CrossSection(const XS1D& Etr,
-               const XS1D& Ea,
-               const XS2D& Es_tr,
+  CrossSection(const XS1D& Etr, const XS1D& Ea, const XS2D& Es_tr,
                const std::string& name = "");
 
   CrossSection(const xt::xtensor<double, 1>& Et,
@@ -55,10 +53,8 @@ class CrossSection {
                const xt::xtensor<double, 1>& Ea,
                const xt::xtensor<double, 3>& Es, const std::string& name = "");
 
-  CrossSection(const XS1D& Et,
-               const XS1D& Dtr,
-               const XS1D& Ea,
-               const XS2D& Es, const std::string& name = "");
+  CrossSection(const XS1D& Et, const XS1D& Dtr, const XS1D& Ea, const XS2D& Es,
+               const std::string& name = "");
 
   std::size_t ngroups() const { return Etr_.ngroups(); }
 
@@ -99,9 +95,7 @@ class CrossSection {
     return Es_(0, gin, gout);
   }
 
-  double Es_tr(std::size_t gin) const {
-    return Es_(0, gin);
-  }
+  double Es_tr(std::size_t gin) const { return Es_(0, gin); }
 
   double Es(std::size_t l, std::size_t gin, std::size_t gout) const {
     if (l > this->max_legendre_order()) return 0.;

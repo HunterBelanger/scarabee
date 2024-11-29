@@ -31,12 +31,8 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
   this->check_xs();
 }
 
-CrossSection::CrossSection(const XS1D& Etr,
-                           const XS1D& Ea,
-                           const XS2D& Es_tr,
-                           const XS1D& Ef,
-                           const XS1D& vEf,
-                           const XS1D& chi,
+CrossSection::CrossSection(const XS1D& Etr, const XS1D& Ea, const XS2D& Es_tr,
+                           const XS1D& Ef, const XS1D& vEf, const XS1D& chi,
                            const std::string& name)
     : Etr_(Etr),
       Dtr_(xt::zeros<double>({Etr_.ngroups()})),
@@ -72,14 +68,12 @@ CrossSection::CrossSection(
   for (std::size_t g = 0; g < ngroups(); g++) {
     Etr_.set_value(g, Etr_(g) - Dtr_(g));
     Es_.set_value(0, g, g, Es_(0, g, g) - Dtr_(g));
-  } 
+  }
 }
 
-CrossSection::CrossSection(
-    const XS1D& Et, const XS1D& Dtr,
-    const XS1D& Ea, const XS2D& Es,
-    const XS1D& Ef, const XS1D& vEf,
-    const XS1D& chi, const std::string& name)
+CrossSection::CrossSection(const XS1D& Et, const XS1D& Dtr, const XS1D& Ea,
+                           const XS2D& Es, const XS1D& Ef, const XS1D& vEf,
+                           const XS1D& chi, const std::string& name)
     : Etr_(Et),
       Dtr_(Dtr),
       Ea_(Ea),
@@ -96,7 +90,7 @@ CrossSection::CrossSection(
   for (std::size_t g = 0; g < ngroups(); g++) {
     Etr_.set_value(g, Etr_(g) - Dtr_(g));
     Es_.set_value(0, g, g, Es_(0, g, g) - Dtr_(g));
-  } 
+  }
 }
 
 CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
@@ -115,9 +109,7 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
   this->check_xs();
 }
 
-CrossSection::CrossSection(const XS1D& Etr,
-                           const XS1D& Ea,
-                           const XS2D& Es_tr,
+CrossSection::CrossSection(const XS1D& Etr, const XS1D& Ea, const XS2D& Es_tr,
                            const std::string& name)
     : Etr_(Etr),
       Dtr_(xt::zeros<double>({Etr_.ngroups()})),
@@ -154,11 +146,8 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Et,
   this->check_xs();
 }
 
-CrossSection::CrossSection(const XS1D& Et,
-                           const XS1D& Dtr,
-                           const XS1D& Ea,
-                           const XS2D& Es,
-                           const std::string& name)
+CrossSection::CrossSection(const XS1D& Et, const XS1D& Dtr, const XS1D& Ea,
+                           const XS2D& Es, const std::string& name)
     : Etr_(Et),
       Dtr_(Dtr),
       Ea_(Ea),
@@ -301,7 +290,8 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
   double chi_sum = 0.;
   if (L_vEf_sum + R_vEf_sum > 0.) {
     for (std::size_t g = 0; g < ngroups(); g++) {
-      const double new_chi = (chi(g) * L_vEf_sum + R.chi(g) * R_vEf_sum) / (L_vEf_sum + R_vEf_sum);
+      const double new_chi =
+          (chi(g) * L_vEf_sum + R.chi(g) * R_vEf_sum) / (L_vEf_sum + R_vEf_sum);
       chi_.set_value(g, new_chi);
       chi_sum += chi_(g);
     }
@@ -310,8 +300,7 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
     if (chi_sum > 0.) chi_ /= chi_sum;
   } else {
     // With no entries, all groups have chi(g) = 0
-    for (std::size_t g = 0; g < chi_.ngroups(); g++)
-      chi_.set_value(g, 0.);
+    for (std::size_t g = 0; g < chi_.ngroups(); g++) chi_.set_value(g, 0.);
   }
 
   // Make sure that we are fissile if the other was also fissile
@@ -320,10 +309,10 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
   // Add all other cross sections which aren't averaged
   Etr_ += R.Etr_;
   Dtr_ += R.Dtr_;
-  Ea_  += R.Ea_;
-  Ef_  += R.Ef_;
+  Ea_ += R.Ea_;
+  Ef_ += R.Ef_;
   vEf_ += R.vEf_;
-  Es_  += R.Es_;
+  Es_ += R.Es_;
 
   this->check_xs();
 
@@ -411,7 +400,7 @@ void CrossSection::check_xs() {
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
-  
+
   if (Ef_.ngroups() != ngroups()) {
     auto mssg = "Ef is not the same size as Et.";
     spdlog::error(mssg);

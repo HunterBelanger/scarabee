@@ -44,12 +44,9 @@ void init_CrossSection(py::module& m) {
            py::arg("Etr"), py::arg("Ea"), py::arg("Es_tr"), py::arg("Ef"),
            py::arg("vEf"), py::arg("chi"), py::arg("name") = "")
 
-      .def(py::init<const XS1D& /*Etr*/,
-                    const XS1D& /*Ea*/,
-                    const XS2D& /*Es_tr*/,
-                    const XS1D& /*Ef*/,
-                    const XS1D& /*vEf*/,
-                    const XS1D& /*chi*/,
+      .def(py::init<const XS1D& /*Etr*/, const XS1D& /*Ea*/,
+                    const XS2D& /*Es_tr*/, const XS1D& /*Ef*/,
+                    const XS1D& /*vEf*/, const XS1D& /*chi*/,
                     const std::string& /*name*/>(),
            "Creates a CrossSection from transport corrected data.\n\n"
            "Parameters\n"
@@ -102,14 +99,9 @@ void init_CrossSection(py::module& m) {
            py::arg("Et"), py::arg("Dtr"), py::arg("Ea"), py::arg("Es"),
            py::arg("Ef"), py::arg("vEf"), py::arg("chi"), py::arg("name") = "")
 
-      .def(py::init<const XS1D& /*Et*/,
-                    const XS1D& /*Dtr*/,
-                    const XS1D& /*Ea*/,
-                    const XS2D& /*Es*/,
-                    const XS1D& /*Ef*/,
-                    const XS1D& /*vEf*/,
-                    const XS1D& /*chi*/,
-                    const std::string& /*name*/>(),
+      .def(py::init<const XS1D& /*Et*/, const XS1D& /*Dtr*/, const XS1D& /*Ea*/,
+                    const XS2D& /*Es*/, const XS1D& /*Ef*/, const XS1D& /*vEf*/,
+                    const XS1D& /*chi*/, const std::string& /*name*/>(),
            "Creates a CrossSection object from uncorrected cross section "
            "data.\n\n"
            "Parameters\n"
@@ -152,10 +144,8 @@ void init_CrossSection(py::module& m) {
            py::arg("Etr"), py::arg("Ea"), py::arg("Es_tr"),
            py::arg("name") = "")
 
-      .def(py::init<const XS1D& /*Etr*/,
-                    const XS1D& /*Ea*/,
-                    const XS2D& /*Es_tr*/,
-                    const std::string& /*name*/>(),
+      .def(py::init<const XS1D& /*Etr*/, const XS1D& /*Ea*/,
+                    const XS2D& /*Es_tr*/, const std::string& /*name*/>(),
            "Creates a CrossSection from transport corrected data. "
            "Fission cross sections and spectrum initialized to zero.\n\n"
            "Parameters\n"
@@ -192,12 +182,9 @@ void init_CrossSection(py::module& m) {
            "       Name of material.\n\n",
            py::arg("Et"), py::arg("Dtr"), py::arg("Ea"), py::arg("Es"),
            py::arg("name") = "")
-      
-      .def(py::init<const XS1D& /*Et*/,
-                    const XS1D& /*Dtr*/,
-                    const XS1D& /*Ea*/,
-                    const XS2D& /*Es*/,
-                    const std::string& /*name*/>(),
+
+      .def(py::init<const XS1D& /*Et*/, const XS1D& /*Dtr*/, const XS1D& /*Ea*/,
+                    const XS2D& /*Es*/, const std::string& /*name*/>(),
            "Creates a CrossSection object from uncorrected cross section data. "
            "Fission cross sections and spectrum initialized to zero.\n\n"
            "Parameters\n"
