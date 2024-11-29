@@ -21,7 +21,7 @@ void init_XS2D(py::module& m) {
       "according to the P0 moment.")
 
       .def(py::init<const xt::xtensor<double, 2>& /*xs*/,
-                    const xt::xtensor<std::size_t, 2>& /*packing*/>(),
+                    const xt::xtensor<std::uint32_t, 2>& /*packing*/>(),
            "Creates an XS2D from the compressed data array and packing "
            "information array. The packing array has two dimensions. The "
            "first must have a length of the number of energy groups. The "

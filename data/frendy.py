@@ -583,10 +583,12 @@ class FrendyMG:
     grp.attrs['temperatures'] = self.temps
     grp.attrs['dilutions'] = self.dilutions
 
-    grp.attrs['sctr_data_starts'] = self.data_starts
-    grp.attrs['sctr_low_group'] = self.low_grps
-    grp.attrs['sctr_high_group'] = self.high_grps
-    grp.attrs['sctr_mat_len'] = self.len_scatter_matrix_data
+    packing = np.zeros((self.ngroups, 3), dtype=np.uint32)
+    for g in range(self.ngroups):
+       packing[g, 0] = self.data_starts[g]
+       packing[g, 1] = self.low_grps[g]
+       packing[g, 2] = self.high_grps[g]
+    grp.create_dataset('matrix-compression', data=packing)
 
     # Save cross section data
     grp.create_dataset("transport-correction", data=self.Dtr)

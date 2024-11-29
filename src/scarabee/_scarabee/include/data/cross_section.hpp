@@ -24,6 +24,10 @@ class CrossSection {
                const xt::xtensor<double, 1>& vEf,
                const xt::xtensor<double, 1>& chi, const std::string& name = "");
 
+  CrossSection(const XS1D& Etr, const XS1D& Ea, const XS2D& Es_tr,
+               const XS1D& Ef, const XS1D& vEf, const XS1D& chi,
+               const std::string& name = "");
+
   CrossSection(const xt::xtensor<double, 1>& Et,
                const xt::xtensor<double, 1>& Dtr,
                const xt::xtensor<double, 1>& Ea,
@@ -32,15 +36,29 @@ class CrossSection {
                const xt::xtensor<double, 1>& vEf,
                const xt::xtensor<double, 1>& chi, const std::string& name = "");
 
+  CrossSection(const XS1D& Et, const XS1D& Dtr, const XS1D& Ea,
+               const XS2D& Es, const XS1D& Ef, const XS1D& vEf,
+               const XS1D& chi, const std::string& name = "");
+
   CrossSection(const xt::xtensor<double, 1>& Etr,
                const xt::xtensor<double, 1>& Ea,
                const xt::xtensor<double, 2>& Es_tr,
+               const std::string& name = "");
+
+  CrossSection(const XS1D& Etr,
+               const XS1D& Ea,
+               const XS2D& Es_tr,
                const std::string& name = "");
 
   CrossSection(const xt::xtensor<double, 1>& Et,
                const xt::xtensor<double, 1>& Dtr,
                const xt::xtensor<double, 1>& Ea,
                const xt::xtensor<double, 3>& Es, const std::string& name = "");
+
+  CrossSection(const XS1D& Et,
+               const XS1D& Dtr,
+               const XS1D& Ea,
+               const XS2D& Es, const std::string& name = "");
 
   std::size_t ngroups() const { return Etr_.ngroups(); }
 
@@ -110,6 +128,14 @@ class CrossSection {
       const xt::xtensor<double, 1>& flux) const;
 
   std::shared_ptr<DiffusionCrossSection> diffusion_xs() const;
+
+  const XS1D& Etr_XS1D() const { return Etr_; }
+  const XS1D& Dtr_XS1D() const { return Dtr_; }
+  const XS1D& Ea_XS1D() const { return Ea_; }
+  const XS1D& Ef_XS1D() const { return Ef_; }
+  const XS1D& vEf_XS1D() const { return vEf_; }
+  const XS1D& chi_XS1D() const { return chi_; }
+  const XS2D& Es_XS2D() const { return Es_; }
 
   // Operators for constructing compound cross sections
   CrossSection operator+(const CrossSection& R) const;

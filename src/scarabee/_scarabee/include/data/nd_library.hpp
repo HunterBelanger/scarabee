@@ -33,10 +33,11 @@ struct NuclideHandle {
 
   std::shared_ptr<xt::xtensor<double, 3>> absorption;
   std::shared_ptr<xt::xtensor<double, 3>> transport_correction;
-  std::shared_ptr<xt::xtensor<double, 4>> scatter;
-  std::shared_ptr<xt::xtensor<double, 4>> p1_scatter;
-  std::shared_ptr<xt::xtensor<double, 4>> p2_scatter;
-  std::shared_ptr<xt::xtensor<double, 4>> p3_scatter;
+  std::shared_ptr<xt::xtensor<std::uint32_t, 2>> packing;
+  std::shared_ptr<xt::xtensor<double, 3>> scatter;
+  std::shared_ptr<xt::xtensor<double, 3>> p1_scatter;
+  std::shared_ptr<xt::xtensor<double, 3>> p2_scatter;
+  std::shared_ptr<xt::xtensor<double, 3>> p3_scatter;
   std::shared_ptr<xt::xtensor<double, 3>> fission;
   std::shared_ptr<xt::xtensor<double, 1>> chi;
   std::shared_ptr<xt::xtensor<double, 1>> nu;

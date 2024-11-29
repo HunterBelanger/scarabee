@@ -31,6 +31,26 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
   this->check_xs();
 }
 
+CrossSection::CrossSection(const XS1D& Etr,
+                           const XS1D& Ea,
+                           const XS2D& Es_tr,
+                           const XS1D& Ef,
+                           const XS1D& vEf,
+                           const XS1D& chi,
+                           const std::string& name)
+    : Etr_(Etr),
+      Dtr_(xt::zeros<double>({Etr_.ngroups()})),
+      Ea_(Ea),
+      Ef_(Ef),
+      vEf_(vEf),
+      chi_(chi),
+      Es_(Es_tr),
+      name_(name),
+      fissile_(false) {
+  // We were provided with transport corrected data, so Dtr is 0 here
+  this->check_xs();
+}
+
 CrossSection::CrossSection(
     const xt::xtensor<double, 1>& Et, const xt::xtensor<double, 1>& Dtr,
     const xt::xtensor<double, 1>& Ea, const xt::xtensor<double, 3>& Es,
@@ -45,14 +65,38 @@ CrossSection::CrossSection(
       Es_(Es),
       name_(name),
       fissile_(false) {
+  // Check xs first, to make sure the size of everything is okay
+  this->check_xs();
+
   // Apply the transport correction
   for (std::size_t g = 0; g < ngroups(); g++) {
     Etr_.set_value(g, Etr_(g) - Dtr_(g));
     Es_.set_value(0, g, g, Es_(0, g, g) - Dtr_(g));
-  }
+  } 
+}
 
+CrossSection::CrossSection(
+    const XS1D& Et, const XS1D& Dtr,
+    const XS1D& Ea, const XS2D& Es,
+    const XS1D& Ef, const XS1D& vEf,
+    const XS1D& chi, const std::string& name)
+    : Etr_(Et),
+      Dtr_(Dtr),
+      Ea_(Ea),
+      Ef_(Ef),
+      vEf_(vEf),
+      chi_(chi),
+      Es_(Es),
+      name_(name),
+      fissile_(false) {
   // Check xs first, to make sure the size of everything is okay
   this->check_xs();
+
+  // Apply the transport correction
+  for (std::size_t g = 0; g < ngroups(); g++) {
+    Etr_.set_value(g, Etr_(g) - Dtr_(g));
+    Es_.set_value(0, g, g, Es_(0, g, g) - Dtr_(g));
+  } 
 }
 
 CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
@@ -71,10 +115,49 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
   this->check_xs();
 }
 
+CrossSection::CrossSection(const XS1D& Etr,
+                           const XS1D& Ea,
+                           const XS2D& Es_tr,
+                           const std::string& name)
+    : Etr_(Etr),
+      Dtr_(xt::zeros<double>({Etr_.ngroups()})),
+      Ea_(Ea),
+      Ef_(xt::zeros<double>({Etr_.ngroups()})),
+      vEf_(xt::zeros<double>({Etr_.ngroups()})),
+      chi_(xt::zeros<double>({Etr_.ngroups()})),
+      Es_(Es_tr),
+      name_(name),
+      fissile_(false) {
+  this->check_xs();
+}
+
 CrossSection::CrossSection(const xt::xtensor<double, 1>& Et,
                            const xt::xtensor<double, 1>& Dtr,
                            const xt::xtensor<double, 1>& Ea,
                            const xt::xtensor<double, 3>& Es,
+                           const std::string& name)
+    : Etr_(Et),
+      Dtr_(Dtr),
+      Ea_(Ea),
+      Ef_(xt::zeros<double>({Etr_.ngroups()})),
+      vEf_(xt::zeros<double>({Etr_.ngroups()})),
+      chi_(xt::zeros<double>({Etr_.ngroups()})),
+      Es_(Es),
+      name_(name),
+      fissile_(false) {
+  // Apply the transport correction
+  for (std::size_t g = 0; g < ngroups(); g++) {
+    Etr_.set_value(g, Etr_(g) - Dtr_(g));
+    Es_.set_value(0, g, g, Es_(0, g, g) - Dtr_(g));
+  }
+
+  this->check_xs();
+}
+
+CrossSection::CrossSection(const XS1D& Et,
+                           const XS1D& Dtr,
+                           const XS1D& Ea,
+                           const XS2D& Es,
                            const std::string& name)
     : Etr_(Et),
       Dtr_(Dtr),

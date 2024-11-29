@@ -44,6 +44,33 @@ void init_CrossSection(py::module& m) {
            py::arg("Etr"), py::arg("Ea"), py::arg("Es_tr"), py::arg("Ef"),
            py::arg("vEf"), py::arg("chi"), py::arg("name") = "")
 
+      .def(py::init<const XS1D& /*Etr*/,
+                    const XS1D& /*Ea*/,
+                    const XS2D& /*Es_tr*/,
+                    const XS1D& /*Ef*/,
+                    const XS1D& /*vEf*/,
+                    const XS1D& /*chi*/,
+                    const std::string& /*name*/>(),
+           "Creates a CrossSection from transport corrected data.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "Etr : XS1D\n"
+           "      Transport corrected total cross section.\n"
+           "Ea : XS1D\n"
+           "     Absorption cross section.\n"
+           "Es_tr : XS2D\n"
+           "        Transport corrected scattering cross section matrix.\n"
+           "Ef : XS1D\n"
+           "     Fission cross section.\n"
+           "vEf : XS1D\n"
+           "      Fission yield time cross section.\n"
+           "chi : XS1D\n"
+           "      Fission spectrum.\n"
+           "name : str (optional)\n"
+           "       Name of material.\n\n",
+           py::arg("Etr"), py::arg("Ea"), py::arg("Es_tr"), py::arg("Ef"),
+           py::arg("vEf"), py::arg("chi"), py::arg("name") = "")
+
       .def(py::init<const xt::xtensor<double, 1>& /*Et*/,
                     const xt::xtensor<double, 1>& /*Dtr*/,
                     const xt::xtensor<double, 1>& /*Ea*/,
@@ -75,6 +102,37 @@ void init_CrossSection(py::module& m) {
            py::arg("Et"), py::arg("Dtr"), py::arg("Ea"), py::arg("Es"),
            py::arg("Ef"), py::arg("vEf"), py::arg("chi"), py::arg("name") = "")
 
+      .def(py::init<const XS1D& /*Et*/,
+                    const XS1D& /*Dtr*/,
+                    const XS1D& /*Ea*/,
+                    const XS2D& /*Es*/,
+                    const XS1D& /*Ef*/,
+                    const XS1D& /*vEf*/,
+                    const XS1D& /*chi*/,
+                    const std::string& /*name*/>(),
+           "Creates a CrossSection object from uncorrected cross section "
+           "data.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "Et : XS1D\n"
+           "     Total cross section\n"
+           "Dtr : XS1D\n"
+           "     Transport correction\n"
+           "Ea : XS1D\n"
+           "     Absorption cross section\n"
+           "Es : XS2D\n"
+           "     Scattering matrices for all legendre moments\n"
+           "Ef : XS1D\n"
+           "     Fission cross section\n"
+           "vEf : XS1D\n"
+           "      Fission yield time cross section\n"
+           "chi : XS1D\n"
+           "      Fission spectrum\n"
+           "name : str (optional)\n"
+           "       Name of material.\n\n",
+           py::arg("Et"), py::arg("Dtr"), py::arg("Ea"), py::arg("Es"),
+           py::arg("Ef"), py::arg("vEf"), py::arg("chi"), py::arg("name") = "")
+
       .def(py::init<const xt::xtensor<double, 1>& /*Etr*/,
                     const xt::xtensor<double, 1>& /*Ea*/,
                     const xt::xtensor<double, 2>& /*Es_tr*/,
@@ -88,6 +146,25 @@ void init_CrossSection(py::module& m) {
            "Ea : ndarray\n"
            "     Absorption cross section.\n"
            "Es_tr : ndarray\n"
+           "        Transport corrected scattering cross section matrix.\n"
+           "name : str (optional)\n"
+           "       Name of material.\n\n",
+           py::arg("Etr"), py::arg("Ea"), py::arg("Es_tr"),
+           py::arg("name") = "")
+
+      .def(py::init<const XS1D& /*Etr*/,
+                    const XS1D& /*Ea*/,
+                    const XS2D& /*Es_tr*/,
+                    const std::string& /*name*/>(),
+           "Creates a CrossSection from transport corrected data. "
+           "Fission cross sections and spectrum initialized to zero.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "Etr : XS1D\n"
+           "      Transport corrected total cross section.\n"
+           "Ea : XS1D\n"
+           "     Absorption cross section.\n"
+           "Es_tr : XS2D\n"
            "        Transport corrected scattering cross section matrix.\n"
            "name : str (optional)\n"
            "       Name of material.\n\n",
@@ -110,6 +187,28 @@ void init_CrossSection(py::module& m) {
            "Ea : ndarray\n"
            "     Absorption cross section.\n"
            "Es : ndarray\n"
+           "     Scattering matrices for all legendre moments\n"
+           "name : str (optional)\n"
+           "       Name of material.\n\n",
+           py::arg("Et"), py::arg("Dtr"), py::arg("Ea"), py::arg("Es"),
+           py::arg("name") = "")
+      
+      .def(py::init<const XS1D& /*Et*/,
+                    const XS1D& /*Dtr*/,
+                    const XS1D& /*Ea*/,
+                    const XS2D& /*Es*/,
+                    const std::string& /*name*/>(),
+           "Creates a CrossSection object from uncorrected cross section data. "
+           "Fission cross sections and spectrum initialized to zero.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "Et : XS1D\n"
+           "     Total cross section.\n"
+           "Dtr : XS1D\n"
+           "     Transport correction\n"
+           "Ea : XS1D\n"
+           "     Absorption cross section.\n"
+           "Es : XS2D\n"
            "     Scattering matrices for all legendre moments\n"
            "name : str (optional)\n"
            "       Name of material.\n\n",

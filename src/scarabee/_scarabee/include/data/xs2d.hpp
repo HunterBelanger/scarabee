@@ -8,13 +8,15 @@
 #include <xtensor/xview.hpp>
 
 #include <cmath>
+#include <cstdint>
+#include <sstream>
 
 namespace scarabee {
 
 class XS2D {
  public:
   XS2D(const xt::xtensor<double, 2>& xs,
-       const xt::xtensor<std::size_t, 2>& packing)
+       const xt::xtensor<std::uint32_t, 2>& packing)
       : xs_(xs), packing_(packing) {
     // Make sure packing is valid
     if (packing_.shape()[1] != 3) {
@@ -90,8 +92,8 @@ class XS2D {
         packing_(g, 0) =
             packing_(g - 1, 0) + packing_(g - 1, 2) + 1 - packing_(g - 1, 1);
       }
-      packing_(g, 1) = g_min;
-      packing_(g, 2) = g_max;
+      packing_(g, 1) = static_cast<std::uint32_t>(g_min);
+      packing_(g, 2) = static_cast<std::uint32_t>(g_max);
     }
 
     const std::size_t NDAT =
@@ -144,8 +146,8 @@ class XS2D {
         packing_(g, 0) =
             packing_(g - 1, 0) + packing_(g - 1, 2) + 1 - packing_(g - 1, 1);
       }
-      packing_(g, 1) = g_min;
-      packing_(g, 2) = g_max;
+      packing_(g, 1) = static_cast<std::uint32_t>(g_min);
+      packing_(g, 2) = static_cast<std::uint32_t>(g_max);
     }
 
     const std::size_t NDAT =
@@ -170,6 +172,29 @@ class XS2D {
   bool anisotropic() const { return xs_.shape()[0] > 1; }
 
   std::size_t max_legendre_order() const { return xs_.shape()[0] - 1; }
+
+  std::string to_string() const {
+    std::stringstream out;
+    out << std::scientific;
+    out << '[';
+    for (std::size_t l = 0; l < max_legendre_order() + 1; l++) {
+      out << '[';
+      for (std::size_t g = 0; g < ngroups(); g++) {
+        out << '[';
+        for (std::size_t gg = 0; gg < ngroups(); gg++) {
+          out << (*this)(l, g, gg);
+          if (gg < ngroups() - 1) out << ", ";
+        }
+        out << ']';
+        if (g < ngroups() - 1) out << ",\n  ";
+      }
+      out << ']';
+      if (l != max_legendre_order()) out << ",\n ";
+    }
+    out << ']';
+
+    return out.str();
+  }
 
   double operator()(const std::size_t l, const std::size_t g) const {
     if (g >= ngroups()) {
@@ -257,7 +282,7 @@ class XS2D {
     xs_(l, strt + gout - g_min) = v;
   }
 
-  void repack_to_be_compatible(const xt::xtensor<std::size_t, 2>& packing2) {
+  void repack_to_be_compatible(const xt::xtensor<std::uint32_t, 2>& packing2) {
     if (ngroups() != packing2.shape()[0]) {
       const auto mssg = "Data packing schemes have different number of groups.";
       spdlog::error(mssg);
@@ -326,6 +351,14 @@ class XS2D {
     packing_ = new_data;
   }
 
+  const xt::xtensor<std::uint32_t, 2>& packing() const { return packing_; }
+
+  XS2D zeros_like() const {
+    XS2D out(*this);
+    out.xs_.fill(0.);
+    return out;
+  }
+
   XS2D& operator+=(const XS2D& xs2) {
     if (ngroups() != xs2.ngroups()) {
       const auto mssg =
@@ -338,8 +371,8 @@ class XS2D {
     this->repack_to_be_compatible(xs2.packing_);
 
     // Must deal with unequal legendre orders
-    if (max_legendre_order() != xs2.max_legendre_order()) {
-      const std::size_t NL = std::max(xs_.shape()[0], xs2.xs_.shape()[0]);
+    if (max_legendre_order() < xs2.max_legendre_order()) {
+      const std::size_t NL = std::max(this->xs_.shape()[0], xs2.xs_.shape()[0]);
       xt::xtensor<double, 2> new_xs = xt::zeros<double>({NL, xs_.shape()[1]});
 
       xt::view(new_xs, xt::range(0, xs_.shape()[0]), xt::all()) = xs_;
@@ -374,7 +407,7 @@ class XS2D {
     this->repack_to_be_compatible(xs2.packing_);
 
     // Must deal with unequal legendre orders
-    if (max_legendre_order() != xs2.max_legendre_order()) {
+    if (max_legendre_order() < xs2.max_legendre_order()) {
       const std::size_t NL = std::max(xs_.shape()[0], xs2.xs_.shape()[0]);
       xt::xtensor<double, 2> new_xs = xt::zeros<double>({NL, xs_.shape()[1]});
 
@@ -434,7 +467,7 @@ class XS2D {
 
  private:
   xt::xtensor<double, 2> xs_;
-  xt::xtensor<std::size_t, 2>
+  xt::xtensor<std::uint32_t, 2>
       packing_;  // First index incident group, second (data start, g_low, g_hi)
 };
 

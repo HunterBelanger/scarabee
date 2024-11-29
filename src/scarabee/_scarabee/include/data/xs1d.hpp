@@ -44,6 +44,12 @@ class XS1D {
     }
   }
 
+  XS1D zeros_like() const {
+    XS1D out(*this);
+    out.xs_.fill(0.);
+    return out;
+  }
+
   XS1D& operator+=(const XS1D xs2) {
     if (this->ngroups() < xs2.ngroups()) {
       this->resize(xs2.ngroups());
