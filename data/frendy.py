@@ -2,7 +2,7 @@ import ENDFtk
 import subprocess
 import os
 import numpy as np
-#from scarabee import *
+from scarabee import *
 
 # Estimates of Intermediate-Resonance Lambda values as a function of mass
 # number, A, taken from "WIMS-D Library Update", by the IAEA.
