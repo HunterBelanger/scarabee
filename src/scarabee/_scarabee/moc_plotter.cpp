@@ -372,7 +372,7 @@ void MOCPlotter::render_image() {
           i++;
         }
       }  // while i < plot_width_
-    }    // For j which is parallel
+    }  // For j which is parallel
   }
 
   if (outline_boundaries) {
@@ -429,7 +429,7 @@ void MOCPlotter::render_image() {
           j++;
         }
       }  // while j < image.height
-    }    // For i which is parallel
+    }  // For i which is parallel
   }
 }
 

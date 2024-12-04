@@ -638,7 +638,7 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
           }
         }
       }  // For all tracks
-    }    // For all azimuthal angles
+    }  // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
@@ -700,7 +700,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
                                     Y_ljs[it_lj] * 0.5;
             }
           }  // For all polar angles
-        }    // For all segments along forward direction of track
+        }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.exit_bc() == BoundaryCondition::Vacuum) {
@@ -751,7 +751,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
                                     Y_ljs[it_lj] * 0.5;
             }
           }  // For all polar angles
-        }    // For all segments along forward direction of track
+        }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.entry_bc() == BoundaryCondition::Vacuum) {
@@ -762,7 +762,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
           }
         }
       }  // For all tracks
-    }    // For all azimuthal angles
+    }  // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
@@ -871,9 +871,9 @@ void MOCDriver::fill_source_anisotropic(
           it_lj++;
 
         }  // -l to l
-      }    // all scattering moments L
-    }      // all flat souce regions
-  }        // all groups
+      }  // all scattering moments L
+    }  // all flat souce regions
+  }  // all groups
 }
 
 void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,

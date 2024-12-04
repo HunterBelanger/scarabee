@@ -451,7 +451,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
         chi.set_value(g, xs_1->chi(g));
       }
     }  // For all groups
-  }    // For 4 lumps
+  }  // For 4 lumps
 
   // Now we go through and normalize each group by the denom, and calculate Et
   for (std::size_t g = 0; g < ngroups_; g++) {
