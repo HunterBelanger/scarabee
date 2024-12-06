@@ -1,6 +1,6 @@
 from _scarabee import *
 import numpy as np
-#import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 class NodeFlux:
@@ -27,7 +27,7 @@ class NodeFlux:
 
         if g >= self.ngroups:
             raise RuntimeError("Group index g is out of range.")
-        
+
         # Commented out to permit use with an array
         """
         if x < self.x_min:
@@ -269,7 +269,7 @@ class Reflector:
         ref_node = NodeFlux(x_fuel, x_ref_end, a_ref)
 
         # Plot reference Sn flux and nodal flux
-        #for g in range(len(self.few_group_condensation_scheme)):
+        # for g in range(len(self.few_group_condensation_scheme)):
         #    nodal_flux = np.zeros(len(x))
         #    nodal_flux[:NF] = fuel_node(x[:NF], g)
         #    nodal_flux[NF:] = ref_node(x[NF:], g)

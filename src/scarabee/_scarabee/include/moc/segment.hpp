@@ -2,7 +2,7 @@
 #define SEGMENT_H
 
 #include <moc/flat_source_region.hpp>
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 

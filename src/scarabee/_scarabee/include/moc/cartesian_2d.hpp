@@ -7,7 +7,7 @@
 #include <moc/pin_cell.hpp>
 #include <moc/direction.hpp>
 #include <moc/vector.hpp>
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 

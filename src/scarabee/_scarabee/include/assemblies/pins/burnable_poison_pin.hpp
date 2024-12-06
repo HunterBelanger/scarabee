@@ -3,7 +3,7 @@
 
 #include <data/material.hpp>
 #include <data/nd_library.hpp>
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 #include <moc/vector.hpp>
 #include <moc/cell.hpp>
 #include <moc/simple_pin_cell.hpp>

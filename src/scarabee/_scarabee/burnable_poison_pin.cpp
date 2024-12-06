@@ -1,5 +1,4 @@
 #include <assemblies/pins/burnable_poison_pin.hpp>
-#include <memory>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
@@ -7,8 +6,7 @@
 #include <xtensor/xtensor.hpp>
 
 #include <cmath>
-#include "cross_section.hpp"
-#include "moc/simple_pin_cell.hpp"
+#include <memory>
 
 namespace scarabee {
 

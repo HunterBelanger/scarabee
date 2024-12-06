@@ -1,7 +1,7 @@
 #ifndef CELL_H
 #define CELL_H
 
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 #include <moc/direction.hpp>
 #include <moc/segment.hpp>
 #include <moc/vector.hpp>

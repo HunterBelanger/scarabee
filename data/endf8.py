@@ -30,7 +30,7 @@ N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
 N.process(h5)
 
-chi = N.chi[0,:]
+chi = N.chi[:]
 
 # Process TSL based evaluations
 N = fdy.FrendyMG()

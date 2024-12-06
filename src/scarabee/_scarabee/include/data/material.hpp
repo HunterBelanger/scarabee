@@ -1,7 +1,7 @@
 #ifndef SCARABEE_MATERIAL_H
 #define SCARABEE_MATERIAL_H
 
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 
 #include <string>
 #include <memory>

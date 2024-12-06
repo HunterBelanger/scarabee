@@ -1,4 +1,4 @@
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
@@ -19,22 +19,31 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
                            const xt::xtensor<double, 1>& chi,
                            const std::string& name)
     : Etr_(Etr),
-      Dtr_(),
+      Dtr_(xt::zeros<double>({Etr_.ngroups()})),
       Ea_(Ea),
       Ef_(Ef),
       vEf_(vEf),
       chi_(chi),
-      Es_(),
+      Es_(Es_tr),
       name_(name),
       fissile_(false) {
   // We were provided with transport corrected data, so Dtr is 0 here
-  Dtr_ = xt::zeros<double>({Etr_.size()});
+  this->check_xs();
+}
 
-  // Now will initialize the scatter matrix
-  Es_ = xt::zeros<double>(
-      {static_cast<std::size_t>(1), Es_tr.shape()[0], Es_tr.shape()[1]});
-  xt::view(Es_, 0, xt::all(), xt::all()) = Es_tr;
-
+CrossSection::CrossSection(const XS1D& Etr, const XS1D& Ea, const XS2D& Es_tr,
+                           const XS1D& Ef, const XS1D& vEf, const XS1D& chi,
+                           const std::string& name)
+    : Etr_(Etr),
+      Dtr_(xt::zeros<double>({Etr_.ngroups()})),
+      Ea_(Ea),
+      Ef_(Ef),
+      vEf_(vEf),
+      chi_(chi),
+      Es_(Es_tr),
+      name_(name),
+      fissile_(false) {
+  // We were provided with transport corrected data, so Dtr is 0 here
   this->check_xs();
 }
 
@@ -57,8 +66,30 @@ CrossSection::CrossSection(
 
   // Apply the transport correction
   for (std::size_t g = 0; g < ngroups(); g++) {
-    Etr_(g) -= Dtr_(g);
-    Es_(0, g, g) -= Dtr_(g);
+    Etr_.set_value(g, Etr_(g) - Dtr_(g));
+    Es_.set_value(0, g, g, Es_(0, g, g) - Dtr_(g));
+  }
+}
+
+CrossSection::CrossSection(const XS1D& Et, const XS1D& Dtr, const XS1D& Ea,
+                           const XS2D& Es, const XS1D& Ef, const XS1D& vEf,
+                           const XS1D& chi, const std::string& name)
+    : Etr_(Et),
+      Dtr_(Dtr),
+      Ea_(Ea),
+      Ef_(Ef),
+      vEf_(vEf),
+      chi_(chi),
+      Es_(Es),
+      name_(name),
+      fissile_(false) {
+  // Check xs first, to make sure the size of everything is okay
+  this->check_xs();
+
+  // Apply the transport correction
+  for (std::size_t g = 0; g < ngroups(); g++) {
+    Etr_.set_value(g, Etr_(g) - Dtr_(g));
+    Es_.set_value(0, g, g, Es_(0, g, g) - Dtr_(g));
   }
 }
 
@@ -67,23 +98,28 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Etr,
                            const xt::xtensor<double, 2>& Es_tr,
                            const std::string& name)
     : Etr_(Etr),
-      Dtr_(),
+      Dtr_(xt::zeros<double>({Etr_.ngroups()})),
       Ea_(Ea),
-      vEf_(),
-      chi_(),
-      Es_(),
+      Ef_(xt::zeros<double>({Etr_.ngroups()})),
+      vEf_(xt::zeros<double>({Etr_.ngroups()})),
+      chi_(xt::zeros<double>({Etr_.ngroups()})),
+      Es_(Es_tr),
       name_(name),
       fissile_(false) {
-  Dtr_ = xt::zeros<double>({ngroups()});
-  Ef_ = xt::zeros<double>({ngroups()});
-  vEf_ = xt::zeros<double>({ngroups()});
-  chi_ = xt::zeros<double>({ngroups()});
+  this->check_xs();
+}
 
-  // Now will initialize the scatter matrix
-  Es_ = xt::zeros<double>(
-      {static_cast<std::size_t>(1), Es_tr.shape()[0], Es_tr.shape()[1]});
-  xt::view(Es_, 0, xt::all(), xt::all()) = Es_tr;
-
+CrossSection::CrossSection(const XS1D& Etr, const XS1D& Ea, const XS2D& Es_tr,
+                           const std::string& name)
+    : Etr_(Etr),
+      Dtr_(xt::zeros<double>({Etr_.ngroups()})),
+      Ea_(Ea),
+      Ef_(xt::zeros<double>({Etr_.ngroups()})),
+      vEf_(xt::zeros<double>({Etr_.ngroups()})),
+      chi_(xt::zeros<double>({Etr_.ngroups()})),
+      Es_(Es_tr),
+      name_(name),
+      fissile_(false) {
   this->check_xs();
 }
 
@@ -95,21 +131,39 @@ CrossSection::CrossSection(const xt::xtensor<double, 1>& Et,
     : Etr_(Et),
       Dtr_(Dtr),
       Ea_(Ea),
-      vEf_(),
-      chi_(),
+      Ef_(xt::zeros<double>({Etr_.ngroups()})),
+      vEf_(xt::zeros<double>({Etr_.ngroups()})),
+      chi_(xt::zeros<double>({Etr_.ngroups()})),
       Es_(Es),
       name_(name),
       fissile_(false) {
-  Ef_ = xt::zeros<double>({ngroups()});
-  vEf_ = xt::zeros<double>({ngroups()});
-  chi_ = xt::zeros<double>({ngroups()});
-  this->check_xs();
-
   // Apply the transport correction
   for (std::size_t g = 0; g < ngroups(); g++) {
-    Etr_(g) -= Dtr_(g);
-    Es_(0, g, g) -= Dtr_(g);
+    Etr_.set_value(g, Etr_(g) - Dtr_(g));
+    Es_.set_value(0, g, g, Es_(0, g, g) - Dtr_(g));
   }
+
+  this->check_xs();
+}
+
+CrossSection::CrossSection(const XS1D& Et, const XS1D& Dtr, const XS1D& Ea,
+                           const XS2D& Es, const std::string& name)
+    : Etr_(Et),
+      Dtr_(Dtr),
+      Ea_(Ea),
+      Ef_(xt::zeros<double>({Etr_.ngroups()})),
+      vEf_(xt::zeros<double>({Etr_.ngroups()})),
+      chi_(xt::zeros<double>({Etr_.ngroups()})),
+      Es_(Es),
+      name_(name),
+      fissile_(false) {
+  // Apply the transport correction
+  for (std::size_t g = 0; g < ngroups(); g++) {
+    Etr_.set_value(g, Etr_(g) - Dtr_(g));
+    Es_.set_value(0, g, g, Es_(0, g, g) - Dtr_(g));
+  }
+
+  this->check_xs();
 }
 
 std::shared_ptr<CrossSection> CrossSection::condense(
@@ -228,52 +282,37 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
     R_vEf_sum += R.vEf(g);
   }
 
+  // Resize chi if needed
+  if (this->chi_.ngroups() < R.chi_.ngroups()) {
+    this->chi_.resize(R.chi_.ngroups());
+  }
+
   double chi_sum = 0.;
   if (L_vEf_sum + R_vEf_sum > 0.) {
     for (std::size_t g = 0; g < ngroups(); g++) {
-      chi_(g) =
+      const double new_chi =
           (chi(g) * L_vEf_sum + R.chi(g) * R_vEf_sum) / (L_vEf_sum + R_vEf_sum);
+      chi_.set_value(g, new_chi);
       chi_sum += chi_(g);
     }
 
     // Renormalize chi
     if (chi_sum > 0.) chi_ /= chi_sum;
   } else {
-    chi_.fill(0.);
+    // With no entries, all groups have chi(g) = 0
+    for (std::size_t g = 0; g < chi_.ngroups(); g++) chi_.set_value(g, 0.);
   }
 
   // Make sure that we are fissile if the other was also fissile
   if (R.fissile()) fissile_ = true;
 
-  // We now fill a temporary scattering matrix array which contains the P0,
-  // P1, ..., Pl scattering matrices where the P0 IS NOT transport corrected.
-  xt::xtensor<double, 3> temp_Es;
-  const std::size_t max_legendre_order =
-      std::max(this->max_legendre_order(), R.max_legendre_order());
-  temp_Es = xt::zeros<double>({max_legendre_order + 1, ngroups(), ngroups()});
-  for (std::size_t l = 0; l <= max_legendre_order; l++) {
-    for (std::size_t gin = 0; gin < ngroups(); gin++) {
-      for (std::size_t gout = 0; gout < ngroups(); gout++) {
-        temp_Es(l, gin, gout) = this->Es(l, gin, gout) + R.Es(l, gin, gout);
-      }
-    }
-  }
-
   // Add all other cross sections which aren't averaged
-  for (std::size_t g = 0; g < ngroups(); g++) {
-    Etr_(g) += R.Etr(g);
-    Dtr_(g) += R.Dtr(g);
-    Ea_(g) += R.Ea(g);
-    Ef_(g) += R.Ef(g);
-    vEf_(g) += R.vEf(g);
-  }
-
-  // Now that we have calculated a new Dtr, we can apply the transport
-  // correction to the new scattering matrix
-  for (std::size_t g = 0; g < ngroups(); g++) {
-    temp_Es(0, g, g) -= Dtr_(g);
-  }
-  Es_ = temp_Es;
+  Etr_ += R.Etr_;
+  Dtr_ += R.Dtr_;
+  Ea_ += R.Ea_;
+  Ef_ += R.Ef_;
+  vEf_ += R.vEf_;
+  Es_ += R.Es_;
 
   this->check_xs();
 
@@ -281,9 +320,27 @@ CrossSection& CrossSection::operator+=(const CrossSection& R) {
 }
 
 std::shared_ptr<DiffusionCrossSection> CrossSection::diffusion_xs() const {
-  return std::make_shared<DiffusionCrossSection>(
-      1. / (3. * Etr_), Ea_, xt::view(Es_, 0, xt::all(), xt::all()), Ef_, vEf_,
-      chi_);
+  const std::size_t NG = Etr_.ngroups();
+  xt::xtensor<double, 1> D = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> Ea = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> Ef = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> vEf = xt::zeros<double>({NG});
+  xt::xtensor<double, 1> chi = xt::zeros<double>({NG});
+  xt::xtensor<double, 2> Es = xt::zeros<double>({NG, NG});
+
+  for (std::size_t g = 0; g < NG; g++) {
+    D(g) = 1. / (3. * Etr_(g));
+    Ea(g) = Ea_(g);
+    Ef(g) = Ef_(g);
+    vEf(g) = vEf_(g);
+    chi(g) = chi_(g);
+
+    for (std::size_t gg = 0; gg < NG; gg++) {
+      Es(g, gg) = Es_(0, g, gg);
+    }
+  }
+
+  return std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi);
 }
 
 CrossSection& CrossSection::operator*=(double N) {
@@ -330,43 +387,39 @@ void CrossSection::check_xs() {
     throw ScarabeeException(mssg);
   }
 
-  if (Dtr_.size() != ngroups()) {
+  if (Dtr_.ngroups() != ngroups()) {
     auto mssg = "Dtr is not the same size as Et.";
     spdlog::error(mssg);
+    spdlog::error("Dtr_.ngroups() = {:}", Dtr_.ngroups());
+    spdlog::error("ngroups() = {:}", ngroups());
     throw ScarabeeException(mssg);
   }
 
-  if (Ea_.size() != ngroups()) {
+  if (Ea_.ngroups() != ngroups()) {
     auto mssg = "Ea is not the same size as Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (Ef_.size() != ngroups()) {
+  if (Ef_.ngroups() != ngroups()) {
     auto mssg = "Ef is not the same size as Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (vEf_.size() != ngroups()) {
+  if (vEf_.ngroups() != ngroups()) {
     auto mssg = "vEf is not the same size as Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (chi_.size() != ngroups()) {
+  if (chi_.ngroups() != ngroups()) {
     auto mssg = "chi is not the same size as Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (Es_.shape()[0] == 0) {
-    auto mssg = "Es has a length of zero along legendre moment axis.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  if (Es_.shape()[1] != ngroups() || Es_.shape()[2] != ngroups()) {
+  if (Es_.ngroups() != ngroups()) {
     auto mssg = "Es is not the same size as Et.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);

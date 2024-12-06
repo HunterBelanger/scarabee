@@ -1,7 +1,7 @@
 #ifndef SCARABEE_DIFFUSION_DATA_H
 #define SCARABEE_DIFFUSION_DATA_H
 
-#include <diffusion_cross_section.hpp>
+#include <data/diffusion_cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 

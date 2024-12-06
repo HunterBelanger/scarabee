@@ -2,7 +2,7 @@
 #define SCARABEE_CYLINDRICAL_FLUX_SOLVER_H
 
 #include <cylindrical_cell.hpp>
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 #include <utils/simulation_mode.hpp>
 
 #include <xtensor/xtensor.hpp>

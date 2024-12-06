@@ -7,6 +7,8 @@
 
 namespace py = pybind11;
 
+extern void init_XS1D(py::module&);
+extern void init_XS2D(py::module&);
 extern void init_CrossSection(py::module&);
 extern void init_DiffusionCrossSection(py::module&);
 extern void init_NuclideHandle(py::module&);
@@ -48,6 +50,8 @@ PYBIND11_MODULE(_scarabee, m) {
   init_Logging(m);
   init_Vector(m);
   init_Direction(m);
+  init_XS1D(m);
+  init_XS2D(m);
   init_CrossSection(m);
   init_DiffusionCrossSection(m);
   init_NuclideHandle(m);

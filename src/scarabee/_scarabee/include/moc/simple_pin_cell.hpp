@@ -4,7 +4,7 @@
 #include <moc/cell.hpp>
 #include <moc/surface.hpp>
 #include <moc/pin_cell_type.hpp>
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 
 #include <memory>
 

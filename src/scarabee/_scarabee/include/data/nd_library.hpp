@@ -2,7 +2,7 @@
 #define SCARABEE_ND_LIBRARY_H
 
 #include <data/material.hpp>
-#include <cross_section.hpp>
+#include <data/cross_section.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include <highfive/highfive.hpp>
@@ -33,13 +33,14 @@ struct NuclideHandle {
 
   std::shared_ptr<xt::xtensor<double, 3>> absorption;
   std::shared_ptr<xt::xtensor<double, 3>> transport_correction;
-  std::shared_ptr<xt::xtensor<double, 4>> scatter;
-  std::shared_ptr<xt::xtensor<double, 4>> p1_scatter;
-  std::shared_ptr<xt::xtensor<double, 4>> p2_scatter;
-  std::shared_ptr<xt::xtensor<double, 4>> p3_scatter;
+  std::shared_ptr<xt::xtensor<std::uint32_t, 2>> packing;
+  std::shared_ptr<xt::xtensor<double, 3>> scatter;
+  std::shared_ptr<xt::xtensor<double, 3>> p1_scatter;
+  std::shared_ptr<xt::xtensor<double, 3>> p2_scatter;
+  std::shared_ptr<xt::xtensor<double, 3>> p3_scatter;
   std::shared_ptr<xt::xtensor<double, 3>> fission;
-  std::shared_ptr<xt::xtensor<double, 2>> chi;
-  std::shared_ptr<xt::xtensor<double, 2>> nu;
+  std::shared_ptr<xt::xtensor<double, 1>> chi;
+  std::shared_ptr<xt::xtensor<double, 1>> nu;
 
   bool loaded() const { return absorption != nullptr; }
   void load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l);
