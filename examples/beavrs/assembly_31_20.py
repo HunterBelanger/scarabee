@@ -8,7 +8,6 @@ ndl = NDLibrary()
 
 # Define all Materials
 Fuel31Comp = MaterialComposition()
-Fuel31Comp.fractions = Fraction.Atoms
 Fuel31Comp.add_nuclide("O16",  4.5853e-02)
 Fuel31Comp.add_nuclide("O17",  1.7420e-05)
 Fuel31Comp.add_nuclide("O18",  9.1942e-05)
@@ -18,7 +17,6 @@ Fuel31Comp.add_nuclide("U238", 2.2253e-02)
 Fuel31 = Material(Fuel31Comp, 575., ndl)
 
 CladComp = MaterialComposition()
-CladComp.fractions = Fraction.Atoms
 CladComp.add_nuclide("Cr50",  3.2962e-06)
 CladComp.add_nuclide("Cr52",  6.3564e-05)
 CladComp.add_nuclide("Cr53",  7.2076e-06)

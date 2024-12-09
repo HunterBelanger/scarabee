@@ -35,13 +35,20 @@ void init_MaterialComposition(py::module& m) {
       "A MaterialComposition object represents all nuclides which make up a "
       "material, and portion of the material taken up b y each nuclide.")
 
-      .def(py::init<>(), "Creates an empty composition, with no nuclides.")
+      .def(py::init<Fraction>(),
+           "Creates an empty composition, with no nuclides.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fractions : Fraction\n"
+           "  Indicates if material is specified using atom or weight "
+           "fractions. Default value is Fraction.Atom.\n\n",
+           py::arg("fractions") = Fraction::Atoms)
 
-      .def_readwrite(
+      .def_readonly(
           "nuclides", &MaterialComposition::nuclides,
           "List of :py:class:`Nuclide` objects, defining the compositon.")
 
-      .def_readwrite(
+      .def_readonly(
           "fractions", &MaterialComposition::fractions,
           "Flag indicating if the nuclide fractions are in Atoms or Weight.")
 

@@ -8,6 +8,9 @@
 
 namespace scarabee {
 
+MaterialComposition::MaterialComposition(Fraction f)
+    : nuclides(), fractions(f) {}
+
 void MaterialComposition::add_nuclide(const std::string& name, double frac) {
   if (frac <= 0.) {
     std::stringstream mssg;

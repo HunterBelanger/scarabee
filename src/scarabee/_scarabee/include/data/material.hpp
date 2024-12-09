@@ -21,6 +21,8 @@ struct MaterialComposition {
   std::vector<Nuclide> nuclides;
   Fraction fractions;
 
+  MaterialComposition(Fraction f = Fraction::Atoms);
+
   void add_nuclide(const std::string& name, double frac);
   void add_nuclide(const Nuclide& nuc);
 };

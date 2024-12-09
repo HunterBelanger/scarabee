@@ -139,14 +139,12 @@ def get_clad_dancoff_correction(UO2, Water):
   return C
 
 UO2comp = MaterialComposition()
-UO2comp.fractions = Fraction.Atoms
 UO2comp.add_nuclide("U235", 7.0803E-4)
 UO2comp.add_nuclide("U238", 2.2604E-2)
 UO2comp.add_nuclide("O16",  4.6624E-2)
 UO2 = Material(UO2comp, 293.6, ndl)
 
 Zirccomp = MaterialComposition()
-Zirccomp.fractions = Fraction.Atoms
 Zirccomp.add_nuclide("Zr90", 2.2200E-2)
 Zirccomp.add_nuclide("Zr91", 4.8280E-3)
 Zirccomp.add_nuclide("Zr92", 7.3713E-3)
@@ -155,7 +153,6 @@ Zirccomp.add_nuclide("Zr96", 1.2070E-3)
 Zirc = Material(Zirccomp, 293.6, ndl)
 
 Watercomp = MaterialComposition()
-Watercomp.fractions = Fraction.Atoms
 Watercomp.add_nuclide("H1_H2O_TC", 6.6630E-2)
 Watercomp.add_nuclide("O16",    3.3315E-2)
 Water = Material(Watercomp, 293.6, ndl)
