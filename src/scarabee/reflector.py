@@ -146,7 +146,7 @@ class Reflector:
         self.assembly_width = assembly_width
         self.gap_width = gap_width
         self.baffle_width = baffle_width
-        self.few_group_condensation_scheme = None
+        self.few_group_condensation_scheme = ndl.reflector_few_group_condensation_scheme
 
         # No Dancoff correction, as looking at 1D isolated slab for baffle
         Ee = 1.0 / (2.0 * self.baffle_width)

@@ -6,14 +6,6 @@ set_output_file(name+"_reflector_out.txt")
 
 ndl = NDLibrary()
 
-# 25 groups (similar to CASMO-25 group structure)
-cond_spec = [[0, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25],
-             [26, 36], [37, 55], [56, 58], [59, 79], [80, 120],
-             [121, 142], [143, 195], [196, 216], [217, 229], [230, 233],
-             [234, 236], [237, 240], [241, 246], [247, 253], [254, 256],
-             [257, 262], [263, 268], [269, 272], [273, 280]]
-few_grp_cond_spec = [[0, 18], [19, 24]]
-
 # Define all Materials
 Fuel31Comp = MaterialComposition()
 Fuel31Comp.fractions = Fraction.Atoms
@@ -98,8 +90,6 @@ fp = FuelPin(fuel=Fuel31, fuel_radius=0.39218, gap=He, gap_radius=0.40005, clad=
 
 # Define assembly
 asmbly = PWRAssembly(pitch=1.25984, moderator=Water, shape=(17, 17), ndl=ndl)
-asmbly.condensation_scheme = cond_spec
-asmbly.few_group_condensation_scheme = few_grp_cond_spec
 asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, fp, fp, fp,
@@ -125,6 +115,5 @@ print()
 refl = Reflector(asmbly.average_fuel_pin, moderator=asmbly.moderator_xs,
                  assembly_width=21.50364, gap_width=0.1627,
                  baffle_width=2.2225, baffle=Baffle, ndl=ndl)
-refl.few_group_condensation_scheme = [[0, 246], [247, 280]]
 refl.solve()
 refl.save_diffusion_data("reflector.npz")

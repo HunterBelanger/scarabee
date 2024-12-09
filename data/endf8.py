@@ -1,5 +1,6 @@
 import frendy as fdy
 import h5py
+import numpy as np
 
 base = "/mnt/c/Users/hunte/Documents/nuclear_data/ENDF-B-VIII.0/neutrons/"
 tslbase = "/mnt/c/Users/hunte/Documents/nuclear_data/ENDF-B-VIII.0/thermal_scatt/"
@@ -8,6 +9,18 @@ tslbase = "/mnt/c/Users/hunte/Documents/nuclear_data/ENDF-B-VIII.0/thermal_scatt
 lib_name = "ENDF/B-VIII.0"
 temps = [293., 500., 600., 800., 1000., 1500., 2000.]
 #temps = [293.6]
+
+# Condensation Schemes for SHEM-281 group structure
+# 25 groups (similar to CASMO-25 group structure)
+cond_spec = np.array([[0, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25],
+             [26, 36], [37, 55], [56, 58], [59, 79], [80, 120],
+             [121, 142], [143, 195], [196, 216], [217, 229], [230, 233],
+             [234, 236], [237, 240], [241, 246], [247, 253], [254, 256],
+             [257, 262], [263, 268], [269, 272], [273, 280]])
+
+few_grp_cond_spec = np.array([[0, 18], [19, 24]])
+
+ref_few_grp_cond_spec = np.array([[0, 246], [247, 280]])
 
 # Set the default group strucutre
 fdy.set_default_group_structure("SHEM-281")
@@ -20,6 +33,11 @@ h5.attrs['group-structure'] = fdy.get_default_group_structure()
 h5.attrs['group-bounds'] = fdy.get_default_group_bounds()
 h5.attrs['ngroups'] = len(fdy.get_default_group_bounds()) - 1
 h5.attrs['library'] = lib_name
+
+if fdy.get_default_group_structure() == "SHEM-281":
+    h5.attrs['macro-group-condensation-scheme'] = cond_spec
+    h5.attrs['few-group-condensation-scheme'] = few_grp_cond_spec
+    h5.attrs['reflector-few-group-condensation-scheme'] = ref_few_grp_cond_spec
 
 # We process U235 first so that we can steal its fission spectrum for
 # performing transport correciton calculations

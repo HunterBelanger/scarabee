@@ -6,14 +6,6 @@ set_output_file(name+"_out.txt")
 
 ndl = NDLibrary()
 
-# 25 groups (similar to CASMO-25 group structure)
-cond_spec = [[0, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25],
-             [26, 36], [37, 55], [56, 58], [59, 79], [80, 120],
-             [121, 142], [143, 195], [196, 216], [217, 229], [230, 233],
-             [234, 236], [237, 240], [241, 246], [247, 253], [254, 256],
-             [257, 262], [263, 268], [269, 272], [273, 280]]
-few_grp_cond_spec = [[0, 18], [19, 24]]
-
 # Define all Materials
 Fuel24Comp = MaterialComposition()
 Fuel24Comp.fractions = Fraction.Atoms
@@ -133,8 +125,6 @@ bp = BurnablePoisonPin(center=Air, center_radius=0.214, poison_clad=SS304,
 
 # Define assembly
 asmbly = PWRAssembly(pitch=1.25984, moderator=Water, shape=(17, 17), ndl=ndl)
-asmbly.condensation_scheme = cond_spec
-asmbly.few_group_condensation_scheme = few_grp_cond_spec
 asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, bp, fp, fp, gt, fp, fp, bp, fp, fp, fp, fp, fp,

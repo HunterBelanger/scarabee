@@ -188,5 +188,21 @@ void init_NDLibrary(py::module& m) {
                              "group structure (in decreasing order).")
 
       .def_property_readonly("group_structure", &NDLibrary::group_structure,
-                             "The name of the group structure (if provided).");
+                             "The name of the group structure (if provided).")
+
+      .def_property_readonly("macro_group_condensation_scheme",
+                             &NDLibrary::macro_group_condensation_scheme,
+                             "The condensation scheme to obtain the default "
+                             "macro-group structure (if provided).")
+
+      .def_property_readonly("few_group_condensation_scheme",
+                             &NDLibrary::few_group_condensation_scheme,
+                             "The condensation scheme to obtain the default "
+                             "few-group structure (if provided).")
+
+      .def_property_readonly(
+          "reflector_few_group_condensation_scheme",
+          &NDLibrary::reflector_few_group_condensation_scheme,
+          "The condensation scheme to obtain the default "
+          "few-group structure for the reflector (if provided).");
 }

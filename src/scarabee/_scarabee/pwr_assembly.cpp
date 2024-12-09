@@ -21,6 +21,16 @@ PWRAssembly::PWRAssembly(double pitch, std::shared_ptr<Material> moderator,
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
+
+  if (ndl_->macro_group_condensation_scheme()) {
+    this->set_condensation_scheme(
+        ndl_->macro_group_condensation_scheme().value());
+  }
+
+  if (ndl_->few_group_condensation_scheme()) {
+    this->set_few_group_condensation_scheme(
+        ndl_->few_group_condensation_scheme().value());
+  }
 }
 
 void PWRAssembly::set_flux_tolerance(double ftol) {
