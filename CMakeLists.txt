@@ -143,7 +143,8 @@ FetchContent_MakeAvailable(ImApp)
 
 #===============================================================================
 # Make python library
-pybind11_add_module(_scarabee src/scarabee/_scarabee/logging.cpp
+pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
+                              src/scarabee/_scarabee/logging.cpp
                               src/scarabee/_scarabee/gauss_kronrod.cpp
                               src/scarabee/_scarabee/chebyshev.cpp
                               src/scarabee/_scarabee/math.cpp
