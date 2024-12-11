@@ -44,3 +44,7 @@ Materials
 .. autoclass:: Material
    :members:
    :special-members: __init__
+
+.. autofunction:: borated_water
+
+.. autofunction:: water_density
