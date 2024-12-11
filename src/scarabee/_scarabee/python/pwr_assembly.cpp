@@ -204,5 +204,5 @@ void init_PWRAssembly(py::module& m) {
 
       .def_property_readonly("pitch", &PWRAssembly::pitch)
 
-      .def_property_readonly("shape", &PWRAssembly::pitch);
+      .def_property_readonly("shape", &PWRAssembly::shape);
 }
