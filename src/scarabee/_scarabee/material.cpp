@@ -4,12 +4,119 @@
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 
+#include <algorithm>
 #include <sstream>
 
 namespace scarabee {
 
 MaterialComposition::MaterialComposition(Fraction f)
     : nuclides(), fractions(f) {}
+
+void MaterialComposition::add_element(const std::string& name, double frac) {
+  if (frac <= 0.) {
+    std::stringstream mssg;
+    mssg << "Element \"" << name << "\" given negative or zero fraction.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  // First, try to get list of natural isotopes
+  if (ELEMENT_ISOTOPES.find(name) == ELEMENT_ISOTOPES.end()) {
+    std::stringstream mssg;
+    mssg << "Could not find element by name of \"" << name << "\".";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+  const auto& isotopes = ELEMENT_ISOTOPES.at(name);
+
+  if (fractions == Fraction::Atoms) {
+    // Just add all isotopes if we are using atom fractions
+    for (const auto& iso : isotopes) {
+      this->add_nuclide(iso, NATURAL_ABUNDANCES.at(iso) * frac);
+    }
+  } else {
+    // Must convert to weight fractions
+
+    // First, get atomic mass of element
+    double elem_atomic_mass = 0.;
+    for (const auto& iso : isotopes) {
+      elem_atomic_mass += ISOTOPE_MASSES.at(iso) * NATURAL_ABUNDANCES.at(iso);
+    }
+
+    // We can now get a mass abundance for each isotopes
+    std::vector<double> mass_abundances(isotopes.size(), 0.);
+    for (std::size_t i = 0; i < isotopes.size(); i++) {
+      const auto& iso = isotopes[i];
+      mass_abundances[i] = NATURAL_ABUNDANCES.at(iso) * ISOTOPE_MASSES.at(iso) /
+                           elem_atomic_mass;
+    }
+
+    // Normalize the abundances
+    const double mass_abundance_sum =
+        std::accumulate(mass_abundances.begin(), mass_abundances.end(), 0.);
+
+    for (auto& ma : mass_abundances) ma /= mass_abundance_sum;
+
+    // Add all isotopes
+    for (std::size_t i = 0; i < isotopes.size(); i++) {
+      const auto& iso = isotopes[i];
+      this->add_nuclide(iso, frac * mass_abundances[i]);
+    }
+  }
+}
+
+void MaterialComposition::add_leu(double enrichment, double frac) {
+  // This uses the same methods as in OpenMC, and is only valid for U235
+  // enrichments <= 5% by weight. Their correlations come from
+  // ORNL/CSD/TM-244 found at https://doi.org/10.2172/5561567.
+  if (enrichment < 0.) {
+    const auto mssg = "LEU enrichment is less than zero.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  } else if (enrichment > 5.) {
+    const auto mssg =
+        "LEU enrichment is greater than 5%. Method is only valid for "
+        "enrichments <= 5%.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (frac <= 0.) {
+    const auto mssg = "LEU given negative or zero fraction.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  const std::array<std::string, 4> isotopes{"U234", "U235", "U236", "U238"};
+
+  // These are initially mass abundances !
+  std::array<double, 4> abundances{0.0089 * enrichment, enrichment,
+                                   0.0046 * enrichment,
+                                   100.0 - 1.0135 * enrichment};
+  const double mass_abundance_sum =
+      std::accumulate(abundances.begin(), abundances.end(), 0.);
+  for (auto& a : abundances) a /= mass_abundance_sum;
+
+  if (this->fractions == Fraction::Weight) {
+    for (std::size_t i = 0; i < 4; i++) {
+      this->add_nuclide(isotopes[i], abundances[i] * frac);
+    }
+  } else {
+    // Must convert mass to number abundances
+    for (std::size_t i = 0; i < 4; i++) {
+      abundances[i] /= ISOTOPE_MASSES.at(isotopes[i]);
+    }
+
+    const double sum_abundances =
+        std::accumulate(abundances.begin(), abundances.end(), 0.);
+    for (auto& a : abundances) a /= sum_abundances;
+
+    // Add all isotopes
+    for (std::size_t i = 0; i < 4; i++) {
+      this->add_nuclide(isotopes[i], abundances[i] * frac);
+    }
+  }
+}
 
 void MaterialComposition::add_nuclide(const std::string& name, double frac) {
   if (frac <= 0.) {

@@ -23,6 +23,8 @@ struct MaterialComposition {
 
   MaterialComposition(Fraction f = Fraction::Atoms);
 
+  void add_element(const std::string& name, double frac);
+  void add_leu(double enrichment, double frac);
   void add_nuclide(const std::string& name, double frac);
   void add_nuclide(const Nuclide& nuc);
 };

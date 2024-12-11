@@ -52,6 +52,30 @@ void init_MaterialComposition(py::module& m) {
           "fractions", &MaterialComposition::fractions,
           "Flag indicating if the nuclide fractions are in Atoms or Weight.")
 
+      .def("add_element", &MaterialComposition::add_element,
+           "Adds all naturally occurring isotopes of an element to the "
+           "material.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "name : str\n"
+           "       Name of the element.\n"
+           "fraction : float\n"
+           "       Fraction that the element occupies in the material.\n\n",
+           py::arg("name"), py::arg("fraction"))
+
+      .def("add_leu", &MaterialComposition::add_leu,
+           "Adds all naturally occurring isotopes of Uranium to the material "
+           "for a given weight percent enrichment. Method is only valid for "
+           "enrichments <= 5 w/o. More information can be found in "
+           "`ORNL/CSD/TM-244 <https://doi.org/10.2172/5561567>`_.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "enrichment : float\n"
+           "       Weight enrichment of U235.\n"
+           "fraction : float\n"
+           "       Fraction that the Uranium occupies in the material.\n\n",
+           py::arg("enrichment"), py::arg("fraction"))
+
       .def("add_nuclide",
            py::overload_cast<const std::string&, double>(
                &MaterialComposition::add_nuclide),
@@ -61,7 +85,7 @@ void init_MaterialComposition(py::module& m) {
            "name : str\n"
            "       Name of the nuclide.\n"
            "fraction : float\n"
-           "           Fraction that the nuclide occupies in the material.\n\n",
+           "       Fraction that the nuclide occupies in the material.\n\n",
            py::arg("name"), py::arg("fraction"))
 
       .def(

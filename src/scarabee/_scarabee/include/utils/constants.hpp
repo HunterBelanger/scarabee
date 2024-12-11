@@ -2,6 +2,9 @@
 #define SCARABEE_CONSTANTS_H
 
 #include <limits>
+#include <map>
+#include <string>
+#include <vector>
 
 namespace scarabee {
 
@@ -14,6 +17,10 @@ constexpr double N_MASS_AMU{1.00866491595};
 constexpr double N_AVAGADRO{0.6022140857};  // [10^24 / mol]
 constexpr std::size_t MAX_SURFS{5};
 #define NDL_ENV_VAR "SCARABEE_ND_LIBRARY"
+
+extern const std::map<std::string, double> NATURAL_ABUNDANCES;
+extern const std::map<std::string, std::vector<std::string>> ELEMENT_ISOTOPES;
+extern const std::map<std::string, double> ISOTOPE_MASSES;
 
 }  // namespace scarabee
 
