@@ -31,6 +31,10 @@ void set_x_current_diff(DiffusionGeometry& geom,
   const double dx_m = geom.dx(indxs[0]);
   const double d_m = D_m / dx_m;
 
+  // Get discontinuity factors for our node
+  const double f_p = geom.adf_xp(m, g);
+  const double f_m = geom.adf_xn(m, g);
+
   // Our fill method depends on if we have boundaries or not.
   if (op_mm1 && op_mp1) {
     // Both the left and right are materials. We can fill it like a normal tile
@@ -45,16 +49,22 @@ void set_x_current_diff(DiffusionGeometry& geom,
     const double dx_mm1 = geom.dx(indxs[0] - 1);
     const double dx_mp1 = geom.dx(indxs[0] + 1);
 
+    // Get discontinuity factors
+    const double f_mp = geom.adf_xp(mm1, g);
+    const double f_pm = geom.adf_xn(mp1, g);
+    const double r_p = f_p / f_pm;
+    const double r_m = f_m / f_mp;
+
     // Compute reduced diffusion coefficients
     const double d_mm1 = D_mm1 / dx_mm1;
     const double d_mp1 = D_mp1 / dx_mp1;
 
     // Now we compute the coefficient for each flux term
     const double a =
-        -(2. / dx_m) * (d_m * d_mp1 / (d_m + d_mp1));  // for flux m+1
+        -(2. / dx_m) * (d_m * d_mp1 / (d_m + r_p * d_mp1));  // for flux m+1
     const double c =
-        -(2. / dx_m) * (d_m * d_mm1 / (d_m + d_mm1));  // for flux m-1
-    const double b = -(a + c);                         // for flux m
+        -(2. / dx_m) * (d_m * d_mm1 / (d_m + r_m * d_mm1));  // for flux m-1
+    const double b = -(r_p * a + r_m * c);                   // for flux m
 
     // Set matrix components
     M.coeffRef(m + g * geom.nmats(), mp1 + g * geom.nmats()) += a;
@@ -67,12 +77,16 @@ void set_x_current_diff(DiffusionGeometry& geom,
     const double dx_mm1 = geom.dx(indxs[0] - 1);
     const double d_mm1 = D_mm1 / dx_mm1;
 
+    // Get discontinuity factors
+    const double f_mp = geom.adf_xp(mm1, g);
+    const double r_m = f_m / f_mp;
+
     const double c =
-        -(2. / dx_m) * (d_m * d_mm1 / (d_m + d_mm1));  // for flux m-1
+        -(2. / dx_m) * (d_m * d_mm1 / (d_m + r_m * d_mm1));  // for flux m-1
     const double alb = tile_mp1.albedo.value();
     const double R = (1. - alb) / (1. + alb);
     const double b =
-        -c + (2. * d_m * R / (dx_m * (4. * d_m + R)));  // for flux m
+        -r_m * c + (2. * d_m * R / (dx_m * (4. * d_m + R)));  // for flux m
     // const double b = -c + (2.*d_m/dx_m); // for zero flux at boundary
 
     M.coeffRef(m + g * geom.nmats(), m + g * geom.nmats()) += b;
@@ -84,12 +98,16 @@ void set_x_current_diff(DiffusionGeometry& geom,
     const double dx_mp1 = geom.dx(indxs[0] + 1);
     const double d_mp1 = D_mp1 / dx_mp1;
 
+    // Get discontinuity factors
+    const double f_pm = geom.adf_xn(mp1, g);
+    const double r_p = f_p / f_pm;
+
     const double a =
-        -(2. / dx_m) * (d_m * d_mp1 / (d_m + d_mp1));  // for flux m+1
+        -(2. / dx_m) * (d_m * d_mp1 / (d_m + r_p * d_mp1));  // for flux m+1
     const double alb = tile_mm1.albedo.value();
     const double R = (1. - alb) / (1. + alb);
     const double b =
-        -a + (2. * d_m * R / (dx_m * (4. * d_m + R)));  // for flux m
+        -r_p * a + (2. * d_m * R / (dx_m * (4. * d_m + R)));  // for flux m
     // const double b = -a + (2.*d_m/dx_m); // for zero flux at boundary
 
     M.coeffRef(m + g * geom.nmats(), mp1 + g * geom.nmats()) += a;
@@ -123,6 +141,10 @@ void set_y_current_diff(DiffusionGeometry& geom,
   const double dy_m = geom.dy(indxs[1]);
   const double d_m = D_m / dy_m;
 
+  // Get discontinuity factors for our node
+  const double f_p = geom.adf_yp(m, g);
+  const double f_m = geom.adf_yn(m, g);
+
   // Our fill method depends on if we have boundaries or not.
   if (op_mm1 && op_mp1) {
     // Both the left and right are materials. We can fill it like a normal tile
@@ -137,16 +159,22 @@ void set_y_current_diff(DiffusionGeometry& geom,
     const double dy_mm1 = geom.dy(indxs[1] - 1);
     const double dy_mp1 = geom.dy(indxs[1] + 1);
 
+    // Get discontinuity factors
+    const double f_mp = geom.adf_yp(mm1, g);
+    const double f_pm = geom.adf_yn(mp1, g);
+    const double r_p = f_p / f_pm;
+    const double r_m = f_m / f_mp;
+
     // Compute reduced diffusion coefficients
     const double d_mm1 = D_mm1 / dy_mm1;
     const double d_mp1 = D_mp1 / dy_mp1;
 
     // Now we compute the coefficient for each flux term
     const double a =
-        -(2. / dy_m) * (d_m * d_mp1 / (d_m + d_mp1));  // for flux m+1
+        -(2. / dy_m) * (d_m * d_mp1 / (d_m + r_p * d_mp1));  // for flux m+1
     const double c =
-        -(2. / dy_m) * (d_m * d_mm1 / (d_m + d_mm1));  // for flux m-1
-    const double b = -(a + c);                         // for flux m
+        -(2. / dy_m) * (d_m * d_mm1 / (d_m + r_m * d_mm1));  // for flux m-1
+    const double b = -(r_p * a + r_m * c);                   // for flux m
 
     // Set matrix components
     M.coeffRef(m + g * geom.nmats(), mp1 + g * geom.nmats()) += a;
@@ -159,12 +187,16 @@ void set_y_current_diff(DiffusionGeometry& geom,
     const double dy_mm1 = geom.dy(indxs[1] - 1);
     const double d_mm1 = D_mm1 / dy_mm1;
 
+    // Get discontinuity factors
+    const double f_mp = geom.adf_yp(mm1, g);
+    const double r_m = f_m / f_mp;
+
     const double c =
-        -(2. / dy_m) * (d_m * d_mm1 / (d_m + d_mm1));  // for flux m-1
+        -(2. / dy_m) * (d_m * d_mm1 / (d_m + r_m * d_mm1));  // for flux m-1
     const double alb = tile_mp1.albedo.value();
     const double R = (1. - alb) / (1. + alb);
     const double b =
-        -c + (2. * d_m * R / (dy_m * (4. * d_m + R)));  // for flux m
+        -r_m * c + (2. * d_m * R / (dy_m * (4. * d_m + R)));  // for flux m
     // const double b = -c + (2.*d_m/dy_m); // for zero flux at boundary
 
     M.coeffRef(m + g * geom.nmats(), m + g * geom.nmats()) += b;
@@ -176,12 +208,16 @@ void set_y_current_diff(DiffusionGeometry& geom,
     const double dy_mp1 = geom.dy(indxs[1] + 1);
     const double d_mp1 = D_mp1 / dy_mp1;
 
+    // Get discontinuity factors
+    const double f_pm = geom.adf_yn(mp1, g);
+    const double r_p = f_p / f_pm;
+
     const double a =
-        -(2. / dy_m) * (d_m * d_mp1 / (d_m + d_mp1));  // for flux m+1
+        -(2. / dy_m) * (d_m * d_mp1 / (d_m + r_p * d_mp1));  // for flux m+1
     const double alb = tile_mm1.albedo.value();
     const double R = (1. - alb) / (1. + alb);
     const double b =
-        -a + (2. * d_m * R / (dy_m * (4. * d_m + R)));  // for flux m
+        -r_p * a + (2. * d_m * R / (dy_m * (4. * d_m + R)));  // for flux m
     // const double b = -a + (2.*d_m/dy_m); // for zero flux at boundary
 
     M.coeffRef(m + g * geom.nmats(), mp1 + g * geom.nmats()) += a;
@@ -228,6 +264,9 @@ void set_z_current_diff(DiffusionGeometry& geom,
     // Get widths
     const double dz_mm1 = geom.dz(indxs[2] - 1);
     const double dz_mp1 = geom.dz(indxs[2] + 1);
+
+    // No need to compute discontinuity factors along z. Scarabée assumes that
+    // along the axial direction, the flux is smooth without any ADF.
 
     // Compute reduced diffusion coefficients
     const double d_mm1 = D_mm1 / dz_mm1;
