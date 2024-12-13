@@ -13,7 +13,7 @@ namespace scarabee {
 class ReflectorSN {
  public:
   ReflectorSN(const std::vector<std::shared_ptr<CrossSection>>& xs,
-              const xt::xtensor<double, 1>& dx);
+              const xt::xtensor<double, 1>& dx, bool anisotropic);
 
   void solve();
   bool solved() const { return solved_; }
@@ -30,11 +30,13 @@ class ReflectorSN {
   std::size_t nregions() const { return xs_.size(); }
   std::size_t nsurfaces() const { return xs_.size() + 1; }
   std::size_t ngroups() const { return ngroups_; }
+  std::size_t max_legendre_order() const { return max_L_; }
+  bool anisotropic() const { return anisotropic_; }
 
   const std::shared_ptr<CrossSection> xs(std::size_t i) const;
   double volume(std::size_t i) const;
 
-  double flux(std::size_t i, std::size_t g) const;
+  double flux(std::size_t i, std::size_t g, std::size_t l = 0) const;
   double current(std::size_t i, std::size_t g) const;
 
   std::shared_ptr<CrossSection> homogenize(
@@ -45,25 +47,32 @@ class ReflectorSN {
  private:
   std::vector<std::shared_ptr<CrossSection>> xs_;
   xt::xtensor<double, 1> dx_;
-  xt::xtensor<double, 2> flux_;  // group, spatial bin
-  xt::xtensor<double, 2> Q_;     // group, spatial bin
+  xt::xtensor<double, 3> flux_;  // group, spatial bin, legendre moment
+  xt::xtensor<double, 3> Q_;     // group, spatial bin, legendre moment
   xt::xtensor<double, 2> J_;     // group, surface
+  xt::xtensor<double, 2> Pnl_;   // direction index, legendre moment
   double keff_{1.};
   double keff_tol_{1.E-5};
   double flux_tol_{1.E-5};
   std::size_t ngroups_;
+  std::size_t max_L_ = 0;     // max-legendre-order in scattering moments
   bool solved_{false};
+  bool anisotropic_{false};
 
-  void sweep(xt::xtensor<double, 2>& flux,
-             xt::xtensor<double, 2>& incident_angular_flux,
-             const xt::xtensor<double, 2>& Q);
-  double calc_keff(const xt::xtensor<double, 2>& old_flux,
-                   const xt::xtensor<double, 2>& new_flux,
+
+  void solve_iso();
+  void sweep_iso(xt::xtensor<double, 3>& flux, xt::xtensor<double, 2>& incident_angular_flux, const xt::xtensor<double, 3>& Q);
+  void fill_fission_source_iso(xt::xtensor<double, 3>& Qfiss, const xt::xtensor<double, 3>& flux) const;
+  void fill_scatter_source_iso(xt::xtensor<double, 3>& Qscat, const xt::xtensor<double, 3>& flux) const;
+
+  void solve_aniso();
+  void sweep_aniso(xt::xtensor<double, 3>& flux, xt::xtensor<double, 2>& incident_angular_flux, const xt::xtensor<double, 3>& Q);
+  void fill_fission_source_aniso(xt::xtensor<double, 3>& Qfiss, const xt::xtensor<double, 3>& flux) const;
+  void fill_scatter_source_aniso(xt::xtensor<double, 3>& Qscat, const xt::xtensor<double, 3>& flux) const;
+
+  double calc_keff(const xt::xtensor<double, 3>& old_flux,
+                   const xt::xtensor<double, 3>& new_flux,
                    const double keff) const;
-  void fill_fission_source(xt::xtensor<double, 2>& Qfiss,
-                           const xt::xtensor<double, 2>& flux) const;
-  void fill_scatter_source(xt::xtensor<double, 2>& Qscat,
-                           const xt::xtensor<double, 2>& flux) const;
 
   static const std::array<double, 64> mu_;
   static const std::array<double, 64> wgt_;

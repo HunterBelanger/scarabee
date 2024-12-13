@@ -10,8 +10,8 @@
 namespace scarabee {
 
 ReflectorSN::ReflectorSN(const std::vector<std::shared_ptr<CrossSection>>& xs,
-                         const xt::xtensor<double, 1>& dx)
-    : xs_(xs), dx_(dx) {
+                         const xt::xtensor<double, 1>& dx, bool anisotropic)
+    : xs_(xs), dx_(dx), anisotropic_(anisotropic) {
   if (xs_.size() != dx_.size()) {
     auto mssg = "Number of cross sections and regions do not agree.";
     spdlog::error(mssg);
@@ -42,8 +42,18 @@ ReflectorSN::ReflectorSN(const std::vector<std::shared_ptr<CrossSection>>& xs,
     }
   }
 
+  // get the max-legendre-order for given scattering moments
+  if (anisotropic_) {
+    max_L_ = 0;
+    for (std::size_t i = 0; i < xs_.size(); i++) {
+      const auto& mat = *xs_[i];
+      const std::size_t l = mat.max_legendre_order();
+      if (l > max_L_) max_L_ = l;
+    }
+  }
+
   // Must allocate with zeros in case someone calls the flux method
-  flux_ = xt::zeros<double>({ngroups_, xs_.size()});
+  flux_ = xt::zeros<double>({ngroups_, xs_.size(), max_L_ + 1});
   J_ = xt::zeros<double>({ngroups_, xs_.size() + 1});
 }
 
@@ -80,15 +90,32 @@ void ReflectorSN::set_keff_tolerance(double ktol) {
 }
 
 void ReflectorSN::solve() {
+  if (anisotropic() && max_legendre_order() > 0) {
+    solve_aniso();
+  } else {
+    solve_iso();
+  }
+}
+
+void ReflectorSN::solve_iso() {
   const std::size_t NG = xs_[0]->ngroups();
   const std::size_t NR = xs_.size();
 
-  flux_ = xt::ones<double>({NG, NR});
-  xt::xtensor<double, 2> next_flux = xt::zeros<double>({NG, NR});
-  xt::xtensor<double, 2> old_outer_flux = xt::zeros<double>({NG, NR});
-  xt::xtensor<double, 2> Qfiss = xt::zeros<double>({NG, NR});
-  xt::xtensor<double, 2> Qscat = xt::zeros<double>({NG, NR});
-  xt::xtensor<double, 2> Q = xt::zeros<double>({NG, NR});
+  if (max_legendre_order() != 0) {
+    const auto mssg =
+        "Should not use solve_iso if the maximum legendre order is greater "
+        "than 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  flux_ = xt::ones<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> next_flux = xt::zeros<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> old_outer_flux =
+      xt::zeros<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> Qfiss = xt::zeros<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> Qscat = xt::zeros<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> Q = xt::zeros<double>({NG, NR, max_L_ + 1});
 
   keff_ = 1.;
 
@@ -119,8 +146,8 @@ void ReflectorSN::solve() {
     iteration++;
     old_outer_flux = flux_;
 
-    fill_fission_source(Qfiss, flux_);
-    fill_scatter_source(Qscat, flux_);
+    fill_fission_source_iso(Qfiss, flux_);
+    fill_scatter_source_iso(Qscat, flux_);
     Q = Qfiss + Qscat;
 
     // Check for negative source values at beginning of simulation
@@ -136,7 +163,7 @@ void ReflectorSN::solve() {
 
     next_flux.fill(0.);
     J_.fill(0.);
-    sweep(next_flux, incident_angular_flux, Q);
+    sweep_iso(next_flux, incident_angular_flux, Q);
 
     // Apply stabalization (see [1])
     for (std::size_t i = 0; i < D.size(); i++) {
@@ -181,9 +208,9 @@ void ReflectorSN::solve() {
   solved_ = true;
 }
 
-void ReflectorSN::sweep(xt::xtensor<double, 2>& flux,
-                        xt::xtensor<double, 2>& incident_angular_flux,
-                        const xt::xtensor<double, 2>& Q) {
+void ReflectorSN::sweep_iso(xt::xtensor<double, 3>& flux,
+                            xt::xtensor<double, 2>& incident_angular_flux,
+                            const xt::xtensor<double, 3>& Q) {
   const std::size_t NG = xs_.front()->ngroups();
   const int iNG = static_cast<int>(NG);
 
@@ -215,7 +242,7 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux,
           const std::size_t i = static_cast<std::size_t>(ii);
           const double dx = dx_[i];
           const double Etr = xs_[i]->Etr(g);
-          const double Qni = Q(g, i);
+          const double Qni = Q(g, i, 0);
 
           // Calculate outgoing flux and bin flux
           flux_out =
@@ -224,7 +251,7 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux,
           flux_bin = 0.5 * (flux_in + flux_out);
 
           // Contribute to flux legendre moments
-          flux(g, i) += wgt_n * flux_bin;
+          flux(g, i, 0) += wgt_n * flux_bin;
 
           // Save outgoing flux as an incident flux
           if (i == 0) {
@@ -250,7 +277,7 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux,
         for (std::size_t i = 0; i < xs_.size(); i++) {
           const double dx = dx_[i];
           const double Etr = xs_[i]->Etr(g);
-          const double Qni = Q(g, i);
+          const double Qni = Q(g, i, 0);
 
           // Calculate outgoing flux and bin flux
           flux_out =
@@ -259,7 +286,7 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux,
           flux_bin = 0.5 * (flux_in + flux_out);
 
           // Contribute to flux legendre moments
-          flux(g, i) += wgt_n * flux_bin;
+          flux(g, i, 0) += wgt_n * flux_bin;
 
           // Tally current at out surface
           J_(g, s) += wgt_n * mu_n * flux_out;
@@ -273,25 +300,8 @@ void ReflectorSN::sweep(xt::xtensor<double, 2>& flux,
   }  // for all groups
 }
 
-double ReflectorSN::calc_keff(const xt::xtensor<double, 2>& old_flux,
-                              const xt::xtensor<double, 2>& new_flux,
-                              const double keff) const {
-  double num = 0.;
-  double denom = 0.;
-  for (std::size_t i = 0; i < xs_.size(); i++) {
-    const auto& mat = xs_[i];
-    const double dx = dx_[i];
-    for (std::size_t g = 0; g < mat->ngroups(); g++) {
-      num += dx * mat->vEf(g) * new_flux(g, i);
-      denom += dx * mat->vEf(g) * old_flux(g, i);
-    }
-  }
-
-  return keff * num / denom;
-}
-
-void ReflectorSN::fill_fission_source(
-    xt::xtensor<double, 2>& Qfiss, const xt::xtensor<double, 2>& flux) const {
+void ReflectorSN::fill_fission_source_iso(
+    xt::xtensor<double, 3>& Qfiss, const xt::xtensor<double, 3>& flux) const {
   Qfiss.fill(0.);
 
   for (std::size_t i = 0; i < xs_.size(); i++) {
@@ -301,7 +311,7 @@ void ReflectorSN::fill_fission_source(
       const double chi_g = mat->chi(g);
 
       for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
-        Qfiss(g, i) += chi_g * mat->vEf(gg) * flux(gg, i);
+        Qfiss(g, i, 0) += chi_g * mat->vEf(gg) * flux(gg, i, 0);
       }
     }
   }
@@ -309,8 +319,8 @@ void ReflectorSN::fill_fission_source(
   Qfiss /= 2. * keff_;
 }
 
-void ReflectorSN::fill_scatter_source(
-    xt::xtensor<double, 2>& Qscat, const xt::xtensor<double, 2>& flux) const {
+void ReflectorSN::fill_scatter_source_iso(
+    xt::xtensor<double, 3>& Qscat, const xt::xtensor<double, 3>& flux) const {
   Qscat.fill(0.);
 
   for (std::size_t i = 0; i < xs_.size(); i++) {
@@ -318,13 +328,265 @@ void ReflectorSN::fill_scatter_source(
 
     for (std::size_t g = 0; g < xs_[0]->ngroups(); g++) {
       for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
-        Qscat(g, i) += 0.5 * mat->Es_tr(gg, g) * flux(gg, i);
+        Qscat(g, i, 0) += 0.5 * mat->Es_tr(gg, g) * flux(gg, i, 0);
       }
     }
   }
 }
 
-double ReflectorSN::flux(std::size_t i, std::size_t g) const {
+void ReflectorSN::solve_aniso() {
+  const std::size_t NG = xs_[0]->ngroups();
+  const std::size_t NR = xs_.size();
+
+  if (max_legendre_order() == 0) {
+    const auto mssg = "Should not use solve_aniso if the maximum legendre order is 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  flux_ = xt::ones<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> next_flux = xt::zeros<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> old_outer_flux = xt::zeros<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> Qfiss = xt::zeros<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> Qscat = xt::zeros<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> Q = xt::zeros<double>({NG, NR, max_L_ + 1});
+
+  // Evaluate the Legendre function P_l(mu_n) for all mu and all l
+  Pnl_ = xt::zeros<double>({mu_.size(), max_L_+1});
+  for (std::size_t n = 0; n < mu_.size(); n++) {
+    for (std::size_t l = 0; l <= max_legendre_order(); l++) {
+      Pnl_(n, l) = legendre(static_cast<unsigned int>(l), mu_[n]);
+    }
+  }
+
+  keff_ = 1.;
+
+  // Array to hold the incident flux at the reflective boundary. We create
+  // this here instead of in the sweep to avoid making memory allocations.
+  xt::xtensor<double, 2> incident_angular_flux = xt::zeros<double>({NG, mu_.size()});
+
+  // Outer Iterations
+  double keff_diff = 100.;
+  double flux_diff = 100.;
+  std::size_t iteration = 0;
+  while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
+    iteration++;
+    old_outer_flux = flux_;
+    
+    // We assume the fission source is only isotropic
+    fill_fission_source_aniso(Qfiss, flux_);
+    fill_scatter_source_aniso(Qscat, flux_);
+    Q = Qfiss + Qscat;
+
+    // Check for negative source values at beginning of simulation
+    bool set_neg_src_to_zero = false;
+    if (iteration <= 20) {
+      for (std::size_t i = 0; i < Q.size(); i++) {
+        if (Q.flat(i) < 0.) {
+          Q.flat(i) = 0.;
+          set_neg_src_to_zero = true;
+        }
+      }
+    }
+
+    next_flux.fill(0.);
+    J_.fill(0.);
+    sweep_aniso(next_flux, incident_angular_flux, Q);
+
+    // Get difference
+    flux_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
+
+    // Make sure that the flux is positive everywhere !
+    bool set_neg_flux_to_zero = false;
+    for (std::size_t i = 0; i < next_flux.size(); i++) {
+      if (next_flux.flat(i) < 0.) {
+        next_flux.flat(i) = 0.;
+        set_neg_flux_to_zero = true;
+      }
+    }
+
+    flux_ = next_flux;
+
+    const double old_keff = keff_;
+    keff_ = calc_keff(old_outer_flux, flux_, keff_);
+    keff_diff = std::abs((old_keff - keff_) / keff_);
+
+    spdlog::info("-------------------------------------");
+    spdlog::info("Iteration {:>6d}        keff: {:.5f}", iteration, keff_);
+    spdlog::info("     keff difference:     {:.5E}", keff_diff);
+    spdlog::info("     max flux difference: {:.5E}", flux_diff);
+
+    // Write warnings about negative flux and source
+    if (set_neg_src_to_zero) {
+      spdlog::warn("Negative source values set to zero");
+    }
+    if (set_neg_flux_to_zero) {
+      spdlog::warn("Negative flux values set to zero");
+    }
+  }
+
+  solved_ = true;
+
+  // We can unallocate Pnl_ now to save memory
+  Pnl_.resize({0,0});
+}
+
+void ReflectorSN::sweep_aniso(xt::xtensor<double, 3>& flux, xt::xtensor<double, 2>& incident_angular_flux, const xt::xtensor<double, 3>& Q) {
+  const std::size_t NG = xs_.front()->ngroups();
+  const int iNG = static_cast<int>(NG);
+
+  incident_angular_flux.fill(0.);
+
+#pragma omp parallel for
+  for (int ig = 0; ig < iNG; ig++) {
+    const std::size_t g = static_cast<std::size_t>(ig);
+
+    for (std::size_t n = 0; n < mu_.size(); n++) {
+      const double mu_n = mu_[n];
+      const double wgt_n = wgt_[n];
+      double flux_in = 0.;
+      double flux_out = 0.;
+      double flux_avg = 0.;
+      std::size_t s = 0;  // surface index
+
+      if (mu_n < 0.) {
+        s = this->nsurfaces() - 1;  // Start at far right (last) surface
+
+        // Track from right to left (negative direction)
+        flux_in = 0.;
+
+        // Tally incident current
+        J_(g, s) += wgt_n * mu_n * flux_in;
+        s--;
+
+        for (int ii = static_cast<int>(xs_.size()) - 1; ii >= 0; ii--) {
+          const std::size_t i = static_cast<std::size_t>(ii);
+          const double dx = dx_[i];
+          const double Et = xs_[i]->Et(g);
+
+          double Qni = 0.;
+          for (std::size_t l = 0; l <= max_legendre_order(); l++) {
+            Qni += Q(g, i, l) * Pnl_(n, l);
+          }
+
+          // Calculate outgoing flux and average flux
+          flux_out =
+              (2. * dx * Qni + (2. * std::abs(mu_n) - dx * Et) * flux_in) /
+              (dx * Et + 2. * std::abs(mu_n));
+          flux_avg = 0.5 * (flux_in + flux_out);
+
+          // Contribute to flux legendre moments
+          for (std::size_t l = 0; l <= max_legendre_order(); l++) {
+            flux(g, i, l) += 0.5 * (2.*static_cast<double>(l) + 1.) * wgt_n * flux_avg * Pnl_(n, l);
+          }
+
+          // Save outgoing flux as an incident flux
+          if (i == 0) {
+            incident_angular_flux(g, mu_.size() - 1 - n) = flux_out;
+          }
+
+          // Tally current at out surface
+          J_(g, s) += wgt_n * mu_n * flux_out;
+          s--;
+
+          flux_in = flux_out;
+        }
+      } else {
+        s = 0;  // Start at far left (first) surface
+
+        // Track from left to right (positive direction)
+        flux_in = incident_angular_flux(g, n);
+
+        // Tally incident current
+        J_(g, s) += wgt_n * mu_n * flux_in;
+        s++;
+
+        for (std::size_t i = 0; i < xs_.size(); i++) {
+          const double dx = dx_[i];
+          const double Et = xs_[i]->Et(g);
+
+          double Qni = 0.;
+          for (std::size_t l = 0; l <= max_legendre_order(); l++) {
+            Qni += Q(g, i, l) * Pnl_(n, l);
+          }
+
+          // Calculate outgoing flux and average flux
+          flux_out =
+              (2. * dx * Qni + (2. * std::abs(mu_n) - dx * Et) * flux_in) /
+              (dx * Et + 2. * std::abs(mu_n));
+          flux_avg = 0.5 * (flux_in + flux_out);
+
+          // Contribute to flux legendre moments
+          for (std::size_t l = 0; l <= max_legendre_order(); l++) {
+            flux(g, i, l) += 0.5 * (2.*static_cast<double>(l) + 1.) * wgt_n * flux_avg * Pnl_(n, l);
+          }
+
+          // Tally current at out surface
+          J_(g, s) += wgt_n * mu_n * flux_out;
+          s++;
+
+          flux_in = flux_out;
+        }
+      }
+    }  // for all mu
+    xt::view(incident_angular_flux, g, xt::all()) = 0.;
+  }  // for all groups
+}
+
+void ReflectorSN::fill_fission_source_aniso(
+    xt::xtensor<double, 3>& Qfiss, const xt::xtensor<double, 3>& flux) const {
+  Qfiss.fill(0.);
+
+  for (std::size_t i = 0; i < xs_.size(); i++) {
+    const auto& mat = xs_[i];
+
+    for (std::size_t g = 0; g < xs_[0]->ngroups(); g++) {
+      const double chi_g = mat->chi(g);
+
+      for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
+        Qfiss(g, i, 0) += chi_g * mat->vEf(gg) * flux(gg, i, 0);
+      }
+    }
+  }
+
+  Qfiss /= keff_;
+}
+
+void ReflectorSN::fill_scatter_source_aniso(
+    xt::xtensor<double, 3>& Qscat, const xt::xtensor<double, 3>& flux) const {
+  Qscat.fill(0.);
+
+  for (std::size_t i = 0; i < xs_.size(); i++) {
+    const auto& mat = xs_[i];
+
+    for (std::size_t g = 0; g < xs_[0]->ngroups(); g++) {
+      for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
+        for (std::size_t l = 0; l < max_legendre_order(); l++) {
+          Qscat(g, i, l) += mat->Es(l, gg, g) * flux(gg, i, l);
+        }
+      }
+    }
+  }
+}
+
+double ReflectorSN::calc_keff(const xt::xtensor<double, 3>& old_flux,
+                              const xt::xtensor<double, 3>& new_flux,
+                              const double keff) const {
+  double num = 0.;
+  double denom = 0.;
+  for (std::size_t i = 0; i < xs_.size(); i++) {
+    const auto& mat = xs_[i];
+    const double dx = dx_[i];
+    for (std::size_t g = 0; g < mat->ngroups(); g++) {
+      num += dx * mat->vEf(g) * new_flux(g, i, 0);
+      denom += dx * mat->vEf(g) * old_flux(g, i, 0);
+    }
+  }
+
+  return keff * num / denom;
+}
+
+double ReflectorSN::flux(std::size_t i, std::size_t g, std::size_t l) const {
   if (i >= this->size()) {
     std::stringstream mssg;
     mssg << "Region index i =" << i << " is out of range.";
@@ -339,7 +601,14 @@ double ReflectorSN::flux(std::size_t i, std::size_t g) const {
     throw ScarabeeException(mssg.str());
   }
 
-  return flux_(g, i);
+  if (l > max_L_) {
+    std::stringstream mssg;
+    mssg << "Legendre order l =" << l << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  return flux_(g, i, l);
 }
 
 double ReflectorSN::current(std::size_t i, std::size_t g) const {

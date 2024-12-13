@@ -12,7 +12,21 @@ using namespace scarabee;
 void init_ReflectorSN(py::module& m) {
   py::class_<ReflectorSN>(m, "ReflectorSN")
       .def(py::init<const std::vector<std::shared_ptr<CrossSection>>& /*xs*/,
-                    const xt::xtensor<double, 1>& /*dx*/>())
+                    const xt::xtensor<double, 1>& /*dx*/,
+                    bool /*anisotropic*/>(),
+           "Creates a ReflectorSN object to perform a 1D Sn calculation with "
+           "a reflective boundary at the -x side and a vacuum boundary on the "
+           "+x side.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "xs : iterable of CrossSection\n"
+           "  1D iterable for the cross section in each bin.\n"
+           "dx : iterable of float\n"
+           "  1D iterable of the widths of each bin along x.\n"
+           "anisotropic : bool\n"
+           "  True to use anisotropic scattering, False to use the transport correction (default value is True).\n",
+           py::arg("xs"), py::arg("dx"), py::arg("anisotropic") = true)
+
       .def("solve", &ReflectorSN::solve)
 
       .def_property_readonly(
@@ -34,6 +48,12 @@ void init_ReflectorSN(py::module& m) {
       .def_property_readonly("nsurfaces", &ReflectorSN::nsurfaces,
                              "Number of surfaces.")
 
+      .def_property_readonly("max_legendre_order", &ReflectorSN::max_legendre_order,
+                             "Maximum legendre order for scattering.")
+
+      .def_property_readonly("anisotropic", &ReflectorSN::anisotropic,
+                             "If True, anisotropic scattering will be simulated.")
+
       .def_property(
           "keff_tolerance", &ReflectorSN::keff_tolerance,
           &ReflectorSN::set_keff_tolerance,
@@ -51,12 +71,14 @@ void init_ReflectorSN(py::module& m) {
            "i : int\n"
            "    Region index.\n"
            "g : int\n"
-           "    Energy group index.\n\n"
+           "    Energy group index.\n"
+           "l : int\n"
+           "    Legendre moment (default value is 0).\n\n"
            "Returns\n"
            "-------\n"
            "float\n"
-           "     Flux in region i and in group g.\n",
-           py::arg("i"), py::arg("g"))
+           "     Flux in region i and in group g for legendre moment l.\n",
+           py::arg("i"), py::arg("g"), py::arg("l")=0)
 
       .def("current", &ReflectorSN::current,
            "Returns the net current in group g at surface i.\n\n"
