@@ -2,6 +2,7 @@
 #include <utils/math.hpp>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
+#include <utils/timer.hpp>
 
 #include <xtensor/xio.hpp>
 
@@ -90,11 +91,18 @@ void ReflectorSN::set_keff_tolerance(double ktol) {
 }
 
 void ReflectorSN::solve() {
+  Timer sim_timer;
+  sim_timer.start();
+
   if (anisotropic() && max_legendre_order() > 0) {
     solve_aniso();
   } else {
     solve_iso();
   }
+
+  sim_timer.stop();
+  spdlog::info("");
+  spdlog::info("Simulation Time: {:.5E} s", sim_timer.elapsed_time());
 }
 
 void ReflectorSN::solve_iso() {
@@ -142,8 +150,12 @@ void ReflectorSN::solve_iso() {
   double keff_diff = 100.;
   double flux_diff = 100.;
   std::size_t iteration = 0;
+  Timer iteration_timer;
   while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
+    iteration_timer.reset();
+    iteration_timer.start();
     iteration++;
+
     old_outer_flux = flux_;
 
     fill_fission_source_iso(Qfiss, flux_);
@@ -191,10 +203,12 @@ void ReflectorSN::solve_iso() {
     keff_ = calc_keff(old_outer_flux, flux_, keff_);
     keff_diff = std::abs((old_keff - keff_) / keff_);
 
+    iteration_timer.stop();
     spdlog::info("-------------------------------------");
     spdlog::info("Iteration {:>6d}        keff: {:.5f}", iteration, keff_);
     spdlog::info("     keff difference:     {:.5E}", keff_diff);
     spdlog::info("     max flux difference: {:.5E}", flux_diff);
+    spdlog::info("     Iteration time: {:.5E} s", iteration_timer.elapsed_time());
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
@@ -369,8 +383,12 @@ void ReflectorSN::solve_aniso() {
   double keff_diff = 100.;
   double flux_diff = 100.;
   std::size_t iteration = 0;
+  Timer iteration_timer;
   while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
+    iteration_timer.reset();
+    iteration_timer.start();
     iteration++;
+
     old_outer_flux = flux_;
     
     // We assume the fission source is only isotropic
@@ -378,13 +396,15 @@ void ReflectorSN::solve_aniso() {
     fill_scatter_source_aniso(Qscat, flux_);
     Q = Qfiss + Qscat;
 
-    // Check for negative source values at beginning of simulation
+    // Check for negative P0 source values at beginning of simulation
     bool set_neg_src_to_zero = false;
     if (iteration <= 20) {
-      for (std::size_t i = 0; i < Q.size(); i++) {
-        if (Q.flat(i) < 0.) {
-          Q.flat(i) = 0.;
-          set_neg_src_to_zero = true;
+      for (std::size_t g = 0; g < NG; g++) {
+        for (std::size_t i = 0; i < NR; i++) {
+          if (Q(g, i, 0) < 0.) {
+            Q(g, i, 0) = 0.;
+            set_neg_src_to_zero = true;
+          }
         }
       }
     }
@@ -393,15 +413,23 @@ void ReflectorSN::solve_aniso() {
     J_.fill(0.);
     sweep_aniso(next_flux, incident_angular_flux, Q);
 
-    // Get difference
-    flux_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
-
-    // Make sure that the flux is positive everywhere !
+    // Get max difference in the scalar flux
+    flux_diff = 0.;
     bool set_neg_flux_to_zero = false;
-    for (std::size_t i = 0; i < next_flux.size(); i++) {
-      if (next_flux.flat(i) < 0.) {
-        next_flux.flat(i) = 0.;
-        set_neg_flux_to_zero = true;
+    for (std::size_t g = 0; g < NG; g++) {
+      for (std::size_t i = 0; i < NR; i++) {
+        const double nf = next_flux(g, i, 0);
+        const double f = flux_(g, i , 0);
+        const double diff = std::abs(nf - f) / nf;
+        if (diff > flux_diff) {
+          flux_diff = diff;
+        }
+
+        // Make sure that the SCALAR flux is positive everywhere !
+        if (nf < 0.) {
+          next_flux(g, i, 0) = 0.;
+          set_neg_flux_to_zero = true;
+        }
       }
     }
 
@@ -410,11 +438,13 @@ void ReflectorSN::solve_aniso() {
     const double old_keff = keff_;
     keff_ = calc_keff(old_outer_flux, flux_, keff_);
     keff_diff = std::abs((old_keff - keff_) / keff_);
-
+  
+    iteration_timer.stop();
     spdlog::info("-------------------------------------");
     spdlog::info("Iteration {:>6d}        keff: {:.5f}", iteration, keff_);
     spdlog::info("     keff difference:     {:.5E}", keff_diff);
     spdlog::info("     max flux difference: {:.5E}", flux_diff);
+    spdlog::info("     Iteration time: {:.5E} s", iteration_timer.elapsed_time());
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
