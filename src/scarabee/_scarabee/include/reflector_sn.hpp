@@ -48,7 +48,6 @@ class ReflectorSN {
   std::vector<std::shared_ptr<CrossSection>> xs_;
   xt::xtensor<double, 1> dx_;
   xt::xtensor<double, 3> flux_;  // group, spatial bin, legendre moment
-  xt::xtensor<double, 3> Q_;     // group, spatial bin, legendre moment
   xt::xtensor<double, 2> J_;     // group, surface
   xt::xtensor<double, 2> Pnl_;   // direction index, legendre moment
   double keff_{1.};

@@ -561,7 +561,7 @@ void ReflectorSN::fill_scatter_source_aniso(
 
     for (std::size_t g = 0; g < xs_[0]->ngroups(); g++) {
       for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
-        for (std::size_t l = 0; l < max_legendre_order(); l++) {
+        for (std::size_t l = 0; l <= max_legendre_order(); l++) {
           Qscat(g, i, l) += 0.5 * (2.*static_cast<double>(l) + 1.) * mat->Es(l, gg, g) * flux(gg, i, l);
         }
       }
