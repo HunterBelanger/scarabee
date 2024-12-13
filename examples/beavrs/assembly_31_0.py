@@ -15,6 +15,7 @@ Fuel31Comp.add_nuclide("U234", 5.7987e-06)
 Fuel31Comp.add_nuclide("U235", 7.2175e-04)
 Fuel31Comp.add_nuclide("U238", 2.2253e-02)
 Fuel31 = Material(Fuel31Comp, 575., ndl)
+Fuel31.max_legendre_order = 2
 
 CladComp = MaterialComposition(Fraction.Weight)
 CladComp.add_element('O', 0.00125)
@@ -23,16 +24,19 @@ CladComp.add_element('Fe', 0.0021)
 CladComp.add_element('Zr', 0.98115)
 CladComp.add_element('Sn', 0.0145)
 Clad = Material(CladComp, 575., 6.55, DensityUnits.g_cm3 , ndl)
+Clad.max_legendre_order = 2
 
 HeComp = MaterialComposition(Fraction.Atoms)
 HeComp.add_element("He", 1.)
 He = Material(HeComp, 575., 0.0015981, DensityUnits.g_cm3, ndl) 
+He.max_legendre_order = 2
 
 WaterComp = MaterialComposition(Fraction.Atoms)
 WaterComp.add_nuclide("H1_H2O_TC",  4.9456e-02 + 7.7035e-06)
 WaterComp.add_element("B", 7.9714e-06 + 3.2247e-05)
 WaterComp.add_element("O", 2.4673e-02 + 9.3734e-06 + 4.9474e-05)
 Water = Material(WaterComp, 575., ndl)
+Water.max_legendre_order = 2
 
 SS304Comp = MaterialComposition(Fraction.Weight)
 SS304Comp.add_element('Si', 0.0060)
@@ -41,6 +45,7 @@ SS304Comp.add_element('Mn', 0.0200)
 SS304Comp.add_element('Fe', 0.6840)
 SS304Comp.add_element('Ni', 0.1000)
 SS304 = Material(SS304Comp, 575., 8.03, DensityUnits.g_cm3, ndl)
+SS304.max_legendre_order = 2
 
 # Define a guide tube
 gt = GuideTube(inner_radius=0.56134, outer_radius=0.60198, clad=Clad)
