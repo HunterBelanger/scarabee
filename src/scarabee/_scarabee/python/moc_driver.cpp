@@ -253,6 +253,12 @@ void init_MOCDriver(py::module& m) {
       .def_property_readonly("nregions", &MOCDriver::nregions,
                              "Number of flat source regions.")
 
+      .def_property_readonly("max_legendre_order", &MOCDriver::max_legendre_order,
+                             "Maximum legendre order for scattering.")
+
+      .def_property_readonly("anisotropic", &MOCDriver::anisotropic,
+                             "If True, anisotropic scattering will be simulated.")
+
       .def_property_readonly("x_min", &MOCDriver::x_min,
                              "Minimum value of x in problem domain.")
 

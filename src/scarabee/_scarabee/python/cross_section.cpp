@@ -214,6 +214,9 @@ void init_CrossSection(py::module& m) {
       .def_property_readonly("anisotropic", &CrossSection::anisotropic,
                              "True if the material has a P1 scattering matrix.")
 
+      .def_property_readonly("max_legendre_order", &CrossSection::max_legendre_order,
+                             "Maximum legendre order for scattering.")
+
       .def("Etr",
            py::overload_cast<std::size_t>(&CrossSection::Etr, py::const_),
            "Transport corrected total cross section in group g.\n\n"

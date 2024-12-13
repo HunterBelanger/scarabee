@@ -70,6 +70,8 @@ class MOCDriver {
   std::size_t size() const;
   std::size_t nfsr() const { return this->size(); }
   std::size_t nregions() const { return this->nfsr(); }
+  std::size_t max_legendre_order() const { return max_L_; }
+  bool anisotropic() const { return anisotropic_; }
 
   double flux(const Vector& r, const Direction& u, std::size_t g,
               std::size_t lj = 0) const;
