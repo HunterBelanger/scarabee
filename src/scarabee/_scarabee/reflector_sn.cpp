@@ -477,7 +477,7 @@ void ReflectorSN::sweep_aniso(xt::xtensor<double, 3>& flux, xt::xtensor<double, 
 
           // Contribute to flux legendre moments
           for (std::size_t l = 0; l <= max_legendre_order(); l++) {
-            flux(g, i, l) += 0.5 * (2.*static_cast<double>(l) + 1.) * wgt_n * flux_avg * Pnl_(n, l);
+            flux(g, i, l) += wgt_n * flux_avg * Pnl_(n, l);
           }
 
           // Save outgoing flux as an incident flux
@@ -518,7 +518,7 @@ void ReflectorSN::sweep_aniso(xt::xtensor<double, 3>& flux, xt::xtensor<double, 
 
           // Contribute to flux legendre moments
           for (std::size_t l = 0; l <= max_legendre_order(); l++) {
-            flux(g, i, l) += 0.5 * (2.*static_cast<double>(l) + 1.) * wgt_n * flux_avg * Pnl_(n, l);
+            flux(g, i, l) += wgt_n * flux_avg * Pnl_(n, l);
           }
 
           // Tally current at out surface
@@ -544,7 +544,7 @@ void ReflectorSN::fill_fission_source_aniso(
       const double chi_g = mat->chi(g);
 
       for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
-        Qfiss(g, i, 0) += chi_g * mat->vEf(gg) * flux(gg, i, 0);
+        Qfiss(g, i, 0) += 0.5 * chi_g * mat->vEf(gg) * flux(gg, i, 0);
       }
     }
   }
@@ -562,7 +562,7 @@ void ReflectorSN::fill_scatter_source_aniso(
     for (std::size_t g = 0; g < xs_[0]->ngroups(); g++) {
       for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
         for (std::size_t l = 0; l < max_legendre_order(); l++) {
-          Qscat(g, i, l) += mat->Es(l, gg, g) * flux(gg, i, l);
+          Qscat(g, i, l) += 0.5 * (2.*static_cast<double>(l) + 1.) * mat->Es(l, gg, g) * flux(gg, i, l);
         }
       }
     }
