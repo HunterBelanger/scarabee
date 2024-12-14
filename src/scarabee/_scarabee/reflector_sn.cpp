@@ -119,8 +119,7 @@ void ReflectorSN::solve_iso() {
 
   flux_ = xt::ones<double>({NG, NR, max_L_ + 1});
   xt::xtensor<double, 3> next_flux = xt::zeros<double>({NG, NR, max_L_ + 1});
-  xt::xtensor<double, 3> old_flux =
-      xt::zeros<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> old_flux = xt::zeros<double>({NG, NR, max_L_ + 1});
   xt::xtensor<double, 3> Q = xt::zeros<double>({NG, NR, max_L_ + 1});
 
   keff_ = 1.;
@@ -204,7 +203,8 @@ void ReflectorSN::solve_iso() {
     spdlog::info("Iteration {:>6d}        keff: {:.5f}", iteration, keff_);
     spdlog::info("     keff difference:     {:.5E}", keff_diff);
     spdlog::info("     max flux difference: {:.5E}", flux_diff);
-    spdlog::info("     iteration time: {:.5E} s", iteration_timer.elapsed_time());
+    spdlog::info("     iteration time: {:.5E} s",
+                 iteration_timer.elapsed_time());
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
@@ -310,7 +310,8 @@ void ReflectorSN::sweep_iso(xt::xtensor<double, 3>& flux,
   }  // for all groups
 }
 
-void ReflectorSN::fill_source_iso(xt::xtensor<double, 3>& Q, const xt::xtensor<double, 3>& flux) const {
+void ReflectorSN::fill_source_iso(xt::xtensor<double, 3>& Q,
+                                  const xt::xtensor<double, 3>& flux) const {
   const double invs_keff = 1. / keff_;
   Q.fill(0.);
 
@@ -333,7 +334,8 @@ void ReflectorSN::solve_aniso() {
   const std::size_t NR = xs_.size();
 
   if (max_legendre_order() == 0) {
-    const auto mssg = "Should not use solve_aniso if the maximum legendre order is 0.";
+    const auto mssg =
+        "Should not use solve_aniso if the maximum legendre order is 0.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -344,7 +346,7 @@ void ReflectorSN::solve_aniso() {
   xt::xtensor<double, 3> Q = xt::zeros<double>({NG, NR, max_L_ + 1});
 
   // Evaluate the Legendre function P_l(mu_n) for all mu and all l
-  Pnl_ = xt::zeros<double>({mu_.size(), max_L_+1});
+  Pnl_ = xt::zeros<double>({mu_.size(), max_L_ + 1});
   for (std::size_t n = 0; n < mu_.size(); n++) {
     for (std::size_t l = 0; l <= max_legendre_order(); l++) {
       Pnl_(n, l) = legendre(static_cast<unsigned int>(l), mu_[n]);
@@ -355,7 +357,8 @@ void ReflectorSN::solve_aniso() {
 
   // Array to hold the incident flux at the reflective boundary. We create
   // this here instead of in the sweep to avoid making memory allocations.
-  xt::xtensor<double, 2> incident_angular_flux = xt::zeros<double>({NG, mu_.size()});
+  xt::xtensor<double, 2> incident_angular_flux =
+      xt::zeros<double>({NG, mu_.size()});
 
   // Outer Iterations
   double keff_diff = 100.;
@@ -368,7 +371,7 @@ void ReflectorSN::solve_aniso() {
     iteration++;
 
     old_flux = flux_;
-    
+
     // We assume the fission source is only isotropic
     fill_source_aniso(Q, flux_);
 
@@ -395,7 +398,7 @@ void ReflectorSN::solve_aniso() {
     for (std::size_t g = 0; g < NG; g++) {
       for (std::size_t i = 0; i < NR; i++) {
         const double nf = next_flux(g, i, 0);
-        const double f = flux_(g, i , 0);
+        const double f = flux_(g, i, 0);
         const double diff = std::abs(nf - f) / nf;
         if (diff > flux_diff) {
           flux_diff = diff;
@@ -414,13 +417,14 @@ void ReflectorSN::solve_aniso() {
     const double old_keff = keff_;
     keff_ = calc_keff(old_flux, flux_, keff_);
     keff_diff = std::abs((old_keff - keff_) / keff_);
-  
+
     iteration_timer.stop();
     spdlog::info("-------------------------------------");
     spdlog::info("Iteration {:>6d}        keff: {:.5f}", iteration, keff_);
     spdlog::info("     keff difference:     {:.5E}", keff_diff);
     spdlog::info("     max flux difference: {:.5E}", flux_diff);
-    spdlog::info("     iteration time: {:.5E} s", iteration_timer.elapsed_time());
+    spdlog::info("     iteration time: {:.5E} s",
+                 iteration_timer.elapsed_time());
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
@@ -434,10 +438,12 @@ void ReflectorSN::solve_aniso() {
   solved_ = true;
 
   // We can unallocate Pnl_ now to save memory
-  Pnl_.resize({0,0});
+  Pnl_.resize({0, 0});
 }
 
-void ReflectorSN::sweep_aniso(xt::xtensor<double, 3>& flux, xt::xtensor<double, 2>& incident_angular_flux, const xt::xtensor<double, 3>& Q) {
+void ReflectorSN::sweep_aniso(xt::xtensor<double, 3>& flux,
+                              xt::xtensor<double, 2>& incident_angular_flux,
+                              const xt::xtensor<double, 3>& Q) {
   const std::size_t NG = xs_.front()->ngroups();
   const int iNG = static_cast<int>(NG);
 
@@ -539,7 +545,8 @@ void ReflectorSN::sweep_aniso(xt::xtensor<double, 3>& flux, xt::xtensor<double, 
   }  // for all groups
 }
 
-void ReflectorSN::fill_source_aniso(xt::xtensor<double, 3>& Q, const xt::xtensor<double, 3>& flux) const {
+void ReflectorSN::fill_source_aniso(xt::xtensor<double, 3>& Q,
+                                    const xt::xtensor<double, 3>& flux) const {
   const double invs_keff = 1. / keff_;
   Q.fill(0.);
 
@@ -551,7 +558,8 @@ void ReflectorSN::fill_source_aniso(xt::xtensor<double, 3>& Q, const xt::xtensor
       for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
         for (std::size_t l = 0; l <= max_legendre_order(); l++) {
           const double flx_gg_l = flux(gg, i, l);
-          Q(g, i, l) += 0.5 * (2.*static_cast<double>(l) + 1.) * mat->Es(l, gg, g) * flx_gg_l;
+          Q(g, i, l) += 0.5 * (2. * static_cast<double>(l) + 1.) *
+                        mat->Es(l, gg, g) * flx_gg_l;
 
           if (l == 0) {
             Q(g, i, 0) += 0.5 * invs_keff * chi_g * mat->vEf(gg) * flx_gg_l;

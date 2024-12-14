@@ -24,7 +24,8 @@ void init_ReflectorSN(py::module& m) {
            "dx : iterable of float\n"
            "  1D iterable of the widths of each bin along x.\n"
            "anisotropic : bool\n"
-           "  True to use anisotropic scattering, False to use the transport correction (default value is True).\n",
+           "  True to use anisotropic scattering, False to use the transport "
+           "correction (default value is True).\n",
            py::arg("xs"), py::arg("dx"), py::arg("anisotropic") = true)
 
       .def("solve", &ReflectorSN::solve)
@@ -48,11 +49,13 @@ void init_ReflectorSN(py::module& m) {
       .def_property_readonly("nsurfaces", &ReflectorSN::nsurfaces,
                              "Number of surfaces.")
 
-      .def_property_readonly("max_legendre_order", &ReflectorSN::max_legendre_order,
+      .def_property_readonly("max_legendre_order",
+                             &ReflectorSN::max_legendre_order,
                              "Maximum legendre order for scattering.")
 
-      .def_property_readonly("anisotropic", &ReflectorSN::anisotropic,
-                             "If True, anisotropic scattering will be simulated.")
+      .def_property_readonly(
+          "anisotropic", &ReflectorSN::anisotropic,
+          "If True, anisotropic scattering will be simulated.")
 
       .def_property(
           "keff_tolerance", &ReflectorSN::keff_tolerance,
@@ -78,7 +81,7 @@ void init_ReflectorSN(py::module& m) {
            "-------\n"
            "float\n"
            "     Flux in region i and in group g for legendre moment l.\n",
-           py::arg("i"), py::arg("g"), py::arg("l")=0)
+           py::arg("i"), py::arg("g"), py::arg("l") = 0)
 
       .def("current", &ReflectorSN::current,
            "Returns the net current in group g at surface i.\n\n"
