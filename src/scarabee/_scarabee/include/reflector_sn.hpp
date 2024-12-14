@@ -61,13 +61,11 @@ class ReflectorSN {
 
   void solve_iso();
   void sweep_iso(xt::xtensor<double, 3>& flux, xt::xtensor<double, 2>& incident_angular_flux, const xt::xtensor<double, 3>& Q);
-  void fill_fission_source_iso(xt::xtensor<double, 3>& Qfiss, const xt::xtensor<double, 3>& flux) const;
-  void fill_scatter_source_iso(xt::xtensor<double, 3>& Qscat, const xt::xtensor<double, 3>& flux) const;
+  void fill_source_iso(xt::xtensor<double, 3>& Q, const xt::xtensor<double, 3>& flux) const;
 
   void solve_aniso();
   void sweep_aniso(xt::xtensor<double, 3>& flux, xt::xtensor<double, 2>& incident_angular_flux, const xt::xtensor<double, 3>& Q);
-  void fill_fission_source_aniso(xt::xtensor<double, 3>& Qfiss, const xt::xtensor<double, 3>& flux) const;
-  void fill_scatter_source_aniso(xt::xtensor<double, 3>& Qscat, const xt::xtensor<double, 3>& flux) const;
+  void fill_source_aniso(xt::xtensor<double, 3>& Q, const xt::xtensor<double, 3>& flux) const;
 
   double calc_keff(const xt::xtensor<double, 3>& old_flux,
                    const xt::xtensor<double, 3>& new_flux,

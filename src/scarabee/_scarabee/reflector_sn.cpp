@@ -119,10 +119,8 @@ void ReflectorSN::solve_iso() {
 
   flux_ = xt::ones<double>({NG, NR, max_L_ + 1});
   xt::xtensor<double, 3> next_flux = xt::zeros<double>({NG, NR, max_L_ + 1});
-  xt::xtensor<double, 3> old_outer_flux =
+  xt::xtensor<double, 3> old_flux =
       xt::zeros<double>({NG, NR, max_L_ + 1});
-  xt::xtensor<double, 3> Qfiss = xt::zeros<double>({NG, NR, max_L_ + 1});
-  xt::xtensor<double, 3> Qscat = xt::zeros<double>({NG, NR, max_L_ + 1});
   xt::xtensor<double, 3> Q = xt::zeros<double>({NG, NR, max_L_ + 1});
 
   keff_ = 1.;
@@ -156,11 +154,9 @@ void ReflectorSN::solve_iso() {
     iteration_timer.start();
     iteration++;
 
-    old_outer_flux = flux_;
+    old_flux = flux_;
 
-    fill_fission_source_iso(Qfiss, flux_);
-    fill_scatter_source_iso(Qscat, flux_);
-    Q = Qfiss + Qscat;
+    fill_source_iso(Q, flux_);
 
     // Check for negative source values at beginning of simulation
     bool set_neg_src_to_zero = false;
@@ -200,7 +196,7 @@ void ReflectorSN::solve_iso() {
     flux_ = next_flux;
 
     const double old_keff = keff_;
-    keff_ = calc_keff(old_outer_flux, flux_, keff_);
+    keff_ = calc_keff(old_flux, flux_, keff_);
     keff_diff = std::abs((old_keff - keff_) / keff_);
 
     iteration_timer.stop();
@@ -208,7 +204,7 @@ void ReflectorSN::solve_iso() {
     spdlog::info("Iteration {:>6d}        keff: {:.5f}", iteration, keff_);
     spdlog::info("     keff difference:     {:.5E}", keff_diff);
     spdlog::info("     max flux difference: {:.5E}", flux_diff);
-    spdlog::info("     Iteration time: {:.5E} s", iteration_timer.elapsed_time());
+    spdlog::info("     iteration time: {:.5E} s", iteration_timer.elapsed_time());
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
@@ -314,35 +310,19 @@ void ReflectorSN::sweep_iso(xt::xtensor<double, 3>& flux,
   }  // for all groups
 }
 
-void ReflectorSN::fill_fission_source_iso(
-    xt::xtensor<double, 3>& Qfiss, const xt::xtensor<double, 3>& flux) const {
-  Qfiss.fill(0.);
+void ReflectorSN::fill_source_iso(xt::xtensor<double, 3>& Q, const xt::xtensor<double, 3>& flux) const {
+  const double invs_keff = 1. / keff_;
+  Q.fill(0.);
 
   for (std::size_t i = 0; i < xs_.size(); i++) {
     const auto& mat = xs_[i];
 
     for (std::size_t g = 0; g < xs_[0]->ngroups(); g++) {
       const double chi_g = mat->chi(g);
-
       for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
-        Qfiss(g, i, 0) += chi_g * mat->vEf(gg) * flux(gg, i, 0);
-      }
-    }
-  }
-
-  Qfiss /= 2. * keff_;
-}
-
-void ReflectorSN::fill_scatter_source_iso(
-    xt::xtensor<double, 3>& Qscat, const xt::xtensor<double, 3>& flux) const {
-  Qscat.fill(0.);
-
-  for (std::size_t i = 0; i < xs_.size(); i++) {
-    const auto& mat = xs_[i];
-
-    for (std::size_t g = 0; g < xs_[0]->ngroups(); g++) {
-      for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
-        Qscat(g, i, 0) += 0.5 * mat->Es_tr(gg, g) * flux(gg, i, 0);
+        const double flx_gg = flux(gg, i, 0);
+        Q(g, i, 0) += 0.5 * mat->Es_tr(gg, g) * flx_gg;
+        Q(g, i, 0) += 0.5 * chi_g * mat->vEf(gg) * flx_gg * invs_keff;
       }
     }
   }
@@ -360,9 +340,7 @@ void ReflectorSN::solve_aniso() {
 
   flux_ = xt::ones<double>({NG, NR, max_L_ + 1});
   xt::xtensor<double, 3> next_flux = xt::zeros<double>({NG, NR, max_L_ + 1});
-  xt::xtensor<double, 3> old_outer_flux = xt::zeros<double>({NG, NR, max_L_ + 1});
-  xt::xtensor<double, 3> Qfiss = xt::zeros<double>({NG, NR, max_L_ + 1});
-  xt::xtensor<double, 3> Qscat = xt::zeros<double>({NG, NR, max_L_ + 1});
+  xt::xtensor<double, 3> old_flux = xt::zeros<double>({NG, NR, max_L_ + 1});
   xt::xtensor<double, 3> Q = xt::zeros<double>({NG, NR, max_L_ + 1});
 
   // Evaluate the Legendre function P_l(mu_n) for all mu and all l
@@ -389,12 +367,10 @@ void ReflectorSN::solve_aniso() {
     iteration_timer.start();
     iteration++;
 
-    old_outer_flux = flux_;
+    old_flux = flux_;
     
     // We assume the fission source is only isotropic
-    fill_fission_source_aniso(Qfiss, flux_);
-    fill_scatter_source_aniso(Qscat, flux_);
-    Q = Qfiss + Qscat;
+    fill_source_aniso(Q, flux_);
 
     // Check for negative P0 source values at beginning of simulation
     bool set_neg_src_to_zero = false;
@@ -436,7 +412,7 @@ void ReflectorSN::solve_aniso() {
     flux_ = next_flux;
 
     const double old_keff = keff_;
-    keff_ = calc_keff(old_outer_flux, flux_, keff_);
+    keff_ = calc_keff(old_flux, flux_, keff_);
     keff_diff = std::abs((old_keff - keff_) / keff_);
   
     iteration_timer.stop();
@@ -444,7 +420,7 @@ void ReflectorSN::solve_aniso() {
     spdlog::info("Iteration {:>6d}        keff: {:.5f}", iteration, keff_);
     spdlog::info("     keff difference:     {:.5E}", keff_diff);
     spdlog::info("     max flux difference: {:.5E}", flux_diff);
-    spdlog::info("     Iteration time: {:.5E} s", iteration_timer.elapsed_time());
+    spdlog::info("     iteration time: {:.5E} s", iteration_timer.elapsed_time());
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
@@ -563,36 +539,23 @@ void ReflectorSN::sweep_aniso(xt::xtensor<double, 3>& flux, xt::xtensor<double, 
   }  // for all groups
 }
 
-void ReflectorSN::fill_fission_source_aniso(
-    xt::xtensor<double, 3>& Qfiss, const xt::xtensor<double, 3>& flux) const {
-  Qfiss.fill(0.);
+void ReflectorSN::fill_source_aniso(xt::xtensor<double, 3>& Q, const xt::xtensor<double, 3>& flux) const {
+  const double invs_keff = 1. / keff_;
+  Q.fill(0.);
 
   for (std::size_t i = 0; i < xs_.size(); i++) {
     const auto& mat = xs_[i];
 
     for (std::size_t g = 0; g < xs_[0]->ngroups(); g++) {
       const double chi_g = mat->chi(g);
-
-      for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
-        Qfiss(g, i, 0) += 0.5 * chi_g * mat->vEf(gg) * flux(gg, i, 0);
-      }
-    }
-  }
-
-  Qfiss /= keff_;
-}
-
-void ReflectorSN::fill_scatter_source_aniso(
-    xt::xtensor<double, 3>& Qscat, const xt::xtensor<double, 3>& flux) const {
-  Qscat.fill(0.);
-
-  for (std::size_t i = 0; i < xs_.size(); i++) {
-    const auto& mat = xs_[i];
-
-    for (std::size_t g = 0; g < xs_[0]->ngroups(); g++) {
       for (std::size_t gg = 0; gg < xs_[0]->ngroups(); gg++) {
         for (std::size_t l = 0; l <= max_legendre_order(); l++) {
-          Qscat(g, i, l) += 0.5 * (2.*static_cast<double>(l) + 1.) * mat->Es(l, gg, g) * flux(gg, i, l);
+          const double flx_gg_l = flux(gg, i, l);
+          Q(g, i, l) += 0.5 * (2.*static_cast<double>(l) + 1.) * mat->Es(l, gg, g) * flx_gg_l;
+
+          if (l == 0) {
+            Q(g, i, 0) += 0.5 * invs_keff * chi_g * mat->vEf(gg) * flx_gg_l;
+          }
         }
       }
     }
