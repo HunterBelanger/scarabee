@@ -392,7 +392,7 @@ void MOCDriver::solve_isotropic() {
       spdlog::info("Iteration {:>4d}", iteration);
     }
     spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
-    spdlog::info("     Iteration time: {:.5E} s",
+    spdlog::info("     iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
 
     // Write warnings about negative flux and source
@@ -511,7 +511,7 @@ void MOCDriver::solve_anisotropic() {
       spdlog::info("Iteration {:>4d}", iteration);
     }
     spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
-    spdlog::info("     Iteration time: {:.5E} s",
+    spdlog::info("     iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
 
     // Write warnings about negative flux and source
