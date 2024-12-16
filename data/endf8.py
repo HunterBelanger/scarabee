@@ -2,10 +2,10 @@ import frendy as fdy
 import h5py
 import numpy as np
 
-base = "/mnt/c/Users/hunte/Documents/nuclear_data/ENDF-B-VIII.0/neutrons/"
-tslbase = "/mnt/c/Users/hunte/Documents/nuclear_data/ENDF-B-VIII.0/thermal_scatt/"
-#base = "/mnt/c/Users/BELANH2/Documents/nuclear_data/ENDF-VIII.0/endf/neutrons/"
-#tslbase = "/mnt/c/Users/BELANH2/Documents/nuclear_data/ENDF-VIII.0/endf/thermal_scatt/"
+#base = "/mnt/c/Users/hunte/Documents/nuclear_data/ENDF-B-VIII.0/neutrons/"
+#tslbase = "/mnt/c/Users/hunte/Documents/nuclear_data/ENDF-B-VIII.0/thermal_scatt/"
+base = "/mnt/c/Users/BELANH2/Documents/nuclear_data/ENDF-VIII.0/endf/neutrons/"
+tslbase = "/mnt/c/Users/BELANH2/Documents/nuclear_data/ENDF-VIII.0/endf/thermal_scatt/"
 lib_name = "ENDF/B-VIII.0"
 temps = [293., 500., 600., 800., 1000., 1500., 2000.]
 #temps = [293.6]
@@ -24,6 +24,8 @@ ref_few_grp_cond_spec = np.array([[0, 246], [247, 280]])
 
 # Set the default group strucutre
 fdy.set_default_group_structure("SHEM-281")
+
+fdy.set_default_max_legendre_moments(3)
 
 print(fdy.get_default_group_structure())
 
@@ -115,6 +117,30 @@ N.dilutions = [1.E10]
 N.process(h5)
 
 N = fdy.FrendyMG()
+N.name = "Li6"
+N.endf_file = base + "n-003_Li_006.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Li7"
+N.endf_file = base + "n-003_Li_007.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Be9"
+N.endf_file = base + "n-003_Be_009.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
 N.name = "B10"
 N.endf_file = base + "n-005_B_010.endf"
 N.label = N.name + " from ENDF/B-8.0"
@@ -181,6 +207,38 @@ N.process(h5)
 N = fdy.FrendyMG()
 N.name = "O18"
 N.endf_file = base + "n-008_O_018.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Na23"
+N.endf_file = base + "n-011_Na_023.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Mg24"
+N.endf_file = base + "n-012_Mg_024.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Mg25"
+N.endf_file = base + "n-012_Mg_025.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Mg26"
+N.endf_file = base + "n-012_Mg_026.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
 N.dilutions = [1.E10]

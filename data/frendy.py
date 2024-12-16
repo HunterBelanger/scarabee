@@ -409,7 +409,7 @@ class FrendyMG:
       self.Es3 = None
 
     # Depletion related reactions
-    self.Egamma =  np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
+    self.Egamma = None 
     self.En2n = None
     self.En3n = None
     self.Enp  = None
@@ -549,6 +549,7 @@ class FrendyMG:
       self.Es3 = Es3
 
   def _remove_zeros(self):
+    self.Egamma = self._cull_array(self.Egamma)
     self.En2n = self._cull_array(self.En2n) 
     self.En3n = self._cull_array(self.En3n)
     self.Enp  = self._cull_array(self.Enp)
@@ -606,7 +607,8 @@ class FrendyMG:
       grp.create_dataset("chi", data=self.chi)
 
     # Depletion data 
-    grp.create_dataset("(n,gamma)", data=self.Egamma)
+    if self.Egamma is not None:
+      grp.create_dataset("(n,gamma)", data=self.Egamma)
     if self.En2n is not None:
       grp.create_dataset("(n,2n)", data=self.En2n)
     if self.En3n is not None:
@@ -741,12 +743,15 @@ class FrendyMG:
           self.nu = xs.nu
           self.chi = xs.chi
       
+    fls = os.listdir()
+
     # read in (n,gamma) data
     fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT102.mg"
-    ngamma = read_1dxs(fname, 3)
-    self.Egamma[itemp,:,:] = ngamma
-
-    fls = os.listdir()
+    if fname in fls:
+      if itemp == 0:
+        self.Egamma = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
+      ngamma = read_1dxs(fname, 3)
+      self.Egamma[itemp,:,:] = ngamma
 
     # Check for (n,2n) data
     fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT16.mg"
