@@ -7,7 +7,7 @@ set_output_file(name+"_out.txt")
 ndl = NDLibrary()
 
 # Define all Materials
-Fuel24Comp = MaterialComposition()
+Fuel24Comp = MaterialComposition(name="Fuel 2.4%")
 Fuel24Comp.add_nuclide("O16",  4.5830e-02)
 Fuel24Comp.add_nuclide("O17",  1.7411e-05)
 Fuel24Comp.add_nuclide("O18",  9.1898e-05)
@@ -16,7 +16,7 @@ Fuel24Comp.add_nuclide("U235", 5.5814e-04)
 Fuel24Comp.add_nuclide("U238", 2.2407e-02)
 Fuel24 = Material(Fuel24Comp, 575., ndl)
 
-CladComp = MaterialComposition(Fraction.Weight)
+CladComp = MaterialComposition(Fraction.Weight, name="Zircaloy 4")
 CladComp.add_element('O', 0.00125)
 CladComp.add_element('Cr', 0.0010)
 CladComp.add_element('Fe', 0.0021)
@@ -24,11 +24,11 @@ CladComp.add_element('Zr', 0.98115)
 CladComp.add_element('Sn', 0.0145)
 Clad = Material(CladComp, 575., 6.55, DensityUnits.g_cm3 , ndl)
 
-HeComp = MaterialComposition(Fraction.Atoms)
+HeComp = MaterialComposition(Fraction.Atoms, name="He Gas")
 HeComp.add_element("He", 1.)
 He = Material(HeComp, 575., 0.0015981, DensityUnits.g_cm3, ndl) 
 
-WaterComp = MaterialComposition(Fraction.Atoms)
+WaterComp = MaterialComposition(Fraction.Atoms, name="Water")
 WaterComp.add_nuclide("H1_H2O_TC",  4.9456e-02 + 7.7035e-06)
 WaterComp.add_element("B", 7.9714e-06 + 3.2247e-05)
 WaterComp.add_element("O", 2.4673e-02 + 9.3734e-06 + 4.9474e-05)
@@ -61,4 +61,4 @@ asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, f
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
                fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp]
 asmbly.solve()
-asmbly.save_diffusion_data(name+".npz")
+asmbly.save_diffusion_data(name+".bin")

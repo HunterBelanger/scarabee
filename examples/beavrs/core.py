@@ -3,43 +3,43 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Get diffusion cross sections
-a1_00_  = DiffusionData.load("F16_0.npz")
-a2_00_  = DiffusionData.load("F24_0.npz")
-a3_00_  = DiffusionData.load("F31_0.npz")
-a2_12_  = DiffusionData.load("F24_12.npz")
-a2_16_  = DiffusionData.load("F24_16.npz")
+a1_00_  = DiffusionData.load("F16_0.bin")
+a2_00_  = DiffusionData.load("F24_0.bin")
+a3_00_  = DiffusionData.load("F31_0.bin")
+a2_12_  = DiffusionData.load("F24_12.bin")
+a2_16_  = DiffusionData.load("F24_16.bin")
 
-a3_06U  = DiffusionData.load("F31_6U.npz")
+a3_06U  = DiffusionData.load("F31_6U.bin")
 
-a3_06R  = DiffusionData.load("F31_6U.npz")
+a3_06R  = DiffusionData.load("F31_6U.bin")
 a3_06R.rotate_clockwise()
 
-a3_06D  = DiffusionData.load("F31_6U.npz")
+a3_06D  = DiffusionData.load("F31_6U.bin")
 a3_06D.rotate_clockwise()
 a3_06D.rotate_clockwise()
 
-a3_06L  = DiffusionData.load("F31_6U.npz")
+a3_06L  = DiffusionData.load("F31_6U.bin")
 a3_06L.rotate_clockwise()
 a3_06L.rotate_clockwise()
 a3_06L.rotate_clockwise()
 
-a3_152  = DiffusionData.load("F31_15II.npz")
+a3_152  = DiffusionData.load("F31_15II.bin")
 
-a3_151  = DiffusionData.load("F31_15II.npz")
+a3_151  = DiffusionData.load("F31_15II.bin")
 a3_151.rotate_clockwise()
 
-a3_154  = DiffusionData.load("F31_15II.npz")
+a3_154  = DiffusionData.load("F31_15II.bin")
 a3_154.rotate_clockwise()
 a3_154.rotate_clockwise()
 
-a3_153  = DiffusionData.load("F31_15II.npz")
+a3_153  = DiffusionData.load("F31_15II.bin")
 a3_153.rotate_clockwise()
 a3_153.rotate_clockwise()
 a3_153.rotate_clockwise()
 
-a3_16_  = DiffusionData.load("F31_16.npz")
-a3_20_  = DiffusionData.load("F31_20.npz")
-rf____  = DiffusionData.load("reflector.npz")
+a3_16_  = DiffusionData.load("F31_16.bin")
+a3_20_  = DiffusionData.load("F31_20.bin")
+rf____  = DiffusionData.load("reflector.bin")
 
 
 # Define nodal geometry
@@ -138,4 +138,3 @@ print("Min Pin Power: {:.3f}".format(np.min(pin_power[nmsk])))
 plt.pcolormesh(y, x, pin_power[:,:,0], cmap='jet')
 plt.title("Pin Power Distribution")
 plt.show()
-
