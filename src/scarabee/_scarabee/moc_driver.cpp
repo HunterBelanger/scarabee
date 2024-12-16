@@ -45,44 +45,9 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
     auto mssg = "Cannot run MOC on a Cartesian2D geometry with invalid tiles.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
-  }
+  } 
 
-  // Get total number of unique FSRs
-  nfsrs_ = geometry_->num_fsrs();
-  if (nfsrs_ == 0) {
-    auto mssg = "No flat source regions found.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-  fsrs_.reserve(nfsrs_);
-
-  // Get all FSRs IDs, and pointers to them
-  auto fsr_ids = geometry_->get_all_fsr_ids();
-  std::map<std::size_t, const FlatSourceRegion*> fsr_ptrs;
-  geometry_->fill_fsrs(fsr_ptrs);
-
-  // We now create offsets for each FSR ID, so that we can get a linear index
-  // in the global FSR array, based on the ID and the unique instance number.
-  for (auto id : fsr_ids) fsr_offsets_[id] = 0;
-  auto id_it_prev = fsr_offsets_.begin();
-  for (auto id_it = ++fsr_offsets_.begin(); id_it != fsr_offsets_.end();
-       id_it++) {
-    const std::size_t id_prev = id_it_prev->first;
-    const std::size_t ninst_prev = geometry_->get_num_fsr_instances(id_prev);
-    fsr_offsets_[id_it->first] = fsr_offsets_[id_prev] + ninst_prev;
-    id_it_prev++;
-
-    // Save ninst_prev points
-    for (std::size_t i = 0; i < ninst_prev; i++) {
-      fsrs_.push_back(fsr_ptrs[id_prev]);
-    }
-  }
-  // Save pointers for last FSR
-  const std::size_t id_prev = id_it_prev->first;
-  const std::size_t ninst_prev = geometry_->get_num_fsr_instances(id_prev);
-  for (std::size_t i = 0; i < ninst_prev; i++) {
-    fsrs_.push_back(fsr_ptrs[id_prev]);
-  }
+  allocate_fsr_data(); 
 
   ngroups_ = geometry_->ngroups();
 
@@ -202,19 +167,7 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   }
 
   spdlog::info("Determining track connections");
-  if (x_min_bc_ == BoundaryCondition::Periodic) {
-    set_periodic_bcs_x();
-  } else {
-    set_ref_vac_bcs_x_max();
-    set_ref_vac_bcs_x_min();
-  }
-
-  if (y_min_bc_ == BoundaryCondition::Periodic) {
-    set_periodic_bcs_y();
-  } else {
-    set_ref_vac_bcs_y_max();
-    set_ref_vac_bcs_y_min();
-  }
+  set_bcs(); 
 
   allocate_track_fluxes();
 
@@ -1259,12 +1212,67 @@ void MOCDriver::set_ref_vac_bcs_x_min() {
   }
 }
 
+void MOCDriver::set_bcs() {
+  if (x_min_bc_ == BoundaryCondition::Periodic) {
+    set_periodic_bcs_x();
+  } else {
+    set_ref_vac_bcs_x_max();
+    set_ref_vac_bcs_x_min();
+  }
+
+  if (y_min_bc_ == BoundaryCondition::Periodic) {
+    set_periodic_bcs_y();
+  } else {
+    set_ref_vac_bcs_y_max();
+    set_ref_vac_bcs_y_min();
+  }
+}
+
 void MOCDriver::allocate_track_fluxes() {
   for (auto& tracks : tracks_) {
     for (auto& track : tracks) {
       track.entry_flux().resize({ngroups_, n_pol_angles_});
       track.exit_flux().resize({ngroups_, n_pol_angles_});
     }
+  }
+}
+
+void MOCDriver::allocate_fsr_data() {
+  // Get total number of unique FSRs
+  nfsrs_ = geometry_->num_fsrs();
+  if (nfsrs_ == 0) {
+    auto mssg = "No flat source regions found.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  fsrs_.reserve(nfsrs_);
+
+  // Get all FSRs IDs, and pointers to them
+  auto fsr_ids = geometry_->get_all_fsr_ids();
+  std::map<std::size_t, const FlatSourceRegion*> fsr_ptrs;
+  geometry_->fill_fsrs(fsr_ptrs);
+
+  // We now create offsets for each FSR ID, so that we can get a linear index
+  // in the global FSR array, based on the ID and the unique instance number.
+  for (auto id : fsr_ids) fsr_offsets_[id] = 0;
+  auto id_it_prev = fsr_offsets_.begin();
+  for (auto id_it = ++fsr_offsets_.begin(); id_it != fsr_offsets_.end();
+       id_it++) {
+    const std::size_t id_prev = id_it_prev->first;
+    const std::size_t ninst_prev = geometry_->get_num_fsr_instances(id_prev);
+    fsr_offsets_[id_it->first] = fsr_offsets_[id_prev] + ninst_prev;
+    id_it_prev++;
+
+    // Save ninst_prev points
+    for (std::size_t i = 0; i < ninst_prev; i++) {
+      fsrs_.push_back(fsr_ptrs[id_prev]);
+    }
+  }
+  // Save pointers for last FSR
+  const std::size_t id_prev = id_it_prev->first;
+  const std::size_t ninst_prev = geometry_->get_num_fsr_instances(id_prev);
+  for (std::size_t i = 0; i < ninst_prev; i++) {
+    fsrs_.push_back(fsr_ptrs[id_prev]);
   }
 }
 

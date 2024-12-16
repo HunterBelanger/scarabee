@@ -165,6 +165,9 @@ class MOCDriver {
   void set_ref_vac_bcs_y_min();
   void set_periodic_bcs_x();
   void set_periodic_bcs_y();
+  void set_bcs();
+
+  void allocate_fsr_data();
 
   void allocate_track_fluxes();
   void segment_renormalization();
