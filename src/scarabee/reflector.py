@@ -119,6 +119,10 @@ class Reflector:
         Width of the core baffle.
     baffle : CrossSection
         Self-shielded cross sections for the core baffle.
+    anisotropic : bool
+        If True, the reflector calculation is performed with explicit
+        anisotropic scattering. Otherwise, the transport correction with
+        isotropic scattering is used. Default value is False.
     keff_tolerance : float
         Convergence criteria for keff. Default is 1.E-5.
     flux_tolerance : float
@@ -147,6 +151,7 @@ class Reflector:
         self.gap_width = gap_width
         self.baffle_width = baffle_width
         self.few_group_condensation_scheme = ndl.reflector_few_group_condensation_scheme
+        self.anisotropic = False
 
         # No Dancoff correction, as looking at 1D isolated slab for baffle
         Ee = 1.0 / (2.0 * self.baffle_width)
@@ -200,7 +205,7 @@ class Reflector:
         dx += [dr] * NR
         mats += [self.moderator] * NR
 
-        ref_sn = ReflectorSN(mats, dx)
+        ref_sn = ReflectorSN(mats, dx, self.anisotropic)
         ref_sn.solve()
 
         few_group_flux = np.zeros(
