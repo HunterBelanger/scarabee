@@ -3,9 +3,12 @@
 
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
+#include <utils/xtensor_serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xview.hpp>
+
+#include <cereal/cereal.hpp>
 
 #include <cmath>
 
@@ -106,6 +109,17 @@ class XS1D {
 
  private:
   xt::xtensor<double, 1> xs_;
+
+  friend class cereal::access;
+  friend class CrossSection;
+  friend class DiffusionCrossSection;
+
+  XS1D(): xs_() {}
+
+  template<class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(xs_));
+  }
 };
 
 inline XS1D operator*(const double v, const XS1D& xs) {

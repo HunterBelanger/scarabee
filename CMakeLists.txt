@@ -142,6 +142,19 @@ FetchContent_Declare(ImApp
 FetchContent_MakeAvailable(ImApp)
 
 #===============================================================================
+# Get Cereal
+message(STATUS "Downloading Cereal")
+set(BUILD_DOC OFF)
+set(BUILD_SANDBOX OFF)
+set(SKIP_PERFORMANCE_COMPARISON ON)
+FetchContent_Declare(cereal
+  GIT_REPOSITORY https://github.com/USCiLab/cereal.git
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(cereal)
+
+
+#===============================================================================
 # Make python library
 pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/water.cpp
@@ -217,7 +230,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
 
 target_include_directories(_scarabee PRIVATE include)
 target_compile_features(_scarabee PRIVATE cxx_std_20)
-target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-io xtensor-python htl HighFive hdf5-static Eigen3::Eigen spdlog::spdlog ImApp::ImApp)
+target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-io xtensor-python htl HighFive hdf5-static Eigen3::Eigen spdlog::spdlog ImApp::ImApp cereal::cereal)
 target_include_directories(_scarabee PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/scarabee/_scarabee/include>
   $<BUILD_INTERFACE:${NUMPY_INCLUDE_DIRS}>

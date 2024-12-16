@@ -8,6 +8,9 @@
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xview.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/string.hpp>
+
 #include <cstdint>
 #include <string>
 #include <memory>
@@ -151,6 +154,23 @@ class CrossSection {
   bool fissile_;
 
   void check_xs();
+
+  friend class cereal::access;
+
+  CrossSection() {}
+
+  template<class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(Etr_),
+        CEREAL_NVP(Dtr_),
+        CEREAL_NVP(Ea_),
+        CEREAL_NVP(Ef_),
+        CEREAL_NVP(vEf_),
+        CEREAL_NVP(chi_),
+        CEREAL_NVP(Es_),
+        CEREAL_NVP(name_),
+        CEREAL_NVP(fissile_));
+  }
 };
 
 }  // namespace scarabee

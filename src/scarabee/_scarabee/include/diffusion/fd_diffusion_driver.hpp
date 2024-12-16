@@ -3,9 +3,13 @@
 
 #include <diffusion/diffusion_data.hpp>
 #include <diffusion/diffusion_geometry.hpp>
+#include <utils/xtensor_serialization.hpp>
 
 #include <xtensor/xarray.hpp>
 #include <xtensor/xtensor.hpp>
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
 
 #include <memory>
 #include <optional>
@@ -47,6 +51,14 @@ class FDDiffusionDriver {
   double flux_tol_ = 1.E-5;
   double keff_tol_ = 1.E-5;
   bool solved_{false};
+
+  friend class cereal::access;
+  FDDiffusionDriver() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(geom_), CEREAL_NVP(flux_), CEREAL_NVP(keff_),
+        CEREAL_NVP(flux_tol_), CEREAL_NVP(keff_tol_), CEREAL_NVP(solved_));
+  }
 };
 
 }  // namespace scarabee

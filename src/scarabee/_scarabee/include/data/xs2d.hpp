@@ -3,9 +3,12 @@
 
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
+#include <utils/xtensor_serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xview.hpp>
+
+#include <cereal/cereal.hpp>
 
 #include <cmath>
 #include <cstdint>
@@ -469,6 +472,18 @@ class XS2D {
   xt::xtensor<double, 2> xs_;
   xt::xtensor<std::uint32_t, 2>
       packing_;  // First index incident group, second (data start, g_low, g_hi)
+
+  friend class cereal::access;
+  friend class CrossSection;
+  friend class DiffusionCrossSection;
+
+  XS2D(): xs_(), packing_() {}
+
+  template<class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(xs_),
+        CEREAL_NVP(packing_));
+  }
 };
 
 inline XS2D operator*(const double v, const XS2D& xs) {

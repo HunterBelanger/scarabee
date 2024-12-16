@@ -2,8 +2,14 @@
 #define SCARABEE_DIFFUSION_GEOMETRY_H
 
 #include <diffusion/diffusion_data.hpp>
+#include <utils/xtensor_serialization.hpp>
 
 #include <xtensor/xarray.hpp>
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/optional.hpp>
+#include <cereal/types/vector.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -18,6 +24,13 @@ class DiffusionGeometry {
   struct Tile {
     std::optional<double> albedo;
     std::shared_ptr<DiffusionData> xs;
+
+   private:
+    friend class cereal::access;
+    template <class Archive>
+    void serialize(Archive& arc) {
+      arc(CEREAL_NVP(albedo), CEREAL_NVP(xs));
+    }
   };
 
   using TileFill = std::variant<double, std::shared_ptr<DiffusionData>,
@@ -134,6 +147,20 @@ class DiffusionGeometry {
   void fill_x_bounds();
   void fill_y_bounds();
   void fill_z_bounds();
+
+  friend class cereal::access;
+  DiffusionGeometry() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(tiles_), CEREAL_NVP(xn_), CEREAL_NVP(xp_), CEREAL_NVP(yn_),
+        CEREAL_NVP(yp_), CEREAL_NVP(zn_), CEREAL_NVP(zp_), CEREAL_NVP(tile_dx_),
+        CEREAL_NVP(x_divs_per_tile_), CEREAL_NVP(tile_dy_),
+        CEREAL_NVP(y_divs_per_tile_), CEREAL_NVP(tile_dz_),
+        CEREAL_NVP(z_divs_per_tile_), CEREAL_NVP(x_bounds_),
+        CEREAL_NVP(y_bounds_), CEREAL_NVP(z_bounds_), CEREAL_NVP(nmats_),
+        CEREAL_NVP(mat_indx_to_flat_geom_indx_), CEREAL_NVP(nx_),
+        CEREAL_NVP(ny_), CEREAL_NVP(nz_), CEREAL_NVP(geom_shape_));
+  }
 };
 
 }  // namespace scarabee

@@ -3,6 +3,10 @@
 
 #include <data/cross_section.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/vector.hpp>
+
 #include <string>
 #include <memory>
 #include <optional>
@@ -13,6 +17,13 @@ namespace scarabee {
 struct Nuclide {
   std::string name;
   double fraction;
+
+ private:
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(name), CEREAL_NVP(fraction));
+  }
 };
 
 enum class Fraction { Atoms, Weight };
@@ -22,12 +33,20 @@ struct MaterialComposition {
   Fraction fractions;
   std::string name;
 
-  MaterialComposition(Fraction f = Fraction::Atoms, const std::string& name = "");
+  MaterialComposition(Fraction f = Fraction::Atoms,
+                      const std::string& name = "");
 
   void add_element(const std::string& name, double frac);
   void add_leu(double enrichment, double frac);
   void add_nuclide(const std::string& name, double frac);
   void add_nuclide(const Nuclide& nuc);
+
+ private:
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(nuclides), CEREAL_NVP(fractions), CEREAL_NVP(name));
+  }
 };
 
 enum class DensityUnits { g_cm3, a_bcm, sum };
@@ -105,6 +124,17 @@ class Material {
                                             const double Ee,
                                             std::shared_ptr<NDLibrary> ndl,
                                             std::size_t max_l) const;
+
+  friend class cereal::access;
+  Material() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(composition_), CEREAL_NVP(name_), CEREAL_NVP(temperature_),
+        CEREAL_NVP(average_molar_mass_), CEREAL_NVP(atoms_per_bcm_),
+        CEREAL_NVP(grams_per_cm3_), CEREAL_NVP(potential_xs_),
+        CEREAL_NVP(lambda_potential_xs_), CEREAL_NVP(max_l_),
+        CEREAL_NVP(fissile_), CEREAL_NVP(resonant_));
+  }
 };
 
 }  // namespace scarabee

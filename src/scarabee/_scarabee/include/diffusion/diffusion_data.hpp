@@ -2,8 +2,13 @@
 #define SCARABEE_DIFFUSION_DATA_H
 
 #include <data/diffusion_cross_section.hpp>
+#include <utils/xtensor_serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/memory.hpp>
 
 #include <memory>
 #include <string>
@@ -133,6 +138,14 @@ class DiffusionData {
   xt::xtensor<double, 2> adf_;  // group then ADF direction
   xt::xtensor<double, 2> cdf_;  // group then CDF direction
   std::string name_;
+
+  friend class cereal::access;
+  DiffusionData() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(xs_), CEREAL_NVP(form_factors_), CEREAL_NVP(adf_),
+        CEREAL_NVP(cdf_), CEREAL_NVP(name_));
+  }
 };
 
 }  // namespace scarabee
