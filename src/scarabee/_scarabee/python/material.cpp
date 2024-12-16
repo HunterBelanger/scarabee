@@ -55,7 +55,7 @@ void init_MaterialComposition(py::module& m) {
           "Flag indicating if the nuclide fractions are in Atoms or Weight.")
 
       .def_readwrite("name", &MaterialComposition::name,
-          "String with the name of the material.")
+                     "String with the name of the material.")
 
       .def("add_element", &MaterialComposition::add_element,
            "Adds all naturally occurring isotopes of an element to the "
@@ -305,7 +305,7 @@ void init_Material(py::module& m) {
       .def_property_readonly(
           "resonant", &Material::resonant,
           "True if the material is resonant, False otherwise.")
-          
+
       .def_property("name", &Material::name, &Material::set_name,
-          "String with the name of the Material.");
+                    "String with the name of the Material.");
 }

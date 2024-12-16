@@ -249,7 +249,8 @@ std::shared_ptr<DiffusionCrossSection> DiffusionCrossSection::condense(
     }
   }
 
-  return std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi, this->name_);
+  return std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi,
+                                                 this->name_);
 }
 
 void DiffusionCrossSection::save(const std::string& fname) const {

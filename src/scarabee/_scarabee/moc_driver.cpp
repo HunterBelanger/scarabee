@@ -44,9 +44,9 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
     auto mssg = "Cannot run MOC on a Cartesian2D geometry with invalid tiles.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
-  } 
+  }
 
-  allocate_fsr_data(); 
+  allocate_fsr_data();
 
   ngroups_ = geometry_->ngroups();
 
@@ -166,7 +166,7 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   }
 
   spdlog::info("Determining track connections");
-  set_bcs(); 
+  set_bcs();
 
   allocate_track_fluxes();
 
@@ -1633,7 +1633,7 @@ std::shared_ptr<MOCDriver> MOCDriver::load_bin(const std::string& fname) {
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
-  
+
   std::shared_ptr<MOCDriver> out(new MOCDriver());
 
   std::ifstream file(fname, std::ios_base::binary);

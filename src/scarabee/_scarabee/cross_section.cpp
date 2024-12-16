@@ -267,7 +267,8 @@ std::shared_ptr<CrossSection> CrossSection::condense(
 
   // If we don't have a P1 matrix, then Et actually contains Etr and Es
   // contains Es_tr. We can therefore use that constructor.
-  return std::make_shared<CrossSection>(Et, Dtr, Ea, Es, Ef, vEf, chi, this->name_);
+  return std::make_shared<CrossSection>(Et, Dtr, Ea, Es, Ef, vEf, chi,
+                                        this->name_);
 }
 
 CrossSection& CrossSection::operator+=(const CrossSection& R) {
@@ -344,7 +345,8 @@ std::shared_ptr<DiffusionCrossSection> CrossSection::diffusion_xs() const {
     }
   }
 
-  return std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi, this->name_);
+  return std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi,
+                                                 this->name_);
 }
 
 CrossSection& CrossSection::operator*=(double N) {
@@ -548,7 +550,7 @@ std::shared_ptr<CrossSection> CrossSection::load(const std::string& fname) {
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
-  
+
   std::shared_ptr<CrossSection> out(new CrossSection());
 
   std::ifstream file(fname, std::ios_base::binary);

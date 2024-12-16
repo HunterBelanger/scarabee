@@ -191,30 +191,26 @@ std::shared_ptr<CylindricalCell> BurnablePoisonPin::make_cylindrical_cell(
   radii.push_back(center_radius_);
   mats.push_back(
       center_->dilution_xs(std::vector<double>(center_->size(), 1.E10), ndl));
-  if (mats.back()->name() == "")
-    mats.back()->set_name("Center");
+  if (mats.back()->name() == "") mats.back()->set_name("Center");
 
   radii.push_back(inner_poison_clad_radius_);
   auto PC = poison_clad_->dilution_xs(
       std::vector<double>(poison_clad_->size(), poison_clad_dilution), ndl);
   mats.push_back(PC);
-  if (mats.back()->name() == "")
-    mats.back()->set_name("Poison Clad");
+  if (mats.back()->name() == "") mats.back()->set_name("Poison Clad");
 
   std::shared_ptr<CrossSection> Gap{nullptr};
   if (gap_) {
     radii.push_back(inner_gap_radius_);
     Gap = gap_->dilution_xs(std::vector<double>(gap_->size(), 1.0E10), ndl);
     mats.push_back(Gap);
-    if (mats.back()->name() == "")
-      mats.back()->set_name("Gap");
+    if (mats.back()->name() == "") mats.back()->set_name("Gap");
   }
 
   radii.push_back(poison_radius_);
   mats.push_back(
       poison_->dilution_xs(std::vector<double>(poison_->size(), 1.0E10), ndl));
-  if (mats.back()->name() == "")
-    mats.back()->set_name("Poison");
+  if (mats.back()->name() == "") mats.back()->set_name("Poison");
 
   if (gap_) {
     radii.push_back(outer_gap_radius_);
@@ -235,8 +231,7 @@ std::shared_ptr<CylindricalCell> BurnablePoisonPin::make_cylindrical_cell(
     mats.push_back(guide_tube_clad_->dilution_xs(
         std::vector<double>(guide_tube_clad_->size(), clad_dilution), ndl));
   }
-  if (mats.back()->name() == "")
-    mats.back()->set_name("Clad");
+  if (mats.back()->name() == "") mats.back()->set_name("Clad");
 
   radii.push_back(std::sqrt(pitch * pitch / PI));
   mats.push_back(moderator);

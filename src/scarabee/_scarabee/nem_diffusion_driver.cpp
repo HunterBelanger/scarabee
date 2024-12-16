@@ -1494,14 +1494,15 @@ void NEMDiffusionDriver::save(const std::string& fname) {
   arc(*this);
 }
 
-std::unique_ptr<NEMDiffusionDriver> NEMDiffusionDriver::load(const std::string& fname) {
+std::unique_ptr<NEMDiffusionDriver> NEMDiffusionDriver::load(
+    const std::string& fname) {
   if (std::filesystem::exists(fname) == false) {
     std::stringstream mssg;
     mssg << "The file \"" << fname << "\" does not exist.";
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
-  
+
   std::unique_ptr<NEMDiffusionDriver> out(new NEMDiffusionDriver());
 
   std::ifstream file(fname, std::ios_base::binary);

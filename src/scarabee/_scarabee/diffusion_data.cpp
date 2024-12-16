@@ -202,7 +202,7 @@ std::shared_ptr<DiffusionData> DiffusionData::load(const std::string& fname) {
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
-  
+
   std::shared_ptr<DiffusionData> out(new DiffusionData());
 
   std::ifstream file(fname, std::ios_base::binary);

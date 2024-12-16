@@ -62,7 +62,7 @@ class B1CriticalitySpectrum : public CriticalitySpectrum {
  public:
   B1CriticalitySpectrum(std::shared_ptr<CrossSection> xs);
   B1CriticalitySpectrum(std::shared_ptr<CrossSection> xs, double B);
- 
+
  private:
   friend class cereal::access;
   B1CriticalitySpectrum() {}

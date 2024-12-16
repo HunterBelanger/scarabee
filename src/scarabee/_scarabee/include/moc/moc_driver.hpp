@@ -196,7 +196,7 @@ class MOCDriver {
                    const xt::xtensor<double, 3>& old_flux) const;
 
   friend class cereal::access;
-  MOCDriver(): polar_quad_(YamamotoTabuchi<6>()) {}
+  MOCDriver() : polar_quad_(YamamotoTabuchi<6>()) {}
   template <class Archive>
   void save(Archive& arc) const {
     arc(CEREAL_NVP(angle_info_), CEREAL_NVP(tracks_), CEREAL_NVP(geometry_),

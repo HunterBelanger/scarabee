@@ -477,12 +477,11 @@ class XS2D {
   friend class CrossSection;
   friend class DiffusionCrossSection;
 
-  XS2D(): xs_(), packing_() {}
+  XS2D() : xs_(), packing_() {}
 
-  template<class Archive>
+  template <class Archive>
   void serialize(Archive& arc) {
-    arc(CEREAL_NVP(xs_),
-        CEREAL_NVP(packing_));
+    arc(CEREAL_NVP(xs_), CEREAL_NVP(packing_));
   }
 };
 

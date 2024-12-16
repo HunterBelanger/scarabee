@@ -98,8 +98,7 @@ std::shared_ptr<CylindricalCell> GuideTube::make_cylindrical_cell(
     std::vector<double> dilutions(clad_->size(), clad_dilution);
     mats.push_back(clad_->dilution_xs(dilutions, ndl));
   }
-  if (mats.back()->name() == "")
-    mats.back()->set_name("Clad");
+  if (mats.back()->name() == "") mats.back()->set_name("Clad");
 
   // Add outer moderator
   mats.push_back(moderator);

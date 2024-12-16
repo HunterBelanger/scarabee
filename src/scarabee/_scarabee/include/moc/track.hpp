@@ -25,7 +25,7 @@ class Track {
         std::size_t backward_phi_index);
 
   // Here for use with cereal and std::vector
-  Track(): entry_(0., 0.), exit_(0., 0.) {}
+  Track() : entry_(0., 0.), exit_(0., 0.) {}
 
   double wgt() const { return wgt_; }
   double width() const { return width_; }

@@ -496,10 +496,12 @@ ImApp::Pixel MOCPlotter::get_color(UniqueFSR ufsr) {
       // Color by material name
       CrossSection* xs = ufsr.fsr->xs().get();
       // Do same check twice with mutex to make thread safe
-      if (material_name_to_color.find(xs->name()) == material_name_to_color.end()) {
+      if (material_name_to_color.find(xs->name()) ==
+          material_name_to_color.end()) {
         // Check if cell id is in id_to_pixel
         create_color_mutex.lock();
-        if (material_name_to_color.find(xs->name()) == material_name_to_color.end()) {
+        if (material_name_to_color.find(xs->name()) ==
+            material_name_to_color.end()) {
           // Get new random color for id
           material_name_to_color[xs->name()] = get_random_color();
         }

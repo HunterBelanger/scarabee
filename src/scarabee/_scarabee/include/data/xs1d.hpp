@@ -114,9 +114,9 @@ class XS1D {
   friend class CrossSection;
   friend class DiffusionCrossSection;
 
-  XS1D(): xs_() {}
+  XS1D() : xs_() {}
 
-  template<class Archive>
+  template <class Archive>
   void serialize(Archive& arc) {
     arc(CEREAL_NVP(xs_));
   }

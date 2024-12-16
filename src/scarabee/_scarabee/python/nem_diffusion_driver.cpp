@@ -163,21 +163,24 @@ void init_NEMDiffusionDriver(py::module& m) {
            "array of float\n"
            "      Value of pin powers at all provided z positions.\n",
            py::arg("z"))
-           
-       .def("save", &NEMDiffusionDriver::save,
+
+      .def("save", &NEMDiffusionDriver::save,
            "Saves the NEMDiffusionDriver to a binary file.\n\n"
            "Parameters\n"
            "----------\n"
            "fname : str\n"
-           "  Name of the file.\n", py::arg("fname"))
-           
-      .def_static("load", &NEMDiffusionDriver::load,
-           "Loads a previously save NEMDiffusionDriver from a binary file.\n\n"
-           "Parameters\n"
-           "----------\n"
-           "fname : str\n"
-           "  Name of the file.\n\n"
-           "Returns\n"
-           "-------\n"
-           "NEMDiffusionDriver", py::arg("fname"));
+           "  Name of the file.\n",
+           py::arg("fname"))
+
+      .def_static(
+          "load", &NEMDiffusionDriver::load,
+          "Loads a previously save NEMDiffusionDriver from a binary file.\n\n"
+          "Parameters\n"
+          "----------\n"
+          "fname : str\n"
+          "  Name of the file.\n\n"
+          "Returns\n"
+          "-------\n"
+          "NEMDiffusionDriver",
+          py::arg("fname"));
 }

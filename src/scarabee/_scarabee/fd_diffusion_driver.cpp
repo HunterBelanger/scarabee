@@ -676,14 +676,15 @@ void FDDiffusionDriver::save(const std::string& fname) {
   arc(*this);
 }
 
-std::unique_ptr<FDDiffusionDriver> FDDiffusionDriver::load(const std::string& fname) {
+std::unique_ptr<FDDiffusionDriver> FDDiffusionDriver::load(
+    const std::string& fname) {
   if (std::filesystem::exists(fname) == false) {
     std::stringstream mssg;
     mssg << "The file \"" << fname << "\" does not exist.";
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
-  
+
   std::unique_ptr<FDDiffusionDriver> out(new FDDiffusionDriver());
 
   std::ifstream file(fname, std::ios_base::binary);

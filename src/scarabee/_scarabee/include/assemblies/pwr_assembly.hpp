@@ -47,9 +47,7 @@ class PWRAssembly {
               std::shared_ptr<NDLibrary> ndl);
 
   std::shared_ptr<NDLibrary> ndl() const { return ndl_; }
-  void set_ndl(std::shared_ptr<NDLibrary> ndl) {
-    ndl_ = ndl;
-  }
+  void set_ndl(std::shared_ptr<NDLibrary> ndl) { ndl_ = ndl; }
 
   const std::optional<std::string> criticality_spectrum_method() const {
     return criticality_spectrum_method_;

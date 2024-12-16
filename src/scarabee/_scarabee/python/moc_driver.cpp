@@ -514,10 +514,10 @@ void init_MOCDriver(py::module& m) {
            py::arg("fname"))
 
       .def_static("load", &MOCDriver::load_bin,
-           "Loads MOCDriver from a binary file.\n\n"
-           "Parameters\n"
-           "----------\n"
-           "fname : str\n"
-           "        Name of file.\n",
-           py::arg("fname"));
+                  "Loads MOCDriver from a binary file.\n\n"
+                  "Parameters\n"
+                  "----------\n"
+                  "fname : str\n"
+                  "        Name of file.\n",
+                  py::arg("fname"));
 }
