@@ -13,6 +13,7 @@ MOCPlotter::MOCPlotter(const MOCDriver* moc)
       geom_(nullptr),
       cell_id_to_color(),
       material_id_to_color(),
+      material_name_to_color(),
       image(500, 500),
       create_color_mutex(),
       height(10.),
@@ -24,7 +25,7 @@ MOCPlotter::MOCPlotter(const MOCDriver* moc)
       mufsr{nullptr, 0},
       mxs(nullptr),
       background(),
-      colorby(ColorBy::Material),
+      colorby(ColorBy::MaterialName),
       must_rerender(true),
       outline_boundaries(true) {
   if (moc_ == nullptr) {
@@ -145,6 +146,8 @@ void MOCPlotter::render_viewport() {
     if (mufsr.fsr) {
       mxs = mufsr.fsr->xs().get();
       mfsri = moc_->get_fsr_indx(mufsr);
+    } else {
+      mxs = nullptr;
     }
   }
 
@@ -158,11 +161,10 @@ void MOCPlotter::render_viewport() {
                   static_cast<float>(color.b()) / 255.f,
                   static_cast<float>(color.a()) / 255.f);
 
-    if (colorby == ColorBy::Material) {
-      // ImGui::Text("Material ID: %i", mxs->id());
-      ImGui::Text("Material Name: %s", mxs->name().data());
-    } else {
+    if (colorby == ColorBy::Cell) {
       ImGui::Text("FSR ID: %li", mufsr.fsr->id());
+    } else {
+      ImGui::Text("Material Name: %s", mxs->name().data());
     }
 
     if (ImGui::ColorEdit3("", reinterpret_cast<float*>(&fcolor))) {
@@ -172,6 +174,8 @@ void MOCPlotter::render_viewport() {
 
       if (colorby == ColorBy::Material)
         material_id_to_color[mxs] = color;
+      else if (colorby == ColorBy::MaterialName)
+        material_name_to_color[mxs->name()] = color;
       else
         cell_id_to_color[mufsr.fsr->id()] = color;
 
@@ -232,6 +236,10 @@ void MOCPlotter::render_controls() {
   if (ImGui::RadioButton("Material", reinterpret_cast<int*>(&colorby),
                          ColorBy::Material))
     must_rerender = true;
+  ImGui::SameLine();
+  if (ImGui::RadioButton("Material Name", reinterpret_cast<int*>(&colorby),
+                         ColorBy::MaterialName))
+    must_rerender = true;
 
   if (ImGui::Checkbox("Mark Boundaries", &outline_boundaries))
     must_rerender = true;
@@ -267,7 +275,6 @@ void MOCPlotter::render_controls() {
   if (!mxs) {
     ImGui::Text("Material for given position is not defined.");
   } else {
-    // ImGui::Text("Material ID: %i", mxs->id());
     ImGui::Text("Material Name: %s", mxs->name().data());
 
     if (colorby == ColorBy::Material &&
@@ -277,6 +284,17 @@ void MOCPlotter::render_controls() {
       color.b() = static_cast<uint8_t>(fcolor.z * 255.f);
 
       material_id_to_color[mxs] = color;
+
+      must_rerender = true;
+    }
+
+    if (colorby == ColorBy::MaterialName &&
+        ImGui::ColorEdit3("", reinterpret_cast<float*>(&fcolor))) {
+      color.r() = static_cast<uint8_t>(fcolor.x * 255.f);
+      color.g() = static_cast<uint8_t>(fcolor.y * 255.f);
+      color.b() = static_cast<uint8_t>(fcolor.z * 255.f);
+
+      material_name_to_color[mxs->name()] = color;
 
       must_rerender = true;
     }
@@ -460,7 +478,7 @@ ImApp::Pixel MOCPlotter::get_color(UniqueFSR ufsr) {
         create_color_mutex.unlock();
       }
       pixel_color = cell_id_to_color[ufsr.fsr->id()];
-    } else {
+    } else if (colorby == ColorBy::Material) {
       // Color by material
       CrossSection* xs = ufsr.fsr->xs().get();
       // Do same check twice with mutex to make thread safe
@@ -474,6 +492,20 @@ ImApp::Pixel MOCPlotter::get_color(UniqueFSR ufsr) {
         create_color_mutex.unlock();
       }
       pixel_color = material_id_to_color[xs];
+    } else {
+      // Color by material name
+      CrossSection* xs = ufsr.fsr->xs().get();
+      // Do same check twice with mutex to make thread safe
+      if (material_name_to_color.find(xs->name()) == material_name_to_color.end()) {
+        // Check if cell id is in id_to_pixel
+        create_color_mutex.lock();
+        if (material_name_to_color.find(xs->name()) == material_name_to_color.end()) {
+          // Get new random color for id
+          material_name_to_color[xs->name()] = get_random_color();
+        }
+        create_color_mutex.unlock();
+      }
+      pixel_color = material_name_to_color[xs->name()];
     }
   }
   return pixel_color;

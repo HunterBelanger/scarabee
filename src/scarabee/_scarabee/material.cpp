@@ -9,8 +9,8 @@
 
 namespace scarabee {
 
-MaterialComposition::MaterialComposition(Fraction f)
-    : nuclides(), fractions(f) {}
+MaterialComposition::MaterialComposition(Fraction f, const std::string& name)
+    : nuclides(), fractions(f), name(name) {}
 
 void MaterialComposition::add_element(const std::string& name, double frac) {
   if (frac <= 0.) {
@@ -145,6 +145,7 @@ void MaterialComposition::add_nuclide(const Nuclide& nuc) {
 Material::Material(const MaterialComposition& comp, double temp,
                    std::shared_ptr<NDLibrary> ndl)
     : composition_(comp),
+      name_(comp.name),
       temperature_(temp),
       atoms_per_bcm_(-1.),
       grams_per_cm3_(-1.),
@@ -218,6 +219,7 @@ Material::Material(const MaterialComposition& comp, double temp,
 Material::Material(const MaterialComposition& comp, double temp, double density,
                    DensityUnits du, std::shared_ptr<NDLibrary> ndl)
     : composition_(comp),
+      name_(comp.name),
       temperature_(temp),
       atoms_per_bcm_(-1.),
       grams_per_cm3_(-1.),
@@ -442,6 +444,9 @@ std::shared_ptr<CrossSection> Material::dilution_xs(
     }
   }
 
+  // Give the xs the name of the material
+  xsout->set_name(this->name_);
+
   return xsout;
 }
 
@@ -494,6 +499,9 @@ std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
     }
   }
 
+  // Give the xs the name of the material
+  xsout->set_name(this->name_);
+
   return xsout;
 }
 
@@ -534,6 +542,9 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
       xsout = xsi;
     }
   }
+
+  // Give the xs the name of the material
+  xsout->set_name(this->name_);
 
   return xsout;
 }

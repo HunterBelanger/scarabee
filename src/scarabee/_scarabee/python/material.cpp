@@ -35,14 +35,16 @@ void init_MaterialComposition(py::module& m) {
       "A MaterialComposition object represents all nuclides which make up a "
       "material, and portion of the material taken up b y each nuclide.")
 
-      .def(py::init<Fraction>(),
+      .def(py::init<Fraction, const std::string&>(),
            "Creates an empty composition, with no nuclides.\n\n"
            "Parameters\n"
            "----------\n"
            "fractions : Fraction\n"
            "  Indicates if material is specified using atom or weight "
-           "fractions. Default value is Fraction.Atom.\n\n",
-           py::arg("fractions") = Fraction::Atoms)
+           "fractions. Default value is Fraction.Atom.\n"
+           "name : str\n"
+           "  Name for the material (default value is \"\").\n\n",
+           py::arg("fractions") = Fraction::Atoms, py::arg("name") = "")
 
       .def_readonly(
           "nuclides", &MaterialComposition::nuclides,
@@ -51,6 +53,9 @@ void init_MaterialComposition(py::module& m) {
       .def_readonly(
           "fractions", &MaterialComposition::fractions,
           "Flag indicating if the nuclide fractions are in Atoms or Weight.")
+
+      .def_readwrite("name", &MaterialComposition::name,
+          "String with the name of the material.")
 
       .def("add_element", &MaterialComposition::add_element,
            "Adds all naturally occurring isotopes of an element to the "
@@ -299,5 +304,8 @@ void init_Material(py::module& m) {
 
       .def_property_readonly(
           "resonant", &Material::resonant,
-          "True if the material is resonant, False otherwise.");
+          "True if the material is resonant, False otherwise.")
+          
+      .def_property("name", &Material::name, &Material::set_name,
+          "String with the name of the Material.");
 }

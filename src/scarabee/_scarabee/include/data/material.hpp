@@ -20,8 +20,9 @@ enum class Fraction { Atoms, Weight };
 struct MaterialComposition {
   std::vector<Nuclide> nuclides;
   Fraction fractions;
+  std::string name;
 
-  MaterialComposition(Fraction f = Fraction::Atoms);
+  MaterialComposition(Fraction f = Fraction::Atoms, const std::string& name = "");
 
   void add_element(const std::string& name, double frac);
   void add_leu(double enrichment, double frac);
@@ -44,6 +45,9 @@ class Material {
   const MaterialComposition& composition() const { return composition_; }
 
   std::size_t size() const { return composition_.nuclides.size(); }
+
+  const std::string& name() const { return name_; }
+  void set_name(const std::string& new_name) { name_ = new_name; }
 
   std::size_t max_legendre_order() const { return max_l_; }
   void set_max_legendre_order(std::size_t max_l) { max_l_ = max_l; }
@@ -82,6 +86,7 @@ class Material {
 
  private:
   MaterialComposition composition_;
+  std::string name_;
   double temperature_;
   double average_molar_mass_;
   double atoms_per_bcm_;

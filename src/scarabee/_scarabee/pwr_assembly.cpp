@@ -135,7 +135,9 @@ void PWRAssembly::set_moderator(std::shared_ptr<Material> mod) {
   moderator_ = mod;
   moderator_xs_ = moderator_->dilution_xs(
       std::vector<double>(moderator_->size(), 1.0E10), ndl_);
-  moderator_xs_->set_name("Moderator");
+  
+  if (moderator_xs_->name() == "")
+    moderator_xs_->set_name("Moderator");
 }
 
 void PWRAssembly::set_num_azimuthal_angles(std::uint32_t n) {

@@ -172,7 +172,8 @@ std::shared_ptr<CylindricalCell> FuelPin::make_cylindrical_cell(
     // For a single pellet, use the standard Carlvik two-term
     double Ee = 1.0 / (2.0 * fuel_radius_);  // Fuel escape xs
     mats.push_back(fuel_->carlvik_xs(dancoff_fuel, Ee, ndl));
-    mats.back()->set_name("Fuel");
+    if (mats.back()->name() == "")
+      mats.back()->set_name("Fuel");
   } else {
     // We need to apply spatial self shielding
     for (std::size_t r = 0; r < fuel_rings_; r++) {
@@ -180,7 +181,8 @@ std::shared_ptr<CylindricalCell> FuelPin::make_cylindrical_cell(
       const double Rout = radii[r];
       mats.push_back(
           fuel_->ring_carlvik_xs(dancoff_fuel, fuel_radius_, Rin, Rout, ndl));
-      mats.back()->set_name("Fuel");
+      if (mats.back()->name() == "")
+        mats.back()->set_name("Fuel");
     }
   }
 
@@ -188,7 +190,8 @@ std::shared_ptr<CylindricalCell> FuelPin::make_cylindrical_cell(
   if (gap_) {
     std::vector<double> dilutions(gap_->size(), 1.0E10);
     mats.push_back(gap_->dilution_xs(dilutions, ndl));
-    mats.back()->set_name("Gap");
+    if (mats.back()->name() == "")
+      mats.back()->set_name("Gap");
   }
 
   // Add the cladding
@@ -204,7 +207,8 @@ std::shared_ptr<CylindricalCell> FuelPin::make_cylindrical_cell(
     std::vector<double> dilutions(clad_->size(), clad_dilution);
     mats.push_back(clad_->dilution_xs(dilutions, ndl));
   }
-  mats.back()->set_name("Clad");
+  if (mats.back()->name() == "")
+    mats.back()->set_name("Clad");
 
   // Finally, add moderator
   mats.push_back(moderator);
