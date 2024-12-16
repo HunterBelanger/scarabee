@@ -4,6 +4,9 @@
 #include <moc/vector.hpp>
 #include <moc/direction.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/array.hpp>
+
 #include <array>
 
 namespace scarabee {
@@ -44,6 +47,12 @@ class Surface {
  private:
   std::array<double, 3> params_;
   Type type_;
+
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(params_), CEREAL_NVP(type_));
+  }
 };
 
 }  // namespace scarabee

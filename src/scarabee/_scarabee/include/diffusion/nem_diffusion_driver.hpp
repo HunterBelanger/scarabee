@@ -3,9 +3,15 @@
 
 #include <diffusion/diffusion_data.hpp>
 #include <diffusion/diffusion_geometry.hpp>
+#include <utils/serialization.hpp>
 
 #include <Eigen/Dense>
 #include <Eigen/LU>
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/utility.hpp>
 
 #include <xtensor/xtensor.hpp>
 
@@ -31,6 +37,8 @@ inline double f4(double xi) {
 class NEMDiffusionDriver {
  public:
   NEMDiffusionDriver(std::shared_ptr<DiffusionGeometry> geom);
+
+  std::shared_ptr<DiffusionGeometry> geometry() const { return geom_; }
 
   std::size_t ngroups() const { return geom_->ngroups(); }
 
@@ -59,6 +67,9 @@ class NEMDiffusionDriver {
              xt::xtensor<double, 1>>
   pin_power(const xt::xtensor<double, 1>& z) const;
   xt::xtensor<double, 3> avg_power() const;
+
+  void save(const std::string& fname);
+  static std::unique_ptr<NEMDiffusionDriver> load(const std::string& fname);
 
  private:
   //----------------------------------------------------------------------------
@@ -91,8 +102,8 @@ class NEMDiffusionDriver {
   //----------------------------------------------------------------------------
   // PRIVATE MEMBERS
   std::shared_ptr<DiffusionGeometry> geom_;
-  const std::size_t NG_;  // Number of groups
-  const std::size_t NM_;  // Number of regions
+  std::size_t NG_;  // Number of groups
+  std::size_t NM_;  // Number of regions
 
   // Quantities required for reconstructing the flux  (kept after solution)
   xt::xtensor<double, 3>
@@ -203,6 +214,20 @@ class NEMDiffusionDriver {
 
     double p1(double xi) const { return xi; }
     double p2(double xi) const { return 0.5 * (3. * xi * xi - 1.); }
+
+   private:
+    friend class cereal::access;
+    template <class Archive>
+    void serialize(Archive& arc) {
+      arc(CEREAL_NVP(phi_0), CEREAL_NVP(eps), CEREAL_NVP(ax0), CEREAL_NVP(ax1),
+          CEREAL_NVP(ax2), CEREAL_NVP(bx1), CEREAL_NVP(bx2), CEREAL_NVP(ay0),
+          CEREAL_NVP(ay1), CEREAL_NVP(ay2), CEREAL_NVP(by1), CEREAL_NVP(by2),
+          CEREAL_NVP(az0), CEREAL_NVP(az1), CEREAL_NVP(az2), CEREAL_NVP(bz1),
+          CEREAL_NVP(bz2), CEREAL_NVP(cxy11), CEREAL_NVP(cxy12),
+          CEREAL_NVP(cxy21), CEREAL_NVP(cxy22), CEREAL_NVP(invs_dx),
+          CEREAL_NVP(invs_dy), CEREAL_NVP(invs_dz), CEREAL_NVP(zeta_x),
+          CEREAL_NVP(zeta_y), CEREAL_NVP(xm), CEREAL_NVP(ym), CEREAL_NVP(zm));
+    }
   };
 
   xt::xtensor<NodeFlux, 2> recon_params;
@@ -214,6 +239,18 @@ class NEMDiffusionDriver {
   double eval_heter_xy_corner_flux(std::size_t g, std::size_t m,
                                    Corner c) const;
   double avg_xy_corner_flux(std::size_t g, std::size_t m, Corner c) const;
+
+  friend class cereal::access;
+  NEMDiffusionDriver() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(geom_), CEREAL_NVP(NG_), CEREAL_NVP(NM_), CEREAL_NVP(flux_),
+        CEREAL_NVP(j_in_out_), CEREAL_NVP(Rmats_), CEREAL_NVP(Pmats_),
+        CEREAL_NVP(Q_), CEREAL_NVP(neighbors_), CEREAL_NVP(geom_inds_),
+        CEREAL_NVP(mats_), CEREAL_NVP(adf_), CEREAL_NVP(keff_),
+        CEREAL_NVP(flux_tol_), CEREAL_NVP(keff_tol_), CEREAL_NVP(solved_),
+        CEREAL_NVP(recon_params));
+  }
 };
 
 }  // namespace scarabee

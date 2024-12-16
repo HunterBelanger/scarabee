@@ -247,7 +247,7 @@ void init_DiffusionData(py::module& m) {
            "rotation of the assembly in the counter clockwise direction.")
 
       .def("save", &DiffusionData::save,
-           "Saves the diffuion data to a numpy zip file.\n\n"
+           "Saves the diffuion data to a binary file.\n\n"
            "Parameters\n"
            "----------\n"
            "fname : str\n"
@@ -255,7 +255,7 @@ void init_DiffusionData(py::module& m) {
            py::arg("fname"))
 
       .def_static("load", &DiffusionData::load,
-                  "Loads diffusion data from a numpy zip file.\n\n"
+                  "Loads diffusion data from a binary file.\n\n"
                   "Parameters\n"
                   "----------\n"
                   "fname : str\n"
@@ -266,5 +266,4 @@ void init_DiffusionData(py::module& m) {
                   "    Diffusion cross sections, form factors, and ADF from "
                   "the file.\n",
                   py::arg("fname"));
-  ;
 }

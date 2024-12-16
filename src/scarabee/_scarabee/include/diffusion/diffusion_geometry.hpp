@@ -2,7 +2,7 @@
 #define SCARABEE_DIFFUSION_GEOMETRY_H
 
 #include <diffusion/diffusion_data.hpp>
-#include <utils/xtensor_serialization.hpp>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xarray.hpp>
 
@@ -10,6 +10,7 @@
 #include <cereal/types/memory.hpp>
 #include <cereal/types/optional.hpp>
 #include <cereal/types/vector.hpp>
+#include <cereal/archives/portable_binary.hpp>
 
 #include <cstdint>
 #include <memory>

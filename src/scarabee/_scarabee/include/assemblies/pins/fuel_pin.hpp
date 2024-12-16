@@ -10,6 +10,10 @@
 #include <moc/pin_cell.hpp>
 #include <cylindrical_cell.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/memory.hpp>
+
 #include <memory>
 #include <optional>
 #include <vector>
@@ -56,6 +60,15 @@ class FuelPin {
   double clad_radius_;
   std::size_t fuel_rings_;
   std::vector<std::shared_ptr<CrossSection>> condensed_xs_;
+
+  friend class cereal::access;
+  FuelPin() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(fuel_), CEREAL_NVP(fuel_radius_), CEREAL_NVP(gap_),
+        CEREAL_NVP(gap_radius_), CEREAL_NVP(clad_), CEREAL_NVP(clad_radius_),
+        CEREAL_NVP(fuel_rings_), CEREAL_NVP(condensed_xs_));
+  }
 };
 
 }  // namespace scarabee

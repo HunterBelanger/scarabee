@@ -1,11 +1,15 @@
 #ifndef SPHERICAL_HARMONICS_H
 #define SPHERICAL_HARMONICS_H
 
-#include <cstdint>
-#include <span>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xview.hpp>
+
+#include <cereal/cereal.hpp>
+
+#include <cstdint>
+#include <span>
 
 namespace scarabee {
 
@@ -29,6 +33,12 @@ class SphericalHarmonics {
                                           // angle), l/j spherical harmonics
   std::size_t L_;
   std::size_t Nlj_;
+
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(all_harmonics_), CEREAL_NVP(L_), CEREAL_NVP(Nlj_));
+  }
 };
 
 }  // namespace scarabee

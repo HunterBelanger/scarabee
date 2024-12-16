@@ -30,6 +30,8 @@ void init_PWRAssembly(py::module& m) {
       "    The nuclear data library to be used in the calculations.\n\n"
       "Attributes\n"
       "----------\n"
+      "ndl : NDLibrary\n"
+      "    Nuclear data library to be used in the calculations.\n"
       "condensation_scheme : list of pairs of ints\n"
       "    Defines how the energy groups will be condensed from the "
       "microgroup\n"
@@ -128,6 +130,26 @@ void init_PWRAssembly(py::module& m) {
            "        Name of file in which to save data.",
            py::arg("fname"))
 
+      .def("save", &PWRAssembly::save,
+           "Saves the assembly data to a binary file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : str\n"
+           "        Name of file in which to save data.",
+           py::arg("fname"))
+
+      .def_static("load", &PWRAssembly::load,
+                  "Loads assembly data from a binary file.\n\n"
+                  "Parameters\n"
+                  "----------\n"
+                  "fname : str\n"
+                  "        Name of file from which to load data.\n\n"
+                  "Returns\n"
+                  "-------\n"
+                  "PWRAssembly\n"
+                  "    Assembly data from the file.\n",
+                  py::arg("fname"))
+
       .def_property("criticality_spectrum_method",
                     &PWRAssembly::criticality_spectrum_method,
                     &PWRAssembly::set_criticality_spectrum_method)
@@ -138,6 +160,8 @@ void init_PWRAssembly(py::module& m) {
       .def_property("few_group_condensation_scheme",
                     &PWRAssembly::few_group_condensation_scheme,
                     &PWRAssembly::set_few_group_condensation_scheme)
+
+      .def_property("ndl", &PWRAssembly::ndl, &PWRAssembly::set_ndl)
 
       .def_property("pins", &PWRAssembly::pins, &PWRAssembly::set_pins)
 

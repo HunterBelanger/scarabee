@@ -2,15 +2,19 @@
 #define MOC_DRIVER_H
 
 #include <moc/cartesian_2d.hpp>
-#include <moc/cmfd.hpp>
 #include <moc/boundary_condition.hpp>
 #include <moc/flat_source_region.hpp>
 #include <moc/track.hpp>
 #include <moc/quadrature/polar_quadrature.hpp>
 #include <utils/simulation_mode.hpp>
 #include <utils/spherical_harmonics.hpp>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/memory.hpp>
 
 #include <map>
 #include <memory>
@@ -28,9 +32,6 @@ class MOCDriver {
             bool anisotropic = false);
 
   std::shared_ptr<Cartesian2D> geometry() const { return geometry_; }
-
-  const std::shared_ptr<CMFD>& cmfd() const { return cmfd_; }
-  void set_cmfd(std::shared_ptr<CMFD> cmfd) { cmfd_ = cmfd; }
 
   bool drawn() const { return !angle_info_.empty(); }
 
@@ -118,8 +119,8 @@ class MOCDriver {
   double y_min() const { return geometry_->y_min(); }
   double y_max() const { return geometry_->y_max(); }
 
-  void save_hdf5(const std::string& fname, const std::string& group) const;
-  void load_hdf5(const std::string& fname, const std::string& group);
+  void save_bin(const std::string& fname) const;
+  static std::shared_ptr<MOCDriver> load_bin(const std::string& fname);
 
  private:
   struct AngleInfo {
@@ -130,12 +131,18 @@ class MOCDriver {
     std::uint32_t ny;            // Number of tracks starting on the -x boundary
     std::size_t forward_index;   // azimuthal angle index in forward
     std::size_t backward_index;  // azimuthal angle index in backward
+
+    template <class Archive>
+    void serialize(Archive& arc) {
+      arc(CEREAL_NVP(phi), CEREAL_NVP(d), CEREAL_NVP(wgt), CEREAL_NVP(nx),
+          CEREAL_NVP(ny), CEREAL_NVP(forward_index),
+          CEREAL_NVP(backward_index));
+    }
   };
 
   std::vector<AngleInfo> angle_info_;       // Information for all angles
   std::vector<std::vector<Track>> tracks_;  // All tracks, indexed by angle
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
-  std::shared_ptr<CMFD> cmfd_;              // CMFD for acceleration
   PolarQuadrature polar_quad_;              // Polar quadrature
   SphericalHarmonics sph_harm_;             // Spherical harmonics
   xt::xtensor<double, 3>
@@ -187,6 +194,35 @@ class MOCDriver {
 
   double calc_keff(const xt::xtensor<double, 3>& flux,
                    const xt::xtensor<double, 3>& old_flux) const;
+
+  friend class cereal::access;
+  MOCDriver(): polar_quad_(YamamotoTabuchi<6>()) {}
+  template <class Archive>
+  void save(Archive& arc) const {
+    arc(CEREAL_NVP(angle_info_), CEREAL_NVP(tracks_), CEREAL_NVP(geometry_),
+        CEREAL_NVP(polar_quad_), CEREAL_NVP(sph_harm_), CEREAL_NVP(flux_),
+        CEREAL_NVP(extern_src_), CEREAL_NVP(ngroups_), CEREAL_NVP(nfsrs_),
+        CEREAL_NVP(n_pol_angles_), CEREAL_NVP(flux_tol_), CEREAL_NVP(keff_tol_),
+        CEREAL_NVP(keff_), CEREAL_NVP(x_min_bc_), CEREAL_NVP(x_max_bc_),
+        CEREAL_NVP(y_min_bc_), CEREAL_NVP(y_max_bc_), CEREAL_NVP(max_L_),
+        CEREAL_NVP(N_lj_), CEREAL_NVP(anisotropic_), CEREAL_NVP(mode_),
+        CEREAL_NVP(solved_));
+  }
+
+  template <class Archive>
+  void load(Archive& arc) {
+    arc(CEREAL_NVP(angle_info_), CEREAL_NVP(tracks_), CEREAL_NVP(geometry_),
+        CEREAL_NVP(polar_quad_), CEREAL_NVP(sph_harm_), CEREAL_NVP(flux_),
+        CEREAL_NVP(extern_src_), CEREAL_NVP(ngroups_), CEREAL_NVP(nfsrs_),
+        CEREAL_NVP(n_pol_angles_), CEREAL_NVP(flux_tol_), CEREAL_NVP(keff_tol_),
+        CEREAL_NVP(keff_), CEREAL_NVP(x_min_bc_), CEREAL_NVP(x_max_bc_),
+        CEREAL_NVP(y_min_bc_), CEREAL_NVP(y_max_bc_), CEREAL_NVP(max_L_),
+        CEREAL_NVP(N_lj_), CEREAL_NVP(anisotropic_), CEREAL_NVP(mode_),
+        CEREAL_NVP(solved_));
+    // Need to reset internal pointers
+    this->allocate_fsr_data();
+    this->set_bcs();
+  }
 };
 
 }  // namespace scarabee

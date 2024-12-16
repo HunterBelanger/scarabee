@@ -8,12 +8,11 @@
 #include <xtensor/xmath.hpp>
 #include <xtensor/xview.hpp>
 
-#include <highfive/highfive.hpp>
-#include <highfive/xtensor.hpp>
-
-namespace H5 = HighFive;
+#include <cereal/archives/portable_binary.hpp>
 
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 
 namespace scarabee {
 
@@ -298,7 +297,6 @@ void MOCDriver::solve_isotropic() {
     }
 
     next_flux.fill(0.);
-    if (cmfd_) cmfd_->zero_currents();
     sweep(next_flux, src);
 
     // Apply stabalization (see [1])
@@ -330,11 +328,6 @@ void MOCDriver::solve_isotropic() {
     }
 
     flux_ = next_flux;
-
-    // Apply CMFD
-    if (cmfd_) {
-      cmfd_->solve(*this);
-    }
 
     iteration_timer.stop();
     spdlog::info("-------------------------------------");
@@ -483,10 +476,6 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
   for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
     std::size_t g = static_cast<std::size_t>(ig);
 
-    // Get the group for CMFD
-    std::size_t G = g;
-    if (cmfd_) G = cmfd_->moc_to_cmfd_group(g);
-
     for (auto& tracks : tracks_) {
       for (std::size_t t = 0; t < tracks.size(); t++) {
         auto& track = tracks[t];
@@ -502,18 +491,8 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
         for (std::size_t p = 0; p < n_pol_angles_; p++)
           angflux.push_back(track.entry_flux()(g, p));
 
-        // Accumulate entry angular flux into CMFD current
-        if (cmfd_ && track.begin()->entry_cmfd_surface()) {
-          const auto surf_indx = track.begin()->entry_cmfd_surface().value();
-          for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
-            cmfd_->tally_current(flx, u_forw, G, surf_indx);
-          }
-        }
-
         // Follow track in forward direction
         for (auto& seg : track) {
-          const auto cmfd_surf = seg.exit_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
@@ -525,11 +504,6 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
-
-            if (cmfd_surf) {
-              const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
-              cmfd_->tally_current(flx, u_forw, G, *cmfd_surf);
-            }
           }  // For all polar angles
           sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
@@ -548,20 +522,9 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
         for (std::size_t p = 0; p < n_pol_angles_; p++)
           angflux[p] = track.exit_flux()(g, p);
 
-        // Accumulate entry angular flux into CMFD current for backwards
-        // direction
-        if (cmfd_ && track.rbegin()->exit_cmfd_surface()) {
-          std::size_t surf_indx = track.rbegin()->exit_cmfd_surface().value();
-          for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
-            cmfd_->tally_current(flx, u_back, G, surf_indx);
-          }
-        }
-
         // Iterate over segments in backwards direction
         for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
           auto& seg = *seg_it;
-          const auto cmfd_surf = seg.entry_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
@@ -573,11 +536,6 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
-
-            if (cmfd_surf) {
-              const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
-              cmfd_->tally_current(flx, u_back, G, *cmfd_surf);
-            }
           }  // For all polar angles
           sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
@@ -942,37 +900,7 @@ void MOCDriver::generate_tracks() {
           segments.emplace_back(fsr_r.first.fsr, d,
                                 this->get_fsr_indx(fsr_r.first));
 
-          if (cmfd_) {
-            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
-
-            const auto tile = cmfd_->get_tile(r_end, u);
-            if (tile) {
-              const auto fsr_indx = segments.back().fsr_indx();
-#pragma omp critical(cmfd_fsr_insertion)
-              cmfd_->insert_fsr(*tile, fsr_indx);
-            } else {
-              auto mssg = "Tile for segment position was nullopt.";
-              spdlog::error(mssg);
-              throw ScarabeeException(mssg);
-            }
-          }
-
           r_end = r_end + d * u;
-
-          if (cmfd_) {
-            segments.back().exit_cmfd_surface() = cmfd_->get_surface(r_end, -u);
-
-            const auto tile = cmfd_->get_tile(r_end, -u);
-            if (tile) {
-              const auto fsr_indx = segments.back().fsr_indx();
-#pragma omp critical(cmfd_fsr_insertion)
-              cmfd_->insert_fsr(*tile, fsr_indx);
-            } else {
-              auto mssg = "Tile for segment position was nullopt.";
-              spdlog::error(mssg);
-              throw ScarabeeException(mssg);
-            }
-          }
 
           ti = geometry_->get_tile_index(r_end, u);
           if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
@@ -1009,37 +937,7 @@ void MOCDriver::generate_tracks() {
           segments.emplace_back(fsr_r.first.fsr, d,
                                 this->get_fsr_indx(fsr_r.first));
 
-          if (cmfd_) {
-            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
-
-            const auto tile = cmfd_->get_tile(r_end, u);
-            if (tile) {
-              const auto fsr_indx = segments.back().fsr_indx();
-#pragma omp critical(cmfd_fsr_insertion)
-              cmfd_->insert_fsr(*tile, fsr_indx);
-            } else {
-              auto mssg = "Tile for segment position was nullopt.";
-              spdlog::error(mssg);
-              throw ScarabeeException(mssg);
-            }
-          }
-
           r_end = r_end + d * u;
-
-          if (cmfd_) {
-            segments.back().exit_cmfd_surface() = cmfd_->get_surface(r_end, -u);
-
-            const auto tile = cmfd_->get_tile(r_end, -u);
-            if (tile) {
-              const auto fsr_indx = segments.back().fsr_indx();
-#pragma omp critical(cmfd_fsr_insertion)
-              cmfd_->insert_fsr(*tile, fsr_indx);
-            } else {
-              auto mssg = "Tile for segment position was nullopt.";
-              spdlog::error(mssg);
-              throw ScarabeeException(mssg);
-            }
-          }
 
           ti = geometry_->get_tile_index(r_end, u);
           if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
@@ -1056,8 +954,6 @@ void MOCDriver::generate_tracks() {
       }
     }
   }
-
-  if (cmfd_) cmfd_->pack_fsr_lists();
 }
 
 std::vector<std::pair<std::size_t, double>> MOCDriver::trace_fsr_segments(
@@ -1718,144 +1614,35 @@ void MOCDriver::apply_criticality_spectrum(const xt::xtensor<double, 1>& flux) {
   }
 }
 
-void MOCDriver::save_hdf5(const std::string& fname,
-                          const std::string& group) const {
-  if (solved_ == false) {
-    auto mssg = "Problem not solved. Cannot save MOC results.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
+void MOCDriver::save_bin(const std::string& fname) const {
+  if (std::filesystem::exists(fname)) {
+    std::filesystem::remove(fname);
   }
 
-  // First create the HDF5 file
-  auto h5 = H5::File(fname, H5::File::OpenOrCreate);
+  std::ofstream file(fname, std::ios_base::binary);
 
-  if (h5.exist(group)) {
-    std::stringstream mssg;
-    mssg << "HDF5 group with name \"" << group << "\" already exists.";
-    const auto mssg_str = mssg.str();
-    spdlog::error(mssg_str);
-    throw ScarabeeException(mssg_str);
-  }
+  cereal::PortableBinaryOutputArchive arc(file);
 
-  // Now we create the desired group
-  auto grp = h5.createGroup(group);
-
-  // Create attributes for groups, azimuthal angles, and polar angles
-  grp.createAttribute("ngroups", ngroups_);
-  grp.createAttribute("nfsrs", nfsrs_);
-  grp.createAttribute("n_pol_angles", n_pol_angles_);
-  grp.createAttribute("keff", keff_);
-  grp.createAttribute("N_lj", N_lj_);
-  grp.createAttribute("anisotropic", anisotropic_);
-
-  // We first save the flux array
-  grp.createDataSet("flux", flux_);
-
-  // Now we go through all azimuthal angles
-  for (std::size_t a = 0; a < tracks_.size(); a++) {
-    const std::string trk_set_name = "track_set_" + std::to_string(a);
-
-    // Create a group for the track set
-    auto trk_set = grp.createGroup(trk_set_name);
-    const auto& trks = tracks_[a];
-
-    for (std::size_t t = 0; t < trks.size(); t++) {
-      const std::string trk_name = "track_" + std::to_string(t);
-      auto trk = trk_set.createGroup(trk_name);
-
-      // Save entry and exit flux
-      trk.createDataSet("entry", trks[t].entry_flux());
-      trk.createDataSet("exit", trks[t].exit_flux());
-    }
-  }
+  arc(*this);
 }
 
-void MOCDriver::load_hdf5(const std::string& fname, const std::string& group) {
-  if (this->drawn() == false) {
-    auto mssg = "Cannot load HDF5 file if tracks have not been drawn.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  // First create the HDF5 file
-  auto h5 = H5::File(fname, H5::File::ReadOnly);
-
-  if (h5.exist(group) == false) {
+std::shared_ptr<MOCDriver> MOCDriver::load_bin(const std::string& fname) {
+  if (std::filesystem::exists(fname) == false) {
     std::stringstream mssg;
-    mssg << "The HDF5 group \"" << group << "\" does not exists.";
-    const auto mssg_str = mssg.str();
-    spdlog::error(mssg_str);
-    throw ScarabeeException(mssg_str);
+    mssg << "The file \"" << fname << "\" does not exist.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
   }
+  
+  std::shared_ptr<MOCDriver> out(new MOCDriver());
 
-  // Now get the groups with results
-  auto grp = h5.getGroup(group);
+  std::ifstream file(fname, std::ios_base::binary);
 
-  // Load attributes, make sure they are the same
-  std::size_t ngroups = grp.getAttribute("ngroups").read<std::size_t>();
-  std::size_t nfsrs = grp.getAttribute("nfsrs").read<std::size_t>();
-  std::size_t n_pol_angles =
-      grp.getAttribute("n_pol_angles").read<std::size_t>();
-  std::size_t N_lj = grp.getAttribute("N_lj").read<std::size_t>();
-  bool anisotropic = grp.getAttribute("anisotropic").read<bool>();
+  cereal::PortableBinaryInputArchive arc(file);
 
-  if (ngroups != ngroups_) {
-    auto mssg = "Number of groups in MOCDriver and HDF5 file do not agree.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-  if (nfsrs != nfsrs_) {
-    auto mssg =
-        "Number of flat source regions in MOCDriver and HDF5 file do not "
-        "agree.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-  if (n_pol_angles != n_pol_angles_) {
-    auto mssg =
-        "Number of polar angles in MOCDriver and HDF5 file do not agree.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-  if (N_lj != N_lj_) {
-    auto mssg =
-        "Number of spherical harmonics in MOCDriver and HDF5 file do not "
-        "agree.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-  if (anisotropic != anisotropic_) {
-    auto mssg = "Anisotropic setting in MOCDriver and HDF5 file do not agree.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
+  arc(*out);
 
-  // If we get here, everything appears to match. We should be safe to load data
-  keff_ = grp.getAttribute("keff").read<double>();
-
-  flux_ = xt::zeros<double>({ngroups_, nfsrs_, N_lj_});
-  grp.getDataSet("flux").read_raw<double>(flux_.data());
-
-  // Now we go through all azimuthal angles. Since we are drawn, all the
-  // tracks have the angular flux allocated.
-  for (std::size_t a = 0; a < tracks_.size(); a++) {
-    const std::string trk_set_name = "track_set_" + std::to_string(a);
-
-    // Get the group for the track set
-    auto trk_set = grp.getGroup(trk_set_name);
-    auto& trks = tracks_[a];
-
-    for (std::size_t t = 0; t < trks.size(); t++) {
-      const std::string trk_name = "track_" + std::to_string(t);
-      auto trk = trk_set.getGroup(trk_name);
-
-      // Load entry and exit flux
-      trk.getDataSet("entry").read_raw<double>(trks[t].entry_flux().data());
-      trk.getDataSet("exit").read_raw<double>(trks[t].exit_flux().data());
-    }
-  }
-
-  solved_ = true;
+  return out;
 }
 
 }  // namespace scarabee

@@ -3,9 +3,14 @@
 
 #include <cylindrical_cell.hpp>
 #include <data/cross_section.hpp>
+#include <utils/serialization.hpp>
 #include <utils/simulation_mode.hpp>
 
 #include <xtensor/xtensor.hpp>
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/vector.hpp>
 
 #include <memory>
 #include <vector>
@@ -105,6 +110,16 @@ class CylindricalFluxSolver {
 
   void solve_single_thread();
   void solve_parallel();
+
+  friend class cereal::access;
+  CylindricalFluxSolver() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(flux_), CEREAL_NVP(extern_source_), CEREAL_NVP(j_ext_),
+        CEREAL_NVP(x_), CEREAL_NVP(cell_), CEREAL_NVP(k_), CEREAL_NVP(a_),
+        CEREAL_NVP(k_tol_), CEREAL_NVP(flux_tol_), CEREAL_NVP(mode_),
+        CEREAL_NVP(solved_));
+  }
 };
 
 }  // namespace scarabee

@@ -1,7 +1,7 @@
 #ifndef SCARABEE_DIFFUISON_CROSS_SECTIONS_H
 #define SCARABEE_DIFFUISON_CROSS_SECTIONS_H
 
-#include <utils/xtensor_serialization.hpp>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xview.hpp>

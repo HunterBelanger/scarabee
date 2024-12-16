@@ -3,7 +3,7 @@
 
 #include <diffusion/diffusion_data.hpp>
 #include <diffusion/diffusion_geometry.hpp>
-#include <utils/xtensor_serialization.hpp>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xarray.hpp>
 #include <xtensor/xtensor.hpp>
@@ -20,6 +20,8 @@ namespace scarabee {
 class FDDiffusionDriver {
  public:
   FDDiffusionDriver(std::shared_ptr<DiffusionGeometry> geom);
+
+  std::shared_ptr<DiffusionGeometry> geometry() const { return geom_; }
 
   std::size_t ngroups() const { return geom_->ngroups(); }
 
@@ -43,6 +45,9 @@ class FDDiffusionDriver {
              std::optional<xt::xarray<double>>,
              std::optional<xt::xarray<double>>>
   power() const;
+
+  void save(const std::string& fname);
+  static std::unique_ptr<FDDiffusionDriver> load(const std::string& fname);
 
  private:
   std::shared_ptr<DiffusionGeometry> geom_;

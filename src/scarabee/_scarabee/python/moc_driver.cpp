@@ -88,9 +88,6 @@ void init_MOCDriver(py::module& m) {
           &MOCDriver::set_flux_tolerance,
           "Maximum relative absolute difference in flux for convergence")
 
-      .def_property("cmfd", &MOCDriver::cmfd, &MOCDriver::set_cmfd,
-                    "CMFD mesh for convergence acceleration.")
-
       .def("flux",
            py::overload_cast<const Vector&, const Direction&, std::size_t,
                              std::size_t>(&MOCDriver::flux, py::const_),
@@ -508,23 +505,19 @@ void init_MOCDriver(py::module& m) {
           "    Array of bounding y values.\n",
           py::arg("nx"), py::arg("ny"))
 
-      .def("save_hdf5", &MOCDriver::save_hdf5,
-           "Saves MOC results to an HDF5 file.\n\n"
+      .def("save", &MOCDriver::save_bin,
+           "Saves MOCDriver to a binary file.\n\n"
            "Parameters\n"
            "----------\n"
            "fname : str\n"
-           "        Name of HDF5 file.\n"
-           "group : str\n"
-           "        Name of group in HDF5 file to save results.\n",
-           py::arg("fname"), py::arg("group"))
+           "        Name of file.\n",
+           py::arg("fname"))
 
-      .def("load_hdf5", &MOCDriver::load_hdf5,
-           "Loads MOC results from an HDF5 file.\n\n"
+      .def_static("load", &MOCDriver::load_bin,
+           "Loads MOCDriver from a binary file.\n\n"
            "Parameters\n"
            "----------\n"
            "fname : str\n"
-           "        Name of HDF5 file.\n"
-           "group : str\n"
-           "        Name of group in HDF5 file to save results.\n",
-           py::arg("fname"), py::arg("group"));
+           "        Name of file.\n",
+           py::arg("fname"));
 }

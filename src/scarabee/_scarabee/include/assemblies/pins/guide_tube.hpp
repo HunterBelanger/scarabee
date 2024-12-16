@@ -10,6 +10,10 @@
 #include <moc/pin_cell.hpp>
 #include <cylindrical_cell.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/memory.hpp>
+
 #include <memory>
 #include <optional>
 #include <vector>
@@ -51,6 +55,14 @@ class GuideTube {
   double inner_radius_;
   double outer_radius_;
   std::vector<std::shared_ptr<CrossSection>> condensed_xs_;
+
+  friend class cereal::access;
+  GuideTube() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(clad_), CEREAL_NVP(inner_radius_), CEREAL_NVP(outer_radius_),
+        CEREAL_NVP(condensed_xs_));
+  }
 };
 
 }  // namespace scarabee

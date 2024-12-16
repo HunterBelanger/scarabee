@@ -8,6 +8,12 @@
 
 #include <xtensor/xio.hpp>
 
+#include <cereal/archives/portable_binary.hpp>
+
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+
 namespace scarabee {
 
 PWRAssembly::PWRAssembly(double pitch, std::shared_ptr<Material> moderator,
@@ -967,6 +973,37 @@ std::vector<double> PWRAssembly::compute_avg_flx(const Vector& r,
   }
 
   return flx;
+}
+
+void PWRAssembly::save(const std::string& fname) const {
+  if (std::filesystem::exists(fname)) {
+    std::filesystem::remove(fname);
+  }
+
+  std::ofstream file(fname, std::ios_base::binary);
+
+  cereal::PortableBinaryOutputArchive arc(file);
+
+  arc(*this);
+}
+
+std::shared_ptr<PWRAssembly> PWRAssembly::load(const std::string& fname) {
+  if (std::filesystem::exists(fname) == false) {
+    std::stringstream mssg;
+    mssg << "The file \"" << fname << "\" does not exist.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+  
+  std::shared_ptr<PWRAssembly> out(new PWRAssembly());
+
+  std::ifstream file(fname, std::ios_base::binary);
+
+  cereal::PortableBinaryInputArchive arc(file);
+
+  arc(*out);
+
+  return out;
 }
 
 }  // namespace scarabee

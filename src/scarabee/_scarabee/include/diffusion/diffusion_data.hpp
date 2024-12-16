@@ -2,7 +2,7 @@
 #define SCARABEE_DIFFUSION_DATA_H
 
 #include <data/diffusion_cross_section.hpp>
-#include <utils/xtensor_serialization.hpp>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
 

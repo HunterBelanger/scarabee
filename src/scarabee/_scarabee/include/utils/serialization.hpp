@@ -2,14 +2,15 @@
 #define SCARABEE_SERIALIZATION_H
 
 #include <cereal/cereal.hpp>
-#include <cereal/archives/json.hpp>
-#include <cereal/archives/binary.hpp>
-#include <cereal/archives/portable_binary.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xarray.hpp>
 
-namespace scarabee {
+#include <htl/static_vector.hpp>
+
+#include <Eigen/Dense>
+
+namespace cereal {
 
 // xarray
 template<class Archive, class T>
@@ -138,6 +139,49 @@ void load(Archive& arc, xt::svector<T>& a) {
   a.resize(size);
   for (std::size_t i = 0; i < size; i++) {
     arc(a[i]);
+  }
+}
+
+// Eigen
+template<class Archive, class T, int M, int N>
+void save(Archive& arc, const Eigen::Matrix<T, M, N>& a) {
+  for (int m = 0; m < M; m++) {
+    for (int n = 0; n < N; n++) {
+      arc(a(m, n));
+    }
+  }
+}
+
+template<class Archive, class T, int M, int N>
+void load(Archive& arc, Eigen::Matrix<T, M, N>& a) {
+  for (int m = 0; m < M; m++) {
+    for (int n = 0; n < N; n++) {
+      arc(a(m, n));
+    }
+  }
+}
+
+// HTL Static Vector
+
+template<class Archive, class T, std::size_t C>
+void save(Archive& arc, const htl::static_vector<T, C>& v) {
+  const std::size_t size = v.size();
+  arc(CEREAL_NVP(size));
+
+  for (std::size_t i = 0; i < size; i++) {
+    arc(v[i]);
+  }
+}
+
+template<class Archive, class T, std::size_t C>
+void load(Archive& arc, htl::static_vector<T, C>& v) {
+  std::size_t size = 0;
+  arc(CEREAL_NVP(size));
+
+  v.resize(size);
+
+  for (std::size_t i = 0; i < size; i++) {
+    arc(v[i]);
   }
 }
 

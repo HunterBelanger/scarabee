@@ -11,6 +11,10 @@
 
 #include <xtensor/xtensor.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/vector.hpp>
+
 #include <memory>
 #include <vector>
 
@@ -23,6 +27,13 @@ struct RegionToken {
   bool inside(const Vector& r, const Direction& u) const {
     const auto current_side = surface->side(r, u);
     return current_side == side;
+  }
+
+ private:
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(surface), CEREAL_NVP(side));
   }
 };
 
@@ -64,6 +75,13 @@ class FlatSourceRegion {
   std::shared_ptr<CrossSection> xs_;
   double volume_;
   std::size_t id_;
+
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(tokens_), CEREAL_NVP(xs_), CEREAL_NVP(volume_),
+        CEREAL_NVP(id_));
+  }
 
   static std::size_t id_counter;
 };

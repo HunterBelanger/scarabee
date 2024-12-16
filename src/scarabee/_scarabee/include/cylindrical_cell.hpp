@@ -3,8 +3,13 @@
 
 #include <data/cross_section.hpp>
 #include <utils/constants.hpp>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/vector.hpp>
 
 #include <memory>
 #include <vector>
@@ -76,6 +81,15 @@ class CylindricalCell {
   void parallel_solve_systems();
 
   double calculate_S_ij(std::size_t i, std::size_t j, std::size_t g) const;
+
+  friend cereal::access;
+  CylindricalCell() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(p_), CEREAL_NVP(X_), CEREAL_NVP(Y_), CEREAL_NVP(Gamma_),
+        CEREAL_NVP(radii_), CEREAL_NVP(vols_), CEREAL_NVP(mats_),
+        CEREAL_NVP(ngroups_), CEREAL_NVP(solved_));
+  }
 };
 
 }  // namespace scarabee

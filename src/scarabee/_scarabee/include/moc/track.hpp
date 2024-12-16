@@ -6,8 +6,12 @@
 #include <moc/direction.hpp>
 #include <moc/boundary_condition.hpp>
 #include <utils/constants.hpp>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/vector.hpp>
 
 #include <vector>
 
@@ -19,6 +23,9 @@ class Track {
         double phi, double wgt, double width,
         const std::vector<Segment>& segments, std::size_t forward_phi_index,
         std::size_t backward_phi_index);
+
+  // Here for use with cereal and std::vector
+  Track(): entry_(0., 0.), exit_(0., 0.) {}
 
   double wgt() const { return wgt_; }
   double width() const { return width_; }
@@ -102,6 +109,16 @@ class Track {
   std::size_t forward_phi_index_;  // azimuthal angle index in forward direction
   std::size_t
       backward_phi_index_;  // azimuthal angle index in backaward direction
+
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(entry_flux_), CEREAL_NVP(exit_flux_), CEREAL_NVP(segments_),
+        CEREAL_NVP(entry_), CEREAL_NVP(exit_), CEREAL_NVP(dir_),
+        CEREAL_NVP(wgt_), CEREAL_NVP(width_), CEREAL_NVP(phi_),
+        CEREAL_NVP(entry_bc_), CEREAL_NVP(exit_bc_),
+        CEREAL_NVP(forward_phi_index_), CEREAL_NVP(backward_phi_index_));
+  }
 };
 
 }  // namespace scarabee

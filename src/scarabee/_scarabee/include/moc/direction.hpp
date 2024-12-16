@@ -4,6 +4,9 @@
 #include <moc/vector.hpp>
 #include <utils/constants.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/base_class.hpp>
+
 namespace scarabee {
 
 //============================================================================
@@ -35,6 +38,12 @@ class Direction : public Vector {
     return d;
   }
 
+ private:
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(cereal::base_class<Vector>(this));
+  }
 };  // Direction
 
 //============================================================================

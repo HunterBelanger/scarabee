@@ -26,6 +26,10 @@ void init_FDDiffusionDriver(py::module& m) {
 
       .def("solve", &FDDiffusionDriver::solve, "Solves the diffusion problem.")
 
+      .def_property_readonly(
+          "geometry", &FDDiffusionDriver::geometry,
+          "The :py:class:`DiffusionGeometry` geometry for the problem.")
+
       .def_property_readonly("ngroups", &FDDiffusionDriver::ngroups,
                              "Number of energy groups.")
 
@@ -83,5 +87,22 @@ void init_FDDiffusionDriver(py::module& m) {
            "problem.\n"
            "z_bounds : ndarray or None\n"
            "           1D array with the z-bounds for the power mesh, if a 3D "
-           "problem.\n");
+           "problem.\n")
+           
+      .def("save", &FDDiffusionDriver::save,
+           "Saves the FDDiffusionDriver to a binary file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : str\n"
+           "  Name of the file.\n", py::arg("fname"))
+           
+      .def_static("load", &FDDiffusionDriver::load,
+           "Loads a previously save FDDiffusionDriver from a binary file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : str\n"
+           "  Name of the file.\n\n"
+           "Returns\n"
+           "-------\n"
+           "FDDiffusionDriver", py::arg("fname"));
 }

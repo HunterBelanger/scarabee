@@ -2,10 +2,10 @@
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 
-#include <xtensor/xmanipulation.hpp>
-#include <xtensor-io/xnpz.hpp>
+#include <cereal/archives/portable_binary.hpp>
 
 #include <filesystem>
+#include <fstream>
 #include <memory>
 
 namespace scarabee {
@@ -188,113 +188,30 @@ void DiffusionData::save(const std::string& fname) const {
     std::filesystem::remove(fname);
   }
 
-  const std::size_t NG = this->ngroups();
+  std::ofstream file(fname, std::ios_base::binary);
 
-  xt::xtensor<double, 2> xs_data = xt::zeros<double>({5 + NG, NG});
-  for (std::size_t g = 0; g < NG; g++) {
-    xs_data(0, g) = this->D(g);
-    xs_data(1, g) = this->Ea(g);
-    xs_data(2, g) = this->Ef(g);
-    xs_data(3, g) = this->vEf(g);
-    xs_data(4, g) = this->chi(g);
+  cereal::PortableBinaryOutputArchive arc(file);
 
-    // Save Es
-    for (std::size_t gout = 0; gout < NG; gout++) {
-      xs_data(5 + g, gout) = this->Es(g, gout);
-    }
-  }
-
-  // Save the xs data to the npz
-  xt::dump_npz(fname, "xs", xs_data);
-
-  if (form_factors_.size() > 0) {
-    xt::dump_npz(fname, "form_factors", form_factors_);
-  }
-
-  if (adf_.size() > 0) {
-    xt::dump_npz(fname, "adf", adf_);
-  }
-
-  if (cdf_.size() > 0) {
-    xt::dump_npz(fname, "cdf", cdf_);
-  }
+  arc(*this);
 }
 
 std::shared_ptr<DiffusionData> DiffusionData::load(const std::string& fname) {
-  auto npz = xt::load_npz(fname);
-
-  // First, read in and create the DiffsuionCrossSection
-  if (npz.find("xs") == npz.end()) {
-    auto mssg = "No \"xs\" entry in the DiffusionData NPZ \"" + fname + "\".";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
+  if (std::filesystem::exists(fname) == false) {
+    std::stringstream mssg;
+    mssg << "The file \"" << fname << "\" does not exist.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
   }
-  xt::xtensor<double, 2> xs_data = npz.at("xs").cast<double>();
-  const std::size_t NG = xs_data.shape()[1];
-  xt::xtensor<double, 1> D = xt::view(xs_data, 0, xt::all());
-  xt::xtensor<double, 1> Ea = xt::view(xs_data, 1, xt::all());
-  xt::xtensor<double, 1> Ef = xt::view(xs_data, 2, xt::all());
-  xt::xtensor<double, 1> vEf = xt::view(xs_data, 3, xt::all());
-  xt::xtensor<double, 1> chi = xt::view(xs_data, 4, xt::all());
-  xt::xtensor<double, 2> Es =
-      xt::view(xs_data, xt::range(5, 5 + NG), xt::all());
-  auto xs = std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi);
+  
+  std::shared_ptr<DiffusionData> out(new DiffusionData());
 
-  std::unique_ptr<xt::xtensor<double, 2>> form_factors, adf, cdf;
+  std::ifstream file(fname, std::ios_base::binary);
 
-  // Load form factors
-  if (npz.find("form_factors") != npz.end()) {
-    form_factors = std::make_unique<xt::xtensor<double, 2>>();
-    *form_factors = npz.at("form_factors").cast<double>();
-  }
+  cereal::PortableBinaryInputArchive arc(file);
 
-  // Load ADF
-  if (npz.find("adf") != npz.end()) {
-    adf = std::make_unique<xt::xtensor<double, 2>>();
-    *adf = npz.at("adf").cast<double>();
-  }
+  arc(*out);
 
-  // Load CDF
-  if (npz.find("cdf") != npz.end()) {
-    cdf = std::make_unique<xt::xtensor<double, 2>>();
-    *cdf = npz.at("cdf").cast<double>();
-  }
-
-  // Return data
-  if (form_factors && adf && cdf) {
-    return std::make_shared<DiffusionData>(xs, *form_factors, *adf, *cdf);
-  } else if (form_factors && adf) {
-    auto out = std::make_shared<DiffusionData>(xs, *form_factors);
-    out->set_adf(*adf);
-    return out;
-  } else if (form_factors && cdf) {
-    auto out = std::make_shared<DiffusionData>(xs, *form_factors);
-    out->set_cdf(*cdf);
-    return out;
-  } else if (form_factors) {
-    return std::make_shared<DiffusionData>(xs, *form_factors);
-  } else if (adf && cdf) {
-    auto out = std::make_shared<DiffusionData>(xs);
-    out->set_adf(*adf);
-    out->set_cdf(*cdf);
-    return out;
-  } else if (adf) {
-    auto out = std::make_shared<DiffusionData>(xs);
-    out->set_adf(*adf);
-    return out;
-  } else if (cdf) {
-    auto out = std::make_shared<DiffusionData>(xs);
-    out->set_cdf(*cdf);
-    return out;
-  } else {
-    return std::make_shared<DiffusionData>(xs);
-  }
-
-  // SHOULD NEVER GET HERE
-  auto mssg = "Something went wrong loading DiffusionData.";
-  spdlog::error(mssg);
-  throw ScarabeeException(mssg);
-  return nullptr;
+  return out;
 }
 
 }  // namespace scarabee

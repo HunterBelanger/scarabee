@@ -11,6 +11,10 @@
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/vector.hpp>
+
 #include <cmath>
 #include <map>
 #include <memory>
@@ -79,6 +83,14 @@ class Cell {
 
   Cell(double dx, double dy);
   void check_surfaces() const;
+
+  friend class cereal::access;
+  Cell() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(fsrs_), CEREAL_NVP(x_min_), CEREAL_NVP(y_min_),
+        CEREAL_NVP(x_max_), CEREAL_NVP(y_max_));
+  }
 };
 
 }  // namespace scarabee

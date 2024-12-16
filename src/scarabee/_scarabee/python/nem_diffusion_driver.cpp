@@ -25,6 +25,10 @@ void init_NEMDiffusionDriver(py::module& m) {
 
       .def("solve", &NEMDiffusionDriver::solve, "Solves the diffusion problem.")
 
+      .def_property_readonly(
+          "geometry", &NEMDiffusionDriver::geometry,
+          "The :py:class:`DiffusionGeometry` geometry for the problem.")
+
       .def_property_readonly("ngroups", &NEMDiffusionDriver::ngroups,
                              "Number of energy groups.")
 
@@ -158,5 +162,22 @@ void init_NEMDiffusionDriver(py::module& m) {
            "-------\n"
            "array of float\n"
            "      Value of pin powers at all provided z positions.\n",
-           py::arg("z"));
+           py::arg("z"))
+           
+       .def("save", &NEMDiffusionDriver::save,
+           "Saves the NEMDiffusionDriver to a binary file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : str\n"
+           "  Name of the file.\n", py::arg("fname"))
+           
+      .def_static("load", &NEMDiffusionDriver::load,
+           "Loads a previously save NEMDiffusionDriver from a binary file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : str\n"
+           "  Name of the file.\n\n"
+           "Returns\n"
+           "-------\n"
+           "NEMDiffusionDriver", py::arg("fname"));
 }

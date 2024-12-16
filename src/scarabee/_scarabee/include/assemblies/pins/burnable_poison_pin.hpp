@@ -10,6 +10,10 @@
 #include <moc/pin_cell.hpp>
 #include <cylindrical_cell.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/memory.hpp>
+
 #include <memory>
 #include <optional>
 #include <vector>
@@ -68,6 +72,19 @@ class BurnablePoisonPin {
   std::shared_ptr<Material> guide_tube_clad_;
   double guide_tube_radius_;
   std::vector<std::shared_ptr<CrossSection>> condensed_xs_;
+
+  friend class cereal::access;
+  BurnablePoisonPin() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(center_), CEREAL_NVP(center_radius_),
+        CEREAL_NVP(poison_clad_), CEREAL_NVP(inner_poison_clad_radius_),
+        CEREAL_NVP(gap_), CEREAL_NVP(inner_gap_radius_), CEREAL_NVP(poison_),
+        CEREAL_NVP(poison_radius_), CEREAL_NVP(outer_gap_radius_),
+        CEREAL_NVP(outer_poison_clad_radius_),
+        CEREAL_NVP(inner_moderator_radius_), CEREAL_NVP(guide_tube_clad_),
+        CEREAL_NVP(guide_tube_radius_), CEREAL_NVP(condensed_xs_));
+  }
 };
 
 }  // namespace scarabee

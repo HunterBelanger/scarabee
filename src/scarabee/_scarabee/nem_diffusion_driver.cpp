@@ -4,9 +4,12 @@
 #include <utils/timer.hpp>
 #include <utils/constants.hpp>
 
+#include <cereal/archives/portable_binary.hpp>
+
 #include <array>
 #include <cmath>
 #include <cstdarg>
+#include <fstream>
 #include <optional>
 
 namespace scarabee {
@@ -1477,6 +1480,37 @@ double NEMDiffusionDriver::avg_xy_corner_flux(std::size_t g, std::size_t m,
   }
 
   return avg_het_flx / CDF;
+}
+
+void NEMDiffusionDriver::save(const std::string& fname) {
+  if (std::filesystem::exists(fname)) {
+    std::filesystem::remove(fname);
+  }
+
+  std::ofstream file(fname, std::ios_base::binary);
+
+  cereal::PortableBinaryOutputArchive arc(file);
+
+  arc(*this);
+}
+
+std::unique_ptr<NEMDiffusionDriver> NEMDiffusionDriver::load(const std::string& fname) {
+  if (std::filesystem::exists(fname) == false) {
+    std::stringstream mssg;
+    mssg << "The file \"" << fname << "\" does not exist.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+  
+  std::unique_ptr<NEMDiffusionDriver> out(new NEMDiffusionDriver());
+
+  std::ifstream file(fname, std::ios_base::binary);
+
+  cereal::PortableBinaryInputArchive arc(file);
+
+  arc(*out);
+
+  return out;
 }
 
 }  // namespace scarabee

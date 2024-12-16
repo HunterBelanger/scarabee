@@ -5,6 +5,10 @@
 #include <moc/surface.hpp>
 #include <data/cross_section.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/base_class.hpp>
+
 #include <memory>
 
 namespace scarabee {
@@ -15,6 +19,13 @@ class EmptyCell : public Cell {
 
  private:
   std::shared_ptr<CrossSection> mat_;
+
+  friend class cereal::access;
+  EmptyCell() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(cereal::base_class<Cell>(this), CEREAL_NVP(mat_));
+  }
 };
 
 }  // namespace scarabee

@@ -16,8 +16,17 @@
 #include <moc/cartesian_2d.hpp>
 #include <moc/moc_driver.hpp>
 #include <utils/criticality_spectrum.hpp>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/variant.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/utility.hpp>
+#include <cereal/types/optional.hpp>
+#include <cereal/types/string.hpp>
 
 #include <memory>
 #include <optional>
@@ -36,6 +45,11 @@ class PWRAssembly {
   PWRAssembly(double pitch, std::shared_ptr<Material> moderator,
               std::pair<std::size_t, std::size_t> shape,
               std::shared_ptr<NDLibrary> ndl);
+
+  std::shared_ptr<NDLibrary> ndl() const { return ndl_; }
+  void set_ndl(std::shared_ptr<NDLibrary> ndl) {
+    ndl_ = ndl;
+  }
 
   const std::optional<std::string> criticality_spectrum_method() const {
     return criticality_spectrum_method_;
@@ -134,6 +148,9 @@ class PWRAssembly {
   void solve();
   void save_diffusion_data(const std::string& fname) const;
 
+  void save(const std::string& fname) const;
+  static std::shared_ptr<PWRAssembly> load(const std::string& fname);
+
  private:
   double pitch_;
   std::pair<std::size_t, std::size_t> shape_;
@@ -196,6 +213,29 @@ class PWRAssembly {
       const std::vector<std::pair<std::size_t, double>>& segments) const;
   std::vector<double> compute_avg_flx(const Vector& r,
                                       const Direction& u) const;
+
+  friend class cereal::access;
+  PWRAssembly() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(pitch_), CEREAL_NVP(shape_), CEREAL_NVP(moderator_),
+        CEREAL_NVP(moderator_xs_), CEREAL_NVP(condensation_scheme_),
+        CEREAL_NVP(few_group_condensation_scheme_), CEREAL_NVP(pins_),
+        CEREAL_NVP(dancoff_num_azimuthal_angles_),
+        CEREAL_NVP(dancoff_track_spacing_),
+        CEREAL_NVP(dancoff_polar_quadrature_),
+        CEREAL_NVP(num_azimuthal_angles_), CEREAL_NVP(track_spacing_),
+        CEREAL_NVP(keff_tolerance_), CEREAL_NVP(flux_tolerance_),
+        CEREAL_NVP(polar_quadrature_), CEREAL_NVP(boundary_conditions_),
+        CEREAL_NVP(anisotropic_), CEREAL_NVP(plot_assembly_),
+        CEREAL_NVP(moc_geom_), CEREAL_NVP(moc_), CEREAL_NVP(diffusion_xs_),
+        CEREAL_NVP(form_factors_), CEREAL_NVP(adf_), CEREAL_NVP(cdf_),
+        CEREAL_NVP(fuel_dancoff_corrections_),
+        CEREAL_NVP(clad_dancoff_corrections_),
+        CEREAL_NVP(criticality_spectrum_method_),
+        CEREAL_NVP(criticality_spectrum_), CEREAL_NVP(pin_1d_cells),
+        CEREAL_NVP(pin_1d_fluxes), CEREAL_NVP(avg_fp_));
+  }
 };
 
 };  // namespace scarabee

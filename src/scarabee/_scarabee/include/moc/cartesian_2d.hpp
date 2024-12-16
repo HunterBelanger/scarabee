@@ -11,6 +11,12 @@
 
 #include <xtensor/xtensor.hpp>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/variant.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/map.hpp>
+
 #include <cmath>
 #include <map>
 #include <memory>
@@ -44,6 +50,13 @@ class Cartesian2D {
     std::size_t ngroups() const;
 
     std::size_t get_num_fsr_instances(std::size_t id) const;
+
+   private:
+    friend class cereal::access;
+    template <class Archive>
+    void serialize(Archive& arc) {
+      arc(CEREAL_NVP(c2d), CEREAL_NVP(cell));
+    }
   };
 
   struct TileIndex {
@@ -221,6 +234,13 @@ class Cartesian2D {
 
   // Methods for getting offset map
   void make_offset_map();
+
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(x_bounds_), CEREAL_NVP(y_bounds_), CEREAL_NVP(tiles_),
+        CEREAL_NVP(fsr_offset_map_), CEREAL_NVP(nx_), CEREAL_NVP(ny_));
+  }
 };
 
 }  // namespace scarabee

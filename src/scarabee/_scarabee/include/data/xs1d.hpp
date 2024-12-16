@@ -3,7 +3,7 @@
 
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
-#include <utils/xtensor_serialization.hpp>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xview.hpp>

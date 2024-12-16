@@ -3,6 +3,8 @@
 
 #include <utils/constants.hpp>
 
+#include <cereal/cereal.hpp>
+
 #include <cmath>
 #include <iostream>
 
@@ -34,6 +36,13 @@ class Vector {
 
  protected:
   double x_, y_;
+
+  friend class cereal::access;
+  Vector() {}
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(x_), CEREAL_NVP(y_));
+  }
 };
 
 //============================================================================
