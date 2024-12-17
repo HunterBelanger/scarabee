@@ -89,6 +89,20 @@ class FlatSourceRegion {
 struct UniqueFSR {
   const FlatSourceRegion* fsr{nullptr};
   std::size_t instance{0};
+
+  bool operator<(const UniqueFSR& rhs) const {
+    if (this->fsr < rhs.fsr)
+      return true;
+    else if (this->fsr > rhs.fsr)
+      return false;
+
+    // fsr is equal here
+    return this->instance < rhs.instance;
+  }
+
+  bool operator==(const UniqueFSR& rhs) const {
+    return (this->fsr == rhs.fsr) && (this->instance && rhs.instance);
+  }
 };
 
 }  // namespace scarabee

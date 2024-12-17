@@ -233,6 +233,10 @@ void MOCPlotter::render_controls() {
                          ColorBy::Cell))
     must_rerender = true;
   ImGui::SameLine();
+  if (ImGui::RadioButton("Unique Cell", reinterpret_cast<int*>(&colorby),
+                         ColorBy::UniqueCell))
+    must_rerender = true;
+  ImGui::SameLine();
   if (ImGui::RadioButton("Material", reinterpret_cast<int*>(&colorby),
                          ColorBy::Material))
     must_rerender = true;
@@ -268,6 +272,17 @@ void MOCPlotter::render_controls() {
       color.b() = static_cast<uint8_t>(fcolor.z * 255.f);
 
       cell_id_to_color[mufsr.fsr->id()] = color;
+
+      must_rerender = true;
+    }
+
+    if (colorby == ColorBy::UniqueCell &&
+        ImGui::ColorEdit3("", reinterpret_cast<float*>(&fcolor))) {
+      color.r() = static_cast<uint8_t>(fcolor.x * 255.f);
+      color.g() = static_cast<uint8_t>(fcolor.y * 255.f);
+      color.b() = static_cast<uint8_t>(fcolor.z * 255.f);
+
+      unique_cell_to_color[mufsr] = color;
 
       must_rerender = true;
     }
@@ -478,6 +493,18 @@ ImApp::Pixel MOCPlotter::get_color(UniqueFSR ufsr) {
         create_color_mutex.unlock();
       }
       pixel_color = cell_id_to_color[ufsr.fsr->id()];
+    } else if (colorby == ColorBy::UniqueCell) {
+      // Do same check twice with mutex to make thread safe
+      if (unique_cell_to_color.find(ufsr) == unique_cell_to_color.end()) {
+        // Check if cell id is in id_to_pixel
+        create_color_mutex.lock();
+        if (unique_cell_to_color.find(ufsr) == unique_cell_to_color.end()) {
+          // Get new random color for id
+          unique_cell_to_color[ufsr] = get_random_color();
+        }
+        create_color_mutex.unlock();
+      }
+      pixel_color = unique_cell_to_color[ufsr];
     } else if (colorby == ColorBy::Material) {
       // Color by material
       CrossSection* xs = ufsr.fsr->xs().get();

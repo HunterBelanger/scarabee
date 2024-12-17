@@ -29,12 +29,18 @@ class MOCPlotter : public ImApp::Layer {
 
   void render_image();
 
-  enum ColorBy : int { Cell = 0, Material = 1, MaterialName = 2 };
+  enum ColorBy : int {
+    Cell = 0,
+    UniqueCell = 1,
+    Material = 2,
+    MaterialName = 3
+  };
 
   // Maps for colors from plotter.hpp
   const MOCDriver* moc_;
   const Cartesian2D* geom_;
   std::map<std::size_t, ImApp::Pixel> cell_id_to_color;
+  std::map<UniqueFSR, ImApp::Pixel> unique_cell_to_color;
   std::map<CrossSection*, ImApp::Pixel> material_id_to_color;
   std::map<std::string, ImApp::Pixel> material_name_to_color;
   ImApp::Image image;
