@@ -266,7 +266,7 @@ endif()
 # Generate stub file for type completion
 add_custom_command(TARGET _scarabee POST_BUILD
     COMMAND stubgen --include-docstrings -m _scarabee -o ${SKBUILD_PLATLIB_DIR}/${SKBUILD_PROJECT_NAME}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:_scarabee> 
     COMMENT "Generating Python stub file for _scarabee"
 )
 
