@@ -1,5 +1,5 @@
-from _scarabee import *
-import _scarabee
+from ._scarabee import *
+from . import _scarabee
 
 from .reflector import *
 

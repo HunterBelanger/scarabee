@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
-project(scarabee CXX)
+project(${SKBUILD_PROJECT_NAME}
+        VERSION ${SKBUILD_PROJECT_VERSION}
+        LANGUAGES CXX)
 
 option(SCARABEE_USE_OMP "Compile Scarabée with OpenMP for shared memory parallelism" ON)
 
@@ -12,6 +14,7 @@ message(STATUS "Downloading Eigen")
 FetchContent_Declare(eigen
   GIT_REPOSITORY https://gitlab.com/HunterBelanger/eigen.git
   GIT_TAG        fix/uninstall-target
+  EXCLUDE_FROM_ALL
 )
 set(BUILD_TESTING OFF)
 set(EIGEN_TEST_NOQT ON)
@@ -24,6 +27,7 @@ message(STATUS "Downloading spdlog v1.13.0")
 FetchContent_Declare(spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
   GIT_TAG        v1.13.0
+  EXCLUDE_FROM_ALL
 )
 set(SPDLOG_BUILD_PIC ON CACHE BOOL "Build position independent code (-fPIC)")
 FetchContent_MakeAvailable(spdlog)
@@ -34,6 +38,7 @@ message(STATUS "Downloading HTL")
 FetchContent_Declare(htl
   GIT_REPOSITORY https://github.com/HunterBelanger/htl.git
   GIT_TAG        master
+  EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(htl)
 
@@ -43,6 +48,7 @@ message(STATUS "Downloading xtl v0.7.7")
 FetchContent_Declare(xtl
   GIT_REPOSITORY https://github.com/xtensor-stack/xtl.git
   GIT_TAG        0.7.7
+  EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(xtl)
 
@@ -52,6 +58,7 @@ message(STATUS "Downloading xsimd v12.1.1")
 FetchContent_Declare(xsimd
   GIT_REPOSITORY https://github.com/xtensor-stack/xsimd.git
   GIT_TAG        12.1.1
+  EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(xsimd)
 
@@ -61,21 +68,15 @@ message(STATUS "Downloading xtensor v0.25.0")
 FetchContent_Declare(xtensor
   GIT_REPOSITORY https://github.com/xtensor-stack/xtensor.git
   GIT_TAG        0.25.0
+  EXCLUDE_FROM_ALL
 )
 set(XTENSOR_USE_XSIMD ON CACHE BOOL "Enable SIMD acceleration.")
 FetchContent_MakeAvailable(xtensor)
 
 #===============================================================================
-# Get Pybind11
-set(PYBIND11_FINDPYTHON ON)
-message(STATUS "Downloading pybind11 v2.12.0")
-FetchContent_Declare(pybind11
-  GIT_REPOSITORY https://github.com/pybind/pybind11
-  GIT_TAG        v2.12.0
-)
-FetchContent_MakeAvailable(pybind11)
-
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
+# Find Pybind11 from Scikit-Build-Core
+set(PYBIND11_NEWPYTHON ON)
+find_package(pybind11 CONFIG REQUIRED)
 execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/get_numpy_includes.py
                 OUTPUT_VARIABLE NUMPY_INCLUDE_DIRS
                 OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -87,6 +88,7 @@ message(STATUS "Downloading xtensor-python v0.27.0")
 FetchContent_Declare(xtensor-python
   GIT_REPOSITORY https://github.com/xtensor-stack/xtensor-python.git
   GIT_TAG        0.27.0
+  EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(xtensor-python)
 message(STATUS "Numpy includes: ${NUMPY_INCLUDE_DIRS}")
@@ -105,6 +107,7 @@ set(BUILD_SHARED_LIBS         OFF)
 FetchContent_Declare(hdf5
   GIT_REPOSITORY https://github.com/HDFGroup/hdf5.git
   GIT_TAG        hdf5-1_14_3
+  EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(hdf5)
 
@@ -119,6 +122,7 @@ set(HIGHFIVE_FIND_HDF5 OFF)
 FetchContent_Declare(HighFive
   GIT_REPOSITORY https://github.com/BlueBrain/HighFive.git
   GIT_TAG        master
+  EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(HighFive)
 
@@ -128,6 +132,7 @@ message(STATUS "Downloading ImApp")
 FetchContent_Declare(ImApp
   GIT_REPOSITORY https://github.com/HunterBelanger/ImApp.git
   GIT_TAG        master
+  EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(ImApp)
 
@@ -140,9 +145,9 @@ set(SKIP_PERFORMANCE_COMPARISON ON)
 FetchContent_Declare(cereal
   GIT_REPOSITORY https://github.com/USCiLab/cereal.git
   GIT_TAG        master
+  EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(cereal)
-
 
 #===============================================================================
 # Make python library
@@ -223,6 +228,9 @@ target_include_directories(_scarabee PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/scarabee/_scarabee/include>
   $<BUILD_INTERFACE:${NUMPY_INCLUDE_DIRS}>
 )
+target_compile_definitions(_scarabee PRIVATE SCARABEE_MAJOR_VERSION=${PROJECT_VERSION_MAJOR})
+target_compile_definitions(_scarabee PRIVATE SCARABEE_MINOR_VERSION=${PROJECT_VERSION_MINOR})
+target_compile_definitions(_scarabee PRIVATE SCARABEE_PATCH_VERSION=${PROJECT_VERSION_PATCH})
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # Comile options for Windows
   target_compile_options(_scarabee PRIVATE /W3)
@@ -254,3 +262,13 @@ if(SCARABEE_USE_OMP)
     target_compile_definitions(_scarabee PUBLIC SCARABEE_USE_OMP)
   endif()
 endif()
+
+# Generate stub file for type completion
+add_custom_command(TARGET _scarabee POST_BUILD
+    COMMAND stubgen --include-docstrings -m _scarabee -o ${SKBUILD_PLATLIB_DIR}/${SKBUILD_PROJECT_NAME}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating Python stub file for _scarabee"
+)
+
+# The install directory is the output (wheel) directory
+install(TARGETS _scarabee LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME} ) 
