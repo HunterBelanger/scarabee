@@ -182,8 +182,8 @@ void NDLibrary::init() {
           scheme =
               std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
           for (std::size_t G = 0; G < dims[0]; G++) {
-            (*scheme)[G].first = cond_scheme(G, 0);
-            (*scheme)[G].second = cond_scheme(G, 1);
+            (*scheme)[G].first = static_cast<std::size_t>(cond_scheme(G, 0));
+            (*scheme)[G].second = static_cast<std::size_t>(cond_scheme(G, 1));
           }
         }
       };
@@ -496,7 +496,7 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
         chi.set_value(g, xs_1->chi(g));
       }
     }  // For all groups
-  }  // For 4 lumps
+  }    // For 4 lumps
 
   // Now we go through and normalize each group by the denom, and calculate Et
   for (std::size_t g = 0; g < ngroups_; g++) {
