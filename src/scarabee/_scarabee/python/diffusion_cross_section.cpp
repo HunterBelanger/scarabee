@@ -166,7 +166,7 @@ void init_DiffusionCrossSection(py::module& m) {
            py::arg("groups"), py::arg("flux"))
 
       .def("save", &DiffusionCrossSection::save,
-           "Saves a set of diffusion cross sections to a numpy file.\n\n"
+           "Saves a set of diffusion cross sections to a binary file.\n\n"
            "Parameters\n"
            "----------\n"
            "fname : str\n"
@@ -175,7 +175,7 @@ void init_DiffusionCrossSection(py::module& m) {
 
       .def_static(
           "load", &DiffusionCrossSection::load,
-          "Loads a set of diffusion cross sections from a numpy file.\n\n"
+          "Loads a set of diffusion cross sections from a binary file.\n\n"
           "Parameters\n"
           "----------\n"
           "fname : str\n"

@@ -3,10 +3,11 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
 
-#include <xtensor/xbuilder.hpp>
-#include <xtensor/xnpy.hpp>
+#include <cereal/archives/portable_binary.hpp>
 
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 
 namespace scarabee {
@@ -254,41 +255,35 @@ std::shared_ptr<DiffusionCrossSection> DiffusionCrossSection::condense(
 }
 
 void DiffusionCrossSection::save(const std::string& fname) const {
-  const std::size_t NG = this->ngroups();
-
-  xt::xtensor<double, 2> data = xt::zeros<double>({5 + NG, NG});
-
-  for (std::size_t g = 0; g < NG; g++) {
-    data(0, g) = this->D(g);
-    data(1, g) = this->Ea(g);
-    data(2, g) = this->Ef(g);
-    data(3, g) = this->vEf(g);
-    data(4, g) = this->chi(g);
-
-    // Save Es
-    for (std::size_t gout = 0; gout < NG; gout++) {
-      data(5 + g, gout) = this->Es(g, gout);
-    }
+  if (std::filesystem::exists(fname)) {
+    std::filesystem::remove(fname);
   }
 
-  // Now we save the data array to a NPY file
-  xt::dump_npy(fname, data);
+  std::ofstream file(fname, std::ios_base::binary);
+
+  cereal::PortableBinaryOutputArchive arc(file);
+
+  arc(*this);
 }
 
 std::shared_ptr<DiffusionCrossSection> DiffusionCrossSection::load(
     const std::string& fname) {
-  auto data = xt::load_npy<double>(fname);
+  if (std::filesystem::exists(fname) == false) {
+    std::stringstream mssg;
+    mssg << "The file \"" << fname << "\" does not exist.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
 
-  const std::size_t NG = data.shape()[1];
+  std::shared_ptr<DiffusionCrossSection> out(new DiffusionCrossSection());
 
-  xt::xtensor<double, 1> D = xt::view(data, 0, xt::all());
-  xt::xtensor<double, 1> Ea = xt::view(data, 1, xt::all());
-  xt::xtensor<double, 1> Ef = xt::view(data, 2, xt::all());
-  xt::xtensor<double, 1> vEf = xt::view(data, 3, xt::all());
-  xt::xtensor<double, 1> chi = xt::view(data, 4, xt::all());
-  xt::xtensor<double, 2> Es = xt::view(data, xt::range(5, 5 + NG), xt::all());
+  std::ifstream file(fname, std::ios_base::binary);
 
-  return std::make_shared<DiffusionCrossSection>(D, Ea, Es, Ef, vEf, chi);
+  cereal::PortableBinaryInputArchive arc(file);
+
+  arc(*out);
+
+  return out;
 }
 
 }  // namespace scarabee
