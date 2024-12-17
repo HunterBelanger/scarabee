@@ -198,6 +198,13 @@ void PWRAssembly::set_dancoff_num_azimuthal_angles(std::uint32_t n) {
 }
 
 void PWRAssembly::solve() {
+  if (ndl_ == nullptr) {
+    auto mssg =
+        "Cannot solve PWR assembly problem. Nuclear data library is None.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   if (pins_.size() == 0) {
     auto mssg = "Cannot solve PWR assembly problem. No pins provided.";
     spdlog::error(mssg);
