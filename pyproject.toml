@@ -18,15 +18,26 @@ authors = [
 ]
 description = "A lattice physics code for LWR analysis."
 requires-python = ">=3.9"
+keywords = ["lattice physics", "reactor physics", "neutron transport", "LWR"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 2 - Pre-Alpha",
   "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
   "Topic :: Scientific/Engineering",
   "Topic :: Scientific/Engineering :: Physics",
+  "Programming Language :: C++",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX",
+  "Operating System :: Unix",
+  "Operating System :: MacOS",
 ]
+
+[project.urls]
+homepage = "https://scarabee.readthedocs.io/en/latest/"
+documentation = "https://scarabee.readthedocs.io/en/latest/"
+source = "https://github.com/HunterBelanger/scarabee"
