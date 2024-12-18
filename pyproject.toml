@@ -41,3 +41,14 @@ classifiers = [
 homepage = "https://scarabee.readthedocs.io/en/latest/"
 documentation = "https://scarabee.readthedocs.io/en/latest/"
 source = "https://github.com/HunterBelanger/scarabee"
+
+[tool.cibuildwheel]
+skip = ["*musllinux*", "pp*"]
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-i686-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "i686", "aarch64"]
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+before-all = "dnf install -y libxkbcommon-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel"
