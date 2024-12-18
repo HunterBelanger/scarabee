@@ -483,58 +483,69 @@ ImApp::Pixel MOCPlotter::get_color(UniqueFSR ufsr) {
   if (ufsr.fsr != nullptr) {
     if (colorby == ColorBy::Cell) {
       // Do same check twice with mutex to make thread safe
-      if (cell_id_to_color.find(ufsr.fsr->id()) == cell_id_to_color.end()) {
+      auto it = cell_id_to_color.find(ufsr.fsr->id());
+      if (it == cell_id_to_color.end()) {
         // Check if cell id is in id_to_pixel
         create_color_mutex.lock();
         if (cell_id_to_color.find(ufsr.fsr->id()) == cell_id_to_color.end()) {
           // Get new random color for id
-          cell_id_to_color[ufsr.fsr->id()] = get_random_color();
+          pixel_color = get_random_color();
+          cell_id_to_color[ufsr.fsr->id()] = pixel_color;
         }
         create_color_mutex.unlock();
+      } else {
+        pixel_color = it->second;
       }
-      pixel_color = cell_id_to_color[ufsr.fsr->id()];
     } else if (colorby == ColorBy::UniqueCell) {
       // Do same check twice with mutex to make thread safe
-      if (unique_cell_to_color.find(ufsr) == unique_cell_to_color.end()) {
+      auto it = unique_cell_to_color.find(ufsr);
+      if (it == unique_cell_to_color.end()) {
         // Check if cell id is in id_to_pixel
         create_color_mutex.lock();
         if (unique_cell_to_color.find(ufsr) == unique_cell_to_color.end()) {
           // Get new random color for id
-          unique_cell_to_color[ufsr] = get_random_color();
+          pixel_color = get_random_color();
+          unique_cell_to_color[ufsr] = pixel_color;
         }
         create_color_mutex.unlock();
+      } else {
+        pixel_color = it->second;
       }
-      pixel_color = unique_cell_to_color[ufsr];
     } else if (colorby == ColorBy::Material) {
       // Color by material
       CrossSection* xs = ufsr.fsr->xs().get();
       // Do same check twice with mutex to make thread safe
-      if (material_id_to_color.find(xs) == material_id_to_color.end()) {
+      auto it = material_id_to_color.find(xs);
+      if (it == material_id_to_color.end()) {
         // Check if cell id is in id_to_pixel
         create_color_mutex.lock();
         if (material_id_to_color.find(xs) == material_id_to_color.end()) {
           // Get new random color for id
-          material_id_to_color[xs] = get_random_color();
+          pixel_color = get_random_color();
+          material_id_to_color[xs] = pixel_color;
         }
         create_color_mutex.unlock();
+      } else {
+        pixel_color = it->second;
       }
-      pixel_color = material_id_to_color[xs];
     } else {
       // Color by material name
       CrossSection* xs = ufsr.fsr->xs().get();
       // Do same check twice with mutex to make thread safe
-      if (material_name_to_color.find(xs->name()) ==
-          material_name_to_color.end()) {
+      auto it = material_name_to_color.find(xs->name());
+      if (it == material_name_to_color.end()) {
         // Check if cell id is in id_to_pixel
         create_color_mutex.lock();
         if (material_name_to_color.find(xs->name()) ==
             material_name_to_color.end()) {
           // Get new random color for id
-          material_name_to_color[xs->name()] = get_random_color();
+          pixel_color = get_random_color();
+          material_name_to_color[xs->name()] = pixel_color;
         }
         create_color_mutex.unlock();
+      } else {
+        pixel_color = it->second;
       }
-      pixel_color = material_name_to_color[xs->name()];
     }
   }
   return pixel_color;
