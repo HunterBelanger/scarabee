@@ -57,7 +57,7 @@ Similarly, our system is homogeneous so we can disregard the position arguments.
 Finally, we are mostly concerned with the energy spectrum in the resonance
 range. These energies are far too low for the birth of a fission neutron, so we
 can neglect the fission source term. Similarly, the main mechanism for neutrons
-to slow down in this energy regions is through elastic scattering. Elastic
+to slow down in this energy region is through elastic scattering. Elastic
 scattering always has a neutron yield of 1, and we will assume that it is
 isotropic in our case. Actually, since the material is infinite and homogeneous,
 we can neglect the direction parameter all together ! With all of these
@@ -71,8 +71,8 @@ simplifications, we arrive at the following simplified transport equation:
 To proceed any further, one must know the functional form of
 :math:`\Es(E'\to E)`. We are assuming that there is only elastic scattering.
 We will also use the assumption that all target nuclei are at rest. This is a
-good approximation at the higher energies of the resolved resonance region,
-but is dubious at best at lower energies (near 1-20 eV in particular). If our
+good approximation at the higher energies of the resolved resonance region
+(though it can be dubious at lower energies, near 1-20 eV in particular). If our
 target nuclei are at rest, then we can use the asymptotic scattering kernel for
 nuclei :math:`i`, which has the following form:
 
@@ -98,11 +98,10 @@ contributions from the resonant isotope, :math:`r`, and all other isotopes:
 The next approximation we shall make is that that the total cross section for
 all the non-resonant isotopes :math:`m\ne r` is constant and equal to the
 potential scattering cross section (no absorption). For moderating materials,
-this is a valid approximation. If there are other resonant absorbers in our
-material, this still is not necessarily a bad approximation, as it is unlikely
-that the resonances of one nuclide will align with those of another. Such
-resonance overlap can and does occur however, and some codes have approximate
-means of treating this. In this case, we may substitute
+this is a valid approximation. Even if there are other resonant absorbers in our
+material, this is still not necessarily a bad approximation, as between
+resonances, the total cross section will be very nearly the potential cross
+section. In this case, we may substitute
 :math:`\sigma_{t,m}(E)\approx\sigma_{p,m}`, resulting in a new slowing-down
 equation:
 
@@ -116,14 +115,15 @@ This equation certainly represents an approximation if there are multiple
 resonant nuclides in a material. For now, we will simply hope that the
 resonances of other resonant nucleides in :math:`m\ne r` do not overlap with
 the resonances of :math:`r`. If this is the case, our approximation is not too
-bad. Unfortunately, however, there are different nuclides which have resonances
-which overlap, particularly when considering fuel depletion simulations. There
-are only approximate means of handling this problem, which will not be covered
-here. For the moderator isotopes, we will assume that that the average energy
-loss of a neutron which undergoes an elastic scatter is much larger than the
-width of a resonance in isotope :math:`r`. When this is the case, for most of
-the integration range when far from a resonance, we should expect the flux to
-approach the asymptotic flux without absorption [1]_ :
+bad. Unfortunately, however, resonance overlap with different nuclides does
+occur, particularly when considering fuel depletion simulations. There are only
+approximate means of handling this problem, which will not be covered here, as
+Scarabée does not employ any treatment for resonance overlap. For the moderator
+isotopes, we will assume that that the average energy lost by a neutron which
+undergoes an elastic scatter is much larger than the width of a resonance in
+isotope :math:`r`. When this is the case, for most of the integration range when
+far from a resonance, we should expect the flux to approach the asymptotic flux
+without absorption (:math:`1/E`) [Duderstadt]_ :
 
 .. math::
 
@@ -156,10 +156,10 @@ Narrow Resonance Approximation
 In this approximation, we will assume that scattering with the resonant isotope
 is dominated by potential scattering, and that the average energy lost in an
 elastic collision with :math:`r` is large compared to the width of the
-resonance. In this case, the resonance appears to be narrow with respect to the
-average energy loss of a neutron. With this, we can make similar approximations
-to the moderator, and treat scattering with the absorber material in the
-following manner:
+resonances in :math:`r`. In this case, a resonance appears to be narrow with
+respect to the average energy loss of a neutron. With this, we can make similar
+approximations to the moderator, and treat scattering with the absorber material
+in the following manner:
 
 .. math::
 
@@ -223,7 +223,7 @@ goes down), the depression would become larger and larger.
 An alternative to the narrow resonance approximation is the wide resonance
 approximation. We will not consider this case here, as Scarabée does not employ
 this approximation. The interested reader is encouraged to look at *Lattice
-Physics Computations* by Knott and Yamamoto for more details [2]_ .
+Physics Computations* by Knott and Yamamoto for more details [Knott]_ .
 
 Heterogeneous Media
 --------------------
@@ -482,7 +482,7 @@ so simple, as all the :math:`a_n` and :math:`b_n` terms must be modified. For
 two-term rational approximations, there is thankfully a known transformation
 that permits us to calculate :math:`\alpha_n` and :math:`\beta_n` which can be
 used to replace :math:`a_n` and :math:`b_n`. This transformation is taken from
-Gibson's PhD thesis [3]_ :
+Gibson's PhD thesis [Gibson]_ :
 
 .. math::
 
@@ -520,7 +520,7 @@ Due to these considerations, it is evident that each fuel pin should have its
 own unique Dancoff factor.
 
 To compute the Dancoff factor for each pin, Scarabée uses the *neutron current
-method* [2]_. This procedure performs two one-group fixed source transport
+method* [Knott]_. This procedure performs two one-group fixed source transport
 calculations: one for a single isolated fuel pin with vacuum boundary
 conditions, and a second for the true geometry of the assembly with the
 appropriate boundary conditions. In each simulation, the total cross section of
@@ -558,7 +558,7 @@ fuel pin in annular rings, often referred to as the *onion ring* effect.
 
 To account for this onion ring effect in the context of equivalence theory,
 Stoker and Weiss developed a method of generating spatially self-shielded cross
-sections for annular rings of a fuel pin [4]_ . In their derivation, the escape
+sections for annular rings of a fuel pin [Stoker]_ . In their derivation, the escape
 probability for the :math:`i\text{th}` ring of a fuel pin is written as
 
 .. math::
@@ -633,19 +633,19 @@ physics code must also have a resonance self-shielding treatment for the
 cladding of fuel pins. The Zirconium isotopes have many resonances, and
 neglecting their self-shielding can have a non-negligible effect. Scarabée uses
 the approach taken by the STREAM lattice physics code for the self-shielding of
-fuel pin cladding and guide tubes [5]_ . These regions are shielded at the same
+fuel pin cladding and guide tubes [Choi]_ . These regions are shielded at the same
 time, using Roman's two-term approximation for the escape probability, as if
 they were infinite slabs. Dancoff factors for each cladding and guide are also
 computed using the neutron current method, except the cladding regions are
 treated as the resonance regions instead of the fuel.
 
 
-.. [1] J. J. Duderstadt and L. J. Hamilton, *Nuclear Reactor Analysis*. John Wiley & Sons, 1976.
+.. [Duderstadt] \ J. J. Duderstadt and L. J. Hamilton, *Nuclear Reactor Analysis*. John Wiley & Sons, 1976.
 
-.. [2] D. Knott and A. Yamamoto, *Lattice Physics Computations* In *Handbook of Nuclear Engineering*, 2010.
+.. [Knott] \ D. Knott and A. Yamamoto, *Lattice Physics Computations* In *Handbook of Nuclear Engineering*, 2010.
 
-.. [3] N. Gibson, *Novel Resonance Self-Shielding Methods for Nuclear Reactor Analysis*, Massachusetts Institute of Technology, 2016.
+.. [Gibson] \ N. Gibson, *Novel Resonance Self-Shielding Methods for Nuclear Reactor Analysis*, Massachusetts Institute of Technology, 2016.
 
-.. [4] C. C. Stoker and Z. J. Weiss, *Spatially dependent resonance cross sections in a fuel rod*, Annals of Nuclear Energy, vol. 23, no. 9, pp. 765–778, 1996, doi: 10.1016/0306-4549(95)00074-7.
+.. [Stoker] \ C. C. Stoker and Z. J. Weiss, *Spatially dependent resonance cross sections in a fuel rod*, Annals of Nuclear Energy, vol. 23, no. 9, pp. 765–778, 1996, doi: 10.1016/0306-4549(95)00074-7.
 
-.. [5] S. Choi, H. Lee, S. G. Hong, and D. Lee, *Resonance self-shielding methodology of new neutron transport code STREAM*, Journal of Nuclear Science and Technology, vol. 52, no. 9, pp. 1133–1150, 2015, doi: 10.1080/00223131.2014.993738.
+.. [Choi] \ S. Choi, H. Lee, S. G. Hong, and D. Lee, *Resonance self-shielding methodology of new neutron transport code STREAM*, Journal of Nuclear Science and Technology, vol. 52, no. 9, pp. 1133–1150, 2015, doi: 10.1080/00223131.2014.993738.
