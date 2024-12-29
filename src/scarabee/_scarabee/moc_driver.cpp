@@ -144,7 +144,7 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   tracks_.clear();
 
   generate_azimuthal_quadrature(n_angles, d);
-  generate_tracks();
+  trace_tracks();
   segment_renormalization();
 
   if ((x_min_bc_ == BoundaryCondition::Periodic &&
@@ -849,7 +849,7 @@ void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
   }
 }
 
-void MOCDriver::generate_tracks() {
+void MOCDriver::trace_tracks() {
   spdlog::info("Tracing tracks");
 
   std::uint32_t n_track_angles_ =

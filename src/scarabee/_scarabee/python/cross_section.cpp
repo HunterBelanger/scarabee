@@ -297,7 +297,7 @@ void init_CrossSection(py::module& m) {
            "Parameters\n"
            "----------\n"
            "g : int\n"
-           "    Energy group.",
+           "    Energy group.\n\n",
            py::arg("g"))
 
       .def("Es_tr",
@@ -310,7 +310,7 @@ void init_CrossSection(py::module& m) {
            "gin : int\n"
            "      Incoming energy group.\n"
            "gout : int\n"
-           "       Outgoing energy group.",
+           "       Outgoing energy group.\n\n",
            py::arg("gin"), py::arg("gout"))
 
       .def("Es",
@@ -322,7 +322,7 @@ void init_CrossSection(py::module& m) {
            "l : int\n"
            "    Scattering moment.\n"
            "g : int\n"
-           "    Energy group.",
+           "    Energy group.\n\n",
            py::arg("l"), py::arg("g"))
 
       .def("Es",
@@ -336,7 +336,7 @@ void init_CrossSection(py::module& m) {
            "gin : int\n"
            "      Incoming energy group.\n"
            "gout : int\n"
-           "       Outgoing energy group.",
+           "       Outgoing energy group.\n\n",
            py::arg("l"), py::arg("gin"), py::arg("gout"))
 
       .def("condense", &CrossSection::condense,

@@ -131,7 +131,7 @@ void init_DiffusionCrossSection(py::module& m) {
            "Parameters\n"
            "----------\n"
            "g : int\n"
-           "    Energy group.",
+           "    Energy group.\n\n",
            py::arg("g"))
 
       .def("Es",
@@ -144,7 +144,7 @@ void init_DiffusionCrossSection(py::module& m) {
            "gin : int\n"
            "      Incoming energy group.\n"
            "gout : int\n"
-           "       Outgoing energy group.",
+           "       Outgoing energy group.\n\n",
            py::arg("gin"), py::arg("gout"))
 
       .def("condense", &DiffusionCrossSection::condense,

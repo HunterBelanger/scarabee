@@ -16,10 +16,10 @@ void init_CriticalitySpectrum(py::module& m) {
                              "Infinite multiplication factor")
 
       .def_property_readonly("B2", &CriticalitySpectrum::B2,
-                             "Critical buckling B^2")
+                             "Critical buckling :math:`B^2`")
 
       .def_property_readonly("buckling", &CriticalitySpectrum::buckling,
-                             "Critical buckling B^2")
+                             "Critical buckling :math:`B^2`")
 
       .def_property_readonly(
           "flux", py::overload_cast<>(&CriticalitySpectrum::flux, py::const_),

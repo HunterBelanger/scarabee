@@ -236,7 +236,7 @@ void MOCPlotter::render_controls() {
   if (ImGui::RadioButton("Unique Cell", reinterpret_cast<int*>(&colorby),
                          ColorBy::UniqueCell))
     must_rerender = true;
-  ImGui::SameLine();
+
   if (ImGui::RadioButton("Material", reinterpret_cast<int*>(&colorby),
                          ColorBy::Material))
     must_rerender = true;

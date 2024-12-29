@@ -36,7 +36,7 @@ void init_MOCDriver(py::module& m) {
            "         Boundary condition at the lower y boundary.\n"
            "ymaxbc : BoundaryCondition\n"
            "         Boundary condition at the upper y boundary.\n"
-           "anisotropic: Anisotropic Scattering\n"
+           "anisotropic : bool\n"
            "             Enable the anisotropic scattering solver.\n",
            py::arg("geometry"),
            py::arg("xminbc") = BoundaryCondition::Reflective,
@@ -45,9 +45,7 @@ void init_MOCDriver(py::module& m) {
            py::arg("ymaxbc") = BoundaryCondition::Reflective,
            py::arg("anisotropic") = false)
 
-      .def("generate_tracks",
-           py::overload_cast<std::uint32_t, double, PolarQuadrature>(
-               &MOCDriver::generate_tracks),
+      .def("generate_tracks", &MOCDriver::generate_tracks,
            "Traces tracks across the geometry for the calculation.\n\n"
            "Parameters\n"
            "----------\n"
@@ -138,7 +136,7 @@ void init_MOCDriver(py::module& m) {
            "    Direction vector for disambiguating the cell region.\n\n"
            "Returns\n"
            "float\n"
-           "     Volume of the FSR at r.",
+           "     Volume of the FSR at r.\n\n",
            py::arg("r"), py::arg("u"))
 
       .def("volume",
@@ -151,7 +149,7 @@ void init_MOCDriver(py::module& m) {
            "Returns\n"
            "-------\n"
            "float\n"
-           "     Volume of FSR i.\n",
+           "     Volume of FSR i.\n\n",
            py::arg("i"))
 
       .def("xs",
@@ -167,7 +165,7 @@ void init_MOCDriver(py::module& m) {
            "Returns\n"
            "-------\n"
            "CrossSection\n"
-           "            Material cross sections at r.\n",
+           "            Material cross sections at r.\n\n",
            py::arg("r"), py::arg("u"))
 
       .def("xs", py::overload_cast<std::size_t>(&MOCDriver::xs, py::const_),
@@ -179,7 +177,7 @@ void init_MOCDriver(py::module& m) {
            "Returns\n"
            "-------\n"
            "CrossSection\n"
-           "            Material cross sections at r.\n",
+           "            Material cross sections at r.\n\n",
            py::arg("i"))
 
       .def_property_readonly("keff", &MOCDriver::keff,
@@ -471,15 +469,15 @@ void init_MOCDriver(py::module& m) {
 
             // Rasterize flux
             for (std::size_t g = 0; g < md.ngroups(); g++) {
-              double y = md.y_min() + 0.5 * dy;
-              for (std::size_t j = 0; j < ny; j++) {
-                double x = md.x_min() + 0.5 * dx;
+#pragma omp parallel for
+              for (int ij = 0; ij < static_cast<int>(ny); ij++) {
+                const std::size_t j = static_cast<std::size_t>(ij);
+                const double y = md.y_min() + (static_cast<double>(j) + 0.5) * dy;
                 for (std::size_t i = 0; i < nx; i++) {
-                  Vector r(x, y);
+                  const double x = md.x_min() + (static_cast<double>(i) + 0.5) * dx;
+                  const Vector r(x, y);
                   flux(g, j, i) = md.flux(r, u, g);
-                  x += dx;
                 }
-                y += dy;
               }
             }
 
