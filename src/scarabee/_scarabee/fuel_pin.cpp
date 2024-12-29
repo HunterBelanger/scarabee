@@ -13,7 +13,7 @@ FuelPin::FuelPin(std::shared_ptr<Material> fuel, double fuel_radius,
                  std::shared_ptr<Material> gap,
                  std::optional<double> gap_radius,
                  std::shared_ptr<Material> clad, double clad_radius,
-                 std::size_t fuel_rings)
+                 std::size_t fuel_rings, bool needs_buffer)
     : fuel_(fuel),
       fuel_radius_(fuel_radius),
       gap_(gap),
@@ -21,7 +21,8 @@ FuelPin::FuelPin(std::shared_ptr<Material> fuel, double fuel_radius,
       clad_(clad),
       clad_radius_(clad_radius),
       fuel_rings_(fuel_rings),
-      condensed_xs_() {
+      condensed_xs_(),
+      needs_buffer_(needs_buffer) {
   if (gap_ == nullptr && gap_radius.has_value()) {
     auto mssg = "Fuel gap material is provided, but no gap radius.";
     spdlog::error(mssg);
@@ -210,6 +211,95 @@ std::shared_ptr<CylindricalCell> FuelPin::make_cylindrical_cell(
   mats.push_back(moderator);
 
   return std::make_shared<CylindricalCell>(radii, mats);
+}
+
+std::shared_ptr<CylindricalCell> FuelPin::make_cylindrical_cell(
+      double pitch, double buffer_radius, std::shared_ptr<CrossSection> buffer,
+      double dancoff_fuel, std::shared_ptr<CrossSection> moderator,
+      std::shared_ptr<NDLibrary> ndl, std::optional<double> dancoff_clad,
+      double clad_dilution) const {
+  // We first determine all the radii
+  std::vector<double> radii;
+  radii.reserve(fuel_rings_ + 4);
+
+  // Add the fuel radii
+  if (fuel_rings_ == 1) {
+    radii.push_back(fuel_radius_);
+  } else {
+    // We will subdivide the pellet into rings. Each ring will have the same
+    // volume. Start by getting pellet volume.
+    const double V = PI * fuel_radius_ * fuel_radius_;
+    const double Vr = V / static_cast<double>(fuel_rings_);
+    for (std::size_t r = 0; r < fuel_rings_; r++) {
+      const double Rin = r > 0 ? radii.back() : 0.;
+      double Rout = std::sqrt((Vr + PI * Rin * Rin) / PI);
+      if (Rout > fuel_radius_) Rout = fuel_radius_;
+      radii.push_back(Rout);
+    }
+  }
+
+  // Add gap radius
+  if (gap_) radii.push_back(gap_radius_);
+
+  // Add clad radius
+  radii.push_back(clad_radius_);
+
+  // Add water radius
+  radii.push_back(std::sqrt(pitch * pitch / PI));
+
+  // Add buffer radius
+  radii.push_back(buffer_radius);
+
+  // Next, we determine all the materials.
+  std::vector<std::shared_ptr<CrossSection>> mats;
+  mats.reserve(fuel_rings_ + 4);
+
+  // This requires applying self shielding to the fuel and cladding
+  if (fuel_rings_ == 1) {
+    // For a single pellet, use the standard Carlvik two-term
+    double Ee = 1.0 / (2.0 * fuel_radius_);  // Fuel escape xs
+    mats.push_back(fuel_->carlvik_xs(dancoff_fuel, Ee, ndl));
+    if (mats.back()->name() == "") mats.back()->set_name("Fuel");
+  } else {
+    // We need to apply spatial self shielding
+    for (std::size_t r = 0; r < fuel_rings_; r++) {
+      const double Rin = r > 0 ? radii[r - 1] : 0.;
+      const double Rout = radii[r];
+      mats.push_back(
+          fuel_->ring_carlvik_xs(dancoff_fuel, fuel_radius_, Rin, Rout, ndl));
+      if (mats.back()->name() == "") mats.back()->set_name("Fuel");
+    }
+  }
+
+  // Next, add the gap (if present)
+  if (gap_) {
+    std::vector<double> dilutions(gap_->size(), 1.0E10);
+    mats.push_back(gap_->dilution_xs(dilutions, ndl));
+    if (mats.back()->name() == "") mats.back()->set_name("Gap");
+  }
+
+  // Add the cladding
+  if (dancoff_clad) {
+    double Ee = 0.;
+    if (gap_) {
+      Ee = 1. / (2. * (clad_radius_ - gap_radius_));
+    } else {
+      Ee = 1. / (2. * (clad_radius_ - fuel_radius_));
+    }
+    mats.push_back(clad_->roman_xs(dancoff_clad.value(), Ee, ndl));
+  } else {
+    std::vector<double> dilutions(clad_->size(), clad_dilution);
+    mats.push_back(clad_->dilution_xs(dilutions, ndl));
+  }
+  if (mats.back()->name() == "") mats.back()->set_name("Clad");
+
+  // Add moderator
+  mats.push_back(moderator);
+
+  // Finally, add the buffer
+  mats.push_back(buffer);
+
+  return std::make_shared<CylindricalCell>(radii, mats);     
 }
 
 std::shared_ptr<PinCell> FuelPin::make_moc_cell(double pitch) const {

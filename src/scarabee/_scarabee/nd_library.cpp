@@ -441,6 +441,11 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
   XS1D Ef(xt::zeros<double>({ngroups_}));
   XS1D vEf(xt::zeros<double>({ngroups_}));
   XS1D chi(xt::zeros<double>({ngroups_}));
+  if (nuclide.chi) {
+    for (std::size_t g = 0; g < ngroups_; g++) {
+      chi.set_value(g, (*nuclide.chi)(g));
+    }
+  }
 
   // Denominators of the weighting factor for each energy group.
   xt::xtensor<double, 1> denoms = xt::zeros<double>({ngroups_});
@@ -449,6 +454,10 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
     const std::pair<double, double> eta_lm = this->eta_lm(m, Rfuel, Rin, Rout);
     const double eta_m = eta_lm.first;
     const double l_m = eta_lm.second;
+
+    // If eta_m is zero, then this m has no contribution to the xs.
+    // This happens for the last ring of a pin.
+    if (eta_m == 0.) continue;
 
     // Calculate the background xs
     const double bg_xs_1 =
@@ -475,28 +484,25 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
 
       // Add contributions to the xs
       // Compute the xs values
-      Dtr.set_value(g,
-                    Dtr(g) + eta_m * (b1 * xs_1->Dtr(g) + b2 * xs_2->Dtr(g)));
-      Ea.set_value(g, Ea(g) + eta_m * (b1 * xs_1->Ea(g) + b2 * xs_2->Ea(g)));
-      Ef.set_value(g, Ef(g) + eta_m * (b1 * xs_1->Ef(g) + b2 * xs_2->Ef(g)));
-      vEf.set_value(g,
-                    vEf(g) + eta_m * (b1 * xs_1->vEf(g) + b2 * xs_2->vEf(g)));
+      Dtr.set_value(g, Dtr(g) + eta_m * (b1 * flux_1_g * xs_1->Dtr(g) +
+                                         b2 * flux_2_g * xs_2->Dtr(g)));
+      Ea.set_value(g, Ea(g) + eta_m * (b1 * flux_1_g * xs_1->Ea(g) +
+                                       b2 * flux_2_g * xs_2->Ea(g)));
+      Ef.set_value(g, Ef(g) + eta_m * (b1 * flux_1_g * xs_1->Ef(g) +
+                                       b2 * flux_2_g * xs_2->Ef(g)));
+      vEf.set_value(g, vEf(g) + eta_m * (b1 * flux_1_g * xs_1->vEf(g) +
+                                         b2 * flux_2_g * xs_2->vEf(g)));
       for (std::size_t l = 0; l <= max_l; l++) {
         for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
-          Es->set_value(
-              l, g, g_out,
-              (*Es)(l, g, g_out) + eta_m * (b1 * xs_1->Es(l, g, g_out) +
-                                            b2 * xs_2->Es(l, g, g_out)));
+          const double new_val =
+              (*Es)(l, g, g_out) +
+              eta_m * (b1 * flux_1_g * xs_1->Es(l, g, g_out) +
+                       b2 * flux_2_g * xs_2->Es(l, g, g_out));
+          if (new_val != 0.) Es->set_value(l, g, g_out, new_val);
         }  // For all outgoing groups
       }
-
-      // Save the fission spectrum if we are in the first lump.
-      // This is fine to do as chi is not stored against temp or dilution.
-      if (m == 1) {
-        chi.set_value(g, xs_1->chi(g));
-      }
     }  // For all groups
-  }    // For 4 lumps
+  }  // For 4 lumps
 
   // Now we go through and normalize each group by the denom, and calculate Et
   for (std::size_t g = 0; g < ngroups_; g++) {
@@ -637,6 +643,12 @@ std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
                                             double Rin, double Rout) const {
   if (m == 0 || m > 4) {
     auto mssg = "Invalid m.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (Rin >= Rout) {
+    auto mssg = "Rin >= Rout.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }

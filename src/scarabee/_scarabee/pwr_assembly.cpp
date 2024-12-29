@@ -472,7 +472,7 @@ void PWRAssembly::get_fuel_dancoff_corrections() {
         const double C = (iso_flux - flux) / iso_flux;
         fuel_dancoff_corrections_.push_back(C);
       } else {
-        fuel_dancoff_corrections_.push_back(0.0);
+        fuel_dancoff_corrections_.push_back(0.);
       }
     }
   }
@@ -575,16 +575,17 @@ void PWRAssembly::pin_cell_calc() {
   for (const auto& pin : pins_)
     std::visit([this](const auto& P) { P->load_nuclides(ndl_); }, pin);
 
-  // First, get all fuel pin indices
+  // First, get all normal fuel pin indices (that don't need a buffer)
   std::vector<std::size_t> fp_inds;
   std::vector<std::size_t> other_inds;
   fp_inds.reserve(pins_.size());
   other_inds.reserve(pins_.size());
+  auto needs_buffer = [](const auto& p) { return p->needs_buffer(); };
   for (std::size_t i = 0; i < pins_.size(); i++) {
-    if (std::holds_alternative<std::shared_ptr<FuelPin>>(pins_[i])) {
-      fp_inds.push_back(i);
-    } else {
+    if (std::visit(needs_buffer, pins_[i])) {
       other_inds.push_back(i);
+    } else {
+      fp_inds.push_back(i);
     }
   }
 
@@ -592,7 +593,7 @@ void PWRAssembly::pin_cell_calc() {
   pin_1d_cells.resize(pins_.size(), nullptr);
   pin_1d_fluxes.resize(pins_.size(), nullptr);
 
-  // Now do all fuel pins
+  // Now do all normal fuel pins
 #pragma omp parallel for
   for (int ii = 0; ii < static_cast<int>(fp_inds.size()); ii++) {
     const std::size_t i = fp_inds[static_cast<std::size_t>(ii)];
@@ -614,15 +615,21 @@ void PWRAssembly::pin_cell_calc() {
   }
   *avg_fp_ *= 1. / static_cast<double>(fp_inds.size());
 
-  // Now we compute all of the non-fuel cells
+  // Now we compute all of the non-fuel cells, and fuel pins needing a buffer
   const double buffer_rad = std::sqrt(9. * pitch_ * pitch_ / PI);
 #pragma omp parallel for
   for (int ii = 0; ii < static_cast<int>(other_inds.size()); ii++) {
     const std::size_t i = other_inds[static_cast<std::size_t>(ii)];
+    const double fuel_dancoff = fuel_dancoff_corrections_[i];
     const double clad_dancoff = clad_dancoff_corrections_[i];
 
     const auto& pin_var = pins_[i];
-    if (std::holds_alternative<std::shared_ptr<GuideTube>>(pin_var)) {
+    if (std::holds_alternative<std::shared_ptr<FuelPin>>(pin_var)) {
+      const auto& pin = std::get<std::shared_ptr<FuelPin>>(pin_var);
+      pin_1d_cells[i] =
+          pin->make_cylindrical_cell(pitch_, buffer_rad, avg_fp_, fuel_dancoff,
+                                     moderator_xs_, ndl_, clad_dancoff);
+    } else if (std::holds_alternative<std::shared_ptr<GuideTube>>(pin_var)) {
       const auto& pin = std::get<std::shared_ptr<GuideTube>>(pin_var);
       pin_1d_cells[i] = pin->make_cylindrical_cell(
           pitch_, moderator_xs_, buffer_rad, avg_fp_, ndl_, clad_dancoff);
@@ -653,13 +660,15 @@ void PWRAssembly::condense_xs() {
   spdlog::info("Performing pin cell energy condensation");
   set_logging_level(LogLevel::warn);
 
+  auto needs_buffer = [](const auto& p) { return p->needs_buffer(); };
+
   for (int ii = 0; ii < static_cast<int>(pins_.size()); ii++) {
     const std::size_t i = static_cast<std::size_t>(ii);
     auto& pin = pins_[i];
     const auto& cell_flux = pin_1d_fluxes[i];
 
     std::size_t NR = cell_flux->nregions();
-    if (std::holds_alternative<std::shared_ptr<FuelPin>>(pin) == false) NR--;
+    if (std::visit(needs_buffer, pin)) NR--;
 
     for (std::size_t r = 0; r < NR; r++) {
       const auto& xs = cell_flux->xs(r);

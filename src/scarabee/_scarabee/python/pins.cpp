@@ -32,17 +32,20 @@ void init_FuelPin(py::module& m) {
       "    density.\n"
       "clad_radius : float\n"
       "    Outer radius of the cladding.\n"
-      "fuel_rings: int\n"
+      "fuel_rings : int\n"
       "    The number of rings into which the fuel pellet will be divided.\n"
-      "    Default value is 1.\n\n")
+      "    Default value is 1.\n"
+      "needs_buffer : bool\n"
+      "    Indicates if the fuel pin needs an outer \"buffer\" region to drive "
+      "the flux for the spectrum calculation. Default value is False.")
       .def(py::init<std::shared_ptr<Material> /*fuel*/, double /*fuel_radius*/,
                     std::shared_ptr<Material> /*gap*/,
                     std::optional<double> /*gap_radius*/,
                     std::shared_ptr<Material> /*clad*/, double /*clad_radius*/,
-                    std::size_t /*fuel_rings*/>(),
+                    std::size_t /*fuel_rings*/, bool /*needs_buffer*/>(),
            py::arg("fuel"), py::arg("fuel_radius"), py::arg("gap"),
            py::arg("gap_radius"), py::arg("clad"), py::arg("clad_radius"),
-           py::arg("fuel_rings") = 1);
+           py::arg("fuel_rings") = 1, py::arg("needs_buffer") = false);
 }
 
 void init_GuideTube(py::module& m) {

@@ -27,6 +27,8 @@ class GuideTube {
 
   Vector clad_offset() const;
 
+  bool needs_buffer() const { return true; }
+
   std::shared_ptr<SimplePinCell> make_fuel_dancoff_cell(
       double pitch, std::shared_ptr<Material> moderator) const;
 

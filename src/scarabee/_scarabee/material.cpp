@@ -519,10 +519,8 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
     const double Ni = this->atom_density(namei);
     const double pot_xs = nuclide.ir_lambda * nuclide.potential_xs;
     const double macro_pot_xs = Ni * pot_xs;
-    const double bg_xs_1 =
-        (lambda_potential_xs() - macro_pot_xs + a1 * Ee) / Ni;
-    const double bg_xs_2 =
-        (lambda_potential_xs() - macro_pot_xs + a2 * Ee) / Ni;
+    const double bg_xs_1 = (mat_pot_xs - macro_pot_xs + a1 * Ee) / Ni;
+    const double bg_xs_2 = (mat_pot_xs - macro_pot_xs + a2 * Ee) / Ni;
 
     std::shared_ptr<CrossSection> xsi{nullptr};
 
