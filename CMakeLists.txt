@@ -76,7 +76,17 @@ FetchContent_MakeAvailable(xtensor)
 #===============================================================================
 # Find Pybind11 from Scikit-Build-Core
 set(PYBIND11_NEWPYTHON ON)
-find_package(pybind11 CONFIG REQUIRED)
+find_package(pybind11 CONFIG QUIET)
+if (NOT pybind11_FOUND)
+  set(PYBIND11_FINDPYTHON ON)
+  message(STATUS "Downloading pybind11 v2.12.0")
+  FetchContent_Declare(pybind11
+    GIT_REPOSITORY https://github.com/pybind/pybind11
+    GIT_TAG        v2.12.0
+  )
+  FetchContent_MakeAvailable(pybind11)
+endif()
+
 execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/get_numpy_includes.py
                 OUTPUT_VARIABLE NUMPY_INCLUDE_DIRS
                 OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -263,12 +273,14 @@ if(SCARABEE_USE_OMP)
   endif()
 endif()
 
-# Generate stub file for type completion
-add_custom_command(TARGET _scarabee POST_BUILD
-    COMMAND stubgen --include-docstrings -m _scarabee -o ${SKBUILD_PLATLIB_DIR}/${SKBUILD_PROJECT_NAME}
-    WORKING_DIRECTORY $<TARGET_FILE_DIR:_scarabee> 
-    COMMENT "Generating Python stub file for _scarabee"
-)
+if (SKBUILD_PROJECT_NAME)
+  # Generate stub file for type completion
+  add_custom_command(TARGET _scarabee POST_BUILD
+      COMMAND stubgen --include-docstrings -m _scarabee -o ${SKBUILD_PLATLIB_DIR}/${SKBUILD_PROJECT_NAME}
+      WORKING_DIRECTORY $<TARGET_FILE_DIR:_scarabee> 
+      COMMENT "Generating Python stub file for _scarabee"
+  )
 
-# The install directory is the output (wheel) directory
-install(TARGETS _scarabee LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME} ) 
+  # The install directory is the output (wheel) directory
+  install(TARGETS _scarabee LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME} ) 
+endif()
