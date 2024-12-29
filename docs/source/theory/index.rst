@@ -9,6 +9,6 @@ Methods and Theory
 
    lattice_calcs.rst
    self_shielding.rst
-   collision_probs.rst
-   moc.rst
+   pin_cell_calc.rst
+   assembly_calc.rst
    nodal_diffusion.rst
