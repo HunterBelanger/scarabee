@@ -1,6 +1,5 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/iostream.h>
 
 #include <xtensor-python/pytensor.hpp>
 
@@ -121,9 +120,7 @@ void init_PWRAssembly(py::module& m) {
            py::arg("ndl"))
 
       .def("solve", &PWRAssembly::solve,
-           "Solve the assembly, generating few-group diffusion constants.",
-           py::call_guard<py::scoped_ostream_redirect,
-                          py::scoped_estream_redirect>())
+           "Solve the assembly, generating few-group diffusion constants.")
 
       .def("save_diffusion_data", &PWRAssembly::save_diffusion_data,
            "Saves the diffusion data to a numpy zip file.\n\n"

@@ -1,6 +1,5 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/iostream.h>
 #include <xtensor-python/pytensor.hpp>
 
 #include <cylindrical_cell.hpp>
@@ -40,9 +39,7 @@ void init_CylindricalCell(py::module& m) {
            "----------\n"
            "parallel : bool\n"
            "  If True, solves the cell in parallel. Default is False.\n",
-           py::arg("parallel") = false,
-           py::call_guard<py::scoped_ostream_redirect,
-                          py::scoped_estream_redirect>())
+           py::arg("parallel") = false)
 
       .def_property_readonly("ngroups", &CylindricalCell::ngroups,
                              "Number of energy groups.")
