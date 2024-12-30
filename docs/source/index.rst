@@ -19,6 +19,7 @@ problems, better understanding reactor physics and the core design process.
    :caption: Contents:
 
    theory/index 
+   examples/index
    api/index 
 
 Indices and tables

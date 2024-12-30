@@ -4,3 +4,4 @@ sphinx-numfig
 numpy
 nbsphinx>=0.7.1
 jupyter
+pandoc
