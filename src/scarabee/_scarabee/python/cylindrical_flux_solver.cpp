@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/iostream.h>
 #include <xtensor-python/pytensor.hpp>
 
 #include <cylindrical_flux_solver.hpp>
@@ -184,7 +185,9 @@ void init_CylindricalFluxSolver(py::module& m) {
            "----------\n"
            "parallel : bool\n"
            "  If True, solves the cell in parallel. Default is False.\n",
-           py::arg("parallel") = false)
+           py::arg("parallel") = false,
+           py::call_guard<py::scoped_ostream_redirect,
+                          py::scoped_estream_redirect>())
 
       .def("homogenize",
            py::overload_cast<>(&CylindricalFluxSolver::homogenize, py::const_),

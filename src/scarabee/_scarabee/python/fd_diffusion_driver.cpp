@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/iostream.h>
 
 #include <xtensor-python/pytensor.hpp>
 
@@ -24,7 +25,9 @@ void init_FDDiffusionDriver(py::module& m) {
            "geom : DiffusionGeometry\n"
            "       Problem deffinition to solve.")
 
-      .def("solve", &FDDiffusionDriver::solve, "Solves the diffusion problem.")
+      .def("solve", &FDDiffusionDriver::solve, "Solves the diffusion problem.",
+           py::call_guard<py::scoped_ostream_redirect,
+                          py::scoped_estream_redirect>())
 
       .def_property_readonly(
           "geometry", &FDDiffusionDriver::geometry,

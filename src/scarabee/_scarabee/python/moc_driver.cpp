@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/iostream.h>
 
 #include <xtensor-python/pytensor.hpp>
 #include <ImApp/imapp.hpp>
@@ -55,7 +56,9 @@ void init_MOCDriver(py::module& m) {
            "    Max spacing between tracks of a given angle (in cm).\n"
            "polar_quad : PolarQuadrature\n"
            "             Polar quadrature for generating segment lengths.",
-           py::arg("nangles"), py::arg("d"), py::arg("polar_quad"))
+           py::arg("nangles"), py::arg("d"), py::arg("polar_quad"),
+           py::call_guard<py::scoped_ostream_redirect,
+                          py::scoped_estream_redirect>())
 
       .def(
           "generate_tracks",
@@ -70,7 +73,9 @@ void init_MOCDriver(py::module& m) {
           "    Max spacing between tracks of a given angle (in cm).\n"
           "polar_quad : PolarQuadrature\n"
           "             Polar quadrature for generating segment lengths.",
-          py::arg("nangles"), py::arg("d"), py::arg("polar_quad"))
+          py::arg("nangles"), py::arg("d"), py::arg("polar_quad"),
+          py::call_guard<py::scoped_ostream_redirect,
+                         py::scoped_estream_redirect>())
 
       .def_property_readonly(
           "drawn", &MOCDriver::drawn,
@@ -194,7 +199,9 @@ void init_MOCDriver(py::module& m) {
       .def_property_readonly("polar_quadrature", &MOCDriver::polar_quadrature,
                              "Quadrature used for polar angle integration.")
 
-      .def("solve", &MOCDriver::solve, "Begins iterations to solve problem.")
+      .def("solve", &MOCDriver::solve, "Begins iterations to solve problem.",
+           py::call_guard<py::scoped_ostream_redirect,
+                          py::scoped_estream_redirect>())
 
       .def_property(
           "sim_mode",
@@ -472,9 +479,11 @@ void init_MOCDriver(py::module& m) {
 #pragma omp parallel for
               for (int ij = 0; ij < static_cast<int>(ny); ij++) {
                 const std::size_t j = static_cast<std::size_t>(ij);
-                const double y = md.y_min() + (static_cast<double>(j) + 0.5) * dy;
+                const double y =
+                    md.y_min() + (static_cast<double>(j) + 0.5) * dy;
                 for (std::size_t i = 0; i < nx; i++) {
-                  const double x = md.x_min() + (static_cast<double>(i) + 0.5) * dx;
+                  const double x =
+                      md.x_min() + (static_cast<double>(i) + 0.5) * dx;
                   const Vector r(x, y);
                   flux(g, j, i) = md.flux(r, u, g);
                 }
