@@ -164,7 +164,6 @@ FetchContent_MakeAvailable(cereal)
 pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/water.cpp
                               src/scarabee/_scarabee/logging.cpp
-                              src/scarabee/_scarabee/gauss_kronrod.cpp
                               src/scarabee/_scarabee/chebyshev.cpp
                               src/scarabee/_scarabee/math.cpp
                               src/scarabee/_scarabee/cross_section.cpp
@@ -181,8 +180,6 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/pin_cell.cpp
                               src/scarabee/_scarabee/cartesian_2d.cpp
                               src/scarabee/_scarabee/track.cpp
-                              src/scarabee/_scarabee/legendre.cpp
-                              src/scarabee/_scarabee/yamamoto_tabuchi.cpp
                               src/scarabee/_scarabee/moc_driver.cpp
                               src/scarabee/_scarabee/moc_plotter.cpp
                               src/scarabee/_scarabee/criticality_spectrum.cpp
