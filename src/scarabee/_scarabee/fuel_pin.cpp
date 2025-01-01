@@ -214,10 +214,10 @@ std::shared_ptr<CylindricalCell> FuelPin::make_cylindrical_cell(
 }
 
 std::shared_ptr<CylindricalCell> FuelPin::make_cylindrical_cell(
-      double pitch, double buffer_radius, std::shared_ptr<CrossSection> buffer,
-      double dancoff_fuel, std::shared_ptr<CrossSection> moderator,
-      std::shared_ptr<NDLibrary> ndl, std::optional<double> dancoff_clad,
-      double clad_dilution) const {
+    double pitch, double buffer_radius, std::shared_ptr<CrossSection> buffer,
+    double dancoff_fuel, std::shared_ptr<CrossSection> moderator,
+    std::shared_ptr<NDLibrary> ndl, std::optional<double> dancoff_clad,
+    double clad_dilution) const {
   // We first determine all the radii
   std::vector<double> radii;
   radii.reserve(fuel_rings_ + 4);
@@ -299,7 +299,7 @@ std::shared_ptr<CylindricalCell> FuelPin::make_cylindrical_cell(
   // Finally, add the buffer
   mats.push_back(buffer);
 
-  return std::make_shared<CylindricalCell>(radii, mats);     
+  return std::make_shared<CylindricalCell>(radii, mats);
 }
 
 std::shared_ptr<PinCell> FuelPin::make_moc_cell(double pitch) const {
