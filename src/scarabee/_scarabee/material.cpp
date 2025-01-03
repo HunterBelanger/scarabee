@@ -5,9 +5,20 @@
 #include <utils/scarabee_exception.hpp>
 
 #include <algorithm>
+#include <map>
 #include <sstream>
 
 namespace scarabee {
+
+std::string nuclide_name_to_simple_name(const std::string& name) {
+  // Must remove any _ from nuclide name (for TSLs like H1_H2O)
+  std::string simp_name = name;
+  auto loc_undr_scr = simp_name.find('_');
+  if (loc_undr_scr != std::string::npos) {
+    simp_name.resize(loc_undr_scr);
+  }
+  return simp_name;
+}
 
 MaterialComposition::MaterialComposition(Fraction f, const std::string& name)
     : nuclides(), fractions(f), name(name) {}
@@ -300,6 +311,16 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
   }
 }
 
+void Material::set_temperature(double T) {
+  if (T <= 0.) {
+    auto mssg = "Material temperature must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  temperature_ = T;
+}
+
 double Material::atom_density(const std::string& name) const {
   for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
     if (composition_.nuclides[i].name == name) {
@@ -552,6 +573,118 @@ void Material::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
     auto& nuc_handle = ndl->get_nuclide(nuc.name);
     nuc_handle.load_xs_from_hdf5(*ndl, max_l_);
   }
+}
+
+std::shared_ptr<Material> mix_materials(
+    const std::vector<std::shared_ptr<Material>>& mats,
+    std::vector<double> fracs, Fraction f, std::shared_ptr<NDLibrary> ndl) {
+  /* This method was directly taken from OpenMC's Python API. */
+
+  // Make sure all fractions are positive
+  for (const auto& v : fracs) {
+    if (v <= 0.) {
+      auto mssg = "All fractions must be > 0.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+  }
+
+  // Make sure all materials are defined
+  for (const auto& m : mats) {
+    if (m == nullptr) {
+      auto mssg = "No material can be None.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+  }
+
+  if (fracs.size() != mats.size()) {
+    auto mssg = "Materials and fractions lists must have same length.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (fracs.size() == 0) {
+    auto mssg = "Materials and fractions lists must have a length > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (ndl == nullptr) {
+    auto mssg = "Provided NDLibrary cannot be None.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // First, we normalize the fractions
+  double norm = std::accumulate(fracs.begin(), fracs.end(), 0.);
+  for (auto& v : fracs) v /= norm;
+
+  std::vector<double> wgts(mats.size(), 0.);
+
+  for (std::size_t m = 0; m < mats.size(); m++) {
+    if (f == Fraction::Atoms) {
+      wgts[m] =
+          fracs[m] * mats[m]->average_molar_mass() / mats[m]->grams_per_cm3();
+    } else {
+      // Weight
+      wgts[m] = fracs[m] / mats[m]->grams_per_cm3();
+    }
+  }
+
+  // Normalize weights
+  norm = std::accumulate(wgts.begin(), wgts.end(), 0.);
+  for (auto& v : wgts) v /= norm;
+
+  // Compute average temperature
+  double avg_T = 0.;
+  for (std::size_t m = 0; m < mats.size(); m++) {
+    avg_T += wgts[m] * mats[m]->temperature();
+  }
+
+  std::map<std::string, double> atoms_per_cc;
+  std::map<std::string, double> mass_per_cc;
+  for (std::size_t m = 0; m < mats.size(); m++) {
+    const auto& mat = mats[m];
+    const double wgt = wgts[m];
+
+    for (std::size_t n = 0; n < mat->composition().nuclides.size(); n++) {
+      const auto& nuc_info = mat->composition().nuclides[n];
+      const std::string nuc_name = nuc_info.name;
+      const std::string simp_name = nuclide_name_to_simple_name(nuc_name);
+      const auto& nuc_frac = nuc_info.fraction;
+      const double atms_per_bcm = mat->atom_density(nuc_name);
+      const double atms_per_cc = wgt * 1.E24 * atms_per_bcm;
+      atoms_per_cc[nuc_name] += atms_per_cc;
+      mass_per_cc[nuc_name] +=
+          atms_per_cc * ISOTOPE_MASSES.at(simp_name) / (N_AVAGADRO * 1.E24);
+    }
+  }
+
+  double tot_atoms_per_cc = 0.;
+  for (const auto& nuc : atoms_per_cc) tot_atoms_per_cc += nuc.second;
+  double density = 0.;
+  for (const auto& nuc : mass_per_cc) density += nuc.second;
+
+  // Create material name
+  std::string new_name("");
+  for (std::size_t m = 0; m < mats.size(); m++) {
+    new_name.append(mats[m]->name());
+
+    if (m != mats.size() - 1) {
+      new_name.append("-");
+    }
+  }
+
+  // Make new material
+  MaterialComposition new_mat_comp(Fraction::Atoms, new_name);
+  for (const auto& name_N_pair : atoms_per_cc) {
+    new_mat_comp.add_nuclide(name_N_pair.first,
+                             name_N_pair.second / tot_atoms_per_cc);
+  }
+
+  return std::make_shared<Material>(new_mat_comp, avg_T, density,
+                                    DensityUnits::g_cm3, ndl);
 }
 
 }  // namespace scarabee

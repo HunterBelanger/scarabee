@@ -273,8 +273,9 @@ void init_Material(py::module& m) {
       .def_property_readonly("size", &Material::size,
                              "Number of nuclides in the material.")
 
-      .def_property_readonly("temperature", &Material::temperature,
-                             "Temperature of the material in kelvin.")
+      .def_property("temperature", &Material::temperature,
+                    &Material::set_temperature,
+                    "Temperature of the material in kelvin.")
 
       .def_property_readonly("average_molar_mass",
                              &Material::average_molar_mass,
@@ -308,4 +309,22 @@ void init_Material(py::module& m) {
 
       .def_property("name", &Material::name, &Material::set_name,
                     "String with the name of the Material.");
+
+  m.def("mix_materials", &mix_materials,
+        "Creates a new material defined as a mixture of materials.\n\n"
+        "Parameters\n"
+        "----------\n"
+        "mats : list of Material\n"
+        "       Materials in the mixture.\n"
+        "fracs : list of float\n"
+        "       Fraction for each material.\n"
+        "f : Fraction\n"
+        "    Indicates if provided fractions are in Atoms or Weight.\n"
+        "ndl : NDLibrary\n"
+        "      Nuclear data library.\n\n"
+        "Returns\n"
+        "-------\n"
+        "Material\n"
+        "  Mixture material with averaged temperature.\n",
+        py::arg("mats"), py::arg("fracs"), py::arg("f"), py::arg("ndl"));
 }

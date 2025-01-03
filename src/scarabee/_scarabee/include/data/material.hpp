@@ -79,6 +79,7 @@ class Material {
   double potential_xs() const { return potential_xs_; }
   double lambda_potential_xs() const { return lambda_potential_xs_; }
   double temperature() const { return temperature_; }
+  void set_temperature(double T);
   double average_molar_mass() const { return average_molar_mass_; }
 
   bool fissile() const { return fissile_; }
@@ -136,6 +137,10 @@ class Material {
         CEREAL_NVP(fissile_), CEREAL_NVP(resonant_));
   }
 };
+
+std::shared_ptr<Material> mix_materials(
+    const std::vector<std::shared_ptr<Material>>& mats,
+    std::vector<double> fracs, Fraction f, std::shared_ptr<NDLibrary> ndl);
 
 }  // namespace scarabee
 

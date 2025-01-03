@@ -48,3 +48,5 @@ Materials
 .. autofunction:: borated_water
 
 .. autofunction:: water_density
+
+.. autofunction:: mix_materials
