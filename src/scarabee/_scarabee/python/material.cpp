@@ -310,6 +310,14 @@ void init_Material(py::module& m) {
       .def_property("name", &Material::name, &Material::set_name,
                     "String with the name of the Material.");
 
+  py::enum_<MixingFraction>(m, "MixingFraction")
+      .value("Atoms", MixingFraction::Atoms,
+             "Indicates fractions are in Atoms.")
+      .value("Weight", MixingFraction::Weight,
+             "Indicates fractions are in Weight.")
+      .value("Volume", MixingFraction::Weight,
+             "Indicates fractions are in Volume.");
+
   m.def("mix_materials", &mix_materials,
         "Creates a new material defined as a mixture of materials.\n\n"
         "Parameters\n"
@@ -318,8 +326,8 @@ void init_Material(py::module& m) {
         "       Materials in the mixture.\n"
         "fracs : list of float\n"
         "       Fraction for each material.\n"
-        "f : Fraction\n"
-        "    Indicates if provided fractions are in Atoms or Weight.\n"
+        "f : MixingFraction\n"
+        "    Indicates if provided fractions are in Atoms, Weight, or Volume.\n"
         "ndl : NDLibrary\n"
         "      Nuclear data library.\n\n"
         "Returns\n"

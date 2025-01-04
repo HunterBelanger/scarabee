@@ -577,7 +577,8 @@ void Material::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
 
 std::shared_ptr<Material> mix_materials(
     const std::vector<std::shared_ptr<Material>>& mats,
-    std::vector<double> fracs, Fraction f, std::shared_ptr<NDLibrary> ndl) {
+    std::vector<double> fracs, MixingFraction f,
+    std::shared_ptr<NDLibrary> ndl) {
   /* This method was directly taken from OpenMC's Python API. */
 
   // Make sure all fractions are positive
@@ -623,12 +624,14 @@ std::shared_ptr<Material> mix_materials(
   std::vector<double> wgts(mats.size(), 0.);
 
   for (std::size_t m = 0; m < mats.size(); m++) {
-    if (f == Fraction::Atoms) {
+    if (f == MixingFraction::Atoms) {
       wgts[m] =
           fracs[m] * mats[m]->average_molar_mass() / mats[m]->grams_per_cm3();
-    } else {
-      // Weight
+    } else if (f == MixingFraction::Weight) {
       wgts[m] = fracs[m] / mats[m]->grams_per_cm3();
+    } else {
+      // Volume
+      wgts[m] = fracs[m];
     }
   }
 

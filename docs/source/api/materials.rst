@@ -49,4 +49,7 @@ Materials
 
 .. autofunction:: water_density
 
+.. autoclass:: MixingFraction
+   :members:
+
 .. autofunction:: mix_materials

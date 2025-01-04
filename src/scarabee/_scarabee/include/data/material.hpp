@@ -138,9 +138,12 @@ class Material {
   }
 };
 
+enum class MixingFraction { Atoms, Weight, Volume };
+
 std::shared_ptr<Material> mix_materials(
     const std::vector<std::shared_ptr<Material>>& mats,
-    std::vector<double> fracs, Fraction f, std::shared_ptr<NDLibrary> ndl);
+    std::vector<double> fracs, MixingFraction f,
+    std::shared_ptr<NDLibrary> ndl);
 
 }  // namespace scarabee
 
