@@ -23,13 +23,13 @@ few_grp_cond_spec = np.array([[0, 18], [19, 24]])
 ref_few_grp_cond_spec = np.array([[0, 246], [247, 280]])
 
 # Set the default group strucutre
-fdy.set_default_group_structure("SHEM-281")
+fdy.set_default_group_structure("SHEM-361")
 
 fdy.set_default_max_legendre_moments(3)
 
 print(fdy.get_default_group_structure())
 
-h5 = h5py.File('endf8_shem281.h5', 'w')
+h5 = h5py.File('endf8_shem361.h5', 'w')
 #h5 = h5py.File('endf8_xmas172.h5', 'w')
 h5.attrs['group-structure'] = fdy.get_default_group_structure()
 h5.attrs['group-bounds'] = fdy.get_default_group_bounds()
@@ -61,17 +61,7 @@ N.tsl_type = "hh2o"
 N.label = "H1 in H2O from ENDF/B-8.0"
 N.temps = [283.6, 293.6, 300., 323.6, 350., 373.6, 400., 423.6, 450., 473.6, 500., 523.6, 550., 573.6, 600., 623.6, 650., 800.]
 N.dilutions = [1.E10]
-N.process(h5)
-
-N = fdy.FrendyMG()
-N.name = "H1_H2O_TC"
-N.endf_file = base + "n-001_H_001.endf"
-N.tsl_file = tslbase + "tsl-HinH2O.endf"
-N.tsl_type = "hh2o"
-N.label = "H1 in H2O from ENDF/B-8.0"
-N.temps = [283.6, 293.6, 300., 323.6, 350., 373.6, 400., 423.6, 450., 473.6, 500., 523.6, 550., 573.6, 600., 623.6, 650., 800.]
-N.dilutions = [1.E10]
-N.process(h5, chi)
+N.process(h5, chi) # Processed with in-scatter transport correction !
 
 N = fdy.FrendyMG()
 N.name = "H2_D2O"
@@ -81,7 +71,7 @@ N.tsl_type = "dd2o"
 N.label = "H2 in D2O from ENDF/B-8.0"
 N.temps = [283.6, 293.6, 300., 323.6, 350., 373.6, 400., 423.6, 450., 473.6, 500., 523.6, 550., 573.6, 600., 623.6, 650.]
 N.dilutions = [1.E10]
-N.process(h5)
+N.process(h5, chi) # Processed with in-scatter transport correction !
 
 # Free Gas Nuclides
 N = fdy.FrendyMG()
@@ -134,7 +124,7 @@ N.process(h5)
 
 N = fdy.FrendyMG()
 N.name = "Be9"
-N.endf_file = base + "n-003_Be_009.endf"
+N.endf_file = base + "n-004_Be_009.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
 N.dilutions = [1.E10]
