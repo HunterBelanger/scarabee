@@ -12,7 +12,7 @@ using namespace scarabee;
 void init_FluxCalculator(py::module& m) {
   py::class_<FluxCalculator>(
       m, "FluxCalculator",
-      "A FluxCalculator solve the neutron slowing down equation for a single "
+      "A FluxCalculator solves the neutron slowing down equation for a single "
       "resonant isotope plus any number of background isotopes which have "
       "constant "
       "cross sections and are pure scatterers.")
