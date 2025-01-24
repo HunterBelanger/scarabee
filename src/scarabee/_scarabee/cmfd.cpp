@@ -134,8 +134,10 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   xs_.resize({nx_, ny_});
   xs_.fill(nullptr);
 
-  // Allocate the flux array
+  // Allocate the flux, Et, and D_transp_corr arrays
   flux_ = xt::zeros<double>({ng_, nx_, ny_});
+  Et_ = xt::zeros<double>({ng_, nx_, ny_});
+  D_transp_corr_ = xt::zeros<double>({ng_, nx_, ny_});
 }
 
 std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
@@ -175,11 +177,11 @@ std::optional<std::size_t> CMFD::get_surface(const Vector& r,
   const std::size_t i = (*otile)[0];
   const std::size_t j = (*otile)[1];
 
-  // Now we get our surfaces for this tile
+  // Now we get our surfaces for this tile 
   const auto& x_n = x_bounds_[i];
-  const auto& x_p = x_bounds_[i + 1];
+  const auto& x_p = x_bounds_[i+1];
   const auto& y_n = y_bounds_[j];
-  const auto& y_p = y_bounds_[j + 1];
+  const auto& y_p = y_bounds_[j+1];
 
   // Get the distances
   const double dx_n = std::abs(x_n.x0() - r.x());
@@ -187,11 +189,10 @@ std::optional<std::size_t> CMFD::get_surface(const Vector& r,
   const double dy_n = std::abs(y_n.y0() - r.y());
   const double dy_p = std::abs(y_p.y0() - r.y());
 
-  if (dx_n < SURFACE_COINCIDENT) return j * x_bounds_.size() + i;
-  if (dx_p < SURFACE_COINCIDENT) return j * x_bounds_.size() + i + 1;
-  if (dy_n < SURFACE_COINCIDENT) return nx_surfs_ + i * y_bounds_.size() + j;
-  if (dy_p < SURFACE_COINCIDENT)
-    return nx_surfs_ + i * y_bounds_.size() + j + 1;
+  if (dx_n < SURFACE_COINCIDENT) return j*x_bounds_.size() + i;
+  if (dx_p < SURFACE_COINCIDENT) return j*x_bounds_.size() + i+1;
+  if (dy_n < SURFACE_COINCIDENT) return nx_surfs_ + i*y_bounds_.size() + j;
+  if (dy_p < SURFACE_COINCIDENT) return nx_surfs_ + i*y_bounds_.size() + j+1;
 
   // If we get here, we aren't on a surface
   return std::nullopt;
@@ -210,6 +211,10 @@ void CMFD::insert_fsr(const std::array<std::size_t, 2>& tile, std::size_t fsr) {
   // Compute linear index
   const std::size_t i = this->tile_to_indx(tile);
   temp_fsrs_.at(i).insert(fsr);
+}
+
+void CMFD::insert_fsr(std::size_t tile_indx, std::size_t fsr) {
+  temp_fsrs_.at(tile_indx).insert(fsr);
 }
 
 void CMFD::pack_fsr_lists() {
@@ -325,26 +330,76 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
   for (std::size_t i = 0; i < nx_; i++) {
     for (std::size_t j = 0; j < ny_; j++) {
       const auto indx = this->tile_to_indx(i, j);
-      const auto fg_xs = moc.homogenize(fsrs_[indx])->diffusion_xs();
+      const auto fg_xs = moc.homogenize(fsrs_[indx]);
+      const auto fg_dxs = fg_xs->diffusion_xs();
       const auto flux_spec = moc.homogenize_flux_spectrum(fsrs_[indx]);
       auto& xs = xs_(i, j);
       if (xs)
-        *xs = *fg_xs->condense(group_condensation_, flux_spec);
+        *xs = *(fg_dxs->condense(group_condensation_, flux_spec));
       else
-        xs = fg_xs->condense(group_condensation_, flux_spec);
+        xs = fg_dxs->condense(group_condensation_, flux_spec);
 
-      // Generate the flux values for the tile
+      // Generate the flux and Et values for the tile
       xt::view(flux_, xt::all(), i, j) = 0.;
+      xt::view(Et_, xt::all(), i, j) = 0.;
       for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
         flux_(moc_to_cmfd_group_map_[g], i, j) += flux_spec(g);
+        Et_(moc_to_cmfd_group_map_[g], i, j) += fg_xs->Et(g) * flux_spec(g);
       }
+      xt::view(Et_, xt::all(), i, j) /= xt::view(flux_, xt::all(), i, j);
     }
   }
 }
 
-void CMFD::solve(MOCDriver& moc) {
+void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::size_t g, const double keff) const {
+  // First, we get the spacing of the tile
+  const double dx = dx_[i];
+  const double dy = dy_[j];
+
+  // Next, get the surfaces for out tile
+  const double J_xn = surface_currents_.at(g, j*x_bounds_.size() + i);
+  const double J_xp = surface_currents_.at(g, j*x_bounds_.size() + i + 1);
+  const double J_yn = surface_currents_.at(g, nx_surfs_ + i*y_bounds_.size() + j);
+  const double J_yp = surface_currents_.at(g, nx_surfs_ + i*y_bounds_.size() + j + 1);
+
+  // Get the xs for our tile
+  const auto& xs = *xs_(i, j);
+  const double chi_g_keff = xs.chi(g) / keff;
+
+  // Compute the fission and scatter sources
+  double fiss_source = 0.;
+  double scat_source = 0.;
+  for (std::size_t gg = 0; gg < ng_; gg++) {
+    const double flx_gg = flux_.at(gg, i, j);
+    fiss_source += chi_g_keff * xs.vEf(gg) * flx_gg;
+    scat_source += xs.Es(gg, g) * flx_gg;
+  }
+
+  // Compute the total leakage from the currents
+  const double leak_rate = ((J_xp - J_xn) / dx) + ((J_yp - J_yn) / dy);
+
+  // Now compute the removal reaction rate
+  const double tot_reac_rate = Et_(g, i, j) * flux_.at(g, i, j);
+
+  // Compute the residual of the balance equation
+  const double residual = std::abs(leak_rate + tot_reac_rate - (scat_source + fiss_source));
+
+  if (residual >= 1.E-5) {
+    spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a neutron balance residual of {:.5E}.", i, j, g, residual);
+  }
+}
+
+void CMFD::solve(MOCDriver& moc, double keff) {
   this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
+
+  for (std::size_t i = 0; i < nx_; i++) {
+    for (std::size_t j = 0; j < ny_; j++) {
+      for (std::size_t g = 0; g < ng_; g++) {
+        this->check_neutron_balance(i, j, g, keff);
+      }
+    }
+  }
 }
 
 }  // namespace scarabee

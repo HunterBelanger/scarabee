@@ -181,6 +181,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/simple_pin_cell.cpp
                               src/scarabee/_scarabee/pin_cell.cpp
                               src/scarabee/_scarabee/cartesian_2d.cpp
+                              src/scarabee/_scarabee/cmfd.cpp
                               src/scarabee/_scarabee/track.cpp
                               src/scarabee/_scarabee/legendre.cpp
                               src/scarabee/_scarabee/yamamoto_tabuchi.cpp
@@ -221,6 +222,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/python/simple_pin_cell.cpp
                               src/scarabee/_scarabee/python/pin_cell.cpp
                               src/scarabee/_scarabee/python/cartesian_2d.cpp
+                              src/scarabee/_scarabee/python/cmfd.cpp
                               src/scarabee/_scarabee/python/moc_driver.cpp
                               src/scarabee/_scarabee/python/criticality_spectrum.cpp
                               src/scarabee/_scarabee/python/diffusion_data.cpp
