@@ -28,21 +28,21 @@ void init_MOCDriver(py::module& m) {
            "----------\n"
            "geometry : :py:class:`Cartesian2D`\n"
            "           Geometry for the problem.\n"
-           "xminbc : BoundaryCondition\n"
-           "         Boundary condition at the lower x boundary.\n"
-           "xmaxbc : BoundaryCondition\n"
-           "         Boundary condition at the upper x boundary.\n"
-           "yminbc : BoundaryCondition\n"
-           "         Boundary condition at the lower y boundary.\n"
-           "ymaxbc : BoundaryCondition\n"
-           "         Boundary condition at the upper y boundary.\n"
+           "x_min_bc : BoundaryCondition\n"
+           "           Boundary condition at the lower x boundary.\n"
+           "x_max_bc : BoundaryCondition\n"
+           "           Boundary condition at the upper x boundary.\n"
+           "y_min_bc : BoundaryCondition\n"
+           "           Boundary condition at the lower y boundary.\n"
+           "y_max_bc : BoundaryCondition\n"
+           "           Boundary condition at the upper y boundary.\n"
            "anisotropic : bool\n"
            "             Enable the anisotropic scattering solver.\n",
            py::arg("geometry"),
-           py::arg("xminbc") = BoundaryCondition::Reflective,
-           py::arg("xmaxbc") = BoundaryCondition::Reflective,
-           py::arg("yminbc") = BoundaryCondition::Reflective,
-           py::arg("ymaxbc") = BoundaryCondition::Reflective,
+           py::arg("x_min_bc") = BoundaryCondition::Reflective,
+           py::arg("x_max_bc") = BoundaryCondition::Reflective,
+           py::arg("y_min_bc") = BoundaryCondition::Reflective,
+           py::arg("y_max_bc") = BoundaryCondition::Reflective,
            py::arg("anisotropic") = false)
 
       .def("generate_tracks", &MOCDriver::generate_tracks,
@@ -79,12 +79,12 @@ void init_MOCDriver(py::module& m) {
       .def_property(
           "keff_tolerance", &MOCDriver::keff_tolerance,
           &MOCDriver::set_keff_tolerance,
-          "Maximum relative absolute difference in keff for convergence")
+          "Maximum relative absolute difference in keff for convergence.")
 
       .def_property(
           "flux_tolerance", &MOCDriver::flux_tolerance,
           &MOCDriver::set_flux_tolerance,
-          "Maximum relative absolute difference in flux for convergence")
+          "Maximum relative absolute difference in flux for convergence.")
 
       .def("flux",
            py::overload_cast<const Vector&, const Direction&, std::size_t,
@@ -270,7 +270,7 @@ void init_MOCDriver(py::module& m) {
 
       .def_property_readonly("solved", &MOCDriver::solved,
                              "True if solve has been run sucessfully (reset to "
-                             "false on generate_tracks).")
+                             "False on generate_tracks).")
 
       .def("get_all_fsr_in_cell", &MOCDriver::get_all_fsr_in_cell,
            "Obtains the index of all Flat Source Regions contained in the Cell "

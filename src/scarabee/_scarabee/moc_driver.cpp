@@ -735,7 +735,7 @@ void MOCDriver::fill_source(xt::xtensor<double, 2>& src,
       double Qout = 0.;
 
       for (std::uint32_t gg = 0; gg < ngroups_; gg++) {
-        // Sccatter source
+        // Scatter source
         const double flux_gg_i = flux(gg, i, 0);
         const double Es_gg_to_g = mat.Es_tr(gg, g);
         Qout += Es_gg_to_g * flux_gg_i;

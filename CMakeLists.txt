@@ -173,6 +173,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/nd_library.cpp
                               src/scarabee/_scarabee/cylindrical_cell.cpp
                               src/scarabee/_scarabee/cylindrical_flux_solver.cpp
+                              src/scarabee/_scarabee/transmission_probabilities.cpp
                               src/scarabee/_scarabee/surface.cpp
                               src/scarabee/_scarabee/flat_source_region.cpp
                               src/scarabee/_scarabee/cell.cpp
@@ -209,6 +210,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/python/nd_library.cpp
                               src/scarabee/_scarabee/python/cylindrical_cell.cpp
                               src/scarabee/_scarabee/python/cylindrical_flux_solver.cpp
+                              src/scarabee/_scarabee/python/transmission_probabilities.cpp
                               src/scarabee/_scarabee/python/polar_quadrature.cpp
                               src/scarabee/_scarabee/python/boundary_condition.cpp
                               src/scarabee/_scarabee/python/simulation_mode.cpp
