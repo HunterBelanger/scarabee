@@ -16,6 +16,7 @@ extern void init_NDLibrary(py::module&);
 extern void init_Nuclide(py::module&);
 extern void init_MaterialComposition(py::module&);
 extern void init_Material(py::module&);
+extern void init_FluxCalculator(py::module&);
 extern void init_CylindricalCell(py::module&);
 extern void init_CylindricalFluxSolver(py::module&);
 extern void init_TransmissionProbabilities(py::module&);
@@ -60,6 +61,7 @@ PYBIND11_MODULE(_scarabee, m) {
   init_Nuclide(m);
   init_MaterialComposition(m);
   init_Material(m);
+  init_FluxCalculator(m);
   init_CylindricalCell(m);
   init_CylindricalFluxSolver(m);
   init_TransmissionProbabilities(m);

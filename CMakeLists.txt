@@ -171,6 +171,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/diffusion_cross_section.cpp
                               src/scarabee/_scarabee/material.cpp
                               src/scarabee/_scarabee/nd_library.cpp
+                              src/scarabee/_scarabee/flux_calculator.cpp
                               src/scarabee/_scarabee/cylindrical_cell.cpp
                               src/scarabee/_scarabee/cylindrical_flux_solver.cpp
                               src/scarabee/_scarabee/transmission_probabilities.cpp
@@ -208,6 +209,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/python/diffusion_cross_section.cpp
                               src/scarabee/_scarabee/python/material.cpp
                               src/scarabee/_scarabee/python/nd_library.cpp
+                              src/scarabee/_scarabee/python/flux_calculator.cpp
                               src/scarabee/_scarabee/python/cylindrical_cell.cpp
                               src/scarabee/_scarabee/python/cylindrical_flux_solver.cpp
                               src/scarabee/_scarabee/python/transmission_probabilities.cpp

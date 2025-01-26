@@ -655,7 +655,6 @@ std::shared_ptr<Material> mix_materials(
       const auto& nuc_info = mat->composition().nuclides[n];
       const std::string nuc_name = nuc_info.name;
       const std::string simp_name = nuclide_name_to_simple_name(nuc_name);
-      const auto& nuc_frac = nuc_info.fraction;
       const double atms_per_bcm = mat->atom_density(nuc_name);
       const double atms_per_cc = wgt * 1.E24 * atms_per_bcm;
       atoms_per_cc[nuc_name] += atms_per_cc;

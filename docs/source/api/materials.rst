@@ -53,3 +53,7 @@ Materials
    :members:
 
 .. autofunction:: mix_materials
+
+.. autoclass:: FluxCalculator
+   :members:
+   :special-members: __init__
