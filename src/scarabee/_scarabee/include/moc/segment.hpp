@@ -3,6 +3,7 @@
 
 #include <moc/flat_source_region.hpp>
 #include <data/cross_section.hpp>
+#include <moc/cmfd.hpp>
 
 #include <xtensor/xtensor.hpp>
 
@@ -38,15 +39,17 @@ class Segment {
 
   std::size_t fsr_indx() const { return fsr_indx_; }
 
-  std::optional<std::size_t>& entry_cmfd_surface() {
+  CMFDSurfaceCrossing& entry_cmfd_surface() {
     return entry_cmfd_surface_;
   }
-  const std::optional<std::size_t>& entry_cmfd_surface() const {
+  const CMFDSurfaceCrossing& entry_cmfd_surface() const {
     return entry_cmfd_surface_;
   }
 
-  std::optional<std::size_t>& exit_cmfd_surface() { return exit_cmfd_surface_; }
-  const std::optional<std::size_t>& exit_cmfd_surface() const {
+  CMFDSurfaceCrossing& exit_cmfd_surface() { 
+    return exit_cmfd_surface_; 
+  }
+  const CMFDSurfaceCrossing& exit_cmfd_surface() const {
     return exit_cmfd_surface_;
   }
 
@@ -55,8 +58,9 @@ class Segment {
   double volume_;
   double length_;
   std::size_t fsr_indx_;
-  std::optional<std::size_t> entry_cmfd_surface_;
-  std::optional<std::size_t> exit_cmfd_surface_;
+  CMFDSurfaceCrossing entry_cmfd_surface_;
+  CMFDSurfaceCrossing entry_cmfd_surface_;
+
 
   friend class cereal::access;
   template <class Archive>

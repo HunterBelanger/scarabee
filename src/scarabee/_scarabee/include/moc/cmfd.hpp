@@ -20,6 +20,18 @@ namespace scarabee {
 
 class MOCDriver;
 
+struct CMFDSurfaceCrossing {
+//left, right, bottom, top, top right, bottom right, bottom left, top left 
+
+enum class Type : std::uint8_t {XN, XP, YN, YP, TP, BR, BL, TL};
+std::size_t cell_index_;
+bool is_valid_;
+Type crossing_;
+
+constexpr explicit operator bool() const noexcept { return is_valid; }
+
+};
+
 class CMFD {
  public:
   CMFD(const std::vector<double>& dx, const std::vector<double>& dy,

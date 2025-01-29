@@ -165,17 +165,26 @@ std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
   return std::nullopt;
 }
 
-std::optional<std::size_t> CMFD::get_surface(const Vector& r,
-                                             const Direction& u) const {
+CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u, const std::size_t& nx) const {
+  CMFDSurfaceCrossing surface;
+
   // First, we try to get a tile
   auto otile = this->get_tile(r, u);
   if (otile.has_value() == false) {
     otile = this->get_tile(r, -u);
   }
-  if (otile.has_value() == false) return std::nullopt;
+  if (otile.has_value() == false){
+    surface.is_valid_ = false;
+    return surface;
+  } 
+
+  const double angle = atan2(u.y(),u.x());
 
   const std::size_t i = (*otile)[0];
   const std::size_t j = (*otile)[1];
+
+  //assuming the cell index starts at the bottom left and goes left->right, bottom ->top
+  surface.cell_index_ = ((i+1)+(j*nx))-1;
 
   // Now we get our surfaces for this tile 
   const auto& x_n = x_bounds_[i];
@@ -189,13 +198,90 @@ std::optional<std::size_t> CMFD::get_surface(const Vector& r,
   const double dy_n = std::abs(y_n.y0() - r.y());
   const double dy_p = std::abs(y_p.y0() - r.y());
 
-  if (dx_n < SURFACE_COINCIDENT) return j*x_bounds_.size() + i;
-  if (dx_p < SURFACE_COINCIDENT) return j*x_bounds_.size() + i+1;
-  if (dy_n < SURFACE_COINCIDENT) return nx_surfs_ + i*y_bounds_.size() + j;
-  if (dy_p < SURFACE_COINCIDENT) return nx_surfs_ + i*y_bounds_.size() + j+1;
+  //start with corners
+  //top right
+  if (dx_p < SURFACE_COINCIDENT && dy_p < SURFACE_COINCIDENT) {
+    if (angle >= 0 && angle < 0.5*PI) {
+      surface.crossing_ = CMFDSurfaceCrossing::Type::TR;
+    }
+    else if (angle >= 0.5*PI && angle < PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::YP;
+    }
+    else if (angle >= PI && angle < 1.5*PI){
+      /**
+       * Not sure this makes sense, if a CMFD entry point is within a corner but going through
+       * the cell, what should the entry surface be? 
+       */
+      surface.crossing_ = CMFDSurfaceCrossing::Type::TR;
+    }
+    else if (angle >= 1.5*PI && angle < 2*PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::XP;
+    }
+  }
+  //bottom right
+  if (dx_p < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
+    if (angle >= 0 && angle < 0.5*PI) {
+      surface.crossing_ = CMFDSurfaceCrossing::Type::XP;
+    }
+    else if (angle >= 0.5*PI && angle < PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::BR;
+    }
+    else if (angle >= PI && angle < 1.5*PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::YN;
+    }
+    else if (angle >= 1.5*PI && angle < 2*PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::BR;
+    }
+  }
+  //bottom left
+  if (dx_n < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
+    if (angle >= 0 && angle < 0.5*PI) {
+      surface.crossing_ = CMFDSurfaceCrossing::Type::BL;
+    }
+    else if (angle >= 0.5*PI && angle < PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::XN;
+    }
+    else if (angle >= PI && angle < 1.5*PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::BL;
+    }
+    else if (angle >= 1.5*PI && angle < 2*PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::YN;
+    }
+  }
+  //top left
+  if (dx_n < SURFACE_COINCIDENT && dy_p < SURFACE_COINCIDENT) {
+    if (angle >= 0 && angle < 0.5*PI) {
+      surface.crossing_ = CMFDSurfaceCrossing::Type::YP;
+    }
+    else if (angle >= 0.5*PI && angle < PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::TL;
+    }
+    else if (angle >= PI && angle < 1.5*PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::XN;
+    }
+    else if (angle >= 1.5*PI && angle < 2*PI){
+      surface.crossing_ = CMFDSurfaceCrossing::Type::TL;
+    }
+  }
 
-  // If we get here, we aren't on a surface
-  return std::nullopt;
+  //does the angle need to be considered for normal crossings?
+  if (dx_p < SURFACE_COINCIDENT) {
+    surface.crossing_ = CMFDSurfaceCrossing::Type::XP;
+  }
+  else if (dx_n < SURFACE_COINCIDENT) {
+    surface.crossing_ = CMFDSurfaceCrossing::Type::XN;
+  }
+  else if (dy_p < SURFACE_COINCIDENT) {
+    surface.crossing_ = CMFDSurfaceCrossing::Type::YP;
+  }
+  else if (dy_n < SURFACE_COINCIDENT) {
+    surface.crossing_ = CMFDSurfaceCrossing::Type::YN;
+  }
+  
+  //not sure when this should be set
+  surface.is_valid_ = true;
+
+  return surface;
 }
 
 std::size_t CMFD::tile_to_indx(const std::array<std::size_t, 2>& tile) const {
