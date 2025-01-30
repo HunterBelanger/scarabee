@@ -23,8 +23,8 @@ class Segment {
         volume_(fsr->volume()),
         length_(length),
         fsr_indx_(indx),
-        entry_cmfd_surface_(std::nullopt),
-        exit_cmfd_surface_(std::nullopt) {}
+        entry_cmfd_surface_(),
+        exit_cmfd_surface_() {}
 
   // Here for use with cereal and std::vector
   Segment() {}
@@ -59,7 +59,7 @@ class Segment {
   double length_;
   std::size_t fsr_indx_;
   CMFDSurfaceCrossing entry_cmfd_surface_;
-  CMFDSurfaceCrossing entry_cmfd_surface_;
+  CMFDSurfaceCrossing exit_cmfd_surface_;
 
 
   friend class cereal::access;

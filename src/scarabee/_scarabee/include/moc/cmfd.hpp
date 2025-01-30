@@ -23,10 +23,10 @@ class MOCDriver;
 struct CMFDSurfaceCrossing {
 //left, right, bottom, top, top right, bottom right, bottom left, top left 
 
-enum class Type : std::uint8_t {XN, XP, YN, YP, TP, BR, BL, TL};
-std::size_t cell_index_;
-bool is_valid_;
-Type crossing_;
+enum class Type : std::uint8_t {XN, XP, YN, YP, TR, BR, BL, TL};
+std::size_t cell_index;
+bool is_valid;
+Type crossing;
 
 constexpr explicit operator bool() const noexcept { return is_valid; }
 
@@ -48,8 +48,8 @@ class CMFD {
   std::size_t tile_to_indx(const std::array<std::size_t, 2>& tile) const;
   std::size_t tile_to_indx(const std::size_t& i, const std::size_t& j) const;
 
-  std::optional<std::size_t> get_surface(const Vector& r,
-                                         const Direction& u) const;
+  CMFDSurfaceCrossing get_surface(const Vector& r,
+                                         const Direction& u, const std::size_t& nx) const;
 
   void insert_fsr(const std::array<std::size_t, 2>& tile, std::size_t fsr);
   void insert_fsr(std::size_t tile_indx, std::size_t fsr);
