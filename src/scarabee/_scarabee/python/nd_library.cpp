@@ -72,6 +72,7 @@ void init_NDLibrary(py::module& m) {
            "       Name of the desired nuclide.",
            py::arg("name"))
 
+/*
       .def("interp_xs", &NDLibrary::interp_xs,
            "Interpolates the cross section of the prescribed nuclide to the "
            "desired temperature and dilution.\n\n"
@@ -174,6 +175,7 @@ void init_NDLibrary(py::module& m) {
            py::arg("b1"), py::arg("b2"), py::arg("mat_pot_xs"), py::arg("N"),
            py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"),
            py::arg("max_l") = 1)
+*/
 
       .def("unload", &NDLibrary::unload,
            "Deallocates all NuclideHandles which contained raw nuclear data.")
@@ -183,6 +185,12 @@ void init_NDLibrary(py::module& m) {
 
       .def_property_readonly("ngroups", &NDLibrary::ngroups,
                              "Number of energy groups in the library.")
+
+      .def_property_readonly("first_resonant_group", &NDLibrary::first_resonant_group,
+                             "Index of the first resonant group in the library.")
+
+      .def_property_readonly("last_resonant_group", &NDLibrary::last_resonant_group,
+                             "Index of the last resonant group in the library.")
 
       .def_property_readonly("group_bounds", &NDLibrary::group_bounds,
                              "The boundaries of the energy groups for the "
