@@ -24,7 +24,7 @@ struct MicroNuclideXS {
   XS2D Es;
   XS1D Ea;
   XS1D Ef;
-  XS1D vEf;
+  XS1D nu;
   XS1D chi;
 };
 

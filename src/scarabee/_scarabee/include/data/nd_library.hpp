@@ -65,10 +65,11 @@ struct NuclideHandle {
   std::shared_ptr<xt::xtensor<double, 3>> res_p3_scatter;
   std::shared_ptr<xt::xtensor<double, 3>> res_fission;
   std::shared_ptr<xt::xtensor<double, 3>> res_n_gamma;
-  
 
   bool loaded() const { return absorption != nullptr; }
   void load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l);
+  void load_inf_data(const NDLibrary& ndl, const H5::Group& grp, std::size_t max_l);
+  void load_res_data(const NDLibrary& ndl, const H5::Group& grp, std::size_t max_l);
   void unload();
 };
 
@@ -106,10 +107,25 @@ class NDLibrary {
   NuclideHandle& get_nuclide(const std::string& name);
   const NuclideHandle& get_nuclide(const std::string& name) const;
 
-  std::pair<MicroNuclideXS, MicroDepletionXS> infinite_dilution_xs(const std::string& name, const double temp, std::size_t max_l = 1);
-  ResonantOneGroupXS dilution_xs(const std::string& name, std::size_t g, const double temp, const double dil, std::size_t max_l = 1);
-  ResonantOneGroupXS two_term_xs(const std::string& name, std::size_t g, const double temp, const double b1, const double b2, const double bg_xs_1, const double bg_xs_2, std::size_t max_l = 1);
-  ResonantOneGroupXS ring_two_term_xs(const std::string& name, std::size_t g, const double temp, const double a1, const double a2, const double b1, const double b2, const double mat_pot_xs, const double N, const double Rfuel, const double Rin, const double Rout, std::size_t max_l = 1);
+  std::pair<MicroNuclideXS, MicroDepletionXS> infinite_dilution_xs(
+      const std::string& name, const double temp, std::size_t max_l = 1);
+
+  ResonantOneGroupXS dilution_xs(const std::string& name, std::size_t g,
+                                 const double temp, const double dil,
+                                 std::size_t max_l = 1);
+
+  ResonantOneGroupXS two_term_xs(const std::string& name, std::size_t g,
+                                 const double temp, const double b1,
+                                 const double b2, const double bg_xs_1,
+                                 const double bg_xs_2, std::size_t max_l = 1);
+
+  ResonantOneGroupXS ring_two_term_xs(const std::string& name, std::size_t g,
+                                      const double temp, const double a1,
+                                      const double a2, const double b1,
+                                      const double b2, const double mat_pot_xs,
+                                      const double N, const double Rfuel,
+                                      const double Rin, const double Rout,
+                                      std::size_t max_l = 1);
 
   /*
   std::shared_ptr<CrossSection> interp_xs(const std::string& name,
@@ -160,17 +176,22 @@ class NDLibrary {
   void get_dil_interp_params(double dil, const NuclideHandle& nuc,
                              std::size_t& i, double& f) const;
 
-  void interp_temp(xt::xtensor<double, 1>& E, const xt::xtensor<double, 2>& nE, std::size_t it, double f_temp) const;
+  void interp_temp(xt::xtensor<double, 1>& E, const xt::xtensor<double, 2>& nE,
+                   std::size_t it, double f_temp) const;
 
-  double interp_temp_dil(const xt::xtensor<double, 3>& nE, std::size_t g, std::size_t it, double f_temp, std::size_t id, double f_dil) const;
+  double interp_temp_dil(const xt::xtensor<double, 3>& nE, std::size_t g,
+                         std::size_t it, double f_temp, std::size_t id,
+                         double f_dil) const;
 
   // E should be a 1D xtensor view
   // nE should be a 3D xtensor view
-  void NDLibrary::interp_temp_dil(auto& E, const auto& nE, std::size_t it, double f_temp, std::size_t id, double f_dil) const {
+  void NDLibrary::interp_temp_dil(auto& E, const auto& nE, std::size_t it,
+                                  double f_temp, std::size_t id,
+                                  double f_dil) const {
     if (f_temp > 0.) {
       if (f_dil > 0.) {
         E = (1. - f_temp) * ((1. - f_dil) * xt::view(nE, it, id, xt::all()) +
-                            f_dil * xt::view(nE, it, id + 1, xt::all())) +
+                             f_dil * xt::view(nE, it, id + 1, xt::all())) +
             f_temp * ((1. - f_dil) * xt::view(nE, it + 1, id, xt::all()) +
                       f_dil * xt::view(nE, it + 1, id + 1, xt::all()));
       } else {
@@ -187,7 +208,8 @@ class NDLibrary {
     }
   }
 
-  std::pair<double, double> eta_lm(std::size_t m, double Rfuel, double Rin, double Rout) const;
+  std::pair<double, double> eta_lm(std::size_t m, double Rfuel, double Rin,
+                                   double Rout) const;
 };
 
 }  // namespace scarabee
