@@ -164,8 +164,8 @@ std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
   // Return nullopt
   return std::nullopt;
 }
-
-CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u, const std::size_t& nx) const {
+//test in python by literally giving the arguments and seeing if the right answer is returned
+CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u) const {
   CMFDSurfaceCrossing surface;
 
   // First, we try to get a tile
@@ -178,13 +178,10 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u, const
     return surface;
   } 
 
-  const double angle = atan2(u.y(),u.x());
-
   const std::size_t i = (*otile)[0];
   const std::size_t j = (*otile)[1];
 
-  //assuming the cell index starts at the bottom left and goes left->right, bottom ->top
-  surface.cell_index = ((i+1)+(j*nx))-1;
+  surface.cell_index = tile_to_indx(*otile);
 
   // Now we get our surfaces for this tile 
   const auto& x_n = x_bounds_[i];
@@ -201,84 +198,62 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u, const
   //start with corners
   //top right
   if (dx_p < SURFACE_COINCIDENT && dy_p < SURFACE_COINCIDENT) {
-    if (angle >= 0 && angle < 0.5*PI) {
+    if (u.x() >= 0.0 && y.x() > 0.0) {
       surface.crossing = CMFDSurfaceCrossing::Type::TR;
     }
-    else if (angle >= 0.5*PI && angle < PI){
+    else if (u.x() < 0.0 && u.y() >= 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::YP;
     }
-    else if (angle >= PI && angle < 1.5*PI){
-      /**
-       * Not sure this makes sense, if a CMFD entry point is within a corner but going through
-       * the cell, what should the entry surface be? 
-       */
+    else if (u.x() =< 0.0 && u.y() < 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::TR;
     }
-    else if (angle >= 1.5*PI && angle < 2*PI){
+    else if (u.x() > 0.0 && u.y() =< 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::XP;
     }
-  }
-  //bottom right
-  if (dx_p < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
-    if (angle >= 0 && angle < 0.5*PI) {
+  } else if (dx_p < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
+    if (u.x() >= 0.0 && y.x() > 0.0) {
       surface.crossing = CMFDSurfaceCrossing::Type::XP;
-    }
-    else if (angle >= 0.5*PI && angle < PI){
+    } else if (u.x() < 0.0 && u.y() >= 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::BR;
-    }
-    else if (angle >= PI && angle < 1.5*PI){
+    } else if (u.x() =< 0.0 && u.y() < 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::YN;
-    }
-    else if (angle >= 1.5*PI && angle < 2*PI){
+    } else if (u.x() > 0.0 && u.y() =< 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::BR;
     }
-  }
-  //bottom left
-  if (dx_n < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
-    if (angle >= 0 && angle < 0.5*PI) {
+  } else if (dx_n < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
+    if (u.x() >= 0.0 && y.x() > 0.0) {
       surface.crossing = CMFDSurfaceCrossing::Type::BL;
-    }
-    else if (angle >= 0.5*PI && angle < PI){
+    } else if (u.x() < 0.0 && u.y() >= 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::XN;
-    }
-    else if (angle >= PI && angle < 1.5*PI){
+    } else if (u.x() =< 0.0 && u.y() < 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::BL;
-    }
-    else if (angle >= 1.5*PI && angle < 2*PI){
+    } else if (u.x() > 0.0 && u.y() =< 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::YN;
     }
-  }
-  //top left
-  if (dx_n < SURFACE_COINCIDENT && dy_p < SURFACE_COINCIDENT) {
-    if (angle >= 0 && angle < 0.5*PI) {
+  } else if (dx_n < SURFACE_COINCIDENT && dy_p < SURFACE_COINCIDENT) {
+    if (u.x() >= 0.0 && y.x() > 0.0) {
       surface.crossing = CMFDSurfaceCrossing::Type::YP;
-    }
-    else if (angle >= 0.5*PI && angle < PI){
+    } else if (u.x() < 0.0 && u.y() >= 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::TL;
-    }
-    else if (angle >= PI && angle < 1.5*PI){
+    } else if (u.x() =< 0.0 && u.y() < 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::XN;
-    }
-    else if (angle >= 1.5*PI && angle < 2*PI){
+    } else if (u.x() > 0.0 && u.y() =< 0.0){
       surface.crossing = CMFDSurfaceCrossing::Type::TL;
     }
-  }
-
-  //does the angle need to be considered for normal crossings?
-  if (dx_p < SURFACE_COINCIDENT) {
+  } else if (dx_p < SURFACE_COINCIDENT) {
     surface.crossing = CMFDSurfaceCrossing::Type::XP;
-  }
-  else if (dx_n < SURFACE_COINCIDENT) {
+  } else if (dx_n < SURFACE_COINCIDENT) {
     surface.crossing = CMFDSurfaceCrossing::Type::XN;
-  }
-  else if (dy_p < SURFACE_COINCIDENT) {
+  } else if (dy_p < SURFACE_COINCIDENT) {
     surface.crossing = CMFDSurfaceCrossing::Type::YP;
-  }
-  else if (dy_n < SURFACE_COINCIDENT) {
+  } else if (dy_n < SURFACE_COINCIDENT) {
     surface.crossing = CMFDSurfaceCrossing::Type::YN;
   }
   
-  //not sure when this should be set
+  else {
+    surface.is_valid = false;
+    return surface;
+  }
   surface.is_valid = true;
 
   return surface;

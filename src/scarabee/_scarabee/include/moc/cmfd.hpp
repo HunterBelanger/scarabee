@@ -30,6 +30,11 @@ Type crossing;
 
 constexpr explicit operator bool() const noexcept { return is_valid; }
 
+template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(cell_index),CEREAL_NVP(is_valid),CEREAL_NVP(crossing));
+  }
+
 };
 
 class CMFD {
@@ -49,7 +54,7 @@ class CMFD {
   std::size_t tile_to_indx(const std::size_t& i, const std::size_t& j) const;
 
   CMFDSurfaceCrossing get_surface(const Vector& r,
-                                         const Direction& u, const std::size_t& nx) const;
+                                         const Direction& u) const;
 
   void insert_fsr(const std::array<std::size_t, 2>& tile, std::size_t fsr);
   void insert_fsr(std::size_t tile_indx, std::size_t fsr);
