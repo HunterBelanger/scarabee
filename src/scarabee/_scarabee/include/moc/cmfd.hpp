@@ -31,9 +31,9 @@ Type crossing;
 constexpr explicit operator bool() const noexcept { return is_valid; }
 
 template <class Archive>
-  void serialize(Archive& arc) {
-    arc(CEREAL_NVP(cell_index),CEREAL_NVP(is_valid),CEREAL_NVP(crossing));
-  }
+void serialize(Archive& arc) {
+  arc(CEREAL_NVP(cell_index),CEREAL_NVP(is_valid),CEREAL_NVP(crossing));
+}
 
 };
 
