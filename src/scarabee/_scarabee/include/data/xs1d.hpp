@@ -16,6 +16,8 @@ namespace scarabee {
 
 class XS1D {
  public:
+  XS1D() : xs_() {}
+
   XS1D(const xt::xtensor<double, 1>& xs) : xs_(xs) {}
 
   double operator()(const std::size_t g) const {
@@ -78,6 +80,16 @@ class XS1D {
     return *this;
   }
 
+  XS1D& operator*=(const XS1D& xs2) {
+    if (this->ngroups() < xs2.ngroups()) {
+      this->resize(xs2.ngroups());
+    }
+
+    for (std::size_t g = 0; g < this->ngroups(); g++) xs_(g) *= xs2(g);
+
+    return *this;
+  }
+
   XS1D& operator/=(const double v) {
     xs_ /= v;
     return *this;
@@ -101,6 +113,12 @@ class XS1D {
     return out;
   }
 
+  XS1D operator*(const XS1D& xs2) const {
+    XS1D out(*this);
+    out *= xs2;
+    return out;
+  }
+
   XS1D operator/(const double v) const {
     XS1D out(*this);
     out /= v;
@@ -111,11 +129,6 @@ class XS1D {
   xt::xtensor<double, 1> xs_;
 
   friend class cereal::access;
-  friend class CrossSection;
-  friend class DiffusionCrossSection;
-
-  XS1D() : xs_() {}
-
   template <class Archive>
   void serialize(Archive& arc) {
     arc(CEREAL_NVP(xs_));

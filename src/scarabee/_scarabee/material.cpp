@@ -161,9 +161,10 @@ Material::Material(const MaterialComposition& comp, double temp,
       atoms_per_bcm_(-1.),
       grams_per_cm3_(-1.),
       potential_xs_(0.),
-      lambda_potential_xs_(0.),
       fissile_(false),
-      resonant_(false) {
+      resonant_(false),
+      micro_nuc_xs_data_(),
+      micro_dep_xs_data_() {
   // Make sure quantities are positive/valid
   if (temp <= 0.) {
     auto mssg = "Material temperature must be > 0.";
@@ -218,11 +219,8 @@ Material::Material(const MaterialComposition& comp, double temp,
   for (const auto& c : composition_.nuclides) {
     const auto& nuc = ndl->get_nuclide(c.name);
     potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
-    lambda_potential_xs_ +=
-        atoms_per_bcm_ * c.fraction * nuc.ir_lambda * nuc.potential_xs;
 
     if (nuc.fissile) fissile_ = true;
-
     if (nuc.resonant) resonant_ = true;
   }
 }
@@ -235,9 +233,10 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
       atoms_per_bcm_(-1.),
       grams_per_cm3_(-1.),
       potential_xs_(0.),
-      lambda_potential_xs_(0.),
       fissile_(false),
-      resonant_(false) {
+      resonant_(false),
+      micro_nuc_xs_data_(),
+      micro_dep_xs_data_() {
   // Make sure quantities are positive/valid
   if (temp <= 0.) {
     auto mssg = "Material temperature must be > 0.";
@@ -302,11 +301,8 @@ Material::Material(const MaterialComposition& comp, double temp, double density,
   for (const auto& c : composition_.nuclides) {
     const auto& nuc = ndl->get_nuclide(c.name);
     potential_xs_ += atoms_per_bcm_ * c.fraction * nuc.potential_xs;
-    lambda_potential_xs_ +=
-        atoms_per_bcm_ * c.fraction * nuc.ir_lambda * nuc.potential_xs;
 
     if (nuc.fissile) fissile_ = true;
-
     if (nuc.resonant) resonant_ = true;
   }
 }
@@ -378,7 +374,7 @@ void Material::normalize_fractions() {
 
 std::shared_ptr<CrossSection> Material::carlvik_xs(
     double C, double Ee, std::shared_ptr<NDLibrary> ndl,
-    std::optional<std::size_t> max_l) const {
+    std::optional<std::size_t> max_l) {
   if (max_l.has_value() == false) max_l = max_l_;
 
   // This implementation is based on the methods outlined by Koike and Gibson
@@ -395,7 +391,7 @@ std::shared_ptr<CrossSection> Material::carlvik_xs(
 
 std::shared_ptr<CrossSection> Material::roman_xs(
     double C, double Ee, std::shared_ptr<NDLibrary> ndl,
-    std::optional<std::size_t> max_l) const {
+    std::optional<std::size_t> max_l) {
   if (max_l.has_value() == false) max_l = max_l_;
   // This implementation is based on the methods outlined by Koike and Gibson
   // in his PhD thesis [1,2]. We start by computing the coefficients for the
@@ -428,7 +424,7 @@ std::shared_ptr<CrossSection> Material::roman_xs(
 
 std::shared_ptr<CrossSection> Material::dilution_xs(
     const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl,
-    std::optional<std::size_t> max_l) const {
+    std::optional<std::size_t> max_l) {
   if (max_l.has_value() == false) max_l = max_l_;
 
   if (dils.size() != this->size()) {
@@ -448,32 +444,44 @@ std::shared_ptr<CrossSection> Material::dilution_xs(
     }
   }
 
-  // Get the first nuclide, then add others to it
-  std::shared_ptr<CrossSection> xsout(nullptr);
+  // Start by getting infinite dilution xs for all nuclides
+  this->initialize_inf_dil_xs(ndl, *max_l);
 
-  // Add other components
-  for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
-    const std::string& namei = composition_.nuclides[i].name;
-    const double Ni = this->atom_density(namei);
-    auto xsi = ndl->interp_xs(namei, temperature_, dils[i], *max_l);
-    *xsi *= Ni;
+  // Go over all resonant groups
+  for (std::size_t g = ndl->first_resonant_group(); g <= ndl->last_resonant_group(); g++) {
+    // Go over all RESONANT nuclides
+    for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
+      const std::string& namei = composition_.nuclides[i].name;
+      const auto& nuc = ndl->get_nuclide(namei);
+      if (nuc.resonant == false) continue;
 
-    if (xsout) {
-      *xsout += *xsi;
-    } else {
-      xsout = xsi;
+      // Do XS interpolation
+      const auto res_data_i = ndl->dilution_xs(namei, g, temperature(), dils[i], *max_l);
+
+      // Assign new values
+      micro_nuc_xs_data_[i].Dtr.set_value(g, res_data_i.Dtr);
+      micro_nuc_xs_data_[i].Ea.set_value(g, res_data_i.Ea);
+      if (nuc.fissile) {
+        micro_nuc_xs_data_[i].Ef.set_value(g, res_data_i.Ef);
+      }
+      if (res_data_i.n_gamma) {
+        micro_dep_xs_data_[i].n_gamma->set_value(g, res_data_i.n_gamma.value());
+      }
+      for (std::size_t l = 0; l < res_data_i.Es.shape()[0]; l++) {
+        for (std::size_t gg = 0; gg < res_data_i.Es.shape()[1]; gg++) {
+          micro_nuc_xs_data_[i].Es.set_value(l, g, res_data_i.gout_min+gg, res_data_i.Es(l, gg));
+        }
+      }
+      micro_nuc_xs_data_[i].Et.set_value(g, micro_nuc_xs_data_[i].Ea(g) + micro_nuc_xs_data_[i].Es(0, g));
     }
   }
 
-  // Give the xs the name of the material
-  xsout->set_name(this->name_);
-
-  return xsout;
+  return this->create_xs_from_micro_data();
 }
 
 std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
     double C, double Rfuel, double Rin, double Rout,
-    std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l) const {
+    std::shared_ptr<NDLibrary> ndl, std::optional<std::size_t> max_l) {
   if (max_l.has_value() == false) max_l = max_l_;
 
   if (Rin >= Rout) {
@@ -493,85 +501,158 @@ std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
   const double b1 = (a2 - (1. - C)) / (a2 - a1);
   const double b2 = 1. - b1;
 
-  std::shared_ptr<CrossSection> xsout(nullptr);
+  // Start by getting infinite dilution xs for all nuclides
+  this->initialize_inf_dil_xs(ndl, *max_l);
 
-  const double mat_pot_xs = this->lambda_potential_xs();
-  for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
-    const std::string& namei = composition_.nuclides[i].name;
-    const auto& nuclide = ndl->get_nuclide(namei);
-    const double Ni = this->atom_density(namei);
+  // Go over all resonant groups
+  for (std::size_t g = ndl->first_resonant_group(); g <= ndl->last_resonant_group(); g++) {
+    const double mat_pot_xs = this->lambda_pot_xs(ndl, g);
 
-    std::shared_ptr<CrossSection> xsi{nullptr};
+    // Go over all RESONANT nuclides
+    for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
+      const std::string& namei = composition_.nuclides[i].name;
+      const auto& nuc = ndl->get_nuclide(namei);
+      if (nuc.resonant == false) continue;
 
-    if (nuclide.resonant) {
-      xsi = ndl->ring_two_term_xs(namei, temperature(), a1, a2, b1, b2,
-                                  mat_pot_xs, Ni, Rfuel, Rin, Rout, *max_l);
-    } else {
-      const double dil = (mat_pot_xs - Ni * nuclide.potential_xs) / Ni;
-      xsi = ndl->interp_xs(namei, temperature_, dil, *max_l);
-    }
+      const double Ni = atoms_per_bcm_ * composition_.nuclides[i].fraction;
 
-    *xsi *= Ni;
+      // Do XS interpolation
+      const auto res_data_i = ndl->ring_two_term_xs(namei, g, temperature(), a1, a2, b1, b2, mat_pot_xs, Ni, Rfuel, Rin, Rout, *max_l);
 
-    if (xsout) {
-      *xsout += *xsi;
-    } else {
-      xsout = xsi;
+      // Assign new values
+      micro_nuc_xs_data_[i].Dtr.set_value(g, res_data_i.Dtr);
+      micro_nuc_xs_data_[i].Ea.set_value(g, res_data_i.Ea);
+      if (nuc.fissile) {
+        micro_nuc_xs_data_[i].Ef.set_value(g, res_data_i.Ef);
+      }
+      if (res_data_i.n_gamma) {
+        micro_dep_xs_data_[i].n_gamma->set_value(g, res_data_i.n_gamma.value());
+      }
+      for (std::size_t l = 0; l < res_data_i.Es.shape()[0]; l++) {
+        for (std::size_t gg = 0; gg < res_data_i.Es.shape()[1]; gg++) {
+          micro_nuc_xs_data_[i].Es.set_value(l, g, res_data_i.gout_min+gg, res_data_i.Es(l, gg));
+        }
+      }
+      micro_nuc_xs_data_[i].Et.set_value(g, micro_nuc_xs_data_[i].Ea(g) + micro_nuc_xs_data_[i].Es(0, g));
     }
   }
-
-  // Give the xs the name of the material
-  xsout->set_name(this->name_);
-
-  return xsout;
+  
+  return this->create_xs_from_micro_data();
 }
 
 std::shared_ptr<CrossSection> Material::two_term_xs(
     const double a1, const double a2, const double b1, const double b2,
-    const double Ee, std::shared_ptr<NDLibrary> ndl, std::size_t max_l) const {
-  std::shared_ptr<CrossSection> xsout(nullptr);
+    const double Ee, std::shared_ptr<NDLibrary> ndl, std::size_t max_l) {
+      
+  // Start by getting infinite dilution xs for all nuclides
+  this->initialize_inf_dil_xs(ndl, max_l);
 
-  const double mat_pot_xs = this->lambda_potential_xs();
+  // Go over all resonant groups
+  for (std::size_t g = ndl->first_resonant_group(); g <= ndl->last_resonant_group(); g++) {
+    const double mat_pot_xs = this->lambda_pot_xs(ndl, g);
 
-  // Add component from each nuclide
-  for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
-    const std::string& namei = composition_.nuclides[i].name;
-    const auto& nuclide = ndl->get_nuclide(namei);
-    const double Ni = this->atom_density(namei);
-    const double pot_xs = nuclide.ir_lambda * nuclide.potential_xs;
-    const double macro_pot_xs = Ni * pot_xs;
-    const double bg_xs_1 = (mat_pot_xs - macro_pot_xs + a1 * Ee) / Ni;
-    const double bg_xs_2 = (mat_pot_xs - macro_pot_xs + a2 * Ee) / Ni;
+    // Go over all RESONANT nuclides
+    for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
+      const std::string& namei = composition_.nuclides[i].name;
+      const auto& nuc = ndl->get_nuclide(namei);
+      if (nuc.resonant == false) continue;
 
-    std::shared_ptr<CrossSection> xsi{nullptr};
+      const double Ni = atoms_per_bcm_ * composition_.nuclides[i].fraction;
+      const double macro_pot_xs = Ni * nuc.ir_lambda[g] * nuc.potential_xs;
+      const double bg_xs_1 = (mat_pot_xs - macro_pot_xs + a1 * Ee) / Ni;
+      const double bg_xs_2 = (mat_pot_xs - macro_pot_xs + a2 * Ee) / Ni;
 
-    if (nuclide.resonant) {
-      xsi = ndl->two_term_xs(namei, temperature(), b1, b2, bg_xs_1, bg_xs_2,
-                             max_l);
-    } else {
-      const double dil = (mat_pot_xs - Ni * nuclide.potential_xs) / Ni;
-      xsi = ndl->interp_xs(namei, temperature_, dil, max_l);
-    }
+      // Do XS interpolation
+      const auto res_data_i = ndl->two_term_xs(namei, g, temperature(), b1, b2, bg_xs_1, bg_xs_2, max_l);
 
-    *xsi *= Ni;
-
-    if (xsout) {
-      *xsout += *xsi;
-    } else {
-      xsout = xsi;
+      // Assign new values
+      micro_nuc_xs_data_[i].Dtr.set_value(g, res_data_i.Dtr);
+      micro_nuc_xs_data_[i].Ea.set_value(g, res_data_i.Ea);
+      if (nuc.fissile) {
+        micro_nuc_xs_data_[i].Ef.set_value(g, res_data_i.Ef);
+      }
+      if (res_data_i.n_gamma) {
+        micro_dep_xs_data_[i].n_gamma->set_value(g, res_data_i.n_gamma.value());
+      }
+      for (std::size_t l = 0; l < res_data_i.Es.shape()[0]; l++) {
+        for (std::size_t gg = 0; gg < res_data_i.Es.shape()[1]; gg++) {
+          micro_nuc_xs_data_[i].Es.set_value(l, g, res_data_i.gout_min+gg, res_data_i.Es(l, gg));
+        }
+      }
+      micro_nuc_xs_data_[i].Et.set_value(g, micro_nuc_xs_data_[i].Ea(g) + micro_nuc_xs_data_[i].Es(0, g));
     }
   }
 
-  // Give the xs the name of the material
-  xsout->set_name(this->name_);
-
-  return xsout;
+  return this->create_xs_from_micro_data();
 }
 
 void Material::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
   for (const auto& nuc : composition_.nuclides) {
     auto& nuc_handle = ndl->get_nuclide(nuc.name);
     nuc_handle.load_xs_from_hdf5(*ndl, max_l_);
+  }
+}
+
+std::shared_ptr<CrossSection> Material::create_xs_from_micro_data() {
+  std::shared_ptr<CrossSection> xsout {nullptr};
+
+  for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
+    std::shared_ptr<CrossSection> xsi{nullptr};
+
+    const double Ni = atoms_per_bcm_ * composition_.nuclides[i].fraction;
+
+    xsi = std::make_shared<CrossSection>(micro_nuc_xs_data_[i].Et,
+                                         micro_nuc_xs_data_[i].Dtr,
+                                         micro_nuc_xs_data_[i].Ea,
+                                         micro_nuc_xs_data_[i].Es,
+                                         micro_nuc_xs_data_[i].Ef,
+                                         micro_nuc_xs_data_[i].nu * micro_nuc_xs_data_[i].Ef,
+                                         micro_nuc_xs_data_[i].chi);
+    (*xsi) *= Ni;
+
+    if (xsout) {
+      (*xsout) += (*xsi);
+    } else {
+      xsout = xsi;
+    }
+  }
+
+  xsout->set_name(this->name_);
+  return xsout;
+}
+
+double Material::lambda_pot_xs(std::shared_ptr<NDLibrary> ndl, std::size_t g) {
+  double lmbd_pot_xs = 0.;
+
+  if (g >= ndl->ngroups()) {
+    std::stringstream mssg;
+    mssg << "Group index " << g << " is out of range.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  for (const auto& c : composition_.nuclides) {
+    const auto& nuc = ndl->get_nuclide(c.name);
+    lmbd_pot_xs += atoms_per_bcm_ * c.fraction * nuc.ir_lambda[g] * nuc.potential_xs;
+  }
+
+  return lmbd_pot_xs;
+}
+
+void Material::clear_micro_xs_data() {
+  micro_nuc_xs_data_.clear();
+  micro_dep_xs_data_.clear();
+}
+
+void Material::initialize_inf_dil_xs(std::shared_ptr<NDLibrary> ndl, std::size_t max_l) {
+  this->clear_micro_xs_data();
+  micro_nuc_xs_data_.reserve(composition_.nuclides.size());
+  micro_dep_xs_data_.reserve(composition_.nuclides.size());
+
+  for (const auto& nuc : composition_.nuclides) {
+    auto tmp = ndl->infinite_dilution_xs(nuc.name, temperature_, max_l);
+    micro_nuc_xs_data_.push_back(tmp.first);
+    micro_dep_xs_data_.push_back(tmp.second);
   }
 }
 

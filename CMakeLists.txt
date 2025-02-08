@@ -206,6 +206,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/python/xs2d.cpp
                               src/scarabee/_scarabee/python/cross_section.cpp
                               src/scarabee/_scarabee/python/diffusion_cross_section.cpp
+                              src/scarabee/_scarabee/python/micro_cross_sections.cpp
                               src/scarabee/_scarabee/python/material.cpp
                               src/scarabee/_scarabee/python/nd_library.cpp
                               src/scarabee/_scarabee/python/flux_calculator.cpp

@@ -66,10 +66,10 @@ struct NuclideHandle {
   std::shared_ptr<xt::xtensor<double, 3>> res_fission;
   std::shared_ptr<xt::xtensor<double, 3>> res_n_gamma;
 
-  bool loaded() const { return absorption != nullptr; }
+  bool loaded() const { return inf_absorption != nullptr; }
   void load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l);
   void load_inf_data(const NDLibrary& ndl, const H5::Group& grp, std::size_t max_l);
-  void load_res_data(const NDLibrary& ndl, const H5::Group& grp, std::size_t max_l);
+  void load_res_data(const H5::Group& grp, std::size_t max_l);
   void unload();
 };
 
@@ -127,25 +127,6 @@ class NDLibrary {
                                       const double Rin, const double Rout,
                                       std::size_t max_l = 1);
 
-  /*
-  std::shared_ptr<CrossSection> interp_xs(const std::string& name,
-                                          const double temp, const double dil,
-                                          std::size_t max_l = 1);
-
-  std::shared_ptr<CrossSection> two_term_xs(const std::string& name,
-                                            const double temp, const double b1,
-                                            const double b2,
-                                            const double bg_xs_1,
-                                            const double bg_xs_2,
-                                            std::size_t max_l = 1);
-
-  std::shared_ptr<CrossSection> ring_two_term_xs(
-      const std::string& name, const double temp, const double a1,
-      const double a2, const double b1, const double b2,
-      const double mat_pot_xs, const double N, const double Rfuel,
-      const double Rin, const double Rout, std::size_t max_l = 1);
-  */
-
   const std::shared_ptr<H5::File>& h5() const { return h5_; }
 
   void unload();
@@ -184,10 +165,8 @@ class NDLibrary {
                          double f_dil) const;
 
   // E should be a 1D xtensor view
-  // nE should be a 3D xtensor view
-  void NDLibrary::interp_temp_dil(auto& E, const auto& nE, std::size_t it,
-                                  double f_temp, std::size_t id,
-                                  double f_dil) const {
+  // nE should be a 3D xtensor view: temp, dil, scat_xs
+  void interp_temp_dil_views(auto E, auto nE, std::size_t it, double f_temp, std::size_t id, double f_dil) const {
     if (f_temp > 0.) {
       if (f_dil > 0.) {
         E = (1. - f_temp) * ((1. - f_dil) * xt::view(nE, it, id, xt::all()) +

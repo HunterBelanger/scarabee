@@ -2,8 +2,13 @@
 #define SCARABEE_MICRO_CROSS_SECTIONS_H
 
 #include <data/xs1d.hpp>
+#include <data/xs2d.hpp>
+#include <utils/serialization.hpp>
 
 #include <xtensor/xtensor.hpp>
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/optional.hpp>
 
 #include <optional>
 
@@ -16,6 +21,12 @@ struct MicroDepletionXS {
   std::optional<XS1D> n_3n;
   std::optional<XS1D> n_a;
   std::optional<XS1D> n_p;
+
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(n_fission), CEREAL_NVP(n_gamma), CEREAL_NVP(n_2n),
+        CEREAL_NVP(n_3n), CEREAL_NVP(n_a), CEREAL_NVP(n_p));
+  }
 };
 
 struct MicroNuclideXS {
@@ -26,6 +37,13 @@ struct MicroNuclideXS {
   XS1D Ef;
   XS1D nu;
   XS1D chi;
+
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(Et), CEREAL_NVP(Dtr), CEREAL_NVP(Es),
+        CEREAL_NVP(Es), CEREAL_NVP(Ef), CEREAL_NVP(nu),
+        CEREAL_NVP(chi));
+  }
 };
 
 struct ResonantOneGroupXS {
