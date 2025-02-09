@@ -300,6 +300,22 @@ void NDLibrary::init() {
   if (h5_->hasAttribute("ngroups"))
     ngroups_ = h5_->getAttribute("ngroups").read<std::size_t>();
 
+  if (h5_->hasAttribute("first-resonance-group")) {
+    first_resonant_group_ = h5_->getAttribute("first-resonance-group").read<std::size_t>();
+  } else {
+    const auto mssg = "No attribute \"first-resonance-group\" in nuclear data library.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (h5_->hasAttribute("last-resonance-group")) {
+    last_resonant_group_ = h5_->getAttribute("last-resonance-group").read<std::size_t>();
+  } else {
+    const auto mssg = "No attribute \"last-resonance-group\" in nuclear data library.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Check if default condensation schemes are provided
   auto get_cond_scheme =
       [this](const std::string& key,

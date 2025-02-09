@@ -24,19 +24,21 @@ ref_few_grp_cond_spec = np.array([[0, 246], [247, 280]])
 
 # Set the default group strucutre
 fdy.set_default_group_structure("SHEM-361")
-
 fdy.set_default_max_legendre_moments(3)
 
 print(fdy.get_default_group_structure())
 
 h5 = h5py.File('endf8_shem361.h5', 'w')
 #h5 = h5py.File('endf8_xmas172.h5', 'w')
-h5.attrs['group-structure'] = fdy.get_default_group_structure()
-h5.attrs['group-bounds'] = fdy.get_default_group_bounds()
-h5.attrs['ngroups'] = len(fdy.get_default_group_bounds()) - 1
+h5.attrs['group-structure'] = fdy.get_default_group_structure().name
+h5.attrs['group-bounds'] = fdy.get_default_group_structure().bounds
+h5.attrs['ngroups'] = fdy.get_default_group_structure().ngroups
+h5.attrs['first-resonance-group'] = fdy.get_default_group_structure().first_res_grp
+h5.attrs['last-resonance-group'] = fdy.get_default_group_structure().last_res_grp
 h5.attrs['library'] = lib_name
 
-if fdy.get_default_group_structure() == "SHEM-281":
+
+if fdy.get_default_group_structure().name == "SHEM-281":
     h5.attrs['macro-group-condensation-scheme'] = cond_spec
     h5.attrs['few-group-condensation-scheme'] = few_grp_cond_spec
     h5.attrs['reflector-few-group-condensation-scheme'] = ref_few_grp_cond_spec
