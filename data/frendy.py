@@ -507,9 +507,9 @@ class FrendyMG:
     self._remove_zeros() 
 
     if chi is not None:
-      self.apply_P1_transport_correction(chi)
+      self.apply_inflow_transport_correction(chi)
     else:
-      self.apply_inscatter_transport_correction()
+      self.apply_outflow_transport_correction()
 
     # Apply compression after computing the transport correction ! 
     self._get_compressed_scatter_layout()
@@ -518,7 +518,7 @@ class FrendyMG:
     if h5 is not None:
       self.add_to_hdf5(h5)
 
-  def apply_P1_transport_correction(self, chi):
+  def apply_inflow_transport_correction(self, chi):
     if not self.processed:
       raise RuntimeError("Cannot apply transport corretion to unprocessed data.")
 
@@ -544,7 +544,7 @@ class FrendyMG:
         # Calculate the delta xs for the transport correction
         self.Dtr[iT, id, :] = Et - Etr
   
-  def apply_inscatter_transport_correction(self):
+  def apply_outflow_transport_correction(self):
     if not self.processed:
       raise RuntimeError("Cannot apply transport corretion to unprocessed data.")
 
