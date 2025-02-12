@@ -98,7 +98,7 @@ _GROUP_STRUCTURES = {
 	                                     2.50000E-08, 2.00000E-08, 1.50000E-08, 1.00000E-08, 6.90000E-09,
 	                                     5.00000E-09, 3.00000E-09, 1.00001E-11]) * 1.E6),
 
-  "SHEM-281": GroupStructure("SHEM-281", "shem-cea-281", 50, 92, # Computed from IR-lambda tool for U238 with a lower limit of 22.5 eV
+  "SHEM-281": GroupStructure("SHEM-281", "shem-cea-281", 34, 92, # Based on upper limit of URR in U238 and 22.5 eV cuttoff for SHEM
                              np.array([1.964030E+07, 1.491823E+07, 1.384029E+07, 1.161833E+07,
                                        9.999987E+06, 9.048363E+06, 8.187297E+06, 7.408173E+06,
                                        6.703192E+06, 6.065299E+06, 4.965847E+06, 4.065691E+06,
