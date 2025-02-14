@@ -23,7 +23,8 @@ class GroupStructure:
     return self.bounds.size - 1
 
 _GROUP_STRUCTURES = {
-  "WIMS-69": GroupStructure("WIMS-69", "epri-69", 14, 26, # Based on table in Stamm'ler and Abbate
+  # Lower resonant group bound from upper limit of URR in U238. Higher resonant group based on table in Stamm'ler and Abbate
+  "WIMS-69": GroupStructure("WIMS-69", "epri-69", 8, 26,
                             np.array([1.00000E+01, 6.06550E+00, 3.67900E+00, 2.23100E+00, 1.35300E+00,
 	                                    8.21000E-01, 5.00000E-01, 3.02500E-01, 1.83000E-01, 1.11000E-01,
 	                                    6.73400E-02, 4.08500E-02, 2.47800E-02, 1.50300E-02, 9.11800E-03,
@@ -38,8 +39,9 @@ _GROUP_STRUCTURES = {
 	                                    1.40000E-07, 1.00000E-07, 8.00000E-08, 6.70000E-08, 5.80000E-08,
 	                                    5.00000E-08, 4.20000E-08, 3.50000E-08, 3.00000E-08, 2.50000E-08,
 	                                    2.00000E-08, 1.50000E-08, 1.00000E-08, 5.00000E-09, 1.00000E-11]) * 1.E6),
-  
-  "APOLLO-99": GroupStructure("APOLLO-99", None, 21, 48, # Computed from IR-lambda tool for U238
+
+  # Lower resonant group bound from upper limit of URR in U238. Higher resonant group bound from IR-lambda tool on U238
+  "APOLLO-99": GroupStructure("APOLLO-99", None, 16, 48,
                               np.array([1.00000000E+07, 8.18730800E+06, 6.70320100E+06, 5.48811700E+06, 4.49329000E+06,
                                         3.67879400E+06, 3.01194300E+06, 2.46597100E+06, 2.01896600E+06, 1.65299000E+06,
                                         1.35335300E+06, 1.10803200E+06, 9.07179875E+05, 6.08101125E+05, 4.07622094E+05,
@@ -60,8 +62,9 @@ _GROUP_STRUCTURES = {
                                         1.88999996E-01, 1.59999996E-01, 1.34000003E-01, 1.15000002E-01, 9.49999988E-02,
                                         7.69999996E-02, 5.90000004E-02, 4.30000015E-02, 2.99999993E-02, 1.99999996E-02,
                                         1.49999997E-02, 9.99999978E-03, 5.49999997E-03, 3.00000003E-03, 1.10000001E-04])),
-
-  "XMAS-172": GroupStructure("XMAS-172", "xmas-nea-lanl-172", 41, 90, # Computed from IR-lambda tool for U238 and Pu240
+  
+  # Lower resonant group bound from upper limit of URR in U238. Higher resonant group bound from IR-lambda tool on U238 and Pu240
+  "XMAS-172": GroupStructure("XMAS-172", "xmas-nea-lanl-172", 32, 90, 
                              np.array([1.96403E+01, 1.73325E+01, 1.49182E+01, 1.38403E+01, 1.16183E+01,
 	                                     1.00000E+01, 8.18731E+00, 6.70320E+00, 6.06531E+00, 5.48812E+00,
 	                                     4.49329E+00, 3.67879E+00, 3.01194E+00, 2.46597E+00, 2.23130E+00,
@@ -97,8 +100,9 @@ _GROUP_STRUCTURES = {
 	                                     5.80000E-08, 5.00000E-08, 4.20000E-08, 3.50000E-08, 3.00000E-08,
 	                                     2.50000E-08, 2.00000E-08, 1.50000E-08, 1.00000E-08, 6.90000E-09,
 	                                     5.00000E-09, 3.00000E-09, 1.00001E-11]) * 1.E6),
-
-  "SHEM-281": GroupStructure("SHEM-281", "shem-cea-281", 34, 92, # Based on upper limit of URR in U238 and 22.5 eV cuttoff for SHEM
+  
+  # Resonant groups based on upper limit of URR in U238 and 22.5 eV cuttoff for SHEM
+  "SHEM-281": GroupStructure("SHEM-281", "shem-cea-281", 34, 92, 
                              np.array([1.964030E+07, 1.491823E+07, 1.384029E+07, 1.161833E+07,
                                        9.999987E+06, 9.048363E+06, 8.187297E+06, 7.408173E+06,
                                        6.703192E+06, 6.065299E+06, 4.965847E+06, 4.065691E+06,
@@ -170,8 +174,9 @@ _GROUP_STRUCTURES = {
                                        3.439976E-02, 2.929889E-02, 2.493942E-02, 2.001035E-02,
                                        1.482996E-02, 1.045050E-02, 7.145263E-03, 4.556021E-03,
                                        2.499897E-03, 1.100027E-04])),
-
-  "SHEM-361": GroupStructure("SHEM-361", "shem-cea-epm-361", 50, 172, # Computed from IR-lambda tool for U238 with a lower limit of 22.5 eV
+  
+  # Resonant groups based on upper limit of URR in U238 and 22.5 eV cuttoff for SHEM
+  "SHEM-361": GroupStructure("SHEM-361", "shem-cea-epm-361", 34, 172,
                              np.array([1.964030e+07, 1.491823e+07, 1.384029e+07, 1.161833e+07, 9.999987e+06,
                                        9.048363e+06, 8.187297e+06, 7.408173e+06, 6.703192e+06, 6.065299e+06,
                                        4.965847e+06, 4.065691e+06, 3.328707e+06, 2.725314e+06, 2.231299e+06,
