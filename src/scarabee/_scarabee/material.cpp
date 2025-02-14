@@ -459,20 +459,7 @@ std::shared_ptr<CrossSection> Material::dilution_xs(
       const auto res_data_i = ndl->dilution_xs(namei, g, temperature(), dils[i], *max_l);
 
       // Assign new values
-      micro_nuc_xs_data_[i].Dtr.set_value(g, res_data_i.Dtr);
-      micro_nuc_xs_data_[i].Ea.set_value(g, res_data_i.Ea);
-      if (nuc.fissile) {
-        micro_nuc_xs_data_[i].Ef.set_value(g, res_data_i.Ef);
-      }
-      if (res_data_i.n_gamma) {
-        micro_dep_xs_data_[i].n_gamma->set_value(g, res_data_i.n_gamma.value());
-      }
-      for (std::size_t l = 0; l < res_data_i.Es.shape()[0]; l++) {
-        for (std::size_t gg = 0; gg < res_data_i.Es.shape()[1]; gg++) {
-          micro_nuc_xs_data_[i].Es.set_value(l, g, res_data_i.gout_min+gg, res_data_i.Es(l, gg));
-        }
-      }
-      micro_nuc_xs_data_[i].Et.set_value(g, micro_nuc_xs_data_[i].Ea(g) + micro_nuc_xs_data_[i].Es(0, g));
+      assign_resonant_xs(i, g, res_data_i);
     }
   }
 
@@ -520,20 +507,7 @@ std::shared_ptr<CrossSection> Material::ring_carlvik_xs(
       const auto res_data_i = ndl->ring_two_term_xs(namei, g, temperature(), a1, a2, b1, b2, mat_pot_xs, Ni, Rfuel, Rin, Rout, *max_l);
 
       // Assign new values
-      micro_nuc_xs_data_[i].Dtr.set_value(g, res_data_i.Dtr);
-      micro_nuc_xs_data_[i].Ea.set_value(g, res_data_i.Ea);
-      if (nuc.fissile) {
-        micro_nuc_xs_data_[i].Ef.set_value(g, res_data_i.Ef);
-      }
-      if (res_data_i.n_gamma) {
-        micro_dep_xs_data_[i].n_gamma->set_value(g, res_data_i.n_gamma.value());
-      }
-      for (std::size_t l = 0; l < res_data_i.Es.shape()[0]; l++) {
-        for (std::size_t gg = 0; gg < res_data_i.Es.shape()[1]; gg++) {
-          micro_nuc_xs_data_[i].Es.set_value(l, g, res_data_i.gout_min+gg, res_data_i.Es(l, gg));
-        }
-      }
-      micro_nuc_xs_data_[i].Et.set_value(g, micro_nuc_xs_data_[i].Ea(g) + micro_nuc_xs_data_[i].Es(0, g));
+      assign_resonant_xs(i, g, res_data_i);
     }
   }
   
@@ -566,24 +540,29 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
       const auto res_data_i = ndl->two_term_xs(namei, g, temperature(), b1, b2, bg_xs_1, bg_xs_2, max_l);
 
       // Assign new values
-      micro_nuc_xs_data_[i].Dtr.set_value(g, res_data_i.Dtr);
-      micro_nuc_xs_data_[i].Ea.set_value(g, res_data_i.Ea);
-      if (nuc.fissile) {
-        micro_nuc_xs_data_[i].Ef.set_value(g, res_data_i.Ef);
-      }
-      if (res_data_i.n_gamma) {
-        micro_dep_xs_data_[i].n_gamma->set_value(g, res_data_i.n_gamma.value());
-      }
-      for (std::size_t l = 0; l < res_data_i.Es.shape()[0]; l++) {
-        for (std::size_t gg = 0; gg < res_data_i.Es.shape()[1]; gg++) {
-          micro_nuc_xs_data_[i].Es.set_value(l, g, res_data_i.gout_min+gg, res_data_i.Es(l, gg));
-        }
-      }
-      micro_nuc_xs_data_[i].Et.set_value(g, micro_nuc_xs_data_[i].Ea(g) + micro_nuc_xs_data_[i].Es(0, g));
+      assign_resonant_xs(i, g, res_data_i);
     }
   }
 
   return this->create_xs_from_micro_data();
+}
+
+void Material::assign_resonant_xs(const std::size_t i, const std::size_t g, const ResonantOneGroupXS& res_data) {
+  micro_nuc_xs_data_[i].Dtr.set_value(g, res_data.Dtr);
+  micro_nuc_xs_data_[i].Ea.set_value(g, res_data.Ea);
+  if (res_data.Ef != 0.) {
+    micro_nuc_xs_data_[i].Ef.set_value(g, res_data.Ef);
+    micro_dep_xs_data_[i].n_fission->set_value(g, res_data.Ef);
+  }
+  if (res_data.n_gamma) {
+    micro_dep_xs_data_[i].n_gamma->set_value(g, res_data.n_gamma.value());
+  }
+  for (std::size_t l = 0; l < res_data.Es.shape()[0]; l++) {
+    for (std::size_t gg = 0; gg < res_data.Es.shape()[1]; gg++) {
+      micro_nuc_xs_data_[i].Es.set_value(l, g, res_data.gout_min+gg, res_data.Es(l, gg));
+    }
+  }
+  micro_nuc_xs_data_[i].Et.set_value(g, micro_nuc_xs_data_[i].Ea(g) + micro_nuc_xs_data_[i].Es(0, g));
 }
 
 void Material::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
