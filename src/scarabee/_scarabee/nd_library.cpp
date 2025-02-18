@@ -174,7 +174,7 @@ void NuclideHandle::load_res_data(const H5::Group& grp, std::size_t max_l) {
   }
 
   if (grp.exist("res-(n,gamma)")) {
-    const auto dims = grp.getDataSet("inf-(n,gamma)").getDimensions();
+    const auto dims = grp.getDataSet("res-(n,gamma)").getDimensions();
     res_n_gamma = std::make_shared<xt::xtensor<double, 3>>();
     res_n_gamma->resize({dims[0], dims[1], dims[2]});
   }

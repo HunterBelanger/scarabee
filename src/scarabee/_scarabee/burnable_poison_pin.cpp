@@ -267,4 +267,16 @@ void BurnablePoisonPin::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
   if (gap_) gap_->load_nuclides(ndl);
 }
 
+std::shared_ptr<BurnablePoisonPin> BurnablePoisonPin::clone() const {
+  auto out = std::make_shared<BurnablePoisonPin>(*this);
+
+  if (center_) out->center_ = std::make_shared<Material>(*center_);
+  if (poison_clad_) out->poison_clad_ = std::make_shared<Material>(*poison_clad_);
+  if (gap_) out->gap_ = std::make_shared<Material>(*gap_);
+  if (poison_) out->poison_ = std::make_shared<Material>(*poison_);
+  if (guide_tube_clad_) out->guide_tube_clad_ = std::make_shared<Material>(*guide_tube_clad_);
+
+  return out;
+}
+
 }  // namespace scarabee

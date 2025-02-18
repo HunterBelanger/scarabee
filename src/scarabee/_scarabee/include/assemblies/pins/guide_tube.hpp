@@ -52,6 +52,8 @@ class GuideTube {
 
   void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
 
+  std::shared_ptr<GuideTube> clone() const;
+
  private:
   std::shared_ptr<Material> clad_;
   double inner_radius_;

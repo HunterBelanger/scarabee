@@ -105,7 +105,7 @@ void PWRAssembly::set_pins(const std::vector<Pin>& pins) {
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
       }
-      pins_.push_back(std::make_shared<FuelPin>(*ptr));
+      pins_.push_back(ptr->clone());
     } else if (std::holds_alternative<std::shared_ptr<GuideTube>>(pin)) {
       auto ptr = std::get<std::shared_ptr<GuideTube>>(pin);
       if (ptr == nullptr) {
@@ -113,7 +113,7 @@ void PWRAssembly::set_pins(const std::vector<Pin>& pins) {
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
       }
-      pins_.push_back(std::make_shared<GuideTube>(*ptr));
+      pins_.push_back(ptr->clone());
     } else if (std::holds_alternative<std::shared_ptr<BurnablePoisonPin>>(
                    pin)) {
       auto ptr = std::get<std::shared_ptr<BurnablePoisonPin>>(pin);
@@ -122,7 +122,7 @@ void PWRAssembly::set_pins(const std::vector<Pin>& pins) {
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
       }
-      pins_.push_back(std::make_shared<BurnablePoisonPin>(*ptr));
+      pins_.push_back(ptr->clone());
     } else {
       auto mssg = "Unsupported pin variant.";
       spdlog::error(mssg);
