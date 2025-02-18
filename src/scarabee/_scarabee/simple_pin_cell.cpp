@@ -126,11 +126,7 @@ void SimplePinCell::build_full() {
   // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
-    radii_.push_back(std::make_shared<Surface>());
-    radii_.back()->type() = Surface::Type::Cylinder;
-    radii_.back()->x0() = x0_;
-    radii_.back()->y0() = y0_;
-    radii_.back()->r() = r;
+    radii_.push_back(std::make_shared<Cylinder>(x0_, y0_, r));
 
     double vol = PI * r * r;
     if (i > 0) {
@@ -229,11 +225,7 @@ void SimplePinCell::build_xn() {
   // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
-    radii_.push_back(std::make_shared<Surface>());
-    radii_.back()->type() = Surface::Type::Cylinder;
-    radii_.back()->x0() = x0_;
-    radii_.back()->y0() = y0_;
-    radii_.back()->r() = r;
+    radii_.push_back(std::make_shared<Cylinder>(x0_, y0_, r));
 
     double vol = 0.5 * PI * r * r;
     if (i > 0) {
@@ -333,11 +325,7 @@ void SimplePinCell::build_xp() {
   // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
-    radii_.push_back(std::make_shared<Surface>());
-    radii_.back()->type() = Surface::Type::Cylinder;
-    radii_.back()->x0() = x0_;
-    radii_.back()->y0() = y0_;
-    radii_.back()->r() = r;
+    radii_.push_back(std::make_shared<Cylinder>(x0_, y0_, r));
 
     double vol = 0.5 * PI * r * r;
     if (i > 0) {
@@ -437,7 +425,7 @@ void SimplePinCell::build_yn() {
   // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
-    radii_.push_back(std::make_shared<Surface>());
+    radii_.push_back(std::make_shared<Cylinder>(x0_, y0_, r));
     radii_.back()->type() = Surface::Type::Cylinder;
     radii_.back()->x0() = x0_;
     radii_.back()->y0() = y0_;
@@ -541,11 +529,7 @@ void SimplePinCell::build_yp() {
   // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
-    radii_.push_back(std::make_shared<Surface>());
-    radii_.back()->type() = Surface::Type::Cylinder;
-    radii_.back()->x0() = x0_;
-    radii_.back()->y0() = y0_;
-    radii_.back()->r() = r;
+    radii_.push_back(std::make_shared<Cylinder>(x0_, y0_, r));
 
     double vol = 0.5 * PI * r * r;
     if (i > 0) {
@@ -644,11 +628,7 @@ void SimplePinCell::build_i() {
   // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
-    radii_.push_back(std::make_shared<Surface>());
-    radii_.back()->type() = Surface::Type::Cylinder;
-    radii_.back()->x0() = x0_;
-    radii_.back()->y0() = y0_;
-    radii_.back()->r() = r;
+    radii_.push_back(std::make_shared<Cylinder>(x0_, y0_, r));
 
     double vol = 0.25 * PI * r * r;
     if (i > 0) {
@@ -748,11 +728,7 @@ void SimplePinCell::build_ii() {
   // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
-    radii_.push_back(std::make_shared<Surface>());
-    radii_.back()->type() = Surface::Type::Cylinder;
-    radii_.back()->x0() = x0_;
-    radii_.back()->y0() = y0_;
-    radii_.back()->r() = r;
+    radii_.push_back(std::make_shared<Cylinder>(x0_, y0_, r));
 
     double vol = 0.25 * PI * r * r;
     if (i > 0) {
@@ -852,11 +828,7 @@ void SimplePinCell::build_iii() {
   // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
-    radii_.push_back(std::make_shared<Surface>());
-    radii_.back()->type() = Surface::Type::Cylinder;
-    radii_.back()->x0() = x0_;
-    radii_.back()->y0() = y0_;
-    radii_.back()->r() = r;
+    radii_.push_back(std::make_shared<Cylinder>(x0_, y0_, r));
 
     double vol = 0.25 * PI * r * r;
     if (i > 0) {
@@ -956,11 +928,7 @@ void SimplePinCell::build_iv() {
   // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
-    radii_.push_back(std::make_shared<Surface>());
-    radii_.back()->type() = Surface::Type::Cylinder;
-    radii_.back()->x0() = x0_;
-    radii_.back()->y0() = y0_;
-    radii_.back()->r() = r;
+    radii_.push_back(std::make_shared<Cylinder>(x0_, y0_, r));
 
     double vol = 0.25 * PI * r * r;
     if (i > 0) {

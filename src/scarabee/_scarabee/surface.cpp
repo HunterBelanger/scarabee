@@ -5,11 +5,11 @@
 
 namespace scarabee {
 
-inline Surface::Side xplane_side(const Surface& surf, const Vector& r,
+inline Surface::Side xplane_side(const double x0, const Vector& r,
                                  const Direction& u) {
-  if (r.x() - surf.x0() > SURFACE_COINCIDENT)
+  if (r.x() - x0 > SURFACE_COINCIDENT)
     return Surface::Side::Positive;
-  else if (r.x() - surf.x0() < -SURFACE_COINCIDENT)
+  else if (r.x() - x0 < -SURFACE_COINCIDENT)
     return Surface::Side::Negative;
   else {
     if (u.x() > 0.)
@@ -19,11 +19,11 @@ inline Surface::Side xplane_side(const Surface& surf, const Vector& r,
   }
 }
 
-inline Surface::Side yplane_side(const Surface& surf, const Vector& r,
+inline Surface::Side yplane_side(const double y0, const Vector& r,
                                  const Direction& u) {
-  if (r.y() - surf.y0() > SURFACE_COINCIDENT)
+  if (r.y() - y0 > SURFACE_COINCIDENT)
     return Surface::Side::Positive;
-  else if (r.y() - surf.y0() < -SURFACE_COINCIDENT)
+  else if (r.y() - y0 < -SURFACE_COINCIDENT)
     return Surface::Side::Negative;
   else {
     if (u.y() > 0.)
@@ -33,32 +33,33 @@ inline Surface::Side yplane_side(const Surface& surf, const Vector& r,
   }
 }
 
-inline Surface::Side plane_side(const Surface& surf, const Vector& r,
-                                const Direction& u) {
-  const double eval = surf.A() * r.x() + surf.B() * r.y() - surf.C();
+inline Surface::Side plane_side(const double A, const double B, const double C,
+                                const Vector& r, const Direction& u) {
+  const double eval = A * r.x() + B * r.y() - C;
   if (eval > SURFACE_COINCIDENT)
     return Surface::Side::Positive;
   else if (eval < -SURFACE_COINCIDENT)
     return Surface::Side::Negative;
   else {
-    if ((surf.A() * u.x() + surf.B() * u.y()) > 0.)
+    if ((A * u.x() + B * u.y()) > 0.)
       return Surface::Side::Positive;
     else
       return Surface::Side::Negative;
   }
 }
 
-inline Surface::Side cylinder_side(const Surface& surf, const Vector& r,
+inline Surface::Side cylinder_side(const double x0, const double y0,
+                                   const double rc, const Vector& r,
                                    const Direction& u) {
-  const double x = r.x() - surf.x0();
-  const double y = r.y() - surf.y0();
-  const double eval = y * y + x * x - surf.r() * surf.r();
+  const double x = r.x() - x0;
+  const double y = r.y() - y0;
+  const double eval = y * y + x * x - rc * rc;
   if (eval > SURFACE_COINCIDENT)
     return Surface::Side::Positive;
   else if (eval < -SURFACE_COINCIDENT)
     return Surface::Side::Negative;
   else {
-    Direction norm(r.x() - surf.x0(), r.y() - surf.y0());
+    Direction norm(r.x() - x0, r.y() - y0);
     if (u.dot(norm) > 0.)
       return Surface::Side::Positive;
     else
@@ -69,19 +70,19 @@ inline Surface::Side cylinder_side(const Surface& surf, const Vector& r,
 Surface::Side Surface::side(const Vector& r, const Direction& u) const {
   switch (type_) {
     case Type::XPlane:
-      return xplane_side(*this, r, u);
+      return xplane_side(this->x0(), r, u);
       break;
 
     case Type::YPlane:
-      return yplane_side(*this, r, u);
+      return yplane_side(this->y0(), r, u);
       break;
 
     case Type::Plane:
-      return plane_side(*this, r, u);
+      return plane_side(this->A(), this->B(), this->C(), r, u);
       break;
 
     case Type::Cylinder:
-      return cylinder_side(*this, r, u);
+      return cylinder_side(this->x0(), this->y0(), this->r(), r, u);
       break;
 
     default:
@@ -90,9 +91,9 @@ Surface::Side Surface::side(const Vector& r, const Direction& u) const {
   }
 }
 
-inline double xplane_distance(const Surface& surf, const Vector& r,
+inline double xplane_distance(const double x0, const Vector& r,
                               const Direction& u) {
-  const double diff = surf.x0() - r.x();
+  const double diff = x0 - r.x();
   if (std::abs(diff) < SURFACE_COINCIDENT || u.x() == 0.)
     return INF;
   else if (diff / u.x() < 0.)
@@ -101,9 +102,9 @@ inline double xplane_distance(const Surface& surf, const Vector& r,
     return diff / u.x();
 }
 
-inline double yplane_distance(const Surface& surf, const Vector& r,
+inline double yplane_distance(const double y0, const Vector& r,
                               const Direction& u) {
-  const double diff = surf.y0() - r.y();
+  const double diff = y0 - r.y();
   if (std::abs(diff) < SURFACE_COINCIDENT || u.y() == 0.)
     return INF;
   else if (diff / u.y() < 0.)
@@ -112,10 +113,10 @@ inline double yplane_distance(const Surface& surf, const Vector& r,
     return diff / u.y();
 }
 
-inline double plane_distance(const Surface& surf, const Vector& r,
-                             const Direction& u) {
-  const double num = surf.C() - surf.A() * r.x() - surf.B() * r.y();
-  const double denom = surf.A() * u.x() + surf.B() * u.y();
+inline double plane_distance(const double A, const double B, const double C,
+                             const Vector& r, const Direction& u) {
+  const double num = C - A * r.x() - B * r.y();
+  const double denom = A * u.x() + B * u.y();
   const double d = num / denom;
   if (std::abs(d) < SURFACE_COINCIDENT || denom == 0.)
     return INF;
@@ -125,15 +126,16 @@ inline double plane_distance(const Surface& surf, const Vector& r,
     return d;
 }
 
-inline double cylinder_distance(const Surface& surf, const Vector& r,
+inline double cylinder_distance(const double x0, const double y0,
+                                const double rc, const Vector& r,
                                 const Direction& u) {
   const double a = u.y() * u.y() + u.x() * u.x();
   if (a == 0.) return INF;
 
-  const double x = r.x() - surf.x0();
-  const double y = r.y() - surf.y0();
+  const double x = r.x() - x0;
+  const double y = r.y() - y0;
   const double k = y * u.y() + x * u.x();
-  const double c = y * y + x * x - surf.r() * surf.r();
+  const double c = y * y + x * x - rc * rc;
   const double quad = k * k - a * c;
 
   if (quad < 0.)
@@ -157,19 +159,19 @@ inline double cylinder_distance(const Surface& surf, const Vector& r,
 double Surface::distance(const Vector& r, const Direction& u) const {
   switch (type_) {
     case Type::XPlane:
-      return xplane_distance(*this, r, u);
+      return xplane_distance(this->x0(), r, u);
       break;
 
     case Type::YPlane:
-      return yplane_distance(*this, r, u);
+      return yplane_distance(this->y0(), r, u);
       break;
 
     case Type::Plane:
-      return plane_distance(*this, r, u);
+      return plane_distance(this->A(), this->B(), this->C(), r, u);
       break;
 
     case Type::Cylinder:
-      return cylinder_distance(*this, r, u);
+      return cylinder_distance(this->x0(), this->y0(), this->r(), r, u);
       break;
 
     default:

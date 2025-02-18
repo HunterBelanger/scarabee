@@ -54,9 +54,7 @@ void PinCell::build() {
   // Create the 4 surfaces which give us our 8 angular sections
   if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::YN ||
       pin_type_ == PinCellType::YP) {
-    xm_ = std::make_shared<Surface>();
-    xm_->type() = Surface::Type::XPlane;
-    xm_->x0() = x0_;
+    xm_ = std::make_shared<XPlane>(x0_);
   } else if (pin_type_ == PinCellType::XP || pin_type_ == PinCellType::I ||
              pin_type_ == PinCellType::IV) {
     xm_ = x_min_;
@@ -67,9 +65,7 @@ void PinCell::build() {
 
   if (pin_type_ == PinCellType::Full || pin_type_ == PinCellType::XN ||
       pin_type_ == PinCellType::XP) {
-    ym_ = std::make_shared<Surface>();
-    ym_->type() = Surface::Type::YPlane;
-    ym_->y0() = y0_;
+    ym_ = std::make_shared<YPlane>(y0_);
   } else if (pin_type_ == PinCellType::YP || pin_type_ == PinCellType::I ||
              pin_type_ == PinCellType::II) {
     ym_ = y_min_;
@@ -78,17 +74,9 @@ void PinCell::build() {
     ym_ = y_max_;
   }
 
-  pd_ = std::make_shared<Surface>();
-  pd_->type() = Surface::Type::Plane;
-  pd_->A() = -1;
-  pd_->B() = 1.;
-  pd_->C() = y0_ - x0_;
+  pd_ = std::make_shared<Plane>(-1., 1., y0_ - x0_);
 
-  nd_ = std::make_shared<Surface>();
-  nd_->type() = Surface::Type::Plane;
-  nd_->A() = 1;
-  nd_->B() = 1.;
-  nd_->C() = y0_ + x0_;
+  nd_ = std::make_shared<Plane>(1., 1., y0_ + x0_);
 
   // Make sure the numbers for mats and rads is coherent
   if (mat_radii_.size() + 1 != mats_.size()) {
@@ -213,11 +201,7 @@ void PinCell::build() {
   // First, make all annular regions
   for (std::size_t i = 0; i < mat_radii_.size(); i++) {
     double r = mat_radii_[i];
-    radii_.push_back(std::make_shared<Surface>());
-    radii_.back()->type() = Surface::Type::Cylinder;
-    radii_.back()->x0() = x0_;
-    radii_.back()->y0() = y0_;
-    radii_.back()->r() = r;
+    radii_.push_back(std::make_shared<Cylinder>(x0_, y0_, r));
 
     // Make 8 FSRs
     double vol = PI * r * r;
