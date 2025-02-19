@@ -84,14 +84,14 @@ def main():
   
   mg_lib = h5py.File(sys.argv[1], 'r+')
 
-  ace = pndl.ACE("/mnt/c/Users/hunte/Documents/nuclear_data/ace/endf8.0/abeille_binary/data/neutron_dir/U/U238/U238.293.6.ace.bin", pndl.ACEType.BINARY)
+  ace = pndl.ACE("/mnt/c/Users/BELANH2/Documents/nuclear_data/ENDF-VIII.0/abeille/data/neutron_dir/U/U238/U238.600.0.ace")
   U238 = pndl.STNeutron(ace)
-
-  ace = pndl.ACE("/mnt/c/Users/hunte/Documents/nuclear_data/ace/endf8.0/abeille_binary/data/neutron_dir/U/U235/U235.293.6.ace.bin", pndl.ACEType.BINARY)
+  
+  ace = pndl.ACE("/mnt/c/Users/BELANH2/Documents/nuclear_data/ENDF-VIII.0/abeille/data/neutron_dir/U/U235/U235.600.0.ace")
   U235 = pndl.STNeutron(ace)
 
   for NucName in mg_lib.keys():
-    NucGrp = mg_lib.get(NucName)
+    NucGrp = mg_lib[NucName]
     awr = NucGrp.attrs['awr']
     if awr <= 1.:
       continue
