@@ -54,5 +54,19 @@ void init_CMFD(py::module& m) {
       "-------\n"
       "surface: CMFDSurfaceCrossing object\n"
       "         Contains the surface crossing information for the segement end\n",
+      py::arg("point"),py::arg("direction"))
+      
+  .def("get_tile", &CMFD::get_tile,
+      "Finds the tile that a segement end exists in\n\n"
+      "Parameters\n"
+      "----------\n"
+      "point: list of float\n"
+      "       list of x and y position of segment end\n"
+      "direction: list of float\n"
+      "           list of x and y components of segment direction unit vector\n"
+      "Returns\n"
+      "-------\n"
+      "surface: CMFDSurfaceCrossing object\n"
+      "         Contains the surface crossing information for the segement end\n",
       py::arg("point"),py::arg("direction"));
 }

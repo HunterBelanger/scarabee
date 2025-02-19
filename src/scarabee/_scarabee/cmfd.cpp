@@ -65,7 +65,6 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   x_bounds_.reserve(dx_.size() + 1);
   x_bounds_.emplace_back();
   x_bounds_.back().type() = Surface::Type::XPlane;
-  x_bounds_.back().x0() = -0.5 * dx_tot;
   for (const auto& d : dx_) {
     const double new_x0 = x_bounds_.back().x0() + d;
 
@@ -195,51 +194,16 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u) const
   const double dy_n = std::abs(y_n.y0() - r.y());
   const double dy_p = std::abs(y_p.y0() - r.y());
 
-  //start with corners
+  //start with corners, then sides
   //top right
   if (dx_p < SURFACE_COINCIDENT && dy_p < SURFACE_COINCIDENT) {
-    if (u.x() >= 0.0 && u.y() > 0.0) {
-      surface.crossing = CMFDSurfaceCrossing::Type::TR;
-    }
-    else if (u.x() < 0.0 && u.y() <= 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::YP;
-    }
-    else if (u.x() <= 0.0 && u.y() < 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::TR;
-    }
-    else if (u.x() > 0.0 && u.y() <= 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::XP;
-    }
+    surface.crossing = CMFDSurfaceCrossing::Type::TR;
   } else if (dx_p < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
-    if (u.x() >= 0.0 && u.y() > 0.0) {
-      surface.crossing = CMFDSurfaceCrossing::Type::XP;
-    } else if (u.x() < 0.0 && u.y() >= 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::BR;
-    } else if (u.x() <= 0.0 && u.y() < 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::YN;
-    } else if (u.x() > 0.0 && u.y() <= 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::BR;
-    }
+    surface.crossing = CMFDSurfaceCrossing::Type::BR;
   } else if (dx_n < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
-    if (u.x() >= 0.0 && u.y() > 0.0) {
-      surface.crossing = CMFDSurfaceCrossing::Type::BL;
-    } else if (u.x() < 0.0 && u.y() >= 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::XN;
-    } else if (u.x() <= 0.0 && u.y() < 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::BL;
-    } else if (u.x() > 0.0 && u.y() <= 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::YN;
-    }
+    surface.crossing = CMFDSurfaceCrossing::Type::BL;
   } else if (dx_n < SURFACE_COINCIDENT && dy_p < SURFACE_COINCIDENT) {
-    if (u.x() >= 0.0 && u.y() > 0.0) {
-      surface.crossing = CMFDSurfaceCrossing::Type::YP;
-    } else if (u.x() < 0.0 && u.y() >= 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::TL;
-    } else if (u.x() <= 0.0 && u.y() < 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::XN;
-    } else if (u.x() > 0.0 && u.y() <= 0.0){
-      surface.crossing = CMFDSurfaceCrossing::Type::TL;
-    }
+    surface.crossing = CMFDSurfaceCrossing::Type::TL;
   } else if (dx_p < SURFACE_COINCIDENT) {
     surface.crossing = CMFDSurfaceCrossing::Type::XP;
   } else if (dx_n < SURFACE_COINCIDENT) {
