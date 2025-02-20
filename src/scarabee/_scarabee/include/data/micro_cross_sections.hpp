@@ -15,12 +15,12 @@
 namespace scarabee {
 
 struct MicroDepletionXS {
-  std::optional<XS1D> n_fission;
-  std::optional<XS1D> n_gamma;
-  std::optional<XS1D> n_2n;
-  std::optional<XS1D> n_3n;
-  std::optional<XS1D> n_a;
-  std::optional<XS1D> n_p;
+  std::optional<XS1D> n_fission {std::nullopt};
+  std::optional<XS1D> n_gamma   {std::nullopt};
+  std::optional<XS1D> n_2n      {std::nullopt};
+  std::optional<XS1D> n_3n      {std::nullopt};
+  std::optional<XS1D> n_a       {std::nullopt};
+  std::optional<XS1D> n_p       {std::nullopt};
 
   template <class Archive>
   void serialize(Archive& arc) {
@@ -47,13 +47,13 @@ struct MicroNuclideXS {
 };
 
 struct ResonantOneGroupXS {
-  double Dtr;
-  double Ea;
-  double Ef;
+  double Dtr {0.};
+  double Ea  {0.};
+  double Ef  {0.};
   xt::xtensor<double, 2> Es; // First index is legendre moment, second is outgoing energy group
-  std::size_t gout_min; // Index of first tabulated outgoing energy group
+  std::size_t gout_min {0}; // Index of first tabulated outgoing energy group
 
-  std::optional<double> n_gamma;
+  std::optional<double> n_gamma {std::nullopt};
 
   // Scarabée assumes that (n,2n), (n,3n), (n,a), and (n,p) are not resonant
   // i.e. not dilution dependent.

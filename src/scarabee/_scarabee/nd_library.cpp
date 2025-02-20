@@ -760,6 +760,11 @@ ResonantOneGroupXS NDLibrary::ring_two_term_xs(
     // Add contributions to the denominator
     denom += eta_m * (b1 * flux_1_g + b2 * flux_2_g);
 
+    // Before adding contributions, must set the scatter array to zero on m = 1
+    if (m == 1) {
+      out.Es = xt::zeros<double>(xs_1.Es.shape());
+    }
+
     // Add contributions to the xs
     // Compute the xs values
     out.Dtr += eta_m * (b1 * flux_1_g * xs_1.Dtr + b2 * flux_2_g * xs_2.Dtr);
