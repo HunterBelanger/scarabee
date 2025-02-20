@@ -220,10 +220,35 @@ flux without absorption. This of course, makes sense, as if we had a single
 depression in the flux, and as more :math:`^{238}U` is added (i.e. the dilution
 goes down), the depression would become larger and larger.
 
+Wide Resonance Approximation
+----------------------------
+
 An alternative to the narrow resonance approximation is the wide resonance
-approximation. We will not consider this case here, as Scarabée does not employ
-this approximation. The interested reader is encouraged to look at *Lattice
-Physics Computations* by Knott and Yamamoto for more details [Knott]_ .
+approximation. In this case, the average energy loss of a neutron which
+undergoes elastic scattering with isotope :math:`r` is comparable to, or
+smaller than the width of a resonance. In this case, we will instead assume
+that :math:`r` is infinitely large, implying that
+:math:`\alpha_r \rightarrow 1`. If this were the case, a neutron would not lose
+any energy in an elastic collision, and all resonances would be *wide*. Under
+this approximation, we find that
+
+.. math::
+
+    \lim_{\alpha_r \rightarrow 1}\frac{1}{1-\alpha_r}\int^{E/\alpha_r}_{E} N_r \sigma_{s,r}(E')\varphi(E') \frac{\dd E'}{E'} \approx \\\\
+    \lim_{\alpha_r \rightarrow 1} \frac{N_r \sigma_{s,r}(E)\varphi(E)}{1 - \alpha_r} \int^{E/\alpha_r}_{E} \frac{\dd E'}{E'} = \\\\
+    N_r \sigma_{s,r}(E)\varphi(E) \lim_{\alpha_r \rightarrow 1} \frac{\ln(1/\alpha_r)}{1 - \alpha_r} = \\\\
+    N_r \sigma_{s,r}(E)\varphi(E).
+
+Using this approximation, we find that the wide resonance flux spectrum is
+
+.. math::
+    :label: wr
+
+    \varphi_{_{WR}}(E) = \frac{\sigma_0}{E\left(\sigma_{a,r}(E) + \sigma_0\right)}.
+
+Intermediate Resonance Approximation
+------------------------------------
+
 
 Heterogeneous Media
 --------------------
