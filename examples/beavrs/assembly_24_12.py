@@ -29,7 +29,7 @@ HeComp.add_element("He", 1.)
 He = Material(HeComp, 575., 0.0015981, DensityUnits.g_cm3, ndl) 
 
 WaterComp = MaterialComposition(Fraction.Atoms, name="Water")
-WaterComp.add_nuclide("H1_H2O_TC",  4.9456e-02 + 7.7035e-06)
+WaterComp.add_nuclide("H1_H2O",  4.9456e-02 + 7.7035e-06)
 WaterComp.add_element("B", 7.9714e-06 + 3.2247e-05)
 WaterComp.add_element("O", 2.4673e-02 + 9.3734e-06 + 4.9474e-05)
 Water = Material(WaterComp, 575., ndl)
