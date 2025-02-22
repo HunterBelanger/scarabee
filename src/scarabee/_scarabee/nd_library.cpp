@@ -27,7 +27,8 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l) {
   }
 }
 
-void NuclideHandle::load_inf_data(const NDLibrary& ndl, const H5::Group& grp, std::size_t max_l) {
+void NuclideHandle::load_inf_data(const NDLibrary& ndl, const H5::Group& grp,
+                                  std::size_t max_l) {
   // First we read in the packing of the scattering matrices. This is needed
   // to get the length of the scattering arrays
   packing = std::make_shared<xt::xtensor<std::uint32_t, 2>>();
@@ -99,7 +100,7 @@ void NuclideHandle::load_inf_data(const NDLibrary& ndl, const H5::Group& grp, st
     chi = std::make_shared<xt::xtensor<double, 1>>();
     chi->resize({ndl.ngroups()});
   }
-  
+
   //==========================================================================
   // Read in data
   grp.getDataSet("inf-absorption").read_raw<double>(inf_absorption->data());
@@ -178,7 +179,7 @@ void NuclideHandle::load_res_data(const H5::Group& grp, std::size_t max_l) {
     res_n_gamma = std::make_shared<xt::xtensor<double, 3>>();
     res_n_gamma->resize({dims[0], dims[1], dims[2]});
   }
-  
+
   //==========================================================================
   // Read in data
   grp.getDataSet("res-absorption").read_raw<double>(res_absorption->data());
@@ -215,7 +216,7 @@ void NuclideHandle::unload() {
   inf_p2_scatter = nullptr;
   inf_p3_scatter = nullptr;
   inf_fission = nullptr;
-  inf_n_gamma = nullptr; 
+  inf_n_gamma = nullptr;
   inf_n_2n = nullptr;
   inf_n_3n = nullptr;
   inf_n_a = nullptr;
@@ -228,7 +229,7 @@ void NuclideHandle::unload() {
   res_p2_scatter = nullptr;
   res_p3_scatter = nullptr;
   res_fission = nullptr;
-  res_n_gamma = nullptr; 
+  res_n_gamma = nullptr;
 }
 
 NDLibrary::NDLibrary()
@@ -301,17 +302,21 @@ void NDLibrary::init() {
     ngroups_ = h5_->getAttribute("ngroups").read<std::size_t>();
 
   if (h5_->hasAttribute("first-resonance-group")) {
-    first_resonant_group_ = h5_->getAttribute("first-resonance-group").read<std::size_t>();
+    first_resonant_group_ =
+        h5_->getAttribute("first-resonance-group").read<std::size_t>();
   } else {
-    const auto mssg = "No attribute \"first-resonance-group\" in nuclear data library.";
+    const auto mssg =
+        "No attribute \"first-resonance-group\" in nuclear data library.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
   if (h5_->hasAttribute("last-resonance-group")) {
-    last_resonant_group_ = h5_->getAttribute("last-resonance-group").read<std::size_t>();
+    last_resonant_group_ =
+        h5_->getAttribute("last-resonance-group").read<std::size_t>();
   } else {
-    const auto mssg = "No attribute \"last-resonance-group\" in nuclear data library.";
+    const auto mssg =
+        "No attribute \"last-resonance-group\" in nuclear data library.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -375,7 +380,8 @@ void NDLibrary::init() {
 
     // Intermediate resonance parameters
     if (grp.hasAttribute("ir-lambda")) {
-      handle.ir_lambda = grp.getAttribute("ir-lambda").read<std::vector<double>>();
+      handle.ir_lambda =
+          grp.getAttribute("ir-lambda").read<std::vector<double>>();
     } else {
       handle.ir_lambda = std::vector<double>(ngroups_, 1.);
     }
@@ -544,8 +550,7 @@ std::pair<MicroNuclideXS, MicroDepletionXS> NDLibrary::infinite_dilution_xs(
 
 ResonantOneGroupXS NDLibrary::dilution_xs(const std::string& name,
                                           std::size_t g, const double temp,
-                                          const double dil,
-                                          std::size_t max_l) {
+                                          const double dil, std::size_t max_l) {
   auto& nuc = this->get_nuclide(name);
 
   // Make sure nuclide is resonant
@@ -616,36 +621,40 @@ ResonantOneGroupXS NDLibrary::dilution_xs(const std::string& name,
 
   //--------------------------------------------------------
   // Do P0 scattering interpolation
-  this->interp_temp_dil_views(xt::view(out.Es, 0, xt::all()),
-                        xt::view(*nuc.res_scatter, xt::all(), xt::all(),
-                                 xt::range(res_start, res_start + scat_len)),
-                        it, f_temp, id, f_dil);
+  this->interp_temp_dil_views(
+      xt::view(out.Es, 0, xt::all()),
+      xt::view(*nuc.res_scatter, xt::all(), xt::all(),
+               xt::range(res_start, res_start + scat_len)),
+      it, f_temp, id, f_dil);
 
   //--------------------------------------------------------
   // Do P1 scattering interpolation
   if (nuc.res_p1_scatter) {
-    this->interp_temp_dil_views(xt::view(out.Es, 1, xt::all()),
-                          xt::view(*nuc.res_p1_scatter, xt::all(), xt::all(),
-                                   xt::range(res_start, res_start + scat_len)),
-                          it, f_temp, id, f_dil);
+    this->interp_temp_dil_views(
+        xt::view(out.Es, 1, xt::all()),
+        xt::view(*nuc.res_p1_scatter, xt::all(), xt::all(),
+                 xt::range(res_start, res_start + scat_len)),
+        it, f_temp, id, f_dil);
   }
 
   //--------------------------------------------------------
   // Do P2 scattering interpolation
   if (nuc.res_p2_scatter && max_l >= 2) {
-    this->interp_temp_dil_views(xt::view(out.Es, 2, xt::all()),
-                          xt::view(*nuc.res_p2_scatter, xt::all(), xt::all(),
-                                   xt::range(res_start, res_start + scat_len)),
-                          it, f_temp, id, f_dil);
+    this->interp_temp_dil_views(
+        xt::view(out.Es, 2, xt::all()),
+        xt::view(*nuc.res_p2_scatter, xt::all(), xt::all(),
+                 xt::range(res_start, res_start + scat_len)),
+        it, f_temp, id, f_dil);
   }
 
   //--------------------------------------------------------
   // Do P3 scattering interpolation
   if (nuc.res_p3_scatter && max_l >= 3) {
-    this->interp_temp_dil_views(xt::view(out.Es, 3, xt::all()),
-                          xt::view(*nuc.res_p3_scatter, xt::all(), xt::all(),
-                                   xt::range(res_start, res_start + scat_len)),
-                          it, f_temp, id, f_dil);
+    this->interp_temp_dil_views(
+        xt::view(out.Es, 3, xt::all()),
+        xt::view(*nuc.res_p3_scatter, xt::all(), xt::all(),
+                 xt::range(res_start, res_start + scat_len)),
+        it, f_temp, id, f_dil);
   }
 
   return out;
@@ -676,17 +685,29 @@ ResonantOneGroupXS NDLibrary::two_term_xs(const std::string& name,
     throw ScarabeeException(mssg.str());
   }
 
-  // See reference [1] to understand this interpolation scheme, in addition to
-  // the calculation of the flux based on the pot_xs and sig_a.
+  // See references [1] and [2] to understand this interpolation scheme, in
+  // addition to the calculation of the flux based on the pot_xs and sig_a.
 
   // Get the two cross section sets
   const auto xs_1 = dilution_xs(name, g, temp, bg_xs_1, max_l);
   const auto xs_2 = dilution_xs(name, g, temp, bg_xs_2, max_l);
-  const double pot_xs = nuc.ir_lambda[g] * nuc.potential_xs;
+  const double ir_lambda = nuc.ir_lambda[g];
+  const double lmbd_pot_xs = ir_lambda * nuc.potential_xs;
+  const double lmbd_Es1 =
+      ir_lambda * xt::sum(xt::view(xs_1.Es, 0, xt::all()))();
+  const double lmbd_Es2 =
+      ir_lambda * xt::sum(xt::view(xs_2.Es, 0, xt::all()))();
 
-  // Calculate the two flux values
-  const double flux_1_g = (pot_xs + bg_xs_1) / (xs_1.Ea + pot_xs + bg_xs_1);
-  const double flux_2_g = (pot_xs + bg_xs_2) / (xs_2.Ea + pot_xs + bg_xs_2);
+  // Calculate the two flux values. This formula is different from that given
+  // in [1] or [2]. This is baed on a more standard IR approximation where
+  // \varphi(E) = (1/E)*(\lambda\sigma_p + \sigma_0) /
+  //                    (\sigma_a(E) + \lambda\sigma_s(E) + \sigma_0)
+  // Check Gibson in refs [2, 3] for some details and hints on how to do this
+  // derivation for yourself.
+  const double flux_1_g =
+      (lmbd_pot_xs + bg_xs_1) / (xs_1.Ea + lmbd_Es1 + bg_xs_1);
+  const double flux_2_g =
+      (lmbd_pot_xs + bg_xs_2) / (xs_2.Ea + lmbd_Es2 + bg_xs_2);
 
   // Calculate the two weighting factors
   const double f1_g = b1 * flux_1_g / (b1 * flux_1_g + b2 * flux_2_g);
@@ -724,8 +745,9 @@ ResonantOneGroupXS NDLibrary::ring_two_term_xs(
   }
 
   const auto& nuclide = get_nuclide(name);
-  const double pot_xs = nuclide.ir_lambda[g] * nuclide.potential_xs;
-  const double macro_pot_xs = N * pot_xs;
+  const double ir_lambda = nuclide.ir_lambda[g];
+  const double lmbd_pot_xs = ir_lambda * nuclide.potential_xs;
+  const double macro_lmbd_pot_xs = N * lmbd_pot_xs;
 
   if (max_l == 3 && nuclide.inf_p3_scatter == nullptr) max_l--;
   if (max_l == 2 && nuclide.inf_p2_scatter == nullptr) max_l--;
@@ -745,17 +767,28 @@ ResonantOneGroupXS NDLibrary::ring_two_term_xs(
 
     // Calculate the background xs
     const double bg_xs_1 =
-        l_m > 0. ? (mat_pot_xs - macro_pot_xs + a1 / l_m) / N : 1.E10;
+        l_m > 0. ? (mat_pot_xs - macro_lmbd_pot_xs + a1 / l_m) / N : 1.E10;
     const double bg_xs_2 =
-        l_m > 0. ? (mat_pot_xs - macro_pot_xs + a2 / l_m) / N : 1.E10;
+        l_m > 0. ? (mat_pot_xs - macro_lmbd_pot_xs + a2 / l_m) / N : 1.E10;
 
     // Get the two cross section sets
     const auto xs_1 = dilution_xs(name, g, temp, bg_xs_1, max_l);
     const auto xs_2 = dilution_xs(name, g, temp, bg_xs_2, max_l);
+    const double lmbd_Es1 =
+        ir_lambda * xt::sum(xt::view(xs_1.Es, 0, xt::all()))();
+    const double lmbd_Es2 =
+        ir_lambda * xt::sum(xt::view(xs_2.Es, 0, xt::all()))();
 
-    // Calculate the two flux values
-    const double flux_1_g = (pot_xs + bg_xs_1) / (xs_1.Ea + pot_xs + bg_xs_1);
-    const double flux_2_g = (pot_xs + bg_xs_2) / (xs_2.Ea + pot_xs + bg_xs_2);
+    // Calculate the two flux values. This formula is different from that given
+    // in [1] or [2]. This is baed on a more standard IR approximation where
+    // \varphi(E) = (1/E)*(\lambda\sigma_p + \sigma_0) /
+    //                    (\sigma_a(E) + \lambda\sigma_s(E) + \sigma_0)
+    // Check Gibson in refs [2, 3] for some details and hints on how to do this
+    // derivation for yourself.
+    const double flux_1_g =
+        (lmbd_pot_xs + bg_xs_1) / (xs_1.Ea + lmbd_Es1 + bg_xs_1);
+    const double flux_2_g =
+        (lmbd_pot_xs + bg_xs_2) / (xs_2.Ea + lmbd_Es2 + bg_xs_2);
 
     // Add contributions to the denominator
     denom += eta_m * (b1 * flux_1_g + b2 * flux_2_g);
@@ -926,3 +959,10 @@ std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
 //     “Advanced resonance self-shielding method for gray resonance treatment in
 //     lattice physics code GALAXY,” J. Nucl. Sci. Technol., vol. 49, no. 7,
 //     pp. 725–747, 2012, doi: 10.1080/00223131.2012.693885.
+//
+// [2] R. M. Ferrer and J. M. Hykes, “Spatially Dependent Resonance
+//     Self-Shielding in CASMO5,” Nucl Sci Eng, vol. 197, no. 2, pp. 333–350,
+//     2023, doi: 10.1080/00295639.2022.2053491.
+//
+// [3] N. Gibson, “Novel Resonance Self-Shielding Methods for Nuclear Reactor
+//     Analysis,” Massachusetts Institute of Technology, 2016.
