@@ -68,7 +68,8 @@ struct NuclideHandle {
 
   bool loaded() const { return inf_absorption != nullptr; }
   void load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l);
-  void load_inf_data(const NDLibrary& ndl, const H5::Group& grp, std::size_t max_l);
+  void load_inf_data(const NDLibrary& ndl, const H5::Group& grp,
+                     std::size_t max_l);
   void load_res_data(const H5::Group& grp, std::size_t max_l);
   void unload();
 };
@@ -166,7 +167,8 @@ class NDLibrary {
 
   // E should be a 1D xtensor view
   // nE should be a 3D xtensor view: temp, dil, scat_xs
-  void interp_temp_dil_views(auto E, auto nE, std::size_t it, double f_temp, std::size_t id, double f_dil) const {
+  void interp_temp_dil_views(auto E, auto nE, std::size_t it, double f_temp,
+                             std::size_t id, double f_dil) const {
     if (f_temp > 0.) {
       if (f_dil > 0.) {
         E = (1. - f_temp) * ((1. - f_dil) * xt::view(nE, it, id, xt::all()) +

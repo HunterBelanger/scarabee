@@ -102,8 +102,8 @@ void init_MaterialComposition(py::module& m) {
           "nuc : Nuclide\n"
           "      :py:class:`Nuclide` giving the nuclide name and fraction.\n\n",
           py::arg("nuc"))
-          
-      .def("__deepcopy__", [](const MaterialComposition& comp){
+
+      .def("__deepcopy__", [](const MaterialComposition& comp) {
         return MaterialComposition(comp);
       });
 }
@@ -265,8 +265,9 @@ void init_Material(py::module& m) {
            py::arg("C"), py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"),
            py::arg("ndl"), py::arg("max_l") = 1)
 
-     .def("clear_micro_xs_data", &Material::clear_micro_xs_data,
-          "Clears all of the previously computed microscopic cross section data.")
+      .def("clear_micro_xs_data", &Material::clear_micro_xs_data,
+           "Clears all of the previously computed microscopic cross section "
+           "data.")
 
       .def_property("max_legendre_order", &Material::max_legendre_order,
                     &Material::set_max_legendre_order,
@@ -311,10 +312,8 @@ void init_Material(py::module& m) {
 
       .def_property("name", &Material::name, &Material::set_name,
                     "String with the name of the Material.")
-                    
-      .def("__deepcopy__", [](const Material& mat){
-        return Material(mat);
-      });
+
+      .def("__deepcopy__", [](const Material& mat) { return Material(mat); });
 
   py::enum_<MixingFraction>(m, "MixingFraction")
       .value("Atoms", MixingFraction::Atoms,

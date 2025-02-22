@@ -19,7 +19,8 @@ namespace scarabee {
 class XS2D {
  public:
   XS2D() : xs_(), packing_() {
-    xs_ = xt::zeros<double>({static_cast<std::size_t>(0), static_cast<std::size_t>(0)});
+    xs_ = xt::zeros<double>(
+        {static_cast<std::size_t>(0), static_cast<std::size_t>(0)});
   }
 
   XS2D(const xt::xtensor<double, 2>& xs,

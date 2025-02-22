@@ -32,11 +32,14 @@ void init_MicroCrossSectionStructs(py::module& m) {
       .def_readonly("nu", &MicroNuclideXS::nu, "Fission yield.")
       .def_readonly("chi", &MicroNuclideXS::chi, "Fission spectrum.");
 
-  py::class_<ResonantOneGroupXS>(m, "ResonantOneGroupXS", "Single group resonant cross sections.")
+  py::class_<ResonantOneGroupXS>(m, "ResonantOneGroupXS",
+                                 "Single group resonant cross sections.")
       .def_readonly("Dtr", &ResonantOneGroupXS::Dtr, "Transport correction.")
       .def_readonly("Ea", &ResonantOneGroupXS::Ea, "Absorption cross section.")
       .def_readonly("Ef", &ResonantOneGroupXS::Ef, "Fission cross section.")
       .def_readonly("Es", &ResonantOneGroupXS::Es, "Scattering cross section.")
-      .def_readonly("gout_min", &ResonantOneGroupXS::gout_min, "First outgoing energy group.")
-      .def_readonly("n_gamma", &ResonantOneGroupXS::n_gamma, "Capture cross section.");
+      .def_readonly("gout_min", &ResonantOneGroupXS::gout_min,
+                    "First outgoing energy group.")
+      .def_readonly("n_gamma", &ResonantOneGroupXS::n_gamma,
+                    "Capture cross section.");
 }

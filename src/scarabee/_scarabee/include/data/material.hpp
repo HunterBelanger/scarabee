@@ -121,9 +121,8 @@ class Material {
   bool resonant_;
 
   // Stored in the same order as in the MaterialComposition
-  std::vector<MicroNuclideXS>   micro_nuc_xs_data_;
+  std::vector<MicroNuclideXS> micro_nuc_xs_data_;
   std::vector<MicroDepletionXS> micro_dep_xs_data_;
-
 
   double calc_avg_molar_mass(const NDLibrary& ndl) const;
   void normalize_fractions();
@@ -131,7 +130,8 @@ class Material {
   void initialize_inf_dil_xs(std::shared_ptr<NDLibrary> ndl, std::size_t max_l);
   double lambda_pot_xs(std::shared_ptr<NDLibrary> ndl, std::size_t g);
   std::shared_ptr<CrossSection> create_xs_from_micro_data();
-  void assign_resonant_xs(const std::size_t i, const std::size_t g, const ResonantOneGroupXS& res_data);
+  void assign_resonant_xs(const std::size_t i, const std::size_t g,
+                          const ResonantOneGroupXS& res_data);
 
   std::shared_ptr<CrossSection> two_term_xs(const double a1, const double a2,
                                             const double b1, const double b2,
