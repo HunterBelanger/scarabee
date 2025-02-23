@@ -5,6 +5,10 @@
 
 namespace scarabee {
 
+//=============================================================================
+// Side Methods
+//-----------------------------------------------------------------------------
+
 inline Surface::Side xplane_side(const double x0, const Vector& r,
                                  const Direction& u) {
   if (r.x() - x0 > SURFACE_COINCIDENT)
@@ -67,6 +71,58 @@ inline Surface::Side cylinder_side(const double x0, const double y0,
   }
 }
 
+inline Surface::Side bwr_box_side(const double xl, const double xh,
+                                  const double yl, const double yh,
+                                  const double Rcx, const double Rcy,
+                                  const double rc, const Surface::Type type,
+                                  const Vector& r, const Direction& u) {
+  // First, we check if we are inside the cell at all
+  const auto side_xl = xplane_side(xl, r, u);
+  const auto side_xh = xplane_side(xh, r, u);
+  const auto side_yl = yplane_side(yl, r, u);
+  const auto side_yh = yplane_side(yh, r, u);
+
+  const bool in_box = side_xl == Surface::Side::Positive &&
+                      side_xh == Surface::Side::Negative &&
+                      side_yl == Surface::Side::Positive &&
+                      side_yh == Surface::Side::Negative;
+  if (in_box == false) return Surface::Side::Positive;
+
+  // Next, check if we are in the circle box
+  const auto side_Rcx = xplane_side(Rcx, r, u);
+  const auto side_Rcy = yplane_side(Rcy, r, u);
+
+  // This statement is dependent on the quadrant !
+  const bool in_circle_box = [&]() {
+    if (type == Surface::Type::BWRCornerI) {
+      return side_Rcx == Surface::Side::Positive &&
+             side_xh == Surface::Side::Negative &&
+             side_Rcy == Surface::Side::Positive &&
+             side_yh == Surface::Side::Negative;
+    } else if (type == Surface::Type::BWRCornerII) {
+      return side_xl == Surface::Side::Positive &&
+             side_Rcx == Surface::Side::Negative &&
+             side_Rcy == Surface::Side::Positive &&
+             side_yh == Surface::Side::Negative;
+    } else if (type == Surface::Type::BWRCornerIII) {
+      return side_xl == Surface::Side::Positive &&
+             side_Rcx == Surface::Side::Negative &&
+             side_yl == Surface::Side::Positive &&
+             side_Rcy == Surface::Side::Negative;
+    } else {
+      return side_Rcx == Surface::Side::Positive &&
+             side_xh == Surface::Side::Negative &&
+             side_yl == Surface::Side::Positive &&
+             side_Rcy == Surface::Side::Negative;
+    }
+  }();
+  if (in_circle_box == false) return Surface::Side::Negative;
+
+  // Now, we check if we are inside the circle, and use that to determine if we
+  // are on the positive or negative side.
+  return cylinder_side(Rcx, Rcy, rc, r, u);
+}
+
 Surface::Side Surface::side(const Vector& r, const Direction& u) const {
   switch (type_) {
     case Type::XPlane:
@@ -85,11 +141,43 @@ Surface::Side Surface::side(const Vector& r, const Direction& u) const {
       return cylinder_side(this->x0(), this->y0(), this->r(), r, u);
       break;
 
+    case Type::BWRCornerI: {
+      const double Rcx = this->xh() - this->rc();
+      const double Rcy = this->yh() - this->rc();
+      return bwr_box_side(this->xl(), this->xh(), this->yl(), this->yh(), Rcx,
+                          Rcy, this->rc(), type_, r, u);
+    } break;
+
+    case Type::BWRCornerII: {
+      const double Rcx = this->xl() + this->rc();
+      const double Rcy = this->yh() - this->rc();
+      return bwr_box_side(this->xl(), this->xh(), this->yl(), this->yh(), Rcx,
+                          Rcy, this->rc(), type_, r, u);
+    } break;
+
+    case Type::BWRCornerIII: {
+      const double Rcx = this->xl() + this->rc();
+      const double Rcy = this->yl() + this->rc();
+      return bwr_box_side(this->xl(), this->xh(), this->yl(), this->yh(), Rcx,
+                          Rcy, this->rc(), type_, r, u);
+    } break;
+
+    case Type::BWRCornerIV: {
+      const double Rcx = this->xh() - this->rc();
+      const double Rcy = this->yl() + this->rc();
+      return bwr_box_side(this->xl(), this->xh(), this->yl(), this->yh(), Rcx,
+                          Rcy, this->rc(), type_, r, u);
+    } break;
+
     default:
       return Side::Positive;
       break;
   }
 }
+
+//=============================================================================
+// Distance Methods
+//-----------------------------------------------------------------------------
 
 inline double xplane_distance(const double x0, const Vector& r,
                               const Direction& u) {
@@ -156,6 +244,39 @@ inline double cylinder_distance(const double x0, const double y0,
   }
 }
 
+inline double bwr_box_distance(const double xl, const double xh,
+                               const double yl, const double yh,
+                               const double Rcx, const double Rcy,
+                               const double rc, const Surface::Type type,
+                               const Vector& r, const Direction& u) {
+  const auto orig_side = bwr_box_side(xl, xh, yl, yh, Rcx, Rcy, rc, type, r, u);
+
+  auto next_side = orig_side;
+  Vector r_next(r);
+
+  double d_sum = 0.;
+  while (next_side == orig_side) {
+    const double d_xl = xplane_distance(xl, r_next, u);
+    const double d_xh = xplane_distance(xh, r_next, u);
+    const double d_yl = yplane_distance(yl, r_next, u);
+    const double d_yh = yplane_distance(yh, r_next, u);
+    const double d_circ = cylinder_distance(Rcx, Rcy, rc, r_next, u);
+
+    const double d = std::min({d_xl, d_xh, d_yl, d_yh, d_circ});
+
+    if (d == INF) {
+      // We will never hit the surface
+      return d;
+    }
+
+    d_sum += d;
+    r_next = Vector(r_next.x() + d * u.x(), r_next.y() + d * u.y());
+    next_side = bwr_box_side(xl, xh, yl, yh, Rcx, Rcy, rc, type, r, u);
+  }
+
+  return d_sum;
+}
+
 double Surface::distance(const Vector& r, const Direction& u) const {
   switch (type_) {
     case Type::XPlane:
@@ -173,6 +294,34 @@ double Surface::distance(const Vector& r, const Direction& u) const {
     case Type::Cylinder:
       return cylinder_distance(this->x0(), this->y0(), this->r(), r, u);
       break;
+
+    case Type::BWRCornerI: {
+      const double Rcx = this->xh() - this->rc();
+      const double Rcy = this->yh() - this->rc();
+      return bwr_box_distance(this->xl(), this->xh(), this->yl(), this->yh(),
+                              Rcx, Rcy, this->rc(), type_, r, u);
+    } break;
+
+    case Type::BWRCornerII: {
+      const double Rcx = this->xl() + this->rc();
+      const double Rcy = this->yh() - this->rc();
+      return bwr_box_distance(this->xl(), this->xh(), this->yl(), this->yh(),
+                              Rcx, Rcy, this->rc(), type_, r, u);
+    } break;
+
+    case Type::BWRCornerIII: {
+      const double Rcx = this->xl() + this->rc();
+      const double Rcy = this->yl() + this->rc();
+      return bwr_box_distance(this->xl(), this->xh(), this->yl(), this->yh(),
+                              Rcx, Rcy, this->rc(), type_, r, u);
+    } break;
+
+    case Type::BWRCornerIV: {
+      const double Rcx = this->xh() - this->rc();
+      const double Rcy = this->yl() + this->rc();
+      return bwr_box_distance(this->xl(), this->xh(), this->yl(), this->yh(),
+                              Rcx, Rcy, this->rc(), type_, r, u);
+    } break;
 
     default:
       return INF;

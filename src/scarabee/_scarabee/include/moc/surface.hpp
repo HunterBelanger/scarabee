@@ -3,6 +3,8 @@
 
 #include <moc/vector.hpp>
 #include <moc/direction.hpp>
+#include <utils/logging.hpp>
+#include <utils/scarabee_exception.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/array.hpp>
@@ -14,7 +16,16 @@ namespace scarabee {
 
 class Surface {
  public:
-  enum class Type : char { XPlane, YPlane, Plane, Cylinder };
+  enum class Type : char {
+    XPlane,
+    YPlane,
+    Plane,
+    Cylinder,
+    BWRCornerI,
+    BWRCornerII,
+    BWRCornerIII,
+    BWRCornerIV
+  };
   enum class Side : bool { Positive, Negative };
 
   Side side(const Vector& r, const Direction& u) const;
@@ -43,13 +54,29 @@ class Surface {
   double& C() { return params_[2]; }
   const double& C() const { return params_[2]; }
 
+  // Parameters for a BWR Corner Surface
+  double& xl() { return params_[0]; }
+  const double& xl() const { return params_[0]; }
+
+  double& xh() { return params_[1]; }
+  const double& xh() const { return params_[1]; }
+
+  double& yl() { return params_[2]; }
+  const double& yl() const { return params_[2]; }
+
+  double& yh() { return params_[3]; }
+  const double& yh() const { return params_[3]; }
+
+  double& rc() { return params_[4]; }
+  const double& rc() const { return params_[4]; }
+
  protected:
   Surface(Type type) : params_(), type_(type) {}
 
  private:
   Surface() : params_(), type_(Type::XPlane) {}
 
-  std::array<double, 3> params_;
+  std::array<double, 5> params_;
   Type type_;
 
   friend class cereal::access;
@@ -64,7 +91,7 @@ class XPlane : public Surface {
   XPlane(double x0) : Surface(Type::XPlane) { this->x0() = x0; }
 
  private:
-  XPlane(): Surface(Type::XPlane) {}
+  XPlane() : Surface(Type::XPlane) {}
 
   friend class cereal::access;
   template <class Archive>
@@ -78,7 +105,7 @@ class YPlane : public Surface {
   YPlane(double y0) : Surface(Type::YPlane) { this->y0() = y0; }
 
  private:
-  YPlane(): Surface(Type::YPlane) {}
+  YPlane() : Surface(Type::YPlane) {}
 
   friend class cereal::access;
   template <class Archive>
@@ -96,7 +123,7 @@ class Plane : public Surface {
   }
 
  private:
-  Plane(): Surface(Type::Plane) {}
+  Plane() : Surface(Type::Plane) {}
 
   friend class cereal::access;
   template <class Archive>
@@ -114,7 +141,195 @@ class Cylinder : public Surface {
   }
 
  private:
-  Cylinder(): Surface(Type::Cylinder) {}
+  Cylinder() : Surface(Type::Cylinder) {}
+
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(cereal::base_class<Surface>(this));
+  }
+};
+
+class BWRCornerI : public Surface {
+ public:
+  BWRCornerI(double xl, double xh, double yl, double yh, double rc)
+      : Surface(Type::BWRCornerI) {
+    if (xh <= xl) {
+      const auto mssg = "x width must be > 0 (i.e. xl > xh).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    if (yh <= yl) {
+      const auto mssg = "y width must be > 0 (i.e. yl > yh).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    if (rc < 0.) {
+      const auto mssg = "Corner radius must be > 0 (i.e. rc > 0).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    const double Rcx = this->xh() - this->rc();
+    const double Rcy = this->yh() - this->rc();
+    if (Rcx < this->xl() || Rcy < this->yl()) {
+      const auto mssg = "Corner radius too large for cell width.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    this->xl() = xl;
+    this->xh() = xh;
+    this->yl() = yl;
+    this->yh() = yh;
+    this->rc() = rc;
+  }
+
+ private:
+  BWRCornerI() : Surface(Type::BWRCornerI) {}
+
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(cereal::base_class<Surface>(this));
+  }
+};
+
+class BWRCornerII : public Surface {
+ public:
+  BWRCornerII(double xl, double xh, double yl, double yh, double rc)
+      : Surface(Type::BWRCornerII) {
+    if (xh <= xl) {
+      const auto mssg = "x width must be > 0 (i.e. xl > xh).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    if (yh <= yl) {
+      const auto mssg = "y width must be > 0 (i.e. yl > yh).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    if (rc < 0.) {
+      const auto mssg = "Corner radius must be > 0 (i.e. rc > 0).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    const double Rcx = this->xl() + this->rc();
+    const double Rcy = this->yh() - this->rc();
+    if (Rcx > this->xh() || Rcy < this->yl()) {
+      const auto mssg = "Corner radius too large for cell width.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    this->xl() = xl;
+    this->xh() = xh;
+    this->yl() = yl;
+    this->yh() = yh;
+    this->rc() = rc;
+  }
+
+ private:
+  BWRCornerII() : Surface(Type::BWRCornerII) {}
+
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(cereal::base_class<Surface>(this));
+  }
+};
+
+class BWRCornerIII : public Surface {
+ public:
+  BWRCornerIII(double xl, double xh, double yl, double yh, double rc)
+      : Surface(Type::BWRCornerIII) {
+    if (xh <= xl) {
+      const auto mssg = "x width must be > 0 (i.e. xl > xh).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    if (yh <= yl) {
+      const auto mssg = "y width must be > 0 (i.e. yl > yh).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    if (rc < 0.) {
+      const auto mssg = "Corner radius must be > 0 (i.e. rc > 0).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    const double Rcx = this->xl() + this->rc();
+    const double Rcy = this->yl() + this->rc();
+    if (Rcx > this->xh() || Rcy > this->yh()) {
+      const auto mssg = "Corner radius too large for cell width.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    this->xl() = xl;
+    this->xh() = xh;
+    this->yl() = yl;
+    this->yh() = yh;
+    this->rc() = rc;
+  }
+
+ private:
+  BWRCornerIII() : Surface(Type::BWRCornerIII) {}
+
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(cereal::base_class<Surface>(this));
+  }
+};
+
+class BWRCornerIV : public Surface {
+ public:
+  BWRCornerIV(double xl, double xh, double yl, double yh, double rc)
+      : Surface(Type::BWRCornerIV) {
+    if (xh <= xl) {
+      const auto mssg = "x width must be > 0 (i.e. xl > xh).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    if (yh <= yl) {
+      const auto mssg = "y width must be > 0 (i.e. yl > yh).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    if (rc < 0.) {
+      const auto mssg = "Corner radius must be > 0 (i.e. rc > 0).";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    const double Rcx = this->xh() - this->rc();
+    const double Rcy = this->yl() + this->rc();
+    if (Rcx < this->xl() || Rcy > this->yh()) {
+      const auto mssg = "Corner radius too large for cell width.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    this->xl() = xl;
+    this->xh() = xh;
+    this->yl() = yl;
+    this->yh() = yh;
+    this->rc() = rc;
+  }
+
+ private:
+  BWRCornerIV() : Surface(Type::BWRCornerIV) {}
 
   friend class cereal::access;
   template <class Archive>
