@@ -81,10 +81,6 @@ class XS1D {
   }
 
   XS1D& operator*=(const XS1D& xs2) {
-    if (this->ngroups() < xs2.ngroups()) {
-      this->resize(xs2.ngroups());
-    }
-
     for (std::size_t g = 0; g < this->ngroups(); g++) xs_(g) *= xs2(g);
 
     return *this;
