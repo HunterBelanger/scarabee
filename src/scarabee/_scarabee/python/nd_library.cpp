@@ -88,13 +88,13 @@ void init_NDLibrary(py::module& m) {
            "-------\n"
            "MicroNuclideXS, MicroDepletionXS\n"
            "  Interpolated infinite dilution cross sections at desired "
-           "temperatures.")
+           "temperature.")
 
       .def("dilution_xs", &NDLibrary::dilution_xs,
            "Interpolates the cross section of the prescribed nuclide at the "
            "prescribed energy group to the desired temperature and dilution. "
            "If the nuclide is not resonant or the desired group g is not "
-           "resonant, and exception is raised.\n\n"
+           "resonant, an exception is raised.\n\n"
            "Parameters\n"
            "----------\n"
            "name : str\n"
@@ -134,7 +134,7 @@ void init_NDLibrary(py::module& m) {
           "cross section of the material, :math:`\\lambda_r` is the "
           "intermediate resonance parameter for isotope :math:`r`, and "
           ":math:`\\Sigma_e` is the escape cross section. If the nuclide is "
-          "not resonant or the desired group g is not resonant, and exception "
+          "not resonant or the desired group g is not resonant, an exception "
           "is raised.\n\n"
           "Parameters\n"
           "----------\n"
@@ -166,7 +166,7 @@ void init_NDLibrary(py::module& m) {
            "Uses the two-term rational approximation and the Stoker-Weiss "
            "method to produce the self-shielded cross sections for a single "
            "nuclide in a ring of fuel. If the nuclide is not resonant or the "
-           "desired group g is not resonant, and exception is raised.\n\n"
+           "desired group g is not resonant, an exception is raised.\n\n"
            "Parameters\n"
            "----------\n"
            "name : str\n"
