@@ -55,7 +55,7 @@ class DilutionTable:
 
   def find_dilution(self, g, xs):
     if g < 0 or g >= self.ngroups:
-      raise IndexError("Energy group index out of range.")
+      raise IndexError("Energy group index is out of range.")
 
     # If XS is increasing with dilution
     if self.xs[0,g] <= self.xs[-1,g]:
