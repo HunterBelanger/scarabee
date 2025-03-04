@@ -65,6 +65,7 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   x_bounds_.reserve(dx_.size() + 1);
   x_bounds_.emplace_back();
   x_bounds_.back().type() = Surface::Type::XPlane;
+  x_bounds_.back().x0() = -0.5 * dx_tot;
   for (const auto& d : dx_) {
     const double new_x0 = x_bounds_.back().x0() + d;
 
@@ -169,9 +170,6 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u) const
 
   // First, we try to get a tile
   auto otile = this->get_tile(r, u);
-  if (otile.has_value() == false) {
-    otile = this->get_tile(r, -u);
-  }
   if (otile.has_value() == false){
     surface.is_valid = false;
     return surface;
