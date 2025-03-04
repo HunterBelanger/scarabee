@@ -483,7 +483,7 @@ with
 
 .. math::
 
-	\varphi_{n,g} = \frac{\lambda_{r,g}\sigma_{p,r} + \sigma_{0,n}}{\sigma_{a,r,g,n} + \lambda_{r,g}\sigma_{s,r,g,g} + \sigma_{0,n}}
+	\varphi_{n,g} = \frac{\lambda_{r,g}\sigma_{p,r} + \sigma_{0,n}}{\sigma_{a,r,g,n} + \lambda_{r,g}\sigma_{s,r,g,n} + \sigma_{0,n}}
 
 in the intermediate resonance approximation. In this notation,
 :math:`\sigma_{x,r,g,n}` is the multi-group cross section for reaction
