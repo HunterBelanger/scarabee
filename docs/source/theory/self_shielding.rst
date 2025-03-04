@@ -311,7 +311,7 @@ isotope with any number of purely scattering background moderator isotopes that
 can have a user specified mass and a constant cross section.
 
 Additionally, when using the IR approximation, we should account for the fact
-that the background nuclides not not contribute to slowing down as much as
+that the background nuclides do not contribute to slowing down as much as
 hydrogen. This fact is captured by the IR parameter. In this framework, we
 instead calculate the background dilution as
 
