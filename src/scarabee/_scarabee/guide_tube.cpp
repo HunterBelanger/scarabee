@@ -125,4 +125,12 @@ void GuideTube::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
   clad_->load_nuclides(ndl);
 }
 
+std::shared_ptr<GuideTube> GuideTube::clone() const {
+  auto out = std::make_shared<GuideTube>(*this);
+
+  if (clad_) out->clad_ = std::make_shared<Material>(*clad_);
+
+  return out;
+}
+
 }  // namespace scarabee
