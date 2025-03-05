@@ -24,7 +24,7 @@ struct CMFDSurfaceCrossing {
 //left, right, bottom, top, top right, bottom right, bottom left, top left 
 
 enum class Type : std::uint8_t {XN, XP, YN, YP, TR, BR, BL, TL};
-std::size_t cell_index;
+std::optional<std::array<std::size_t, 2>> cell_tile;
 bool is_valid;
 Type crossing;
 
@@ -32,7 +32,7 @@ constexpr explicit operator bool() const noexcept { return is_valid; }
 
 template <class Archive>
 void serialize(Archive& arc) {
-  arc(CEREAL_NVP(cell_index),CEREAL_NVP(is_valid),CEREAL_NVP(crossing));
+  arc(CEREAL_NVP(cell_tile),CEREAL_NVP(is_valid),CEREAL_NVP(crossing));
 }
 
 };
@@ -66,7 +66,7 @@ class CMFD {
   const double& current(const std::size_t G, const std::size_t surface) const;
 
   void tally_current(double aflx, const Direction& u, std::size_t G,
-                     const std::size_t surf);
+                     const CMFDSurfaceCrossing& surf);
 
   void zero_currents() {
     surface_currents_.fill(0.);

@@ -22,8 +22,8 @@ void init_CMFD(py::module& m) {
   py::class_<CMFDSurfaceCrossing>(m, "CMFDSurfaceCrossing")
   .def_readonly("is_valid", &CMFDSurfaceCrossing::is_valid,
   "Bool that indicates whether or not the segment end is on a valid CMFD surface")
-  .def_readonly("cell_index", &CMFDSurfaceCrossing::cell_index,
-  "Int with the CMFD cell index")
+  .def_readonly("cell_tile", &CMFDSurfaceCrossing::cell_tile,
+  "Array of int with the CMFD cell indexes")
   .def_readonly("crossing", &CMFDSurfaceCrossing::crossing,
   "Defines which corner / side of the cell the segment end passes through");
 

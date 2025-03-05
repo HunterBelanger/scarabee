@@ -486,8 +486,8 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
     std::size_t g = static_cast<std::size_t>(ig);
 
     // Get the group for CMFD
-    //std::size_t G = g;
-    //if (cmfd_) G = cmfd_->moc_to_cmfd_group(g);
+    std::size_t G = g;
+    if (cmfd_) G = cmfd_->moc_to_cmfd_group(g);
 
     for (auto& tracks : tracks_) {
       for (std::size_t t = 0; t < tracks.size(); t++) {
@@ -504,20 +504,20 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
         for (std::size_t p = 0; p < n_pol_angles_; p++)
           angflux.push_back(track.entry_flux()(g, p));
 
-        /** 
+        
         // Accumulate entry angular flux into CMFD current
         if (cmfd_ && track.begin()->entry_cmfd_surface()) {
-          const auto surf_indx = track.begin()->entry_cmfd_surface().value();
+          const auto surf_indx = track.begin()->entry_cmfd_surface();
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
             cmfd_->tally_current(flx, u_forw, G, surf_indx);
           }
         }
-        */
+        
 
         // Follow track in forward direction
         for (auto& seg : track) {
-          //const auto cmfd_surf = seg.exit_cmfd_surface();
+          const auto cmfd_surf = seg.exit_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
@@ -530,12 +530,12 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
 
-            /** 
+            
             if (cmfd_surf) {
               const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
-              cmfd_->tally_current(flx, u_forw, G, *cmfd_surf);
+              cmfd_->tally_current(flx, u_forw, G, cmfd_surf);
             }
-            */
+            
           }  // For all polar angles
           sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
@@ -556,20 +556,20 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
 
         // Accumulate entry angular flux into CMFD current for backwards
         // direction
-        /**
+        
         if (cmfd_ && track.rbegin()->exit_cmfd_surface()) {
-          std::size_t surf_indx = track.rbegin()->exit_cmfd_surface().value();
+          auto surf_indx = track.rbegin()->exit_cmfd_surface();
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
             cmfd_->tally_current(flx, u_back, G, surf_indx);
           }
         }
-        */
+        
 
         // Iterate over segments in backwards direction
         for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
           auto& seg = *seg_it;
-          //const auto cmfd_surf = seg.entry_cmfd_surface();
+          const auto cmfd_surf = seg.entry_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
@@ -581,12 +581,12 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
-            /** 
+            
             if (cmfd_surf) {
               const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
-              cmfd_->tally_current(flx, u_back, G, *cmfd_surf);
+              cmfd_->tally_current(flx, u_back, G, cmfd_surf);
             }
-            */
+            
           }  // For all polar angles
           sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track

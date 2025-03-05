@@ -178,7 +178,8 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u) const
   const std::size_t i = (*otile)[0];
   const std::size_t j = (*otile)[1];
 
-  surface.cell_index = tile_to_indx(*otile);
+  //surface.cell_index = tile_to_indx(*otile);
+  surface.cell_tile = otile;
 
   // Now we get our surfaces for this tile 
   const auto& x_n = x_bounds_[i];
@@ -296,26 +297,100 @@ const double& CMFD::current(const std::size_t G,
 }
 
 void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
-                         const std::size_t surf) {
+                         const CMFDSurfaceCrossing& surf) {
   if (G >= surface_currents_.shape()[0]) {
     auto mssg = "Group index out of range.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (surf >= surface_currents_.shape()[1]) {
-    auto mssg = "Surface index out of range.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
+  std::size_t i = (*surf.cell_tile)[0];
+  std::size_t j = (*surf.cell_tile)[1];
+
+  //Get surface index(s) from CMFDSurfaceCrossing
+  //need cell indexes
+  htl::static_vector<std::size_t,4> surf_indexes;
+  bool is_corner = false;
+  if (surf.crossing == CMFDSurfaceCrossing::Type::XN){
+    surf_indexes.push_back( (nx_ * j + i) + j );
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::XP){
+    surf_indexes.push_back( (nx_ * j + i) + j + 1);
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::YN){
+    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j);
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::YP){
+    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j +1);
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TR){
+    is_corner = true;
+    //YP and XP surfaces of current cell
+    surf_indexes.push_back((nx_ + 1)*ny_ + (ny_ + 1)*i + j +1 );
+    surf_indexes.push_back((nx_ * j + i) + j + 1);
+    //YN and XN surfaces of diagonal cell
+    i += 1, j += 1;
+    surf_indexes.push_back((nx_ + 1)*ny_ + (ny_ + 1)*i + j);
+    surf_indexes.push_back((nx_ * j + i) + j );
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BR){
+    is_corner = true;
+    //XP and YN surfaces of current cell
+    surf_indexes.push_back((nx_ * j + i) + j + 1);
+    surf_indexes.push_back((nx_ + 1)*ny_ + (ny_ + 1)*i + j);
+    //YP and XN surfaces of diagonal cell
+    i += 1, j -= 1;
+    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j +1);
+    surf_indexes.push_back( (nx_ * j + i) + j);
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BL){
+    is_corner = true;
+    //YN and XN surfaces of current cell
+    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j);
+    surf_indexes.push_back((nx_ * j + i) + j);
+    //XP and YP surfaces of diagonal cell
+    i -= 1, j -= 1;
+    surf_indexes.push_back((nx_ * j + i) + j + 1);
+    surf_indexes.push_back((nx_ + 1)*ny_ + (ny_ + 1)*i + j +1);
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TL){
+    is_corner = true;
+    //XN and YP surfaces of current cell
+    surf_indexes.push_back( (nx_ * j + i) + j );
+    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j +1);
+    //XP and YN surfaces of diagonal cell
+    i -= 1, j += 1;
+    surf_indexes.push_back( (nx_ * j + i) + j + 1);
+    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j);
   }
 
-  if (surf < nx_surfs_) {
-#pragma omp atomic
-    surface_currents_(G, surf) += std::copysign(aflx, u.x());
-  } else {
-#pragma omp atomic
-    surface_currents_(G, surf) += std::copysign(aflx, u.y());
+  //Check surface indexes are not out of range
+  for (std::size_t k=0; k < surf_indexes.size(); ++k){
+    if (surf_indexes[k] >= surface_currents_.shape()[1]) {
+      auto mssg = "Surface index out of range.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
   }
+
+  if (is_corner){
+    //Split flux between two surfaces evenly
+    aflx *= 0.5;
+
+    for (std::size_t i = 0; i < 4; ++i){
+      if (surf_indexes[i] < nx_surfs_) {
+        #pragma omp atomic
+            surface_currents_(G, surf_indexes[i]) += std::copysign(aflx, u.x());
+          } else {
+        #pragma omp atomic
+            surface_currents_(G, surf_indexes[i]) += std::copysign(aflx, u.y());
+          }
+    }
+  } else {
+    if (surf_indexes[0] < nx_surfs_) {
+      #pragma omp atomic
+          surface_currents_(G, surf_indexes[0]) += std::copysign(aflx, u.x());
+        } else {
+      #pragma omp atomic
+          surface_currents_(G, surf_indexes[0]) += std::copysign(aflx, u.y());
+        }
+  }
+
+
+
 }
 
 void CMFD::normalize_currents() {
