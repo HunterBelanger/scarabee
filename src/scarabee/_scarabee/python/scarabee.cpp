@@ -11,6 +11,7 @@ extern void init_XS1D(py::module&);
 extern void init_XS2D(py::module&);
 extern void init_CrossSection(py::module&);
 extern void init_DiffusionCrossSection(py::module&);
+extern void init_MicroCrossSectionStructs(py::module&);
 extern void init_NuclideHandle(py::module&);
 extern void init_NDLibrary(py::module&);
 extern void init_Nuclide(py::module&);
@@ -56,6 +57,7 @@ PYBIND11_MODULE(_scarabee, m) {
   init_XS2D(m);
   init_CrossSection(m);
   init_DiffusionCrossSection(m);
+  init_MicroCrossSectionStructs(m);
   init_NuclideHandle(m);
   init_NDLibrary(m);
   init_Nuclide(m);

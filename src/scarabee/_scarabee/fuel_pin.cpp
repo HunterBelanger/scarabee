@@ -347,4 +347,14 @@ void FuelPin::load_nuclides(std::shared_ptr<NDLibrary> ndl) const {
   if (gap_) gap_->load_nuclides(ndl);
 }
 
+std::shared_ptr<FuelPin> FuelPin::clone() const {
+  auto out = std::make_shared<FuelPin>(*this);
+
+  if (fuel_) out->fuel_ = std::make_shared<Material>(*fuel_);
+  if (gap_) out->gap_ = std::make_shared<Material>(*gap_);
+  if (clad_) out->clad_ = std::make_shared<Material>(*clad_);
+
+  return out;
+}
+
 }  // namespace scarabee

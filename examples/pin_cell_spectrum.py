@@ -153,7 +153,7 @@ Zirccomp.add_nuclide("Zr96", 1.2070E-3)
 Zirc = Material(Zirccomp, 293.6, ndl)
 
 Watercomp = MaterialComposition()
-Watercomp.add_nuclide("H1_H2O_TC", 6.6630E-2)
+Watercomp.add_nuclide("H1_H2O", 6.6630E-2)
 Watercomp.add_nuclide("O16",    3.3315E-2)
 Water = Material(Watercomp, 293.6, ndl)
 
@@ -235,6 +235,6 @@ plt.ylabel("Flux per Unit Lethargy [Arb. Units]")
 plt.legend().set_draggable(True)
 plt.show()
 
-np.save("cp_spectrum.npy", avg_flux_cp)
-np.save("moc_spectrum.npy", avg_flux_moc)
-np.save("energy_bounds.npy", ebounds)
+#np.save("cp_spectrum.npy", avg_flux_cp)
+#np.save("moc_spectrum.npy", avg_flux_moc)
+#np.save("energy_bounds.npy", ebounds)
