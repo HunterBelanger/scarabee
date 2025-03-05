@@ -2,6 +2,8 @@
 #define SCARABEE_MATERIAL_H
 
 #include <data/cross_section.hpp>
+#include <data/micro_cross_sections.hpp>
+#include <utils/serialization.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/string.hpp>
@@ -10,6 +12,7 @@
 #include <string>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace scarabee {
@@ -77,30 +80,31 @@ class Material {
   double atoms_per_bcm() const { return atoms_per_bcm_; }
   double grams_per_cm3() const { return grams_per_cm3_; }
   double potential_xs() const { return potential_xs_; }
-  double lambda_potential_xs() const { return lambda_potential_xs_; }
   double temperature() const { return temperature_; }
   void set_temperature(double T);
   double average_molar_mass() const { return average_molar_mass_; }
+
+  void clear_micro_xs_data();
 
   bool fissile() const { return fissile_; }
   bool resonant() const { return resonant_; }
 
   std::shared_ptr<CrossSection> carlvik_xs(
       double C, double Ee, std::shared_ptr<NDLibrary> ndl,
-      std::optional<std::size_t> max_l = std::nullopt) const;
+      std::optional<std::size_t> max_l = std::nullopt);
 
   std::shared_ptr<CrossSection> roman_xs(
       double C, double Ee, std::shared_ptr<NDLibrary> ndl,
-      std::optional<std::size_t> max_l = std::nullopt) const;
+      std::optional<std::size_t> max_l = std::nullopt);
 
   std::shared_ptr<CrossSection> dilution_xs(
       const std::vector<double>& dils, std::shared_ptr<NDLibrary> ndl,
-      std::optional<std::size_t> max_l = std::nullopt) const;
+      std::optional<std::size_t> max_l = std::nullopt);
 
   std::shared_ptr<CrossSection> ring_carlvik_xs(
       double C, double Rfuel, double Rin, double Rout,
       std::shared_ptr<NDLibrary> ndl,
-      std::optional<std::size_t> max_l = std::nullopt) const;
+      std::optional<std::size_t> max_l = std::nullopt);
 
   void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
 
@@ -112,19 +116,28 @@ class Material {
   double atoms_per_bcm_;
   double grams_per_cm3_;
   double potential_xs_;
-  double lambda_potential_xs_;
   std::size_t max_l_{1};
   bool fissile_;
   bool resonant_;
 
+  // Stored in the same order as in the MaterialComposition
+  std::vector<MicroNuclideXS> micro_nuc_xs_data_;
+  std::vector<MicroDepletionXS> micro_dep_xs_data_;
+
   double calc_avg_molar_mass(const NDLibrary& ndl) const;
   void normalize_fractions();
+
+  void initialize_inf_dil_xs(std::shared_ptr<NDLibrary> ndl, std::size_t max_l);
+  double lambda_pot_xs(std::shared_ptr<NDLibrary> ndl, std::size_t g);
+  std::shared_ptr<CrossSection> create_xs_from_micro_data();
+  void assign_resonant_xs(const std::size_t i, const std::size_t g,
+                          const ResonantOneGroupXS& res_data);
 
   std::shared_ptr<CrossSection> two_term_xs(const double a1, const double a2,
                                             const double b1, const double b2,
                                             const double Ee,
                                             std::shared_ptr<NDLibrary> ndl,
-                                            std::size_t max_l) const;
+                                            std::size_t max_l);
 
   friend class cereal::access;
   Material() {}
@@ -133,8 +146,8 @@ class Material {
     arc(CEREAL_NVP(composition_), CEREAL_NVP(name_), CEREAL_NVP(temperature_),
         CEREAL_NVP(average_molar_mass_), CEREAL_NVP(atoms_per_bcm_),
         CEREAL_NVP(grams_per_cm3_), CEREAL_NVP(potential_xs_),
-        CEREAL_NVP(lambda_potential_xs_), CEREAL_NVP(max_l_),
-        CEREAL_NVP(fissile_), CEREAL_NVP(resonant_));
+        CEREAL_NVP(max_l_), CEREAL_NVP(fissile_), CEREAL_NVP(resonant_),
+        CEREAL_NVP(micro_nuc_xs_data_), CEREAL_NVP(micro_dep_xs_data_));
   }
 };
 

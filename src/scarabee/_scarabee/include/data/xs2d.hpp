@@ -18,6 +18,11 @@ namespace scarabee {
 
 class XS2D {
  public:
+  XS2D() : xs_(), packing_() {
+    xs_ = xt::zeros<double>(
+        {static_cast<std::size_t>(0), static_cast<std::size_t>(0)});
+  }
+
   XS2D(const xt::xtensor<double, 2>& xs,
        const xt::xtensor<std::uint32_t, 2>& packing)
       : xs_(xs), packing_(packing) {
@@ -474,11 +479,6 @@ class XS2D {
       packing_;  // First index incident group, second (data start, g_low, g_hi)
 
   friend class cereal::access;
-  friend class CrossSection;
-  friend class DiffusionCrossSection;
-
-  XS2D() : xs_(), packing_() {}
-
   template <class Archive>
   void serialize(Archive& arc) {
     arc(CEREAL_NVP(xs_), CEREAL_NVP(packing_));

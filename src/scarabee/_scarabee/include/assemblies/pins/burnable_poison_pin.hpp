@@ -59,6 +59,8 @@ class BurnablePoisonPin {
 
   void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
 
+  std::shared_ptr<BurnablePoisonPin> clone() const;
+
  private:
   std::shared_ptr<Material> center_;
   double center_radius_;

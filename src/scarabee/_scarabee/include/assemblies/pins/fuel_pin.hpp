@@ -59,6 +59,8 @@ class FuelPin {
 
   void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
 
+  std::shared_ptr<FuelPin> clone() const;
+
  private:
   std::shared_ptr<Material> fuel_;
   double fuel_radius_;
