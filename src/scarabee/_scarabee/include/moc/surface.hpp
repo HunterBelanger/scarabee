@@ -31,6 +31,9 @@ class Surface {
   Side side(const Vector& r, const Direction& u) const;
   double distance(const Vector& r, const Direction& u) const;
 
+  double integrate_x(double xmin, double xmax, const Side side) const;
+  double integrate_y(double ymin, double ymax, const Side side) const;
+
   Type& type() { return type_; }
   const Type& type() const { return type_; }
 
