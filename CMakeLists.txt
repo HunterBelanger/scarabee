@@ -180,6 +180,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/empty_cell.cpp
                               src/scarabee/_scarabee/simple_pin_cell.cpp
                               src/scarabee/_scarabee/pin_cell.cpp
+                              src/scarabee/_scarabee/simple_bwr_corner_pin_cell.cpp
                               src/scarabee/_scarabee/cartesian_2d.cpp
                               src/scarabee/_scarabee/track.cpp
                               src/scarabee/_scarabee/legendre.cpp
@@ -220,6 +221,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/python/pin_cell_type.cpp
                               src/scarabee/_scarabee/python/simple_pin_cell.cpp
                               src/scarabee/_scarabee/python/pin_cell.cpp
+                              src/scarabee/_scarabee/python/simple_bwr_corner_pin_cell.cpp
                               src/scarabee/_scarabee/python/cartesian_2d.cpp
                               src/scarabee/_scarabee/python/moc_driver.cpp
                               src/scarabee/_scarabee/python/criticality_spectrum.cpp

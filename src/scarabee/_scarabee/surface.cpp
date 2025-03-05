@@ -271,7 +271,7 @@ inline double bwr_box_distance(const double xl, const double xh,
 
     d_sum += d;
     r_next = Vector(r_next.x() + d * u.x(), r_next.y() + d * u.y());
-    next_side = bwr_box_side(xl, xh, yl, yh, Rcx, Rcy, rc, type, r, u);
+    next_side = bwr_box_side(xl, xh, yl, yh, Rcx, Rcy, rc, type, r_next, u);
   }
 
   return d_sum;

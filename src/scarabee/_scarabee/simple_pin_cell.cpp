@@ -75,7 +75,7 @@ void SimplePinCell::build_full() {
 
   // Make sure we have at least 2 mats and one radii
   if (mat_radii_.size() == 0) {
-    auto mssg = "Must have at least one radiius.";
+    auto mssg = "Must have at least one radius.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -97,7 +97,7 @@ void SimplePinCell::build_full() {
   // Make sure mats aren't nullptr
   for (const auto& mat : mats_) {
     if (!mat) {
-      auto mssg = "Found CrossSection which was nullptr.";
+      auto mssg = "Found CrossSection which is None.";
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
     }
