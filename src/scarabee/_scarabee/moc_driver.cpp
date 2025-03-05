@@ -103,6 +103,22 @@ void MOCDriver::set_keff_tolerance(double ktol) {
   keff_tol_ = ktol;
 }
 
+void MOCDriver::set_fsr_area_tolerance(double atol) {
+  if (atol <= 0.) {
+    auto mssg = "Tolerance for FSR areas must be in the interval (0., 0.25).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (atol >= 0.25) {
+    auto mssg = "Tolerance for FSR areas must be in the interval (0., 0.25).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  fsr_area_tol_ = atol;
+}
+
 void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
                                 PolarQuadrature polar_quad) {
   // Timer for method
@@ -549,7 +565,7 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
           }
         }
       }  // For all tracks
-    }    // For all azimuthal angles
+    }  // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
@@ -611,7 +627,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
                                     Y_ljs[it_lj] * 0.5;
             }
           }  // For all polar angles
-        }    // For all segments along forward direction of track
+        }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.exit_bc() == BoundaryCondition::Vacuum) {
@@ -662,7 +678,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
                                     Y_ljs[it_lj] * 0.5;
             }
           }  // For all polar angles
-        }    // For all segments along forward direction of track
+        }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.entry_bc() == BoundaryCondition::Vacuum) {
@@ -673,7 +689,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
           }
         }
       }  // For all tracks
-    }    // For all azimuthal angles
+    }  // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
@@ -782,9 +798,9 @@ void MOCDriver::fill_source_anisotropic(
           it_lj++;
 
         }  // -l to l
-      }    // all scattering moments L
-    }      // all flat souce regions
-  }        // all groups
+      }  // all scattering moments L
+    }  // all flat souce regions
+  }  // all groups
 }
 
 void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
@@ -1173,7 +1189,11 @@ void MOCDriver::allocate_fsr_data() {
 }
 
 void MOCDriver::segment_renormalization() {
-  spdlog::info("Renormalizing segment lengths");
+  if (check_fsr_areas_) {
+    spdlog::info("Renormalizing segment lengths with FSR area checks");
+  } else {
+    spdlog::info("Renormalizing segment lengths");
+  }
 
   // We now bias the traced segment lengths, so that we better predict the
   // volume of our flat source regions. We do this for each angle, but it
@@ -1196,6 +1216,24 @@ void MOCDriver::segment_renormalization() {
       for (auto& seg : track) {
         const std::size_t i = seg.fsr_indx();
         approx_vols[i] += seg.length() * d;
+      }
+    }
+
+    if (check_fsr_areas_) {
+      // Here, we do a sanity check, to make sure the approximate FSR volumes
+      // are relatively close to the true volumes. If they are not, this is
+      // could mean that the track spacing is too wide to adequately capture the
+      // FSR, or it could mean that the "true" volume of the FSR is incorrect.
+      // Both are problems.
+      for (std::size_t i = 0; i < approx_vols.size(); i++) {
+        const double rel_diff = std::abs((approx_vols[i] - fsrs_[i]->volume()) /
+                                         fsrs_[i]->volume());
+        if (std::abs(rel_diff) > fsr_area_tol_) {
+          spdlog::warn(
+              "For FSR {:} azimuthal angle {:}, the true and approximate FSR "
+              "areas differ by {:.3f}%.",
+              i, a, rel_diff * 100.);
+        }
       }
     }
 

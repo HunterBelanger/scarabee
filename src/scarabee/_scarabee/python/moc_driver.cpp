@@ -79,12 +79,27 @@ void init_MOCDriver(py::module& m) {
       .def_property(
           "keff_tolerance", &MOCDriver::keff_tolerance,
           &MOCDriver::set_keff_tolerance,
-          "Maximum relative absolute difference in keff for convergence")
+          "Maximum relative absolute difference in keff for convergence.")
 
       .def_property(
           "flux_tolerance", &MOCDriver::flux_tolerance,
           &MOCDriver::set_flux_tolerance,
-          "Maximum relative absolute difference in flux for convergence")
+          "Maximum relative absolute difference in flux for convergence.")
+
+      .def_property(
+          "fsr_area_tolerance", &MOCDriver::fsr_area_tolerance,
+          &MOCDriver::set_fsr_area_tolerance,
+          "Maximum relative absolute difference between approximate "
+          "flat source region area and the true flat source region "
+          "area. Only used if check_fsr_areas is True. Default value is 0.05.")
+
+      .def_property("check_fsr_areas", &MOCDriver::check_fsr_areas,
+                    &MOCDriver::set_check_fsr_areas,
+                    "Checks if the approximate flat source region area (from "
+                    "numerical integration) is within fsr_area_tolerance of "
+                    "the true flat source region area. It the check does not "
+                    "pass, a warning is issued, but the calculation continues. "
+                    "Default value is False.")
 
       .def("flux",
            py::overload_cast<const Vector&, const Direction&, std::size_t,
