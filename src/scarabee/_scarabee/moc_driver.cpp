@@ -248,8 +248,10 @@ void MOCDriver::solve() {
 
 // solve for the isotropic
 void MOCDriver::solve_isotropic() {
-  flux_.resize({ngroups_, nfsrs_, 1});
-  flux_.fill(0.);
+  if (solved_ == false) {
+    flux_.resize({ngroups_, nfsrs_, 1});
+    flux_.fill(0.);
+  }
   xt::xtensor<double, 2> src;
   src.resize({ngroups_, nfsrs_});
   src.fill(0.);
@@ -269,22 +271,25 @@ void MOCDriver::solve_isotropic() {
   }
 
   // Initialize flux and keff
-  if (mode_ == SimulationMode::Keff) {
-    flux_.fill(1.);
-  } else {
-    flux_.fill(0.);
+  if (solved_ == false) {
+    if (mode_ == SimulationMode::Keff) {
+      flux_.fill(1.);
+    } else {
+      flux_.fill(0.);
+    }
+
+    // Initialize angular flux
+    for (auto& tracks : tracks_) {
+      for (auto& track : tracks) {
+        track.entry_flux().fill(1. / (4. * PI));
+        track.exit_flux().fill(1. / (4. * PI));
+      }
+    }
+
+    keff_ = 1.;
   }
-  keff_ = 1.;
   auto next_flux = flux_;
   double prev_keff = keff_;
-
-  // Initialize angular flux
-  for (auto& tracks : tracks_) {
-    for (auto& track : tracks) {
-      track.entry_flux().fill(1. / (4. * PI));
-      track.exit_flux().fill(1. / (4. * PI));
-    }
-  }
 
   double rel_diff_keff = 100.;
   if (mode_ == SimulationMode::FixedSource) {
@@ -369,10 +374,11 @@ void MOCDriver::solve_isotropic() {
 
 // solve for anisotropic
 void MOCDriver::solve_anisotropic() {
-  N_lj_ = (max_L_ + 1) * (max_L_ + 1);
-  flux_.resize({ngroups_, nfsrs_, N_lj_});
-  flux_.fill(0.);
-
+  if (solved_ == false) {
+    N_lj_ = (max_L_ + 1) * (max_L_ + 1);
+    flux_.resize({ngroups_, nfsrs_, N_lj_});
+    flux_.fill(0.);
+  }
   xt::xtensor<double, 3> src;
   src.resize({ngroups_, nfsrs_, N_lj_});
   src.fill(0.);
@@ -391,22 +397,26 @@ void MOCDriver::solve_anisotropic() {
   sph_harm_ = SphericalHarmonics(max_L_, azimuthal_angles, polar_angles);
 
   // Initialize flux and keff
-  if (mode_ == SimulationMode::Keff) {
-    flux_.fill(1.);
-  } else {
-    flux_.fill(0.);
+  if (solved_ == false) {
+    if (mode_ == SimulationMode::Keff) {
+      flux_.fill(1.);
+    } else {
+      flux_.fill(0.);
+    }
+
+    // Initialize angular flux
+    for (auto& tracks : tracks_) {
+      for (auto& track : tracks) {
+        track.entry_flux().fill(1. / std::sqrt(4. * PI));
+        track.exit_flux().fill(1. / std::sqrt(4. * PI));
+      }
+    }
+
+    keff_ = 1.;
   }
-  keff_ = 1.;
+
   auto next_flux = flux_;
   double prev_keff = keff_;
-
-  // Initialize angular flux
-  for (auto& tracks : tracks_) {
-    for (auto& track : tracks) {
-      track.entry_flux().fill(1. / std::sqrt(4. * PI));
-      track.exit_flux().fill(1. / std::sqrt(4. * PI));
-    }
-  }
 
   double rel_diff_keff = 100.;
   if (mode_ == SimulationMode::FixedSource) {
