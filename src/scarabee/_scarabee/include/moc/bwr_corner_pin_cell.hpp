@@ -12,6 +12,7 @@
 #include <cereal/types/base_class.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace scarabee {
 
