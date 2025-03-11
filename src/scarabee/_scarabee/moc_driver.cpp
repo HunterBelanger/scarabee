@@ -293,6 +293,8 @@ void MOCDriver::solve_isotropic() {
 
   double rel_diff_keff = 100.;
   if (mode_ == SimulationMode::FixedSource) {
+    keff_ = 1.;
+    prev_keff = keff_;
     rel_diff_keff = 0.;
   }
   double max_flx_diff = 100;
@@ -420,6 +422,8 @@ void MOCDriver::solve_anisotropic() {
 
   double rel_diff_keff = 100.;
   if (mode_ == SimulationMode::FixedSource) {
+    keff_ = 1.;
+    prev_keff = keff_;
     rel_diff_keff = 0.;
   }
 
