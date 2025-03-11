@@ -1512,54 +1512,399 @@ void BWRCornerPinCell::build_IV() {
       std::make_shared<BWRCornerIV>(xmin, xmax, ymin, ymax, rc_ + box_width_);
   auto box_inner = std::make_shared<BWRCornerIV>(xmin, xmax - box_width_,
                                                  ymin + box_width_, ymax, rc_);
-  surfs_.push_back(box_outer);
-  surfs_.push_back(box_inner);
 
-  // Create the FSR for the outer moderator
+  // Create the FSRs for the outer moderator
+  // position of outer box corner
+  const Vector r_obc(Rcx + (rc_ + box_width_) / SQRT_2,
+                     Rcy - (rc_ + box_width_) / SQRT_2);
+  std::shared_ptr<Surface> robc_xp = std::make_shared<XPlane>(r_obc.x());
+  std::shared_ptr<Surface> robc_yp = std::make_shared<YPlane>(r_obc.y());
+
   {
     fsrs_.emplace_back();
     auto& fsr = fsrs_.back();
-    fsr.volume() = (xmax - Rcx) * (Rcy - ymin);  // Box volume
-    fsr.volume() -= 0.25 * PI * (rc_ + box_width_) *
-                    (rc_ + box_width_);  // Subtract quarter circle
     fsr.xs() = outer_mod_;
-    fsr.tokens().push_back({x_min_, Surface::Side::Positive});
-    fsr.tokens().push_back({x_max_, Surface::Side::Negative});
-    fsr.tokens().push_back({y_min_, Surface::Side::Positive});
-    fsr.tokens().push_back({y_max_, Surface::Side::Negative});
-    fsr.tokens().push_back({box_outer, Surface::Side::Positive});
-  }
-
-  // Create the FSR for the box
-  {
-    fsrs_.emplace_back();
-    auto& fsr = fsrs_.back();
     fsr.volume() =
-        0.25 * PI * (rc_ + box_width_) * (rc_ + box_width_);  // Larger cylinder
-    fsr.volume() -= 0.25 * PI * rc_ * rc_;      // Subtract inner cylinder
-    fsr.volume() += box_width_ * (ymax - Rcy);  // Add first square
-    fsr.volume() += box_width_ * (Rcx - xmin);  // Add second square
-    fsr.xs() = box_mat_;
-    fsr.tokens().push_back({box_outer, Surface::Side::Negative});
-    fsr.tokens().push_back({box_inner, Surface::Side::Positive});
+        robc_xp->integrate_y(ymin, r_obc.y(), Surface::Side::Positive) -
+        box_outer->integrate_y(ymin, r_obc.y(), Surface::Side::Positive);
+    fsr.tokens() = {{box_outer, Surface::Side::Positive},
+                    {robc_xp, Surface::Side::Negative},
+                    {y_min_, Surface::Side::Positive}};
   }
 
-  // Create the FSR for the inner moderator
   {
     fsrs_.emplace_back();
     auto& fsr = fsrs_.back();
-    // Start with area of the rectangular portion.
-    fsr.volume() = (dx - box_width_) * (dy - box_width_);
-    // Remove the bit outside the cylinder
-    fsr.volume() -= rc_ * rc_ * (1. - 0.25 * PI);
-    // Remove area of pin
-    if (pin_radii_.size() > 0)
-      fsr.volume() -= PI * pin_radii_.back() * pin_radii_.back();
-    fsr.xs() = inner_mod_;
-    fsr.tokens().push_back({box_inner, Surface::Side::Negative});
-    fsr.tokens().push_back(
-        {surfs_[pin_radii_.size() - 1], Surface::Side::Positive});
+    fsr.xs() = outer_mod_;
+    fsr.volume() = 0.5 * (xmax - r_obc.x()) * (r_obc.y() - ymin);
+    fsr.tokens() = {{robc_xp, Surface::Side::Positive},
+                    {y_min_, Surface::Side::Positive},
+                    {nd_, Surface::Side::Negative}};
   }
+
+  {
+    fsrs_.emplace_back();
+    auto& fsr = fsrs_.back();
+    fsr.xs() = outer_mod_;
+    fsr.volume() = 0.5 * (xmax - r_obc.x()) * (r_obc.y() - ymin);
+    fsr.tokens() = {{robc_yp, Surface::Side::Negative},
+                    {x_max_, Surface::Side::Negative},
+                    {nd_, Surface::Side::Positive}};
+  }
+
+  {
+    fsrs_.emplace_back();
+    auto& fsr = fsrs_.back();
+    fsr.xs() = outer_mod_;
+    fsr.volume() =
+        box_outer->integrate_x(r_obc.x(), xmax, Surface::Side::Negative) -
+        robc_yp->integrate_x(r_obc.x(), xmax, Surface::Side::Negative);
+    fsr.tokens() = {{box_outer, Surface::Side::Positive},
+                    {robc_yp, Surface::Side::Positive},
+                    {x_max_, Surface::Side::Negative}};
+  }
+
+  // Create the FSRs for the box
+  std::shared_ptr<Surface> box_xp = std::make_shared<XPlane>(Rcx);
+  std::shared_ptr<Surface> box_yp = std::make_shared<YPlane>(Rcy);
+
+  if (rc_ < dx) {
+    fsrs_.emplace_back();
+    auto& fsr = fsrs_.back();
+    fsr.xs() = box_mat_;
+    fsr.volume() = box_width_ * (Rcx - xmin);
+    fsr.tokens() = {{box_outer, Surface::Side::Negative},
+                    {box_inner, Surface::Side::Positive},
+                    {box_xp, Surface::Side::Negative}};
+  }
+
+  {
+    fsrs_.emplace_back();
+    auto& fsr = fsrs_.back();
+    fsr.xs() = box_mat_;
+    fsr.volume() = 0.5 * 0.25 * PI * (rc_ + box_width_) *
+                   (rc_ + box_width_);            // Larger cylinder
+    fsr.volume() -= 0.5 * 0.25 * PI * rc_ * rc_;  // Subtract inner cylinder
+    fsr.tokens() = {{box_outer, Surface::Side::Negative},
+                    {box_inner, Surface::Side::Positive},
+                    {box_xp, Surface::Side::Positive},
+                    {nd_, Surface::Side::Negative}};
+  }
+
+  {
+    fsrs_.emplace_back();
+    auto& fsr = fsrs_.back();
+    fsr.xs() = box_mat_;
+    fsr.volume() = 0.5 * 0.25 * PI * (rc_ + box_width_) *
+                   (rc_ + box_width_);            // Larger cylinder
+    fsr.volume() -= 0.5 * 0.25 * PI * rc_ * rc_;  // Subtract inner cylinder
+    fsr.tokens() = {{box_outer, Surface::Side::Negative},
+                    {box_inner, Surface::Side::Positive},
+                    {nd_, Surface::Side::Positive},
+                    {box_yp, Surface::Side::Negative}};
+  }
+
+  if (rc_ < dy) {
+    fsrs_.emplace_back();
+    auto& fsr = fsrs_.back();
+    fsr.xs() = box_mat_;
+    fsr.volume() = box_width_ * (ymax - Rcy);
+    fsr.tokens() = {{box_outer, Surface::Side::Negative},
+                    {box_inner, Surface::Side::Positive},
+                    {box_yp, Surface::Side::Positive}};
+  }
+
+  // Create FSRs for the inner moderator gaps
+  std::shared_ptr<Surface> gap_yp =
+      std::make_shared<YPlane>(ymin + box_width_ + inner_gap_);
+  std::shared_ptr<Surface> gap_xp =
+      std::make_shared<XPlane>(xmax - box_width_ - inner_gap_);
+
+  if (inner_gap_ > 0. && rc_ < dx) {
+    fsrs_.emplace_back();
+    auto& fsr = fsrs_.back();
+    fsr.xs() = inner_mod_;
+    fsr.volume() = inner_gap_ * (Rcx - xmin);
+    fsr.tokens() = {{box_inner, Surface::Side::Negative},
+                    {gap_yp, Surface::Side::Negative},
+                    {box_xp, Surface::Side::Negative}};
+  }
+
+  if (inner_gap_ > 0.) {
+    fsrs_.emplace_back();
+    auto& fsr = fsrs_.back();
+    fsr.xs() = inner_mod_;
+    fsr.volume() =
+        box_inner->integrate_y(ymin + box_width_,
+                               ymin + box_width_ + inner_gap_,
+                               Surface::Side::Positive) -
+        box_xp->integrate_y(ymin + box_width_, ymin + box_width_ + inner_gap_,
+                            Surface::Side::Negative);
+    fsr.tokens() = {{box_inner, Surface::Side::Negative},
+                    {gap_yp, Surface::Side::Negative},
+                    {box_xp, Surface::Side::Positive}};
+  }
+
+  if (inner_gap_ > 0.) {
+    fsrs_.emplace_back();
+    auto& fsr = fsrs_.back();
+    fsr.xs() = inner_mod_;
+    fsr.volume() =
+        box_yp->integrate_x(xmax - box_width_ - inner_gap_, xmax - box_width_,
+                            Surface::Side::Negative) -
+        box_inner->integrate_x(xmax - box_width_ - inner_gap_,
+                               xmax - box_width_, Surface::Side::Negative);
+    fsr.tokens() = {{box_inner, Surface::Side::Negative},
+                    {gap_xp, Surface::Side::Positive},
+                    {box_yp, Surface::Side::Negative}};
+  }
+
+  if (inner_gap_ > 0. && rc_ < dy) {
+    fsrs_.emplace_back();
+    auto& fsr = fsrs_.back();
+    fsr.xs() = inner_mod_;
+    fsr.volume() = inner_gap_ * (ymax - Rcy);
+    fsr.tokens() = {{box_inner, Surface::Side::Negative},
+                    {gap_xp, Surface::Side::Positive},
+                    {box_yp, Surface::Side::Positive}};
+  }
+
+  // Create the FSRs for the inner moderator pin-cell region
+  // First get the radius of the moderator around pin
+  const double pin_mod_rad = Rpx - xmin;
+  surfs_.push_back(std::make_shared<Cylinder>(Rpx, Rpy, pin_mod_rad));
+
+  // We need to check if the box will intersect the moderator ring around
+  // the fuel pin. If so, we add an extra surface.
+  const double Rx = 0.5 * (dx - box_width_ - inner_gap_) + inner_gap_;
+  const double Ry = 0.5 * (dy - box_width_ - inner_gap_) + inner_gap_;
+  const double R = std::sqrt(Rx * Rx + Ry * Ry);
+  const double corner_test_criteria = (R - pin_mod_rad) / (std::sqrt(2.) - 1.);
+
+  // Make FSRs for moderator ring around fuel pin
+  {
+    const double vol =
+        0.125 * PI *
+        (pin_mod_rad * pin_mod_rad - pin_radii_.back() * pin_radii_.back());
+    const std::size_t i = surfs_.size() - 1;
+
+    // NNE
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = vol;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_[i], Surface::Side::Negative},
+                      {surfs_[i - 1], Surface::Side::Positive},
+                      {xm_, Surface::Side::Positive},
+                      {pd_, Surface::Side::Positive}};
+    }
+
+    // NEE
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = vol;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_[i], Surface::Side::Negative},
+                      {surfs_[i - 1], Surface::Side::Positive},
+                      {ym_, Surface::Side::Positive},
+                      {pd_, Surface::Side::Negative}};
+      if (rc_ > corner_test_criteria) {
+        fsr.tokens().push_back({box_inner, Surface::Side::Negative});
+        fsr.volume() = 0.;
+      }
+    }
+
+    // SEE
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = vol;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_[i], Surface::Side::Negative},
+                      {surfs_[i - 1], Surface::Side::Positive},
+                      {ym_, Surface::Side::Negative},
+                      {nd_, Surface::Side::Positive}};
+      if (rc_ > corner_test_criteria) {
+        fsr.tokens().push_back({box_inner, Surface::Side::Negative});
+        fsr.volume() = 0.;
+      }
+    }
+
+    // SSE
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = vol;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_[i], Surface::Side::Negative},
+                      {surfs_[i - 1], Surface::Side::Positive},
+                      {xm_, Surface::Side::Positive},
+                      {nd_, Surface::Side::Negative}};
+      if (rc_ > corner_test_criteria) {
+        fsr.tokens().push_back({box_inner, Surface::Side::Negative});
+        fsr.volume() = 0.;
+      }
+    }
+
+    // SSW
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = vol;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_[i], Surface::Side::Negative},
+                      {surfs_[i - 1], Surface::Side::Positive},
+                      {xm_, Surface::Side::Negative},
+                      {pd_, Surface::Side::Negative}};
+      if (rc_ > corner_test_criteria) {
+        fsr.tokens().push_back({box_inner, Surface::Side::Negative});
+        fsr.volume() = 0.;
+      }
+    }
+
+    // SWW
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = vol;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_[i], Surface::Side::Negative},
+                      {surfs_[i - 1], Surface::Side::Positive},
+                      {ym_, Surface::Side::Negative},
+                      {pd_, Surface::Side::Positive}};
+    }
+
+    // NWW
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = vol;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_[i], Surface::Side::Negative},
+                      {surfs_[i - 1], Surface::Side::Positive},
+                      {ym_, Surface::Side::Positive},
+                      {nd_, Surface::Side::Negative}};
+    }
+
+    // NNW
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = vol;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_[i], Surface::Side::Negative},
+                      {surfs_[i - 1], Surface::Side::Positive},
+                      {xm_, Surface::Side::Negative},
+                      {nd_, Surface::Side::Positive}};
+    }
+  }
+
+  // Make the last FSRs for moderator outside the moderator ring
+  {
+    // NNE
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = 0.;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_.back(), Surface::Side::Positive},
+                      {y_max_, Surface::Side::Negative},
+                      {xm_, Surface::Side::Positive},
+                      {pd_, Surface::Side::Positive}};
+    }
+
+    // NEE
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = 0.;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_.back(), Surface::Side::Positive},
+                      {box_inner, Surface::Side::Negative},
+                      {gap_xp, Surface::Side::Negative},
+                      {ym_, Surface::Side::Positive},
+                      {pd_, Surface::Side::Negative}};
+    }
+
+    // SEE
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = 0.;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_.back(), Surface::Side::Positive},
+                      {box_inner, Surface::Side::Negative},
+                      {gap_xp, Surface::Side::Negative},
+                      {ym_, Surface::Side::Negative},
+                      {nd_, Surface::Side::Positive}};
+    }
+
+    // SSE
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = 0.;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_.back(), Surface::Side::Positive},
+                      {box_inner, Surface::Side::Negative},
+                      {gap_yp, Surface::Side::Positive},
+                      {xm_, Surface::Side::Positive},
+                      {nd_, Surface::Side::Negative}};
+    }
+
+    // SSW
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = 0.;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_.back(), Surface::Side::Positive},
+                      {box_inner, Surface::Side::Negative},
+                      {gap_yp, Surface::Side::Positive},
+                      {xm_, Surface::Side::Negative},
+                      {pd_, Surface::Side::Negative}};
+    }
+
+    // SWW
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = 0.;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_.back(), Surface::Side::Positive},
+                      {x_min_, Surface::Side::Positive},
+                      {ym_, Surface::Side::Negative},
+                      {pd_, Surface::Side::Positive}};
+    }
+
+    // NWW
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = 0.;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_.back(), Surface::Side::Positive},
+                      {x_min_, Surface::Side::Positive},
+                      {ym_, Surface::Side::Positive},
+                      {nd_, Surface::Side::Negative}};
+    }
+
+    // NNW
+    {
+      fsrs_.emplace_back();
+      auto& fsr = fsrs_.back();
+      fsr.volume() = 0.;
+      fsr.xs() = inner_mod_;
+      fsr.tokens() = {{surfs_.back(), Surface::Side::Positive},
+                      {y_max_, Surface::Side::Negative},
+                      {xm_, Surface::Side::Negative},
+                      {nd_, Surface::Side::Positive}};
+    }
+  }
+
+  this->estimate_unknown_areas_cull_fsrs();
 }
 
 void BWRCornerPinCell::build_pin(const double Rpx, const double Rpy) {
