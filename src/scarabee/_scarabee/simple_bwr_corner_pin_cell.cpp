@@ -11,9 +11,9 @@ namespace scarabee {
 SimpleBWRCornerPinCell::SimpleBWRCornerPinCell(
     const std::vector<double>& pin_rads,
     const std::vector<std::shared_ptr<CrossSection>>& pin_mats,
-    std::shared_ptr<CrossSection> inner_mod, double inner_gap, double box_width,
-    std::shared_ptr<CrossSection> box_mat,
-    std::shared_ptr<CrossSection> outer_mod, double rc, double dx, double dy,
+    double inner_gap, std::shared_ptr<CrossSection> inner_mod, double box_width,
+    double rc, std::shared_ptr<CrossSection> box_mat,
+    std::shared_ptr<CrossSection> outer_mod, double dx, double dy,
     BWRCornerType corner_type)
     : Cell(dx, dy),
       pin_radii_(pin_rads),
