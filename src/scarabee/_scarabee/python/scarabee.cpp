@@ -33,6 +33,8 @@ extern void init_EmptyCell(py::module&);
 extern void init_PinCellType(py::module&);
 extern void init_SimplePinCell(py::module&);
 extern void init_PinCell(py::module&);
+extern void init_SimpleBWRCornerPinCell(py::module&);
+extern void init_BWRCornerPinCell(py::module&);
 extern void init_Cartesian2D(py::module&);
 extern void init_MOCDriver(py::module&);
 extern void init_CriticalitySpectrum(py::module&);
@@ -76,6 +78,8 @@ PYBIND11_MODULE(_scarabee, m) {
   init_PinCellType(m);
   init_SimplePinCell(m);
   init_PinCell(m);
+  init_SimpleBWRCornerPinCell(m);
+  init_BWRCornerPinCell(m);
   init_Cartesian2D(m);
   init_MOCDriver(m);
   init_CriticalitySpectrum(m);

@@ -30,6 +30,19 @@ Geometry
     :inherited-members:
     :special-members: __init__
 
+.. autoclass:: BWRCornerType
+    :members:
+
+.. autoclass:: SimpleBWRCornerPinCell
+    :members:
+    :inherited-members:
+    :special-members: __init__
+
+.. autoclass:: BWRCornerPinCell
+    :members:
+    :inherited-members:
+    :special-members: __init__
+
 .. autoclass:: Tile
     :members:
     :inherited-members:

@@ -79,19 +79,13 @@ class Cartesian2D {
   }
 
   double distance(const Vector& r, const Direction& u) const {
-    Surface x, y;
-    x.type() = Surface::Type::XPlane;
-    y.type() = Surface::Type::YPlane;
-
-    x.x0() = x_min();
+    XPlane x(x_min());
     const double x_min_dist = x.distance(r, u);
-
     x.x0() = x_max();
     const double x_max_dist = x.distance(r, u);
 
-    y.y0() = y_min();
+    YPlane y(y_min());
     const double y_min_dist = y.distance(r, u);
-
     y.y0() = y_max();
     const double y_max_dist = y.distance(r, u);
 

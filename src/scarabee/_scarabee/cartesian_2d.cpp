@@ -100,27 +100,17 @@ Cartesian2D::Cartesian2D(const std::vector<double>& dx,
 
   // Create surfaces
   x_bounds_.reserve(dx.size() + 1);
-  x_bounds_.push_back(std::make_shared<Surface>());
-  x_bounds_.back()->type() = Surface::Type::XPlane;
-  x_bounds_.back()->x0() = -0.5 * dx_tot;
+  x_bounds_.push_back(std::make_shared<XPlane>(-0.5 * dx_tot));
   for (const auto& d : dx) {
     const double new_x0 = x_bounds_.back()->x0() + d;
-
-    x_bounds_.push_back(std::make_shared<Surface>());
-    x_bounds_.back()->type() = Surface::Type::XPlane;
-    x_bounds_.back()->x0() = new_x0;
+    x_bounds_.push_back(std::make_shared<XPlane>(new_x0));
   }
 
   y_bounds_.reserve(dy.size() + 1);
-  y_bounds_.push_back(std::make_shared<Surface>());
-  y_bounds_.back()->type() = Surface::Type::YPlane;
-  y_bounds_.back()->y0() = -0.5 * dy_tot;
+  y_bounds_.push_back(std::make_shared<YPlane>(-0.5 * dy_tot));
   for (const auto& d : dy) {
     const double new_y0 = y_bounds_.back()->y0() + d;
-
-    y_bounds_.push_back(std::make_shared<Surface>());
-    y_bounds_.back()->type() = Surface::Type::YPlane;
-    y_bounds_.back()->y0() = new_y0;
+    y_bounds_.push_back(std::make_shared<YPlane>(new_y0));
   }
 
   nx_ = dx.size();

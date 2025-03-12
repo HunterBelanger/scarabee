@@ -26,21 +26,11 @@ Cell::Cell(double dx, double dy)
   }
 
   // Build surfaces
-  x_min_ = std::make_shared<Surface>();
-  x_min_->type() = Surface::Type::XPlane;
-  x_min_->x0() = -0.5 * dx;
+  x_min_ = std::make_shared<XPlane>(-0.5 * dx);
+  x_max_ = std::make_shared<XPlane>(0.5 * dx);
 
-  x_max_ = std::make_shared<Surface>();
-  x_max_->type() = Surface::Type::XPlane;
-  x_max_->x0() = 0.5 * dx;
-
-  y_min_ = std::make_shared<Surface>();
-  y_min_->type() = Surface::Type::YPlane;
-  y_min_->y0() = -0.5 * dy;
-
-  y_max_ = std::make_shared<Surface>();
-  y_max_->type() = Surface::Type::YPlane;
-  y_max_->y0() = 0.5 * dy;
+  y_min_ = std::make_shared<YPlane>(-0.5 * dy);
+  y_max_ = std::make_shared<YPlane>(0.5 * dy);
 
   this->check_surfaces();
 }
