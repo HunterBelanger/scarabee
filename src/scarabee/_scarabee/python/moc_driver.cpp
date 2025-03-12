@@ -61,6 +61,7 @@ void init_MOCDriver(py::module& m) {
           "generate_tracks",
           [](MOCDriver& md, std::uint32_t na, double d,
              PolarQuadratureType pq) { return md.generate_tracks(na, d, pq); },
+          py::call_guard<py::gil_scoped_release>(),
           "Traces tracks across the geometry for the calculation.\n\n"
           "Parameters\n"
           "----------\n"
@@ -209,7 +210,8 @@ void init_MOCDriver(py::module& m) {
       .def_property_readonly("polar_quadrature", &MOCDriver::polar_quadrature,
                              "Quadrature used for polar angle integration.")
 
-      .def("solve", &MOCDriver::solve, "Begins iterations to solve problem.")
+      .def("solve", &MOCDriver::solve, py::call_guard<py::gil_scoped_release>(),
+           "Begins iterations to solve problem.")
 
       .def_property(
           "sim_mode",
