@@ -9,6 +9,6 @@ enum class PinCellType : std::uint8_t { Full, XP, XN, YP, YN, I, II, III, IV };
 
 enum class BWRCornerType : std::uint8_t { I, II, III, IV };
 
-}
+}  // namespace scarabee
 
 #endif

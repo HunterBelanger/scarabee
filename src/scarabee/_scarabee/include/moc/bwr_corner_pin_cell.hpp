@@ -21,9 +21,10 @@ class BWRCornerPinCell : public Cell {
   BWRCornerPinCell(const std::vector<double>& pin_rads,
                    const std::vector<std::shared_ptr<CrossSection>>& pin_mats,
                    double inner_gap, std::shared_ptr<CrossSection> inner_mod,
-                   double box_width, double rc, std::shared_ptr<CrossSection> box_mat,
-                   std::shared_ptr<CrossSection> outer_mod,
-                   double dx, double dy, BWRCornerType corner_type);
+                   double box_width, double rc,
+                   std::shared_ptr<CrossSection> box_mat,
+                   std::shared_ptr<CrossSection> outer_mod, double dx,
+                   double dy, BWRCornerType corner_type);
 
  private:
   std::vector<double> pin_radii_;
