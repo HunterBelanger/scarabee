@@ -1,8 +1,6 @@
 from ._scarabee import *
 from . import _scarabee
 
-from .reflector import *
-
 __author__ = _scarabee.__author__
 __copyright__ = _scarabee.__copyright__
 __license__ = _scarabee.__license__

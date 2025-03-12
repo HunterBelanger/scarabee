@@ -300,7 +300,7 @@ void init_Material(py::module& m) {
 
       .def_property_readonly(
           "grams_per_cm3", &Material::grams_per_cm3,
-          "Density of the materil in grams per cubic-centimeter.")
+          "Density of the material in grams per cubic-centimeter.")
 
       .def_property_readonly(
           "fissile", &Material::fissile,
