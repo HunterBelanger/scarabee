@@ -1,6 +1,7 @@
 #ifndef SCARABEE_CONSTANTS_H
 #define SCARABEE_CONSTANTS_H
 
+#include <cmath>
 #include <limits>
 #include <map>
 #include <string>
@@ -8,6 +9,7 @@
 
 namespace scarabee {
 
+constexpr double SQRT_2{1.41421356237309504880168872420969808};
 constexpr double PI{3.14159265358979323846264338327950288};
 constexpr double PI_2{0.5 * PI};
 constexpr double INF{std::numeric_limits<double>::max()};

@@ -52,6 +52,12 @@ class MOCDriver {
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
 
+  double fsr_area_tolerance() const { return fsr_area_tol_; }
+  void set_fsr_area_tolerance(double atol);
+
+  bool check_fsr_areas() const { return check_fsr_areas_; }
+  void set_check_fsr_areas(bool v) { check_fsr_areas_ = v; }
+
   void generate_tracks(std::uint32_t n_angles, double d,
                        PolarQuadrature polar_quad);
 
@@ -156,6 +162,8 @@ class MOCDriver {
   double flux_tol_ = 1.E-5;
   double keff_tol_ = 1.E-5;
   double keff_ = 1.;
+  bool check_fsr_areas_{false};
+  double fsr_area_tol_{0.05};  // Default to 5% tolerance
   BoundaryCondition x_min_bc_, x_max_bc_, y_min_bc_, y_max_bc_;
   std::size_t max_L_ = 0;     // max-legendre-order in scattering moments
   std::size_t N_lj_ = 1;      // total number of j (-l ro l)
@@ -203,7 +211,8 @@ class MOCDriver {
         CEREAL_NVP(polar_quad_), CEREAL_NVP(sph_harm_), CEREAL_NVP(flux_),
         CEREAL_NVP(extern_src_), CEREAL_NVP(ngroups_), CEREAL_NVP(nfsrs_),
         CEREAL_NVP(n_pol_angles_), CEREAL_NVP(flux_tol_), CEREAL_NVP(keff_tol_),
-        CEREAL_NVP(keff_), CEREAL_NVP(x_min_bc_), CEREAL_NVP(x_max_bc_),
+        CEREAL_NVP(keff_), CEREAL_NVP(check_fsr_areas_),
+        CEREAL_NVP(fsr_area_tol_), CEREAL_NVP(x_min_bc_), CEREAL_NVP(x_max_bc_),
         CEREAL_NVP(y_min_bc_), CEREAL_NVP(y_max_bc_), CEREAL_NVP(max_L_),
         CEREAL_NVP(N_lj_), CEREAL_NVP(anisotropic_), CEREAL_NVP(mode_),
         CEREAL_NVP(solved_));
@@ -215,7 +224,8 @@ class MOCDriver {
         CEREAL_NVP(polar_quad_), CEREAL_NVP(sph_harm_), CEREAL_NVP(flux_),
         CEREAL_NVP(extern_src_), CEREAL_NVP(ngroups_), CEREAL_NVP(nfsrs_),
         CEREAL_NVP(n_pol_angles_), CEREAL_NVP(flux_tol_), CEREAL_NVP(keff_tol_),
-        CEREAL_NVP(keff_), CEREAL_NVP(x_min_bc_), CEREAL_NVP(x_max_bc_),
+        CEREAL_NVP(keff_), CEREAL_NVP(check_fsr_areas_),
+        CEREAL_NVP(fsr_area_tol_), CEREAL_NVP(x_min_bc_), CEREAL_NVP(x_max_bc_),
         CEREAL_NVP(y_min_bc_), CEREAL_NVP(y_max_bc_), CEREAL_NVP(max_L_),
         CEREAL_NVP(N_lj_), CEREAL_NVP(anisotropic_), CEREAL_NVP(mode_),
         CEREAL_NVP(solved_));

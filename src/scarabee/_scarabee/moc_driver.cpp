@@ -103,6 +103,22 @@ void MOCDriver::set_keff_tolerance(double ktol) {
   keff_tol_ = ktol;
 }
 
+void MOCDriver::set_fsr_area_tolerance(double atol) {
+  if (atol <= 0.) {
+    auto mssg = "Tolerance for FSR areas must be in the interval (0., 0.25).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (atol >= 0.25) {
+    auto mssg = "Tolerance for FSR areas must be in the interval (0., 0.25).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  fsr_area_tol_ = atol;
+}
+
 void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
                                 PolarQuadrature polar_quad) {
   // Timer for method
@@ -232,8 +248,10 @@ void MOCDriver::solve() {
 
 // solve for the isotropic
 void MOCDriver::solve_isotropic() {
-  flux_.resize({ngroups_, nfsrs_, 1});
-  flux_.fill(0.);
+  if (solved_ == false) {
+    flux_.resize({ngroups_, nfsrs_, 1});
+    flux_.fill(0.);
+  }
   xt::xtensor<double, 2> src;
   src.resize({ngroups_, nfsrs_});
   src.fill(0.);
@@ -253,25 +271,30 @@ void MOCDriver::solve_isotropic() {
   }
 
   // Initialize flux and keff
-  if (mode_ == SimulationMode::Keff) {
-    flux_.fill(1.);
-  } else {
-    flux_.fill(0.);
+  if (solved_ == false) {
+    if (mode_ == SimulationMode::Keff) {
+      flux_.fill(1.);
+    } else {
+      flux_.fill(0.);
+    }
+
+    // Initialize angular flux
+    for (auto& tracks : tracks_) {
+      for (auto& track : tracks) {
+        track.entry_flux().fill(1. / (4. * PI));
+        track.exit_flux().fill(1. / (4. * PI));
+      }
+    }
+
+    keff_ = 1.;
   }
-  keff_ = 1.;
   auto next_flux = flux_;
   double prev_keff = keff_;
 
-  // Initialize angular flux
-  for (auto& tracks : tracks_) {
-    for (auto& track : tracks) {
-      track.entry_flux().fill(1. / (4. * PI));
-      track.exit_flux().fill(1. / (4. * PI));
-    }
-  }
-
   double rel_diff_keff = 100.;
   if (mode_ == SimulationMode::FixedSource) {
+    keff_ = 1.;
+    prev_keff = keff_;
     rel_diff_keff = 0.;
   }
   double max_flx_diff = 100;
@@ -353,10 +376,11 @@ void MOCDriver::solve_isotropic() {
 
 // solve for anisotropic
 void MOCDriver::solve_anisotropic() {
-  N_lj_ = (max_L_ + 1) * (max_L_ + 1);
-  flux_.resize({ngroups_, nfsrs_, N_lj_});
-  flux_.fill(0.);
-
+  if (solved_ == false) {
+    N_lj_ = (max_L_ + 1) * (max_L_ + 1);
+    flux_.resize({ngroups_, nfsrs_, N_lj_});
+    flux_.fill(0.);
+  }
   xt::xtensor<double, 3> src;
   src.resize({ngroups_, nfsrs_, N_lj_});
   src.fill(0.);
@@ -375,25 +399,31 @@ void MOCDriver::solve_anisotropic() {
   sph_harm_ = SphericalHarmonics(max_L_, azimuthal_angles, polar_angles);
 
   // Initialize flux and keff
-  if (mode_ == SimulationMode::Keff) {
-    flux_.fill(1.);
-  } else {
-    flux_.fill(0.);
+  if (solved_ == false) {
+    if (mode_ == SimulationMode::Keff) {
+      flux_.fill(1.);
+    } else {
+      flux_.fill(0.);
+    }
+
+    // Initialize angular flux
+    for (auto& tracks : tracks_) {
+      for (auto& track : tracks) {
+        track.entry_flux().fill(1. / std::sqrt(4. * PI));
+        track.exit_flux().fill(1. / std::sqrt(4. * PI));
+      }
+    }
+
+    keff_ = 1.;
   }
-  keff_ = 1.;
+
   auto next_flux = flux_;
   double prev_keff = keff_;
 
-  // Initialize angular flux
-  for (auto& tracks : tracks_) {
-    for (auto& track : tracks) {
-      track.entry_flux().fill(1. / std::sqrt(4. * PI));
-      track.exit_flux().fill(1. / std::sqrt(4. * PI));
-    }
-  }
-
   double rel_diff_keff = 100.;
   if (mode_ == SimulationMode::FixedSource) {
+    keff_ = 1.;
+    prev_keff = keff_;
     rel_diff_keff = 0.;
   }
 
@@ -1173,7 +1203,11 @@ void MOCDriver::allocate_fsr_data() {
 }
 
 void MOCDriver::segment_renormalization() {
-  spdlog::info("Renormalizing segment lengths");
+  if (check_fsr_areas_) {
+    spdlog::info("Renormalizing segment lengths with FSR area checks");
+  } else {
+    spdlog::info("Renormalizing segment lengths");
+  }
 
   // We now bias the traced segment lengths, so that we better predict the
   // volume of our flat source regions. We do this for each angle, but it
@@ -1196,6 +1230,24 @@ void MOCDriver::segment_renormalization() {
       for (auto& seg : track) {
         const std::size_t i = seg.fsr_indx();
         approx_vols[i] += seg.length() * d;
+      }
+    }
+
+    if (check_fsr_areas_) {
+      // Here, we do a sanity check, to make sure the approximate FSR volumes
+      // are relatively close to the true volumes. If they are not, this is
+      // could mean that the track spacing is too wide to adequately capture the
+      // FSR, or it could mean that the "true" volume of the FSR is incorrect.
+      // Both are problems.
+      for (std::size_t i = 0; i < approx_vols.size(); i++) {
+        const double rel_diff = std::abs((approx_vols[i] - fsrs_[i]->volume()) /
+                                         fsrs_[i]->volume());
+        if (std::abs(rel_diff) > fsr_area_tol_) {
+          spdlog::warn(
+              "For FSR {:} azimuthal angle {:}, the true and approximate FSR "
+              "areas differ by {:.3f}%.",
+              i, a, rel_diff * 100.);
+        }
       }
     }
 
