@@ -304,6 +304,23 @@ void init_MOCDriver(py::module& m) {
            "    Indices of all flat source regions in the cell.\n",
            py::arg("r"), py::arg("u"))
 
+      .def("get_fsr_indx",
+           py::overload_cast<std::size_t, std::size_t>(&MOCDriver::get_fsr_indx,
+                                                       py::const_),
+           "Obtains the index for a given flat source region ID and "
+           "instance.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fsr_id : int\n"
+           "    Flat source region ID.\n"
+           "instance : int\n"
+           "    Desired instance of the provided FSR ID.\n\n"
+           "Returns\n"
+           "-------\n"
+           "int\n"
+           "    Index in the MOCDriver of the specified FSR instance.\n",
+           py::arg("fsr_id"), py::arg("instance"))
+
       .def("set_extern_src",
            py::overload_cast<const Vector&, const Direction&, std::size_t,
                              double>(&MOCDriver::set_extern_src),

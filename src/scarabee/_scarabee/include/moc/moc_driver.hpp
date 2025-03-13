@@ -94,6 +94,7 @@ class MOCDriver {
   UniqueFSR get_fsr(const Vector& r, const Direction& u) const;
 
   std::size_t get_fsr_indx(const UniqueFSR& fsr) const;
+  std::size_t get_fsr_indx(std::size_t fsr_id, std::size_t instance) const;
 
   std::vector<std::size_t> get_all_fsr_in_cell(const Vector& r,
                                                const Direction& u) const;

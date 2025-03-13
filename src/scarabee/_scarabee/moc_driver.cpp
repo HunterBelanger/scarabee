@@ -1387,7 +1387,11 @@ UniqueFSR MOCDriver::get_fsr(const Vector& r, const Direction& u) const {
 }
 
 std::size_t MOCDriver::get_fsr_indx(const UniqueFSR& fsr) const {
-  const std::size_t i = fsr_offsets_.at(fsr.fsr->id()) + fsr.instance;
+  return this->get_fsr_indx(fsr.fsr->id(), fsr.instance);
+}
+
+std::size_t MOCDriver::get_fsr_indx(std::size_t fsr_id, std::size_t instance) const {
+  const std::size_t i = fsr_offsets_.at(fsr_id) + instance;
   if (i >= nfsrs_) {
     auto mssg = "FSR index out of range.";
     spdlog::error(mssg);

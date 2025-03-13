@@ -85,10 +85,10 @@ PYBIND11_MODULE(_scarabee, m) {
   init_DiffusionGeometry(m);
   init_FDDiffusionDriver(m);
   init_NEMDiffusionDriver(m);
-  init_FuelPin(m);
-  init_GuideTube(m);
-  init_BurnablePoisonPin(m);
-  init_PWRAssembly(m);
+  //init_FuelPin(m);
+  //init_GuideTube(m);
+  //init_BurnablePoisonPin(m);
+  //init_PWRAssembly(m);
   init_ReflectorSN(m);
   init_WaterFuncs(m);
 
