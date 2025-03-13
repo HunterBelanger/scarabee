@@ -218,6 +218,13 @@ void init_CrossSection(py::module& m) {
                              &CrossSection::max_legendre_order,
                              "Maximum legendre order for scattering.")
 
+      .def("set", &CrossSection::set,
+           "Reinitializes to be copy of another cross section.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "other : CrossSection\n"
+           "    Cross section used to reinitialize the current data.\n")
+
       .def("Etr",
            py::overload_cast<std::size_t>(&CrossSection::Etr, py::const_),
            "Transport corrected total cross section in group g.\n\n"

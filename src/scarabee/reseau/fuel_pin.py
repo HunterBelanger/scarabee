@@ -1,4 +1,13 @@
-from .._scarabee import NDLibrary, Material, CrossSection, SimplePinCell, MOCDriver
+from .._scarabee import (
+    NDLibrary,
+    Material,
+    CrossSection,
+    SimplePinCell,
+    PinCell,
+    MOCDriver,
+    MixingFraction,
+    mix_materials,
+)
 import numpy as np
 from typing import Optional, List, Tuple
 import copy
@@ -6,8 +15,7 @@ import copy
 
 class FuelPin:
     """
-    Represents a generic fuel pin. This could be a fuel pin in a PWR, or a fuel
-    pin in a BWR next to the channel box or in the channel corner.
+    Represents a generic fuel pin for a PWR.
 
     Parameters
     ----------
@@ -77,6 +85,22 @@ class FuelPin:
             raise ValueError("Number of fuel rings must be >= 1.")
         self._num_fuel_rings = num_fuel_rings
 
+        # Create list of the different radii
+        self._fuel_radii = []
+        if self.num_fuel_rings == 1:
+            self._fuel_radii.append(self.fuel_radius)
+        else:
+            V = np.pi * self.fuel_radius * self.fuel_radius
+            Vr = V / self.num_fuel_rings
+            for ri in range(self.num_fuel_rings):
+                Rin = 0.
+                if ri > 0:
+                    Rin = self._fuel_radii[-1]
+                Rout = np.sqrt((Vr + np.pi * Rin * Rin) / np.pi)
+                if Rout > self.fuel_radius:
+                    Rout = self.fuel_radius
+                self._fuel_radii.append(Rout)
+
         # Initialize array of compositions for the fuel. This holds the
         # composition for each fuel ring and for each depletion step.
         self._fuel_ring_materials: List[List[Material]] = []
@@ -144,6 +168,13 @@ class FuelPin:
         for r in range(self.num_fuel_rings):
             self._fuel_ring_fsr_ids.append([])
 
+        # Holds all the CrossSection objects used for the real transport
+        # calculation. These are NOT stored for each depletion step like with
+        # the materials.
+        self._fuel_ring_xs: List[CrossSection] = []
+        self._gap_xs: Optional[CrossSection] = None
+        self._clad_xs: Optional[CrossSection] = None
+
     @property
     def fuel_radius(self) -> float:
         return self._fuel_radius
@@ -193,22 +224,96 @@ class FuelPin:
         ndl : NDLibrary
             Nuclear data library which should load the nuclides.
         """
-        self.fuel.load_nuclides(ndl)
+        for ring_mats in self.fuel_ring_materials:
+            ring_mats[-1].load_nuclides(ndl)
+
         if self.gap is not None:
             self.gap.load_nuclides(ndl)
+
         self.clad.load_nuclides(ndl)
 
     def setup_xs_for_fuel_dancoff_calculation(self) -> None:
-        pass
-    
-    def setup_xs_for_clad_dancoff_calculation(self) -> None:
-        pass
+        """
+        Sets the 1-group cross sections to calculate the fuel Dancoff factors.
+        """
+        self._fuel_dancoff_xs.set(
+            CrossSection(
+                np.array([1.0e5]), np.array([1.0e5]), np.array([[0.0]]), "Fuel"
+            )
+        )
+
+        if self._gap_dancoff_xs is not None and self.gap is not None:
+            self._gap_dancoff_xs.set(
+                CrossSection(
+                    np.array([self.gap.potential_xs]),
+                    np.array([self.gap.potential_xs]),
+                    np.array([[0.0]]),
+                    "Gap",
+                )
+            )
+
+        self._clad_dancoff_xs.set(
+            CrossSection(
+                np.array([self.clad.potential_xs]),
+                np.array([self.clad.potential_xs]),
+                np.array([[0.0]]),
+                "Clad",
+            )
+        )
+
+    def setup_xs_for_clad_dancoff_calculation(self, ndl: NDLibrary) -> None:
+        """
+        Sets the 1-group cross sections to calculate the clad Dancoff factors.
+
+        Parameters
+        ----------
+        ndl : NDLibrary
+            Nuclear data library for obtaining potential scattering cross
+            sections.
+        """
+        # Create average fuel mixture
+        fuel_mats = []
+        fuel_vols = []
+        for ring in self.fuel_ring_materials:
+            fuel_mats.append(ring[-1])
+            fuel_vols.append(1.0 / self.num_fuel_rings)
+        avg_fuel: Material = mix_materials(
+            fuel_mats, fuel_vols, MixingFraction.Volume, ndl
+        )
+
+        self._fuel_dancoff_xs.set(
+            CrossSection(
+                np.array([avg_fuel.potential_xs]),
+                np.array([avg_fuel.potential_xs]),
+                np.array([[0.0]]),
+                "Fuel",
+            )
+        )
+
+        if self._gap_dancoff_xs is not None and self.gap is not None:
+            self._gap_dancoff_xs.set(
+                CrossSection(
+                    np.array([self.gap.potential_xs]),
+                    np.array([self.gap.potential_xs]),
+                    np.array([[0.0]]),
+                    "Gap",
+                )
+            )
+
+        self._clad_dancoff_xs.set(
+            CrossSection(
+                np.array([1.0e5]),
+                np.array([1.0e5]),
+                np.array([[0.0]]),
+                "Clad",
+            )
+        )
 
     def make_dancoff_moc_cell(
         self, moderator_xs: CrossSection, pitch: float
     ) -> Tuple[SimplePinCell, int, int]:
         """
-        Makes a simplified cell suitable for perofrming Dancoff factor
+        Makes a simplified cell suitable for performing Dancoff factor
         calculations.
 
         Parameters
@@ -223,7 +328,7 @@ class FuelPin:
         Returns
         -------
         SimplifiedPinCell, int, int
-            Pin cell object for MOC calcualtion, ID of the fuel flat source
+            Pin cell object for MOC calculation, ID of the fuel flat source
             region, ID of the clad flat source region.
         """
         if pitch < 2.0 * self.clad_radius:
@@ -291,5 +396,147 @@ class FuelPin:
             raise ValueError("Dancoff factor must be in range [0, 1].")
         self._clad_dancoff_factors.append(D)
 
-    def make_moc_cell(self, moderator_xs: CrossSection, pitch: float):
-        pass
+    def set_fuel_xs_for_depletion_step(self, t: int, ndl: NDLibrary) -> None:
+        """
+        Constructs the CrossSection object for all fuel rings of the pin at the
+        specified depletion step.
+
+        Parameters
+        ----------
+        t : int
+            Index for the depletion step.
+        ndl : NDLibrary
+            Nuclear data library to use for cross sections.
+        """
+        if t < 0:
+            raise ValueError("Depletion step index must be >= 0.")
+
+        # Do the fuel cross sections
+        if len(self._fuel_ring_xs) == 0:
+            # Create initial CrossSection objects
+            if self.num_fuel_rings == 1:
+                # Compute escape xs
+                Ee = 1. / (2. * self.fuel_radius)
+                self._fuel_ring_xs.append(self._fuel_ring_materials[0][t].carlvik_xs(self._fuel_dancoff_factors[t], Ee, ndl))
+                if self._fuel_ring_xs[-1].name == "":
+                    self._fuel_ring_xs[-1].set_name("Fuel")
+            else:
+                # Do each ring
+                for ri in range(self.num_fuel_rings):
+                    Rin = 0.
+                    if ri > 0:
+                        Rin = self._fuel_radii[ri-1]
+                    Rout = self._fuel_radii[ri]
+                    self._fuel_ring_xs.append(self._fuel_ring_materials[ri][t].ring_carlvik_xs(self._fuel_dancoff_factors[t], self.fuel_radius, Rin, Rout, ndl))
+                    if self._fuel_ring_xs[-1].name == "":
+                        self._fuel_ring_xs[-1].set_name("Fuel")
+
+        elif len(self._fuel_ring_xs) == self.num_fuel_rings:
+            # Reset XS values. Cannot reassign or pointers will be broken !
+            if self.num_fuel_rings == 1:
+                # Compute escape xs
+                Ee = 1. / (2. * self.fuel_radius)
+                self._fuel_ring_xs[0].set(self._fuel_ring_materials[0][t].carlvik_xs(self._fuel_dancoff_factors[t], Ee, ndl))
+                if self._fuel_ring_xs[0].name == "":
+                    self._fuel_ring_xs[0].set_name("Fuel")
+            else:
+                # Do each ring
+                for ri in range(self.num_fuel_rings):
+                    Rin = 0.
+                    if ri > 0:
+                        Rin = self._fuel_radii[ri-1]
+                    Rout = self._fuel_radii[ri]
+                    self._fuel_ring_xs[ri].set(self._fuel_ring_materials[ri][t].ring_carlvik_xs(self._fuel_dancoff_factors[t], self.fuel_radius, Rin, Rout, ndl))
+                    if self._fuel_ring_xs[ri].name == "":
+                        self._fuel_ring_xs[ri].set_name("Fuel")
+        else:
+            raise RuntimeError(
+                "Number of fuel cross sections does not agree with the number of fuel rings."
+            )
+
+    def set_gap_xs(self, ndl: NDLibrary):
+        """
+        Constructs the CrossSection object for the gap between the fuel pellet
+        and the cladding of the pin.
+
+        Parameters
+        ----------
+        ndl : NDLibrary
+            Nuclear data library to use for cross sections.
+        """
+        if self.gap is not None:
+            if self._gap_xs is None:
+                self._gap_xs = self.gap.dilution_xs([1.E10]*self.gap.size, ndl)
+            else:
+                self._gap_xs.set(self.gap.dilution_xs([1.E10]*self.gap.size, ndl))
+
+            if self._gap_xs.name == "":
+                self._gap_xs.set_name("Gap")
+
+    def set_clad_xs_for_depletion_step(self, t: int, ndl: NDLibrary):
+        """
+        Constructs the CrossSection object for the cladding of the pin at the
+        specified depletion step. The depletion step only changes the Dancoff
+        factor, not the cladding composition.
+
+        Parameters
+        ----------
+        t : int
+            Index for the depletion step.
+        ndl : NDLibrary
+            Nuclear data library to use for cross sections.
+        """
+        # Compute escape xs
+        Ee = 0.
+        if self.gap_radius is not None:
+            Ee = 1. / (2. * (self.clad_radius - self.gap_radius))
+        else:
+            Ee = 1. / (2. * (self.clad_radius - self.fuel_radius))
+
+        # Get / set the xs
+        if self._clad_xs is None:
+            self._clad_xs = self.clad.roman_xs(self._clad_dancoff_factors[t], Ee, ndl)
+        else:
+            self._clad_xs.set(self.clad.roman_xs(self._clad_dancoff_factors[t], Ee, ndl))
+
+        if self._clad_xs.name == "":
+            self._clad_xs.set_name("Clad")
+
+    def make_moc_cell(self, moderator_xs: CrossSection, pitch: float) -> PinCell:
+        """
+        Constructs the pin cell object used in for the global MOC simulation.
+
+        Parameters
+        ----------
+        moderator_xs : CrossSection
+            Cross sections to use for the moderator surrounding the fuel pin.
+        pitch : float
+            Spacing between fuel pins. Must be larger than the outer diameter
+            of the cladding.
+        """
+        if len(self._fuel_ring_xs) != self.num_fuel_rings:
+            raise RuntimeError("Fuel cross sections have not yet been built.")
+        if self.gap is not None and self._gap_xs is None:
+            raise RuntimeError("Gap cross section has not yet been built.")
+        if self._clad_xs is None:
+            raise RuntimeError("Clad cross section has not yet been built.")
+        if pitch < 2.*self.clad_radius:
+            raise RuntimeError("Pitch must be >= twice the cladding radius.")
+
+        # Initialize the radii and cross section lists with the fuel info
+        radii = [r for r in self._fuel_radii]
+        xss = [xs for xs in self._fuel_ring_xs]
+
+        # Add the gap (if present)
+        if self._gap_xs is not None:
+            radii.append(self.gap_radius)
+            xss.append(self._gap_xs)
+
+        # Add cladding
+        radii.append(self.clad_radius)
+        xss.append(self._clad_xs)
+
+        # Add moderator to the end of materials
+        xss.append(moderator_xs)
+
+        return PinCell(radii, xss, pitch, pitch)        

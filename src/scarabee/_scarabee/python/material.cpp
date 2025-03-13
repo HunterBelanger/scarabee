@@ -313,7 +313,7 @@ void init_Material(py::module& m) {
       .def_property("name", &Material::name, &Material::set_name,
                     "String with the name of the Material.")
 
-      .def("__deepcopy__", [](const Material& mat) { return Material(mat); });
+      .def("__deepcopy__", [](const Material& mat, py::dict) { return Material(mat); });
 
   py::enum_<MixingFraction>(m, "MixingFraction")
       .value("Atoms", MixingFraction::Atoms,
