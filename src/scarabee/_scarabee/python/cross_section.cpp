@@ -396,5 +396,7 @@ void init_CrossSection(py::module& m) {
       .def("__rmul__", [](const CrossSection& xs, double N) { return xs * N; })
       .def("__add__", &CrossSection::operator+)
       .def("__imul__", &CrossSection::operator*=)
-      .def("__iadd__", &CrossSection::operator+=);
+      .def("__iadd__", &CrossSection::operator+=)
+
+      .def("__deepcopy__", [](const CrossSection& xs, py::dict) { return CrossSection(xs); });
 }
