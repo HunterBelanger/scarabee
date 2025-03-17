@@ -4,7 +4,6 @@ from .._scarabee import (
     CrossSection,
     SimplePinCell,
     PinCell,
-    MOCDriver,
     MixingFraction,
     mix_materials,
 )
@@ -127,11 +126,11 @@ class FuelPin:
         if gap_radius is not None and gap_radius <= fuel_radius:
             raise ValueError("Gap radius must be > fuel radius.")
 
-        self._gap = gap
+        self._gap = copy.deepcopy(gap)
         self._gap_radius = gap_radius
 
         # Get cladding related parameters
-        self._clad = clad
+        self._clad = copy.deepcopy(clad)
 
         if clad_radius <= 0.0 or clad_radius <= fuel_radius:
             raise ValueError("Clad radius must be > fuel radius.")
@@ -232,7 +231,7 @@ class FuelPin:
 
         self.clad.load_nuclides(ndl)
 
-    def setup_xs_for_fuel_dancoff_calculation(self) -> None:
+    def set_xs_for_fuel_dancoff_calculation(self) -> None:
         """
         Sets the 1-group cross sections to calculate the fuel Dancoff factors.
         """
@@ -261,7 +260,7 @@ class FuelPin:
             )
         )
 
-    def setup_xs_for_clad_dancoff_calculation(self, ndl: NDLibrary) -> None:
+    def set_xs_for_clad_dancoff_calculation(self, ndl: NDLibrary) -> None:
         """
         Sets the 1-group cross sections to calculate the clad Dancoff factors.
 
@@ -454,7 +453,7 @@ class FuelPin:
                 "Number of fuel cross sections does not agree with the number of fuel rings."
             )
 
-    def set_gap_xs(self, ndl: NDLibrary):
+    def set_gap_xs(self, ndl: NDLibrary) -> None:
         """
         Constructs the CrossSection object for the gap between the fuel pellet
         and the cladding of the pin.
@@ -473,7 +472,7 @@ class FuelPin:
             if self._gap_xs.name == "":
                 self._gap_xs.set_name("Gap")
 
-    def set_clad_xs_for_depletion_step(self, t: int, ndl: NDLibrary):
+    def set_clad_xs_for_depletion_step(self, t: int, ndl: NDLibrary) -> None:
         """
         Constructs the CrossSection object for the cladding of the pin at the
         specified depletion step. The depletion step only changes the Dancoff
@@ -535,6 +534,11 @@ class FuelPin:
         # Add cladding
         radii.append(self.clad_radius)
         xss.append(self._clad_xs)
+
+        # Add another ring of moderator if possible
+        if pitch > 2.*self.clad_radius:
+            radii.append(0.5*pitch)
+            xss.append(moderator_xs)
 
         # Add moderator to the end of materials
         xss.append(moderator_xs)
