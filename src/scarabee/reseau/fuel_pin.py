@@ -4,6 +4,7 @@ from .._scarabee import (
     CrossSection,
     SimplePinCell,
     PinCell,
+    MOCDriver,
     MixingFraction,
     mix_materials,
 )
@@ -82,40 +83,7 @@ class FuelPin:
 
         if num_fuel_rings <= 0:
             raise ValueError("Number of fuel rings must be >= 1.")
-        self._num_fuel_rings = num_fuel_rings
-
-        # Create list of the different radii
-        self._fuel_radii = []
-        if self.num_fuel_rings == 1:
-            self._fuel_radii.append(self.fuel_radius)
-        else:
-            V = np.pi * self.fuel_radius * self.fuel_radius
-            Vr = V / self.num_fuel_rings
-            for ri in range(self.num_fuel_rings):
-                Rin = 0.
-                if ri > 0:
-                    Rin = self._fuel_radii[-1]
-                Rout = np.sqrt((Vr + np.pi * Rin * Rin) / np.pi)
-                if Rout > self.fuel_radius:
-                    Rout = self.fuel_radius
-                self._fuel_radii.append(Rout)
-
-        # Initialize array of compositions for the fuel. This holds the
-        # composition for each fuel ring and for each depletion step.
-        self._fuel_ring_materials: List[List[Material]] = []
-        for r in range(self.num_fuel_rings):
-            # All rings initially start with the same composition
-            self._fuel_ring_materials.append([copy.deepcopy(fuel)])
-
-        # Initialize an array to hold the flux spectrum for each fuel ring and
-        # for each depletion step.
-        self._fuel_ring_flux_spectra: List[List[np.ndarray]] = []
-        for r in range(self.num_fuel_rings):
-            # All rings initially start with empty flux spectrum list
-            self._fuel_ring_flux_spectra.append([])
-
-        # Initialize empty list of Dancoff factors for the fuel
-        self._fuel_dancoff_factors: List[float] = []
+        self._num_fuel_rings = num_fuel_rings 
 
         # Get gap related parameters
         if gap is None and gap_radius is not None:
@@ -137,6 +105,13 @@ class FuelPin:
         elif gap_radius is not None and clad_radius <= gap_radius:
             raise ValueError("Clad radius must be > gap radius.")
         self._clad_radius = clad_radius
+
+        # ======================================================================
+        # DANCOFF FACTOR CALCULATION DATA
+        # ----------------------------------------------------------------------
+
+        # Initialize empty list of Dancoff factors for the fuel
+        self._fuel_dancoff_factors: List[float] = []
 
         # Initialize empty list of Dancoff factors for the cladding
         self._clad_dancoff_factors: List[float] = []
@@ -161,11 +136,64 @@ class FuelPin:
             "Clad",
         )
 
+        self._fuel_isolated_dancoff_fsr_ids = []
+        self._gap_isolated_dancoff_fsr_ids = []
+        self._clad_isolated_dancoff_fsr_ids = []
+        self._mod_isolated_dancoff_fsr_ids = []
+
+        self._fuel_full_dancoff_fsr_ids = []
+        self._gap_full_dancoff_fsr_ids = []
+        self._clad_full_dancoff_fsr_ids = []
+        self._mod_full_dancoff_fsr_ids = []
+
+        self._fuel_isolated_dancoff_fsr_inds = []
+        self._gap_isolated_dancoff_fsr_inds = []
+        self._clad_isolated_dancoff_fsr_inds = []
+        self._mod_isolated_dancoff_fsr_inds = []
+
+        self._fuel_full_dancoff_fsr_inds = []
+        self._gap_full_dancoff_fsr_inds = []
+        self._clad_full_dancoff_fsr_inds = []
+        self._mod_full_dancoff_fsr_inds = []
+
+        # ======================================================================
+        # TRANSPORT CALCULATION DATA
+        # ----------------------------------------------------------------------
         # Lists of the FSR IDs for each fuel ring, used to homogenize flux
         # spectra for depletion. These will be filled by make_moc_cell.
         self._fuel_ring_fsr_ids: List[List[int]] = []
         for r in range(self.num_fuel_rings):
             self._fuel_ring_fsr_ids.append([])
+
+        # Create list of the different radii for fuel pellet
+        self._fuel_radii = []
+        if self.num_fuel_rings == 1:
+            self._fuel_radii.append(self.fuel_radius)
+        else:
+            V = np.pi * self.fuel_radius * self.fuel_radius
+            Vr = V / self.num_fuel_rings
+            for ri in range(self.num_fuel_rings):
+                Rin = 0.0
+                if ri > 0:
+                    Rin = self._fuel_radii[-1]
+                Rout = np.sqrt((Vr + np.pi * Rin * Rin) / np.pi)
+                if Rout > self.fuel_radius:
+                    Rout = self.fuel_radius
+                self._fuel_radii.append(Rout)
+
+        # Initialize array of compositions for the fuel. This holds the
+        # composition for each fuel ring and for each depletion step.
+        self._fuel_ring_materials: List[List[Material]] = []
+        for r in range(self.num_fuel_rings):
+            # All rings initially start with the same composition
+            self._fuel_ring_materials.append([copy.deepcopy(fuel)])
+
+        # Initialize an array to hold the flux spectrum for each fuel ring and
+        # for each depletion step.
+        self._fuel_ring_flux_spectra: List[List[np.ndarray]] = []
+        for r in range(self.num_fuel_rings):
+            # All rings initially start with empty flux spectrum list
+            self._fuel_ring_flux_spectra.append([])
 
         # Holds all the CrossSection objects used for the real transport
         # calculation. These are NOT stored for each depletion step like with
@@ -231,6 +259,8 @@ class FuelPin:
 
         self.clad.load_nuclides(ndl)
 
+    #==========================================================================
+    # Dancoff Factor Related Methods
     def set_xs_for_fuel_dancoff_calculation(self) -> None:
         """
         Sets the 1-group cross sections to calculate the fuel Dancoff factors.
@@ -308,12 +338,13 @@ class FuelPin:
             )
         )
 
-    def make_dancoff_moc_cell(
+    def make_isolated_dancoff_moc_cell(
         self, moderator_xs: CrossSection, pitch: float
-    ) -> Tuple[SimplePinCell, int, int]:
+    ) -> SimplePinCell:
         """
         Makes a simplified cell suitable for performing Dancoff factor
-        calculations.
+        calculations of the isolated pin. The flat source region IDs are stored
+        locally in the FuelPin object.
 
         Parameters
         ----------
@@ -322,13 +353,12 @@ class FuelPin:
             absorption (i.e. no scattering) and should be equal to the
             macroscopic potential cross section.
         pitch : float
-            Width of the cell.
+            Width of the isolated cell.
 
         Returns
         -------
-        SimplifiedPinCell, int, int
-            Pin cell object for MOC calculation, ID of the fuel flat source
-            region, ID of the clad flat source region.
+        SimplifiedPinCell
+            Pin cell object for isolated MOC Dancoff calculation.
         """
         if pitch < 2.0 * self.clad_radius:
             raise ValueError(
@@ -358,14 +388,334 @@ class FuelPin:
         cell_fsr_ids = list(cell.get_all_fsr_ids())
         cell_fsr_ids.sort()
 
-        fuel_fsr_id = cell_fsr_ids[0]
+        self._fuel_isolated_dancoff_fsr_ids.append(cell_fsr_ids[0])
 
         if self.gap is None:
-            clad_fsr_id = cell_fsr_ids[1]
+            self._clad_isolated_dancoff_fsr_ids.append(cell_fsr_ids[1])
+            self._mod_isolated_dancoff_fsr_ids.append(cell_fsr_ids[2])
         else:
-            clad_fsr_id = cell_fsr_ids[2]
+            self._gap_isolated_dancoff_fsr_ids.append(cell_fsr_ids[1])
+            self._clad_isolated_dancoff_fsr_ids.append(cell_fsr_ids[2])
+            self._mod_isolated_dancoff_fsr_ids.append(cell_fsr_ids[3])
 
-        return cell, fuel_fsr_id, clad_fsr_id
+        return cell
+
+    def make_full_dancoff_moc_cell(
+        self, moderator_xs: CrossSection, pitch: float
+    ) -> SimplePinCell:
+        """
+        Makes a simplified cell suitable for performing Dancoff factor
+        calculations of the full true geometry. The flat source region IDs are
+        stored locally in the FuelPin object.
+
+        Parameters
+        ----------
+        moderator_xs : CrossSection
+            One group cross sections for the moderator. Total should equal
+            absorption (i.e. no scattering) and should be equal to the
+            macroscopic potential cross section.
+        pitch : float
+            Width of the cell.
+
+        Returns
+        -------
+        SimplifiedPinCell
+            Pin cell object for full geometry MOC Dancoff factor calculation.
+        """
+        if pitch < 2.0 * self.clad_radius:
+            raise ValueError(
+                "The fuel pin pitch must be > the diameter of the cladding."
+            )
+
+        # First we create list of radii and materials
+        radii = []
+        xs = []
+
+        radii.append(self.fuel_radius)
+        xs.append(self._fuel_dancoff_xs)
+
+        if self.gap is not None and self.gap_radius is not None:
+            radii.append(self.gap_radius)
+            xs.append(self._gap_dancoff_xs)
+
+        radii.append(self.clad_radius)
+        xs.append(self._clad_dancoff_xs)
+
+        xs.append(moderator_xs)
+
+        # Make the simple pin cell.
+        cell = SimplePinCell(radii, xs, pitch, pitch)
+
+        # Get the FSR IDs for the regions of interest
+        cell_fsr_ids = list(cell.get_all_fsr_ids())
+        cell_fsr_ids.sort()
+
+        self._fuel_full_dancoff_fsr_ids.append(cell_fsr_ids[0])
+
+        if self.gap is None:
+            self._clad_full_dancoff_fsr_ids.append(cell_fsr_ids[1])
+            self._mod_full_dancoff_fsr_ids.append(cell_fsr_ids[2])
+        else:
+            self._gap_full_dancoff_fsr_ids.append(cell_fsr_ids[1])
+            self._clad_full_dancoff_fsr_ids.append(cell_fsr_ids[2])
+            self._mod_full_dancoff_fsr_ids.append(cell_fsr_ids[3])
+
+        return cell
+
+    def populate_dancoff_fsr_indexes(
+        self, isomoc: MOCDriver, fullmoc: MOCDriver
+    ) -> None:
+        """
+        Obtains the flat source region indexes for all of the flat source
+        regions used in the Dancoff factor calculations.
+
+        Parameters
+        ----------
+        isomoc : MOCDriver
+            MOC simulation for the isolated pin.
+        fullmoc : MOCDriver
+            MOC simulation for the full geometry.
+        """
+        self._fuel_isolated_dancoff_fsr_inds = []
+        self._clad_isolated_dancoff_fsr_inds = []
+        self._fuel_full_dancoff_fsr_inds = []
+        self._clad_full_dancoff_fsr_inds = []
+
+        for id in self._fuel_isolated_dancoff_fsr_ids:
+            self._fuel_isolated_dancoff_fsr_inds.append(isomoc.get_fsr_indx(id, 0))
+        for id in self._clad_isolated_dancoff_fsr_ids:
+            self._clad_isolated_dancoff_fsr_inds.append(isomoc.get_fsr_indx(id, 0))
+
+        for id in self._fuel_full_dancoff_fsr_ids:
+            self._fuel_full_dancoff_fsr_inds.append(fullmoc.get_fsr_indx(id, 0))
+        for id in self._clad_full_dancoff_fsr_ids:
+            self._clad_full_dancoff_fsr_inds.append(fullmoc.get_fsr_indx(id, 0))
+
+    def set_isolated_dancoff_fuel_sources(
+        self, isomoc: MOCDriver, moderator: Material
+    ) -> None:
+        """
+        Initializes the fixed sources for the isolated MOC calculation required
+        in computing Dancoff factors. Sources are set for a fuel Dancoff factor
+        calculation.
+
+        Parameters
+        ----------
+        isomoc : MOCDriver
+            MOC simulation for the isolated geometry.
+        moderator : Material
+            Material definition for the moderator, used to obtain the potential
+            scattering cross section.
+        """
+        # Fuel sources should all be zero !
+        for ind in self._fuel_isolated_dancoff_fsr_inds:
+            isomoc.set_extern_src(ind, 0, 0.0)
+
+        # Gap sources should all be potential_xs
+        if self.gap is not None:
+            pot_xs = self.gap.potential_xs
+            for ind in self._gap_isolated_dancoff_fsr_inds:
+                isomoc.set_extern_src(ind, 0, pot_xs)
+
+        # Clad sources should all be potential_xs
+        pot_xs = self.clad.potential_xs
+        for ind in self._clad_isolated_dancoff_fsr_inds:
+            isomoc.set_extern_src(ind, 0, pot_xs)
+
+        # Moderator sources should all be potential_xs
+        pot_xs = moderator.potential_xs
+        for ind in self._mod_isolated_dancoff_fsr_inds:
+            isomoc.set_extern_src(ind, 0, pot_xs)
+
+    def set_isolated_dancoff_clad_sources(
+        self, isomoc: MOCDriver, moderator: Material, ndl: NDLibrary
+    ) -> None:
+        """
+        Initializes the fixed sources for the isolated MOC calculation required
+        in computing Dancoff factors. Sources are set for a clad Dancoff factor
+        calculation.
+
+        Parameters
+        ----------
+        isomoc : MOCDriver
+            MOC simulation for the isolated geometry.
+        moderator : Material
+            Material definition for the moderator, used to obtain the potential
+            scattering cross section.
+        ndl : NDLibrary
+            Nuclear data library for obtaining potential scattering cross
+            sections.
+        """
+        # Create average fuel mixture
+        fuel_mats = []
+        fuel_vols = []
+        for ring in self.fuel_ring_materials:
+            fuel_mats.append(ring[-1])
+            fuel_vols.append(1.0 / self.num_fuel_rings)
+        avg_fuel: Material = mix_materials(
+            fuel_mats, fuel_vols, MixingFraction.Volume, ndl
+        )
+
+        # Fuel sources should all be potential_xs
+        pot_xs = avg_fuel.potential_xs
+        for ind in self._fuel_isolated_dancoff_fsr_inds:
+            isomoc.set_extern_src(ind, 0, pot_xs)
+
+        # Gap sources should all be potential_xs
+        if self.gap is not None:
+            pot_xs = self.gap.potential_xs
+            for ind in self._gap_isolated_dancoff_fsr_inds:
+                isomoc.set_extern_src(ind, 0, pot_xs)
+
+        # Clad sources should all be zero !
+        for ind in self._clad_isolated_dancoff_fsr_inds:
+            isomoc.set_extern_src(ind, 0, 0.0)
+
+        # Moderator sources should all be potential_xs
+        pot_xs = moderator.potential_xs
+        for ind in self._mod_isolated_dancoff_fsr_inds:
+            isomoc.set_extern_src(ind, 0, pot_xs)
+
+    def set_full_dancoff_fuel_sources(
+        self, fullmoc: MOCDriver, moderator: Material
+    ) -> None:
+        """
+        Initializes the fixed sources for the full MOC calculation required
+        in computing Dancoff factors. Sources are set for a fuel Dancoff factor
+        calculation.
+
+        Parameters
+        ----------
+        fullmoc : MOCDriver
+            MOC simulation for the full geometry.
+        moderator : Material
+            Material definition for the moderator, used to obtain the potential
+            scattering cross section.
+        """
+        # Fuel sources should all be zero !
+        for ind in self._fuel_full_dancoff_fsr_inds:
+            fullmoc.set_extern_src(ind, 0, 0.0)
+
+        # Gap sources should all be potential_xs
+        if self.gap is not None:
+            pot_xs = self.gap.potential_xs
+            for ind in self._gap_full_dancoff_fsr_inds:
+                fullmoc.set_extern_src(ind, 0, pot_xs)
+
+        # Clad sources should all be potential_xs
+        pot_xs = self.clad.potential_xs
+        for ind in self._clad_full_dancoff_fsr_inds:
+            fullmoc.set_extern_src(ind, 0, pot_xs)
+
+        # Moderator sources should all be potential_xs
+        pot_xs = moderator.potential_xs
+        for ind in self._mod_full_dancoff_fsr_inds:
+            fullmoc.set_extern_src(ind, 0, pot_xs)
+
+    def set_full_dancoff_clad_sources(
+        self, fullmoc: MOCDriver, moderator: Material, ndl: NDLibrary
+    ) -> None:
+        """
+        Initializes the fixed sources for the full MOC calculation required
+        in computing Dancoff factors. Sources are set for a clad Dancoff factor
+        calculation.
+
+        Parameters
+        ----------
+        isomoc : MOCDriver
+            MOC simulation for the isolated geometry.
+        moderator : Material
+            Material definition for the moderator, used to obtain the potential
+            scattering cross section.
+        ndl : NDLibrary
+            Nuclear data library for obtaining potential scattering cross
+            sections.
+        """
+        # Create average fuel mixture
+        fuel_mats = []
+        fuel_vols = []
+        for ring in self.fuel_ring_materials:
+            fuel_mats.append(ring[-1])
+            fuel_vols.append(1.0 / self.num_fuel_rings)
+        avg_fuel: Material = mix_materials(
+            fuel_mats, fuel_vols, MixingFraction.Volume, ndl
+        )
+
+        # Fuel sources should all be potential_xs
+        pot_xs = avg_fuel.potential_xs
+        for ind in self._fuel_full_dancoff_fsr_inds:
+            fullmoc.set_extern_src(ind, 0, pot_xs)
+
+        # Gap sources should all be potential_xs
+        if self.gap is not None:
+            pot_xs = self.gap.potential_xs
+            for ind in self._gap_full_dancoff_fsr_inds:
+                fullmoc.set_extern_src(ind, 0, pot_xs)
+
+        # Clad sources should all be zero !
+        for ind in self._clad_full_dancoff_fsr_inds:
+            fullmoc.set_extern_src(ind, 0, 0.0)
+
+        # Moderator sources should all be potential_xs
+        pot_xs = moderator.potential_xs
+        for ind in self._mod_full_dancoff_fsr_inds:
+            fullmoc.set_extern_src(ind, 0, pot_xs)
+
+    def compute_fuel_dancoff_factor(
+        self, isomoc: MOCDriver, fullmoc: MOCDriver
+    ) -> float:
+        """
+        Computes the Dancoff factor for the fuel region of the fuel pin.
+
+        Parameters
+        ----------
+        isomoc : MOCDriver
+            MOC simulation for the isolated geometry (previously solved).
+        fullmoc : MOCDriver
+            MOC simulation for the full geometry (previously solved).
+
+        Returns
+        -------
+        float
+            Dancoff factor for the fuel region.
+        """
+        iso_flux = isomoc.homogenize_flux_spectrum(
+            self._fuel_isolated_dancoff_fsr_inds
+        )[0]
+        full_flux = fullmoc.homogenize_flux_spectrum(self._fuel_full_dancoff_fsr_inds)[
+            0
+        ]
+        C = (iso_flux - full_flux) / iso_flux
+        D = 1.0 - C
+        return D
+
+    def compute_clad_dancoff_factor(
+        self, isomoc: MOCDriver, fullmoc: MOCDriver
+    ) -> float:
+        """
+        Computes the Dancoff factor for the cladding region of the fuel pin.
+
+        Parameters
+        ----------
+        isomoc : MOCDriver
+            MOC simulation for the isolated geometry (previously solved).
+        fullmoc : MOCDriver
+            MOC simulation for the full geometry (previously solved).
+
+        Returns
+        -------
+        float
+            Dancoff factor for the cladding region.
+        """
+        iso_flux = isomoc.homogenize_flux_spectrum(
+            self._clad_isolated_dancoff_fsr_inds
+        )[0]
+        full_flux = fullmoc.homogenize_flux_spectrum(self._clad_full_dancoff_fsr_inds)[
+            0
+        ]
+        C = (iso_flux - full_flux) / iso_flux
+        D = 1.0 - C
+        return D
 
     def append_fuel_dancoff_factor(self, D) -> None:
         """
@@ -395,6 +745,8 @@ class FuelPin:
             raise ValueError("Dancoff factor must be in range [0, 1].")
         self._clad_dancoff_factors.append(D)
 
+    #==========================================================================
+    # Transport Calculation Related Methods
     def set_fuel_xs_for_depletion_step(self, t: int, ndl: NDLibrary) -> None:
         """
         Constructs the CrossSection object for all fuel rings of the pin at the
@@ -415,18 +767,30 @@ class FuelPin:
             # Create initial CrossSection objects
             if self.num_fuel_rings == 1:
                 # Compute escape xs
-                Ee = 1. / (2. * self.fuel_radius)
-                self._fuel_ring_xs.append(self._fuel_ring_materials[0][t].carlvik_xs(self._fuel_dancoff_factors[t], Ee, ndl))
+                Ee = 1.0 / (2.0 * self.fuel_radius)
+                self._fuel_ring_xs.append(
+                    self._fuel_ring_materials[0][t].carlvik_xs(
+                        self._fuel_dancoff_factors[t], Ee, ndl
+                    )
+                )
                 if self._fuel_ring_xs[-1].name == "":
                     self._fuel_ring_xs[-1].set_name("Fuel")
             else:
                 # Do each ring
                 for ri in range(self.num_fuel_rings):
-                    Rin = 0.
+                    Rin = 0.0
                     if ri > 0:
-                        Rin = self._fuel_radii[ri-1]
+                        Rin = self._fuel_radii[ri - 1]
                     Rout = self._fuel_radii[ri]
-                    self._fuel_ring_xs.append(self._fuel_ring_materials[ri][t].ring_carlvik_xs(self._fuel_dancoff_factors[t], self.fuel_radius, Rin, Rout, ndl))
+                    self._fuel_ring_xs.append(
+                        self._fuel_ring_materials[ri][t].ring_carlvik_xs(
+                            self._fuel_dancoff_factors[t],
+                            self.fuel_radius,
+                            Rin,
+                            Rout,
+                            ndl,
+                        )
+                    )
                     if self._fuel_ring_xs[-1].name == "":
                         self._fuel_ring_xs[-1].set_name("Fuel")
 
@@ -434,18 +798,30 @@ class FuelPin:
             # Reset XS values. Cannot reassign or pointers will be broken !
             if self.num_fuel_rings == 1:
                 # Compute escape xs
-                Ee = 1. / (2. * self.fuel_radius)
-                self._fuel_ring_xs[0].set(self._fuel_ring_materials[0][t].carlvik_xs(self._fuel_dancoff_factors[t], Ee, ndl))
+                Ee = 1.0 / (2.0 * self.fuel_radius)
+                self._fuel_ring_xs[0].set(
+                    self._fuel_ring_materials[0][t].carlvik_xs(
+                        self._fuel_dancoff_factors[t], Ee, ndl
+                    )
+                )
                 if self._fuel_ring_xs[0].name == "":
                     self._fuel_ring_xs[0].set_name("Fuel")
             else:
                 # Do each ring
                 for ri in range(self.num_fuel_rings):
-                    Rin = 0.
+                    Rin = 0.0
                     if ri > 0:
-                        Rin = self._fuel_radii[ri-1]
+                        Rin = self._fuel_radii[ri - 1]
                     Rout = self._fuel_radii[ri]
-                    self._fuel_ring_xs[ri].set(self._fuel_ring_materials[ri][t].ring_carlvik_xs(self._fuel_dancoff_factors[t], self.fuel_radius, Rin, Rout, ndl))
+                    self._fuel_ring_xs[ri].set(
+                        self._fuel_ring_materials[ri][t].ring_carlvik_xs(
+                            self._fuel_dancoff_factors[t],
+                            self.fuel_radius,
+                            Rin,
+                            Rout,
+                            ndl,
+                        )
+                    )
                     if self._fuel_ring_xs[ri].name == "":
                         self._fuel_ring_xs[ri].set_name("Fuel")
         else:
@@ -465,9 +841,9 @@ class FuelPin:
         """
         if self.gap is not None:
             if self._gap_xs is None:
-                self._gap_xs = self.gap.dilution_xs([1.E10]*self.gap.size, ndl)
+                self._gap_xs = self.gap.dilution_xs([1.0e10] * self.gap.size, ndl)
             else:
-                self._gap_xs.set(self.gap.dilution_xs([1.E10]*self.gap.size, ndl))
+                self._gap_xs.set(self.gap.dilution_xs([1.0e10] * self.gap.size, ndl))
 
             if self._gap_xs.name == "":
                 self._gap_xs.set_name("Gap")
@@ -486,17 +862,19 @@ class FuelPin:
             Nuclear data library to use for cross sections.
         """
         # Compute escape xs
-        Ee = 0.
+        Ee = 0.0
         if self.gap_radius is not None:
-            Ee = 1. / (2. * (self.clad_radius - self.gap_radius))
+            Ee = 1.0 / (2.0 * (self.clad_radius - self.gap_radius))
         else:
-            Ee = 1. / (2. * (self.clad_radius - self.fuel_radius))
+            Ee = 1.0 / (2.0 * (self.clad_radius - self.fuel_radius))
 
         # Get / set the xs
         if self._clad_xs is None:
             self._clad_xs = self.clad.roman_xs(self._clad_dancoff_factors[t], Ee, ndl)
         else:
-            self._clad_xs.set(self.clad.roman_xs(self._clad_dancoff_factors[t], Ee, ndl))
+            self._clad_xs.set(
+                self.clad.roman_xs(self._clad_dancoff_factors[t], Ee, ndl)
+            )
 
         if self._clad_xs.name == "":
             self._clad_xs.set_name("Clad")
@@ -519,7 +897,7 @@ class FuelPin:
             raise RuntimeError("Gap cross section has not yet been built.")
         if self._clad_xs is None:
             raise RuntimeError("Clad cross section has not yet been built.")
-        if pitch < 2.*self.clad_radius:
+        if pitch < 2.0 * self.clad_radius:
             raise RuntimeError("Pitch must be >= twice the cladding radius.")
 
         # Initialize the radii and cross section lists with the fuel info
@@ -536,11 +914,11 @@ class FuelPin:
         xss.append(self._clad_xs)
 
         # Add another ring of moderator if possible
-        if pitch > 2.*self.clad_radius:
-            radii.append(0.5*pitch)
+        if pitch > 2.0 * self.clad_radius:
+            radii.append(0.5 * pitch)
             xss.append(moderator_xs)
 
         # Add moderator to the end of materials
         xss.append(moderator_xs)
 
-        return PinCell(radii, xss, pitch, pitch)        
+        return PinCell(radii, xss, pitch, pitch)
