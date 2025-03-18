@@ -477,19 +477,32 @@ class FuelPin:
             MOC simulation for the full geometry.
         """
         self._fuel_isolated_dancoff_fsr_inds = []
+        self._gap_isolated_dancoff_fsr_inds = []
         self._clad_isolated_dancoff_fsr_inds = []
+        self._mod_isolated_dancoff_fsr_inds = []
+
         self._fuel_full_dancoff_fsr_inds = []
+        self._gap_full_dancoff_fsr_inds = []
         self._clad_full_dancoff_fsr_inds = []
+        self._mod_full_dancoff_fsr_inds = []
 
         for id in self._fuel_isolated_dancoff_fsr_ids:
             self._fuel_isolated_dancoff_fsr_inds.append(isomoc.get_fsr_indx(id, 0))
+        for id in self._gap_isolated_dancoff_fsr_ids:
+            self._gap_isolated_dancoff_fsr_inds.append(isomoc.get_fsr_indx(id, 0))
         for id in self._clad_isolated_dancoff_fsr_ids:
             self._clad_isolated_dancoff_fsr_inds.append(isomoc.get_fsr_indx(id, 0))
+        for id in self._mod_isolated_dancoff_fsr_ids:
+            self._mod_isolated_dancoff_fsr_inds.append(isomoc.get_fsr_indx(id, 0))
 
         for id in self._fuel_full_dancoff_fsr_ids:
             self._fuel_full_dancoff_fsr_inds.append(fullmoc.get_fsr_indx(id, 0))
+        for id in self._gap_full_dancoff_fsr_ids:
+            self._gap_full_dancoff_fsr_inds.append(fullmoc.get_fsr_indx(id, 0))
         for id in self._clad_full_dancoff_fsr_ids:
             self._clad_full_dancoff_fsr_inds.append(fullmoc.get_fsr_indx(id, 0))
+        for id in self._mod_full_dancoff_fsr_ids:
+            self._mod_full_dancoff_fsr_inds.append(fullmoc.get_fsr_indx(id, 0))
 
     def set_isolated_dancoff_fuel_sources(
         self, isomoc: MOCDriver, moderator: Material
