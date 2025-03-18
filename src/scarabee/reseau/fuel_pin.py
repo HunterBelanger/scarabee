@@ -9,7 +9,7 @@ from .._scarabee import (
     mix_materials,
 )
 import numpy as np
-from typing import Optional, List, Tuple
+from typing import Optional, List
 import copy
 
 

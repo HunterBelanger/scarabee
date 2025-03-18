@@ -7,7 +7,7 @@ from .._scarabee import (
     MOCDriver
 )
 import numpy as np
-from typing import Optional, List, Tuple
+from typing import Optional, List
 import copy
 
 
@@ -302,7 +302,7 @@ class GuideTube:
             isomoc.set_extern_src(ind, 0, pot_xs)
 
     def set_isolated_dancoff_clad_sources(
-        self, isomoc: MOCDriver, moderator: Material, ndl: NDLibrary
+        self, isomoc: MOCDriver, moderator: Material
     ) -> None:
         """
         Initializes the fixed sources for the isolated MOC calculation required
@@ -316,9 +316,6 @@ class GuideTube:
         moderator : Material
             Material definition for the moderator, used to obtain the potential
             scattering cross section.
-        ndl : NDLibrary
-            Nuclear data library for obtaining potential scattering cross
-            sections.
         """
         # Clad sources should all be zero !
         for ind in self._clad_isolated_dancoff_fsr_inds:
@@ -356,7 +353,7 @@ class GuideTube:
             fullmoc.set_extern_src(ind, 0, pot_xs)
 
     def set_full_dancoff_clad_sources(
-        self, fullmoc: MOCDriver, moderator: Material, ndl: NDLibrary
+        self, fullmoc: MOCDriver, moderator: Material
     ) -> None:
         """
         Initializes the fixed sources for the full MOC calculation required
@@ -370,9 +367,6 @@ class GuideTube:
         moderator : Material
             Material definition for the moderator, used to obtain the potential
             scattering cross section.
-        ndl : NDLibrary
-            Nuclear data library for obtaining potential scattering cross
-            sections.
         """
         # Clad sources should all be zero !
         for ind in self._clad_full_dancoff_fsr_inds:
