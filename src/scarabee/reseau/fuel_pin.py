@@ -772,9 +772,6 @@ class FuelPin:
         ndl : NDLibrary
             Nuclear data library to use for cross sections.
         """
-        if t < 0:
-            raise ValueError("Depletion step index must be >= 0.")
-
         # Do the fuel cross sections
         if len(self._fuel_ring_xs) == 0:
             # Create initial CrossSection objects

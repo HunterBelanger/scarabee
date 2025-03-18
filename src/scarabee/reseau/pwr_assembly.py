@@ -10,11 +10,16 @@ from .._scarabee import (
     BoundaryCondition,
     SimulationMode,
     YamamotoTabuchi6,
+    set_logging_level,
+    scarabee_log,
+    LogLevel,
 )
 from enum import Enum
 import numpy as np
 from typing import Optional, List, Tuple, Union
 import copy
+from threading import Thread
+
 
 class Symmetry(Enum):
     """
@@ -35,6 +40,7 @@ class Symmetry(Enum):
     """
     The fuel assembly has symmetry about the x and y axis.
     """
+
 
 class PWRAssembly:
     """ """
@@ -61,6 +67,17 @@ class PWRAssembly:
                 "Can only use full symmetry with rectangular fuel assembly."
             )
         self._shape = shape
+
+        # Compute the number of expected cells along each dimension [y][x]
+        # based on the symmetry of the problem being solved.
+        expx = self.shape[0]
+        expy = self.shape[1]
+        if self.symmetry == Symmetry.Half:
+            expy = (expy // 2) + (expy % 2)
+        elif self.symmetry == Symmetry.Quarter:
+            expy = (expy // 2) + (expy % 2)
+            expx = (expx // 2) + (expx % 2)
+        self._simulated_shape = (expx, expy)
 
         self._cells_set = False
         self._cells: List[List[Union[FuelPin, GuideTube]]] = [[]]
@@ -98,7 +115,7 @@ class PWRAssembly:
         elif self.symmetry == Symmetry.Quarter:
             self._x_min_bc = BoundaryCondition.Reflective
             self._x_max_bc = BoundaryCondition.Reflective
-        
+
         # ======================================================================
         # DANCOFF FACTOR CALCULATION DATA
         # ----------------------------------------------------------------------
@@ -122,8 +139,15 @@ class PWRAssembly:
 
         # Dancoff factor parameters
         self._dancoff_moc_track_spacing = 0.05
-        self._dancoff_moc_num_angles = 64
-        
+        self._dancoff_moc_num_angles = 32
+
+        self._fuel_dancoff_factors = np.zeros(
+            (self._simulated_shape[1], self._simulated_shape[0])
+        )
+        self._clad_dancoff_factors = np.zeros(
+            (self._simulated_shape[1], self._simulated_shape[0])
+        )
+
         # ======================================================================
         # TRANSPORT CALCULATION DATA
         # ----------------------------------------------------------------------
@@ -132,6 +156,13 @@ class PWRAssembly:
         self._moderator_xs: CrossSection = self.moderator.dilution_xs(
             self.moderator.size * [1.0e10], self._ndl
         )
+
+        self._moc_track_spacing = 0.05
+        self._moc_num_angles = 64
+
+        self._asmbly_cells = []
+        self._asmbly_geom = None
+        self._asmbly_moc = None
 
     @property
     def shape(self):
@@ -163,7 +194,7 @@ class PWRAssembly:
 
     @property
     def dancoff_moc_track_spacing(self):
-        return self._dancoff_track_spacing
+        return self._dancoff_moc_track_spacing
 
     @dancoff_moc_track_spacing.setter
     def dancoff_moc_track_spacing(self, dts: float):
@@ -173,7 +204,7 @@ class PWRAssembly:
 
     @property
     def dancoff_moc_num_angles(self):
-        return self._dancoff_num_angles
+        return self._dancoff_moc_num_angles
 
     @dancoff_moc_num_angles.setter
     def dancoff_moc_num_angles(self, dna: int):
@@ -188,27 +219,41 @@ class PWRAssembly:
         self._dancoff_moc_num_angles = int(dna)
 
     @property
+    def moc_track_spacing(self):
+        return self._moc_track_spacing
+
+    @moc_track_spacing.setter
+    def moc_track_spacing(self, dts: float):
+        if dts <= 0.0 or dts > 0.1:
+            raise ValueError("Track spacing must be in range (0, 0.1].")
+        self._moc_track_spacing = dts
+
+    @property
+    def moc_num_angles(self):
+        return self._moc_num_angles
+
+    @moc_num_angles.setter
+    def moc_num_angles(self, dna: int):
+        if dna % 4 != 0:
+            raise ValueError(
+                "Number of angles for MOC calculation must be a multiple of 4."
+            )
+        if dna < 4:
+            raise ValueError("Number of angles for MOC calculation must be > 4.")
+        self._moc_num_angles = int(dna)
+
+    @property
     def cells(self):
         return self._cells
 
     @cells.setter
     def cells(self, cells: List[List[Union[FuelPin, GuideTube]]]):
-        # Compute the number of expected cells along each dimension [y][x]
-        # based on the symmetry of the problem being solved.
-        expx = self.shape[0]
-        expy = self.shape[1]
-        if self.symmetry == Symmetry.Half:
-            expy = (expy // 2) + (expy % 2)
-        elif self.symmetry == Symmetry.Quarter:
-            expy = (expy // 2) + (expy % 2)
-            expx = (expx // 2) + (expx % 2)
-
-        if len(cells) != expy:
+        if len(cells) != self._simulated_shape[1]:
             raise ValueError(
                 "Shape along y of cells list does not agree with assembly shape and symmetry."
             )
         for j in range(len(cells)):
-            if len(cells[j]) != expx:
+            if len(cells[j]) != self._simulated_shape[0]:
                 raise ValueError(
                     "Shape along x of cells list does not agree with assembly shape and symmetry."
                 )
@@ -223,6 +268,101 @@ class PWRAssembly:
                 self._cells[-1].append(copy.deepcopy(cells[j][i]))
         self._cells_set = True
 
+    # ==========================================================================
+    # Dancoff Factor Related Methods
+
+    def _init_dancoff_components(self) -> None:
+        scarabee_log(
+            LogLevel.Info, "Initializing Dancoff factor calculation components."
+        )
+        set_logging_level(LogLevel.Warning)
+        self._init_isolated_dancoff_components()
+        self._init_full_dancoff_components()
+        self._save_dancoff_fsr_indexes()
+        set_logging_level(LogLevel.Info)
+
+    def _init_isolated_dancoff_components(self) -> None:
+        # Isolated pitch
+        iso_pitch = 20.0 * self.pitch
+
+        for j in range(len(self.cells)):
+            self._isolated_dancoff_cells.append([])
+            self._isolated_dancoff_mocs.append([])
+            for i in range(len(self.cells[j])):
+                # Get the geometry bit from the cell
+                cell = self.cells[j][i].make_isolated_dancoff_moc_cell(
+                    self._moderator_dancoff_xs, iso_pitch
+                )
+
+                # Save to cells
+                self._isolated_dancoff_cells[-1].append(cell)
+
+                # Make the Cartesian2D geometry
+                geom = Cartesian2D([iso_pitch], [iso_pitch])
+                geom.set_tiles([cell])
+
+                # Make the MOCDriver
+                moc = MOCDriver(geom)
+                moc.sim_mode = SimulationMode.FixedSource
+                moc.x_min_bc = BoundaryCondition.Vacuum
+                moc.x_max_bc = BoundaryCondition.Vacuum
+                moc.y_min_bc = BoundaryCondition.Vacuum
+                moc.y_max_bc = BoundaryCondition.Vacuum
+
+                # Generate tracks in serial as each call will run with threads
+                moc.generate_tracks(
+                    self._dancoff_moc_num_angles,
+                    self._dancoff_moc_track_spacing,
+                    YamamotoTabuchi6(),
+                )
+
+                # Save the MOC
+                self._isolated_dancoff_mocs[-1].append(moc)
+
+    def _init_full_dancoff_components(self):
+        # Get all the cells
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                # Get the geometry bit from the cell
+                cell = self.cells[j][i].make_full_dancoff_moc_cell(
+                    self._moderator_dancoff_xs, self.pitch
+                )
+
+                # Save to cells
+                self._full_dancoff_cells.append(cell)
+
+        # Construct the Cartesian2D geometry
+        self._full_dancoff_geom = Cartesian2D(
+            self._simulated_shape[0] * [self.pitch],
+            self._simulated_shape[1] * [self.pitch],
+        )
+        self._full_dancoff_geom.set_tiles(self._full_dancoff_cells)
+
+        # Construct the MOC
+        self._full_dancoff_moc = MOCDriver(self._full_dancoff_geom)
+        self._full_dancoff_moc.sim_mode = SimulationMode.FixedSource
+        self._full_dancoff_moc.x_min_bc = self._x_min_bc
+        self._full_dancoff_moc.x_max_bc = self._x_max_bc
+        self._full_dancoff_moc.y_min_bc = self._y_min_bc
+        self._full_dancoff_moc.y_max_bc = self._y_max_bc
+        self._full_dancoff_moc.generate_tracks(
+            self._dancoff_moc_num_angles,
+            self._dancoff_moc_track_spacing,
+            YamamotoTabuchi6(),
+        )
+
+    def _save_dancoff_fsr_indexes(self):
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                isomoc = self._isolated_dancoff_mocs[j][i]
+                cell.populate_dancoff_fsr_indexes(isomoc, self._full_dancoff_moc)
+
+    def _dancoff_components_initialized(self) -> bool:
+        if self._full_dancoff_moc is None:
+            return False
+        return True
+
     def set_dancoff_moderator_xs(self) -> None:
         """
         Updates the moderator cross section for all Dancoff factor calculations.
@@ -236,15 +376,222 @@ class PWRAssembly:
             )
         )
 
+    def compute_fuel_dancoff_factors(self):
+        """
+        Recomputes all Dancoff factors for the fuel regions in the problem,
+        using the most recent material definitions. All fuel is shelf-shielded
+        together, regarless of wether or not is is UO2 or MOX.
+        """
+        scarabee_log(LogLevel.Info, "Computing Dancoff factors for the fuel.")
+        set_logging_level(LogLevel.Warning)
+        if not self._dancoff_components_initialized():
+            raise RuntimeError(
+                "Dancoff calculation components have not been initialized."
+            )
+
+        # Set the xs and sources for all cells
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                isomoc = self._isolated_dancoff_mocs[j][i]
+
+                cell.set_xs_for_fuel_dancoff_calculation()
+
+                cell.set_isolated_dancoff_fuel_sources(isomoc, self.moderator)
+
+                cell.set_full_dancoff_fuel_sources(
+                    self._full_dancoff_moc, self.moderator
+                )
+
+        # Solve all the MOCs in parallel
+        threads = []
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                if isinstance(cell, FuelPin):
+                    isomoc = self._isolated_dancoff_mocs[j][i]
+                    threads.append(Thread(target=isomoc.solve))
+                    threads[-1].start()
+        threads.append(Thread(target=self._full_dancoff_moc.solve))
+        threads[-1].start()
+        for t in threads:
+            t.join()
+
+        # Go through and let each cell compute the Dancoff factor if it holds
+        # a fuel pin.
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                isomoc = self._isolated_dancoff_mocs[j][i]
+
+                if isinstance(cell, FuelPin):
+                    D = cell.compute_fuel_dancoff_factor(isomoc, self._full_dancoff_moc)
+                    self._fuel_dancoff_factors[j, i] = D
+        set_logging_level(LogLevel.Info)
+
+    def compute_clad_dancoff_factors(self):
+        """
+        Recomputes all Dancoff factors for the fuel pin claddin regions in the
+        problem, using the most recent material definitions. All cladding is
+        shelf-shielded together.
+        """
+        scarabee_log(LogLevel.Info, "Computing Dancoff factors for the cladding.")
+        set_logging_level(LogLevel.Warning)
+        if self._full_dancoff_moc is None:
+            raise RuntimeError(
+                "Dancoff calculation components have not been initialized."
+            )
+
+        # Set the xs and sources for all cells
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                isomoc = self._isolated_dancoff_mocs[j][i]
+
+                cell.set_xs_for_clad_dancoff_calculation(self._ndl)
+
+                cell.set_isolated_dancoff_clad_sources(
+                    isomoc, self.moderator, self._ndl
+                )
+
+                cell.set_full_dancoff_clad_sources(
+                    self._full_dancoff_moc, self.moderator, self._ndl
+                )
+
+        # Solve all the MOCs in parallel
+        threads = []
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                isomoc = self._isolated_dancoff_mocs[j][i]
+                threads.append(Thread(target=isomoc.solve))
+                threads[-1].start()
+        threads.append(Thread(target=self._full_dancoff_moc.solve))
+        threads[-1].start()
+        for t in threads:
+            t.join()
+
+        # Go through and let each cell compute the Dancoff factor if it holds
+        # a fuel pin.
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                isomoc = self._isolated_dancoff_mocs[j][i]
+
+                D = cell.compute_clad_dancoff_factor(isomoc, self._full_dancoff_moc)
+                self._clad_dancoff_factors[j, i] = D
+        set_logging_level(LogLevel.Info)
+
+    def apply_dancoff_factors(self):
+        """
+        Appends all fuel and cladding Dancoff factors to the appropriate cell.
+        """
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                if isinstance(cell, FuelPin):
+                    cell.append_fuel_dancoff_factor(self._fuel_dancoff_factors[j, i])
+                cell.append_clad_dancoff_factor(self._clad_dancoff_factors[j, i])
+
+    def self_shield_and_xs_update(self):
+        """
+        Computes a new set of Dancoff factors for the fuel and the cladding.
+        After, these are applied to all the cells in the problem.
+        """
+        if not self._dancoff_components_initialized():
+            self._init_dancoff_components()
+
+        self.compute_fuel_dancoff_factors()
+        self.compute_clad_dancoff_factors()
+        self.apply_dancoff_factors()
+
+    # ==========================================================================
+    # Transport Calculation Related Methods
+
+    def _init_moc(self):
+        # Get all the cells
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                # Get the geometry bit from the cell
+                cell = self.cells[j][i].make_moc_cell(self._moderator_xs, self.pitch)
+
+                # Save to cells
+                self._asmbly_cells.append(cell)
+
+        # Construct the Cartesian2D geometry
+        self._asmbly_geom = Cartesian2D(
+            self._simulated_shape[0] * [self.pitch],
+            self._simulated_shape[1] * [self.pitch],
+        )
+        self._asmbly_geom.set_tiles(self._asmbly_cells)
+
+        # Construct the MOC
+        self._asmbly_moc = MOCDriver(self._asmbly_geom)
+        self._asmbly_moc.x_min_bc = self._x_min_bc
+        self._asmbly_moc.x_max_bc = self._x_max_bc
+        self._asmbly_moc.y_min_bc = self._y_min_bc
+        self._asmbly_moc.y_max_bc = self._y_max_bc
+        self._asmbly_moc.generate_tracks(
+            self._moc_num_angles,
+            self._moc_track_spacing,
+            YamamotoTabuchi6(),
+        )
+
     def set_moderator_xs(self) -> None:
         """
         Updates the moderator cross section for transport calculations.
         """
-        self._moderator_dancoff_xs.set(
-            borated_water(
-                self.boron_ppm, self.moderator_temp, self.moderator_pressure, self._ndl
-            )
+        self._moderator_xs.set(
+            self.moderator.dilution_xs(self.moderator.size * [1.0e10], self._ndl)
         )
 
-    def _init_dancoff_components(self) -> None:
-        pass        
+    def recompute_all_xs(self) -> None:
+        """
+        Computes and applies all cross sections using the most recent material
+        information and Dancoff factors.
+        """
+        self.recompute_all_fuel_xs()
+        self.recompute_all_gap_xs()
+        self.recompute_all_clad_xs()
+
+        self.set_moderator_xs()
+
+    def recompute_all_self_shielded_xs(self) -> None:
+        """
+        Computes and applies all fuel and caldding cross sections using the
+        most recent material information and Dancoff factors.
+        """
+        self.recompute_all_fuel_xs()
+        self.recompute_all_clad_xs()
+
+    def recompute_all_fuel_xs(self) -> None:
+        """
+        Computes and applies all fuel cross sections using the most recent
+        material information and Dancoff factors.
+        """
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                if isinstance(cell, FuelPin):
+                    cell.set_fuel_xs_for_depletion_step(-1, self._ndl)
+
+    def recompute_all_clad_xs(self) -> None:
+        """
+        Computes and applies all cladding cross sections using the most recent
+        material information and Dancoff factors.
+        """
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                cell.set_clad_xs_for_depletion_step(-1, self._ndl)
+
+    def recompute_all_gap_xs(self) -> None:
+        """
+        Computes and applies all gap cross sections using the most recent
+        material information.
+        """
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                if isinstance(cell, FuelPin):
+                    cell.set_gap_xs(self._ndl)

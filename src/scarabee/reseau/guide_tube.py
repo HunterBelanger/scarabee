@@ -163,7 +163,7 @@ class GuideTube:
         SimplifiedPinCell, None, int
             Pin cell object for MOC isolated calculation.
         """
-        if pitch < 2.0 * self.clad_radius:
+        if pitch < 2.0 * self.outer_radius:
             raise ValueError(
                 "The fuel pin pitch must be > the diameter of the cladding."
             )
@@ -187,10 +187,8 @@ class GuideTube:
         cell_fsr_ids = list(cell.get_all_fsr_ids())
         cell_fsr_ids.sort()
 
-        self._clad_isolated_dancoff_fsr_ids[cell_fsr_ids[1]]
-        self._mod_isolated_dancoff_fsr_ids = [
-            id for id, i in enumerate(cell_fsr_ids) if i != 1
-        ]
+        self._clad_isolated_dancoff_fsr_ids.append(cell_fsr_ids[1])
+        self._mod_isolated_dancoff_fsr_ids = [cell_fsr_ids[0], cell_fsr_ids[2]]
 
         return cell
 
@@ -216,7 +214,7 @@ class GuideTube:
         SimplifiedPinCell, None, int
             Pin cell object for MOC isolated calculation.
         """
-        if pitch < 2.0 * self.clad_radius:
+        if pitch < 2.0 * self.outer_radius:
             raise ValueError(
                 "The fuel pin pitch must be > the diameter of the cladding."
             )
@@ -240,10 +238,8 @@ class GuideTube:
         cell_fsr_ids = list(cell.get_all_fsr_ids())
         cell_fsr_ids.sort()
 
-        self._clad_full_dancoff_fsr_ids[cell_fsr_ids[1]]
-        self._mod_full_dancoff_fsr_ids = [
-            id for id, i in enumerate(cell_fsr_ids) if i != 1
-        ]
+        self._clad_full_dancoff_fsr_ids.append(cell_fsr_ids[1])
+        self._mod_full_dancoff_fsr_ids = [cell_fsr_ids[0], cell_fsr_ids[2]]
 
         return cell
 
@@ -302,7 +298,7 @@ class GuideTube:
             isomoc.set_extern_src(ind, 0, pot_xs)
 
     def set_isolated_dancoff_clad_sources(
-        self, isomoc: MOCDriver, moderator: Material
+        self, isomoc: MOCDriver, moderator: Material, ndl: NDLibrary
     ) -> None:
         """
         Initializes the fixed sources for the isolated MOC calculation required
@@ -316,6 +312,9 @@ class GuideTube:
         moderator : Material
             Material definition for the moderator, used to obtain the potential
             scattering cross section.
+        ndl : NDLibrary
+            Nuclear data library for obtaining potential scattering cross
+            sections.
         """
         # Clad sources should all be zero !
         for ind in self._clad_isolated_dancoff_fsr_inds:
@@ -353,7 +352,7 @@ class GuideTube:
             fullmoc.set_extern_src(ind, 0, pot_xs)
 
     def set_full_dancoff_clad_sources(
-        self, fullmoc: MOCDriver, moderator: Material
+        self, fullmoc: MOCDriver, moderator: Material, ndl: NDLibrary
     ) -> None:
         """
         Initializes the fixed sources for the full MOC calculation required
@@ -367,6 +366,9 @@ class GuideTube:
         moderator : Material
             Material definition for the moderator, used to obtain the potential
             scattering cross section.
+        ndl : NDLibrary
+            Nuclear data library for obtaining potential scattering cross
+            sections.
         """
         # Clad sources should all be zero !
         for ind in self._clad_full_dancoff_fsr_inds:
