@@ -5,6 +5,7 @@ from .._scarabee import (
     Material,
     CrossSection,
     NDLibrary,
+    PinCellType,
     Cartesian2D,
     MOCDriver,
     BoundaryCondition,
@@ -102,6 +103,7 @@ class PWRAssembly:
         self._moderator: Material = borated_water(
             self.boron_ppm, self.moderator_temp, self.moderator_pressure, self._ndl
         )
+        self._moderator.name = f"Moderator ({self.boron_ppm} ppm boron)"
 
         # Set initial boundary conditions
         self._x_min_bc = BoundaryCondition.Periodic
@@ -109,10 +111,11 @@ class PWRAssembly:
         self._y_min_bc = BoundaryCondition.Periodic
         self._y_max_bc = BoundaryCondition.Periodic
 
-        if self.symmetry == Symmetry.Half:
+        if self.symmetry != Symmetry.Full:
             self._y_min_bc = BoundaryCondition.Reflective
             self._y_max_bc = BoundaryCondition.Reflective
-        elif self.symmetry == Symmetry.Quarter:
+
+        if self.symmetry == Symmetry.Quarter:
             self._x_min_bc = BoundaryCondition.Reflective
             self._x_max_bc = BoundaryCondition.Reflective
 
@@ -283,31 +286,95 @@ class PWRAssembly:
 
     def _init_isolated_dancoff_components(self) -> None:
         # Isolated pitch
-        iso_pitch = 20.0 * self.pitch
+        iso_pitch = 10. * self.pitch
 
         for j in range(len(self.cells)):
             self._isolated_dancoff_cells.append([])
             self._isolated_dancoff_mocs.append([])
             for i in range(len(self.cells[j])):
-                # Get the geometry bit from the cell
-                cell = self.cells[j][i].make_isolated_dancoff_moc_cell(
-                    self._moderator_dancoff_xs, iso_pitch
-                )
+                cell = None
+                geom = None
+                moc = None
+                
+                x_min_bc = BoundaryCondition.Vacuum
+                x_max_bc = BoundaryCondition.Vacuum
+                y_min_bc = BoundaryCondition.Vacuum
+                y_max_bc = BoundaryCondition.Vacuum
 
+                # First check for quarter symmetry and being corner pin
+                if (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                    and i == 0
+                ):
+                    cell = self.cells[j][i].make_dancoff_moc_cell(
+                        self._moderator_dancoff_xs,
+                        0.5 * iso_pitch,
+                        0.5 * iso_pitch,
+                        PinCellType.I,
+                        True
+                    )
+                    geom = Cartesian2D([0.5*iso_pitch], [0.5*iso_pitch])
+                    geom.set_tiles([cell])
+                    x_min_bc = BoundaryCondition.Reflective
+                    y_min_bc = BoundaryCondition.Reflective
+                # Next, check for being on the side with a half pin in quarter symmetry
+                elif (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and i == 0
+                ):
+                    cell = self.cells[j][i].make_dancoff_moc_cell(
+                        self._moderator_dancoff_xs,
+                        0.5 * iso_pitch,
+                        iso_pitch,
+                        PinCellType.XP,
+                        True
+                    )
+                    geom = Cartesian2D([0.5*iso_pitch], [iso_pitch])
+                    geom.set_tiles([cell])
+                    x_min_bc = BoundaryCondition.Reflective
+                # Next, check for being on the bottom row with a half pin
+                elif (
+                    self.symmetry != Symmetry.Full
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                ):
+                    cell = self.cells[j][i].make_dancoff_moc_cell(
+                        self._moderator_dancoff_xs,
+                        iso_pitch,
+                        0.5 * iso_pitch,
+                        PinCellType.YP,
+                        True
+                    )
+                    geom = Cartesian2D([iso_pitch], [0.5*iso_pitch])
+                    geom.set_tiles([cell])
+                    y_min_bc = BoundaryCondition.Reflective
+                # Otherwise, we just make the full cell
+                else:
+                    cell = self.cells[j][i].make_dancoff_moc_cell(
+                        self._moderator_dancoff_xs,
+                        iso_pitch,
+                        iso_pitch,
+                        PinCellType.Full,
+                        True
+                    )
+                    geom = Cartesian2D([iso_pitch], [iso_pitch])
+                    geom.set_tiles([cell])
+
+                
                 # Save to cells
                 self._isolated_dancoff_cells[-1].append(cell)
-
-                # Make the Cartesian2D geometry
-                geom = Cartesian2D([iso_pitch], [iso_pitch])
-                geom.set_tiles([cell])
 
                 # Make the MOCDriver
                 moc = MOCDriver(geom)
                 moc.sim_mode = SimulationMode.FixedSource
-                moc.x_min_bc = BoundaryCondition.Vacuum
-                moc.x_max_bc = BoundaryCondition.Vacuum
-                moc.y_min_bc = BoundaryCondition.Vacuum
-                moc.y_max_bc = BoundaryCondition.Vacuum
+                moc.x_min_bc = x_min_bc 
+                moc.x_max_bc = x_max_bc 
+                moc.y_min_bc = y_min_bc 
+                moc.y_max_bc = y_max_bc 
 
                 # Generate tracks in serial as each call will run with threads
                 moc.generate_tracks(
@@ -324,18 +391,70 @@ class PWRAssembly:
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
                 # Get the geometry bit from the cell
-                cell = self.cells[j][i].make_full_dancoff_moc_cell(
-                    self._moderator_dancoff_xs, self.pitch
-                )
+                cell = None
+
+                # First check for quarter symmetry and being corner pin
+                if (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                    and i == 0
+                ):
+                    cell = self.cells[j][i].make_dancoff_moc_cell(
+                        self._moderator_dancoff_xs,
+                        0.5 * self.pitch,
+                        0.5 * self.pitch,
+                        PinCellType.I,
+                        False
+                    )
+                # Next, check for being on the side with a half pin in quarter symmetry
+                elif (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and i == 0
+                ):
+                    cell = self.cells[j][i].make_dancoff_moc_cell(
+                        self._moderator_dancoff_xs,
+                        0.5 * self.pitch,
+                        self.pitch,
+                        PinCellType.XP,
+                        False
+                    )
+                # Next, check for being on the bottom row with a half pin
+                elif (
+                    self.symmetry != Symmetry.Full
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                ):
+                    cell = self.cells[j][i].make_dancoff_moc_cell(
+                        self._moderator_dancoff_xs,
+                        self.pitch,
+                        0.5 * self.pitch,
+                        PinCellType.YP,
+                        False
+                    )
+                # Otherwise, we just make the full cell
+                else:
+                    cell = self.cells[j][i].make_dancoff_moc_cell(
+                        self._moderator_dancoff_xs,
+                        self.pitch,
+                        self.pitch,
+                        PinCellType.Full,
+                        False
+                    )
 
                 # Save to cells
                 self._full_dancoff_cells.append(cell)
 
         # Construct the Cartesian2D geometry
-        self._full_dancoff_geom = Cartesian2D(
-            self._simulated_shape[0] * [self.pitch],
-            self._simulated_shape[1] * [self.pitch],
-        )
+        dx = self._simulated_shape[0] * [self.pitch]
+        dy = self._simulated_shape[1] * [self.pitch]
+        if self.symmetry != Symmetry.Full and self.shape[1] % 2 == 1:
+            dy[0] *= 0.5
+        if self.symmetry == Symmetry.Quarter and self.shape[0] % 2 == 1:
+            dx[0] *= 0.5
+        self._full_dancoff_geom = Cartesian2D(dx, dy)
         self._full_dancoff_geom.set_tiles(self._full_dancoff_cells)
 
         # Construct the MOC
@@ -513,16 +632,66 @@ class PWRAssembly:
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
                 # Get the geometry bit from the cell
-                cell = self.cells[j][i].make_moc_cell(self._moderator_xs, self.pitch)
+                cell = None
+
+                # First check for quarter symmetry and being corner pin
+                if (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                    and i == 0
+                ):
+                    cell = self.cells[j][i].make_moc_cell(
+                        self._moderator_xs,
+                        0.5 * self.pitch,
+                        0.5 * self.pitch,
+                        PinCellType.I
+                    )
+                # Next, check for being on the side with a half pin in quarter symmetry
+                elif (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and i == 0
+                ):
+                    cell = self.cells[j][i].make_moc_cell(
+                        self._moderator_xs,
+                        0.5 * self.pitch,
+                        self.pitch,
+                        PinCellType.XP
+                    )
+                # Next, check for being on the bottom row with a half pin
+                elif (
+                    self.symmetry != Symmetry.Full
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                ):
+                    cell = self.cells[j][i].make_moc_cell(
+                        self._moderator_xs,
+                        self.pitch,
+                        0.5 * self.pitch,
+                        PinCellType.YP
+                    )
+                # Otherwise, we just make the full cell
+                else:
+                    cell = self.cells[j][i].make_moc_cell(
+                        self._moderator_xs,
+                        self.pitch,
+                        self.pitch,
+                        PinCellType.Full
+                    )
 
                 # Save to cells
                 self._asmbly_cells.append(cell)
 
         # Construct the Cartesian2D geometry
-        self._asmbly_geom = Cartesian2D(
-            self._simulated_shape[0] * [self.pitch],
-            self._simulated_shape[1] * [self.pitch],
-        )
+        dx = self._simulated_shape[0] * [self.pitch]
+        dy = self._simulated_shape[1] * [self.pitch]
+        if self.symmetry != Symmetry.Full and self.shape[1] % 2 == 1:
+            dy[0] *= 0.5
+        if self.symmetry == Symmetry.Quarter and self.shape[0] % 2 == 1:
+            dx[0] *= 0.5
+        self._asmbly_geom = Cartesian2D(dx, dy)
         self._asmbly_geom.set_tiles(self._asmbly_cells)
 
         # Construct the MOC

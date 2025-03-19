@@ -2,6 +2,7 @@ from .._scarabee import (
     NDLibrary,
     Material,
     CrossSection,
+    PinCellType,
     SimplePinCell,
     PinCell,
     MOCDriver,
@@ -83,7 +84,7 @@ class FuelPin:
 
         if num_fuel_rings <= 0:
             raise ValueError("Number of fuel rings must be >= 1.")
-        self._num_fuel_rings = num_fuel_rings 
+        self._num_fuel_rings = num_fuel_rings
 
         # Get gap related parameters
         if gap is None and gap_radius is not None:
@@ -164,6 +165,16 @@ class FuelPin:
         self._fuel_ring_fsr_ids: List[List[int]] = []
         for r in range(self.num_fuel_rings):
             self._fuel_ring_fsr_ids.append([])
+        self._gap_fsr_ids: List[int] = []
+        self._clad_fsr_ids: List[int] = []
+        self._mod_fsr_ids: List[int] = []
+
+        self._fuel_ring_fsr_inds: List[List[int]] = []
+        for r in range(self.num_fuel_rings):
+            self._fuel_ring_fsr_inds.append([])
+        self._gap_fsr_inds: List[int] = []
+        self._clad_fsr_inds: List[int] = []
+        self._mod_fsr_inds: List[int] = []
 
         # Create list of the different radii for fuel pellet
         self._fuel_radii = []
@@ -242,6 +253,44 @@ class FuelPin:
     def clad_dancoff_factors(self) -> List[float]:
         return self._clad_dancoff_factors
 
+    def _check_dx_dy(self, dx, dy, pintype):
+        if pintype == PinCellType.Full:
+            if dx < 2.0 * self.clad_radius:
+                raise ValueError(
+                    "The fuel pin cell x width must be > the diameter of the cladding."
+                )
+            if dy < 2.0 * self.clad_radius:
+                raise ValueError(
+                    "The fuel pin cell y width must be > the diameter of the cladding."
+                )
+        elif pintype in [PinCellType.XN, PinCellType.XP]:
+            if dx < self.clad_radius:
+                raise ValueError(
+                    "The fuel pin cell x width must be > the radius of the cladding."
+                )
+            if dy < 2.0 * self.clad_radius:
+                raise ValueError(
+                    "The fuel pin cell y width must be > the diameter of the cladding."
+                )
+        elif pintype in [PinCellType.YN, PinCellType.YP]:
+            if dy < self.clad_radius:
+                raise ValueError(
+                    "The fuel pin cell y width must be > the radius of the cladding."
+                )
+            if dx < 2.0 * self.clad_radius:
+                raise ValueError(
+                    "The fuel pin cell x width must be > the diameter of the cladding."
+                )
+        else:
+            if dx < self.clad_radius:
+                raise ValueError(
+                    "The fuel pin cell x width must be > the radius of the cladding."
+                )
+            if dy < self.clad_radius:
+                raise ValueError(
+                    "The fuel pin cell y width must be > the radius of the cladding."
+                )
+
     def load_nuclides(self, ndl: NDLibrary) -> None:
         """
         Loads all the nuclides for all current materials into the data library.
@@ -259,7 +308,7 @@ class FuelPin:
 
         self.clad.load_nuclides(ndl)
 
-    #==========================================================================
+    # ==========================================================================
     # Dancoff Factor Related Methods
     def set_xs_for_fuel_dancoff_calculation(self) -> None:
         """
@@ -338,13 +387,18 @@ class FuelPin:
             )
         )
 
-    def make_isolated_dancoff_moc_cell(
-        self, moderator_xs: CrossSection, pitch: float
+    def make_dancoff_moc_cell(
+        self,
+        moderator_xs: CrossSection,
+        dx: float,
+        dy: float,
+        pintype: PinCellType,
+        isolated: bool,
     ) -> SimplePinCell:
         """
         Makes a simplified cell suitable for performing Dancoff factor
-        calculations of the isolated pin. The flat source region IDs are stored
-        locally in the FuelPin object.
+        calculations. The flat source region IDs are stored locally in the
+        FuelPin object.
 
         Parameters
         ----------
@@ -352,18 +406,22 @@ class FuelPin:
             One group cross sections for the moderator. Total should equal
             absorption (i.e. no scattering) and should be equal to the
             macroscopic potential cross section.
-        pitch : float
-            Width of the isolated cell.
+        dx : float
+            Width of the cell along x.
+        dy : float
+            Width of the cell along y.
+        pintype : PinCellType
+            How the pin cell should be split (along x, y, or only a quadrant).
+        isolated : bool
+            If True, the FSR IDs are stored for the isolated pin. Otherwise,
+            they are stored for the full pin.
 
         Returns
         -------
         SimplifiedPinCell
-            Pin cell object for isolated MOC Dancoff calculation.
+            Pin cell object for MOC Dancoff factor calculation.
         """
-        if pitch < 2.0 * self.clad_radius:
-            raise ValueError(
-                "The fuel pin pitch must be > the diameter of the cladding."
-            )
+        self._check_dx_dy(dx, dy, pintype)
 
         # First we create list of radii and materials
         radii = []
@@ -382,83 +440,30 @@ class FuelPin:
         xs.append(moderator_xs)
 
         # Make the simple pin cell.
-        cell = SimplePinCell(radii, xs, pitch, pitch)
+        cell = SimplePinCell(radii, xs, dx, dy, pintype)
 
         # Get the FSR IDs for the regions of interest
         cell_fsr_ids = list(cell.get_all_fsr_ids())
         cell_fsr_ids.sort()
 
-        self._fuel_isolated_dancoff_fsr_ids.append(cell_fsr_ids[0])
-
-        if self.gap is None:
-            self._clad_isolated_dancoff_fsr_ids.append(cell_fsr_ids[1])
-            self._mod_isolated_dancoff_fsr_ids.append(cell_fsr_ids[2])
+        if isolated:
+            self._fuel_isolated_dancoff_fsr_ids.append(cell_fsr_ids[0])
+            if self.gap is None:
+                self._clad_isolated_dancoff_fsr_ids.append(cell_fsr_ids[1])
+                self._mod_isolated_dancoff_fsr_ids.append(cell_fsr_ids[2])
+            else:
+                self._gap_isolated_dancoff_fsr_ids.append(cell_fsr_ids[1])
+                self._clad_isolated_dancoff_fsr_ids.append(cell_fsr_ids[2])
+                self._mod_isolated_dancoff_fsr_ids.append(cell_fsr_ids[3])
         else:
-            self._gap_isolated_dancoff_fsr_ids.append(cell_fsr_ids[1])
-            self._clad_isolated_dancoff_fsr_ids.append(cell_fsr_ids[2])
-            self._mod_isolated_dancoff_fsr_ids.append(cell_fsr_ids[3])
-
-        return cell
-
-    def make_full_dancoff_moc_cell(
-        self, moderator_xs: CrossSection, pitch: float
-    ) -> SimplePinCell:
-        """
-        Makes a simplified cell suitable for performing Dancoff factor
-        calculations of the full true geometry. The flat source region IDs are
-        stored locally in the FuelPin object.
-
-        Parameters
-        ----------
-        moderator_xs : CrossSection
-            One group cross sections for the moderator. Total should equal
-            absorption (i.e. no scattering) and should be equal to the
-            macroscopic potential cross section.
-        pitch : float
-            Width of the cell.
-
-        Returns
-        -------
-        SimplifiedPinCell
-            Pin cell object for full geometry MOC Dancoff factor calculation.
-        """
-        if pitch < 2.0 * self.clad_radius:
-            raise ValueError(
-                "The fuel pin pitch must be > the diameter of the cladding."
-            )
-
-        # First we create list of radii and materials
-        radii = []
-        xs = []
-
-        radii.append(self.fuel_radius)
-        xs.append(self._fuel_dancoff_xs)
-
-        if self.gap is not None and self.gap_radius is not None:
-            radii.append(self.gap_radius)
-            xs.append(self._gap_dancoff_xs)
-
-        radii.append(self.clad_radius)
-        xs.append(self._clad_dancoff_xs)
-
-        xs.append(moderator_xs)
-
-        # Make the simple pin cell.
-        cell = SimplePinCell(radii, xs, pitch, pitch)
-
-        # Get the FSR IDs for the regions of interest
-        cell_fsr_ids = list(cell.get_all_fsr_ids())
-        cell_fsr_ids.sort()
-
-        self._fuel_full_dancoff_fsr_ids.append(cell_fsr_ids[0])
-
-        if self.gap is None:
-            self._clad_full_dancoff_fsr_ids.append(cell_fsr_ids[1])
-            self._mod_full_dancoff_fsr_ids.append(cell_fsr_ids[2])
-        else:
-            self._gap_full_dancoff_fsr_ids.append(cell_fsr_ids[1])
-            self._clad_full_dancoff_fsr_ids.append(cell_fsr_ids[2])
-            self._mod_full_dancoff_fsr_ids.append(cell_fsr_ids[3])
+            self._fuel_full_dancoff_fsr_ids.append(cell_fsr_ids[0])
+            if self.gap is None:
+                self._clad_full_dancoff_fsr_ids.append(cell_fsr_ids[1])
+                self._mod_full_dancoff_fsr_ids.append(cell_fsr_ids[2])
+            else:
+                self._gap_full_dancoff_fsr_ids.append(cell_fsr_ids[1])
+                self._clad_full_dancoff_fsr_ids.append(cell_fsr_ids[2])
+                self._mod_full_dancoff_fsr_ids.append(cell_fsr_ids[3])
 
         return cell
 
@@ -741,7 +746,9 @@ class FuelPin:
             New Dancoff factor.
         """
         if D < 0.0 or D > 1.0:
-            raise ValueError("Dancoff factor must be in range [0, 1].")
+            raise ValueError(
+                f"Dancoff factor must be in range [0, 1]. Was provided {D}."
+            )
         self._fuel_dancoff_factors.append(D)
 
     def append_clad_dancoff_factor(self, D) -> None:
@@ -755,10 +762,12 @@ class FuelPin:
             New Dancoff factor.
         """
         if D < 0.0 or D > 1.0:
-            raise ValueError("Dancoff factor must be in range [0, 1].")
+            raise ValueError(
+                f"Dancoff factor must be in range [0, 1]. Was provided {D}."
+            )
         self._clad_dancoff_factors.append(D)
 
-    #==========================================================================
+    # ==========================================================================
     # Transport Calculation Related Methods
     def set_fuel_xs_for_depletion_step(self, t: int, ndl: NDLibrary) -> None:
         """
@@ -889,7 +898,13 @@ class FuelPin:
         if self._clad_xs.name == "":
             self._clad_xs.set_name("Clad")
 
-    def make_moc_cell(self, moderator_xs: CrossSection, pitch: float) -> PinCell:
+    def make_moc_cell(
+        self,
+        moderator_xs: CrossSection,
+        dx: float,
+        dy: float,
+        pintype: PinCellType,
+    ) -> PinCell:
         """
         Constructs the pin cell object used in for the global MOC simulation.
 
@@ -897,9 +912,17 @@ class FuelPin:
         ----------
         moderator_xs : CrossSection
             Cross sections to use for the moderator surrounding the fuel pin.
-        pitch : float
-            Spacing between fuel pins. Must be larger than the outer diameter
-            of the cladding.
+        dx : float
+            Width of the cell along x.
+        dy : float
+            Width of the cell along y.
+        pintype : PinCellType
+            How the pin cell should be split (along x, y, or only a quadrant).
+
+        Returns
+        -------
+        PinCell
+            Pin cell suitable for the true MOC calculation.
         """
         if len(self._fuel_ring_xs) != self.num_fuel_rings:
             raise RuntimeError("Fuel cross sections have not yet been built.")
@@ -907,8 +930,7 @@ class FuelPin:
             raise RuntimeError("Gap cross section has not yet been built.")
         if self._clad_xs is None:
             raise RuntimeError("Clad cross section has not yet been built.")
-        if pitch < 2.0 * self.clad_radius:
-            raise RuntimeError("Pitch must be >= twice the cladding radius.")
+        self._check_dx_dy(dx, dy, pintype)
 
         # Initialize the radii and cross section lists with the fuel info
         radii = [r for r in self._fuel_radii]
@@ -924,11 +946,28 @@ class FuelPin:
         xss.append(self._clad_xs)
 
         # Add another ring of moderator if possible
-        if pitch > 2.0 * self.clad_radius:
-            radii.append(0.5 * pitch)
+        if pintype == PinCellType.Full and min(dx, dy) > 2.0 * self.clad_radius:
+            radii.append(0.5 * min(dx, dy))
+            xss.append(moderator_xs)
+        elif (
+            pintype in [PinCellType.XN, PinCellType.XP]
+            and dx > self.clad_radius
+            and dy > 2.0 * self.clad_radius
+        ):
+            radii.append(min(dx, 0.5 * dy))
+            xss.append(moderator_xs)
+        elif (
+            pintype in [PinCellType.YN, PinCellType.YP]
+            and dy > self.clad_radius
+            and dx > 2.0 * self.clad_radius
+        ):
+            radii.append(min(0.5 * dx, dy))
+            xss.append(moderator_xs)
+        elif dx > self.clad_radius and dy > self.clad_radius:
+            radii.append(min(dx, dy))
             xss.append(moderator_xs)
 
         # Add moderator to the end of materials
         xss.append(moderator_xs)
 
-        return PinCell(radii, xss, pitch, pitch)
+        return PinCell(radii, xss, dx, dy, pintype)

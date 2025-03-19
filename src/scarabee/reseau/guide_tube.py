@@ -2,9 +2,10 @@ from .._scarabee import (
     NDLibrary,
     Material,
     CrossSection,
+    PinCellType,
     SimplePinCell,
     PinCell,
-    MOCDriver
+    MOCDriver,
 )
 import numpy as np
 from typing import Optional, List
@@ -76,6 +77,11 @@ class GuideTube:
         # ======================================================================
         # TRANSPORT CALCULATION DATA
         # ----------------------------------------------------------------------
+        self._clad_fsr_ids: List[int] = []
+        self._mod_fsr_ids: List[int] = []
+
+        self._clad_fsr_inds: List[int] = []
+        self._mod_fsr_inds: List[int] = []
 
         # Holds the CrossSection object used for the real transport calc.
         self._clad_xs: Optional[CrossSection] = None
@@ -96,6 +102,44 @@ class GuideTube:
     def clad_dancoff_factors(self):
         return self._clad_dancoff_factors
 
+    def _check_dx_dy(self, dx, dy, pintype):
+        if pintype == PinCellType.Full:
+            if dx < 2.0 * self.outer_radius:
+                raise ValueError(
+                    "The fuel pin cell x width must be > the diameter of the cladding."
+                )
+            if dy < 2.0 * self.outer_radius:
+                raise ValueError(
+                    "The fuel pin cell y width must be > the diameter of the cladding."
+                )
+        elif pintype in [PinCellType.XN, PinCellType.XP]:
+            if dx < self.outer_radius:
+                raise ValueError(
+                    "The fuel pin cell x width must be > the radius of the cladding."
+                )
+            if dy < 2.0 * self.outer_radius:
+                raise ValueError(
+                    "The fuel pin cell y width must be > the diameter of the cladding."
+                )
+        elif pintype in [PinCellType.YN, PinCellType.YP]:
+            if dy < self.outer_radius:
+                raise ValueError(
+                    "The fuel pin cell y width must be > the radius of the cladding."
+                )
+            if dx < 2.0 * self.outer_radius:
+                raise ValueError(
+                    "The fuel pin cell x width must be > the diameter of the cladding."
+                )
+        else:
+            if dx < self.outer_radius:
+                raise ValueError(
+                    "The fuel pin cell x width must be > the radius of the cladding."
+                )
+            if dy < self.outer_radius:
+                raise ValueError(
+                    "The fuel pin cell y width must be > the radius of the cladding."
+                )
+
     def load_nuclides(self, ndl: NDLibrary) -> None:
         """
         Loads all the nuclides for all current materials into the data library.
@@ -106,8 +150,8 @@ class GuideTube:
             Nuclear data library which should load the nuclides.
         """
         self.clad.load_nuclides(ndl)
-    
-    #==========================================================================
+
+    # ==========================================================================
     # Dancoff Factor Related Methods
     def set_xs_for_fuel_dancoff_calculation(self) -> None:
         """
@@ -141,13 +185,18 @@ class GuideTube:
             )
         )
 
-    def make_isolated_dancoff_moc_cell(
-        self, moderator_xs: CrossSection, pitch: float
+    def make_dancoff_moc_cell(
+        self,
+        moderator_xs: CrossSection,
+        dx: float,
+        dy: float,
+        pintype: PinCellType,
+        isolated: bool,
     ) -> SimplePinCell:
         """
         Makes a simplified cell suitable for performing Dancoff factor
-        calculations of the isolated guide tube. The flat source region IDs
-        are stored locally in the GuideTube object.
+        calculations. The flat source region IDs are stored locally in the
+        GuideTube object.
 
         Parameters
         ----------
@@ -155,18 +204,22 @@ class GuideTube:
             One group cross sections for the moderator. Total should equal
             absorption (i.e. no scattering) and should be equal to the
             macroscopic potential cross section.
-        pitch : float
-            Width of the cell.
+        dx : float
+            Width of the cell along x.
+        dy : float
+            Width of the cell along y.
+        pintype : PinCellType
+            How the cell should be split (along x, y, or only a quadrant).
+        isolated : bool
+            If True, the FSR IDs are stored for the isolated pin. Otherwise,
+            they are stored for the full pin.
 
         Returns
         -------
-        SimplifiedPinCell, None, int
-            Pin cell object for MOC isolated calculation.
+        SimplifiedPinCell
+            Pin cell object for MOC Dancoff factor calculation.
         """
-        if pitch < 2.0 * self.outer_radius:
-            raise ValueError(
-                "The fuel pin pitch must be > the diameter of the cladding."
-            )
+        self._check_dx_dy(dx, dy, pintype) 
 
         # First we create list of radii and materials
         radii = []
@@ -181,69 +234,24 @@ class GuideTube:
         xs.append(moderator_xs)
 
         # Make the simple pin cell.
-        cell = SimplePinCell(radii, xs, pitch, pitch)
+        cell = SimplePinCell(radii, xs, dx, dy, pintype)
 
         # Get the FSR IDs for the regions of interest
         cell_fsr_ids = list(cell.get_all_fsr_ids())
         cell_fsr_ids.sort()
 
-        self._clad_isolated_dancoff_fsr_ids.append(cell_fsr_ids[1])
-        self._mod_isolated_dancoff_fsr_ids = [cell_fsr_ids[0], cell_fsr_ids[2]]
+        if isolated:
+            self._clad_isolated_dancoff_fsr_ids.append(cell_fsr_ids[1])
+            self._mod_isolated_dancoff_fsr_ids = [cell_fsr_ids[0], cell_fsr_ids[2]]
+        else:
+            self._clad_full_dancoff_fsr_ids.append(cell_fsr_ids[1])
+            self._mod_full_dancoff_fsr_ids = [cell_fsr_ids[0], cell_fsr_ids[2]]
 
         return cell
 
-    def make_full_dancoff_moc_cell(
-        self, moderator_xs: CrossSection, pitch: float
-    ) -> SimplePinCell:
-        """
-        Makes a simplified cell suitable for performing Dancoff factor
-        calculations of the full true geometry. The flat source region IDs
-        are stored locally in the GuideTube object.
-
-        Parameters
-        ----------
-        moderator_xs : CrossSection
-            One group cross sections for the moderator. Total should equal
-            absorption (i.e. no scattering) and should be equal to the
-            macroscopic potential cross section.
-        pitch : float
-            Width of the cell.
-
-        Returns
-        -------
-        SimplifiedPinCell, None, int
-            Pin cell object for MOC isolated calculation.
-        """
-        if pitch < 2.0 * self.outer_radius:
-            raise ValueError(
-                "The fuel pin pitch must be > the diameter of the cladding."
-            )
-
-        # First we create list of radii and materials
-        radii = []
-        xs = []
-
-        radii.append(self.inner_radius)
-        xs.append(moderator_xs)
-
-        radii.append(self.outer_radius)
-        xs.append(self._clad_dancoff_xs)
-
-        xs.append(moderator_xs)
-
-        # Make the simple pin cell.
-        cell = SimplePinCell(radii, xs, pitch, pitch)
-
-        # Get the FSR IDs for the regions of interest
-        cell_fsr_ids = list(cell.get_all_fsr_ids())
-        cell_fsr_ids.sort()
-
-        self._clad_full_dancoff_fsr_ids.append(cell_fsr_ids[1])
-        self._mod_full_dancoff_fsr_ids = [cell_fsr_ids[0], cell_fsr_ids[2]]
-
-        return cell
-
-    def populate_dancoff_fsr_indexes(self, isomoc: MOCDriver, fullmoc: MOCDriver) -> None:
+    def populate_dancoff_fsr_indexes(
+        self, isomoc: MOCDriver, fullmoc: MOCDriver
+    ) -> None:
         """
         Obtains the flat source region indexes for all of the flat source
         regions used in the Dancoff factor calculations.
@@ -324,7 +332,7 @@ class GuideTube:
         pot_xs = moderator.potential_xs
         for ind in self._mod_isolated_dancoff_fsr_inds:
             isomoc.set_extern_src(ind, 0, pot_xs)
-    
+
     def set_full_dancoff_fuel_sources(
         self, fullmoc: MOCDriver, moderator: Material
     ) -> None:
@@ -418,10 +426,12 @@ class GuideTube:
             New Dancoff factor.
         """
         if D < 0.0 or D > 1.0:
-            raise ValueError("Dancoff factor must be in range [0, 1].")
+            raise ValueError(
+                f"Dancoff factor must be in range [0, 1]. Was provided {D}."
+            )
         self._clad_dancoff_factors.append(D)
 
-    #==========================================================================
+    # ==========================================================================
     # Transport Calculation Related Methods
     def set_clad_xs_for_depletion_step(self, t: int, ndl: NDLibrary) -> None:
         """
@@ -450,7 +460,9 @@ class GuideTube:
         if self._clad_xs.name == "":
             self._clad_xs.set_name("Clad")
 
-    def make_moc_cell(self, moderator_xs: CrossSection, pitch: float) -> PinCell:
+    def make_moc_cell(
+        self, moderator_xs: CrossSection, dx: float, dy: float, pintype: PinCellType
+    ) -> PinCell:
         """
         Constructs the pin cell object used in for the global MOC simulation.
 
@@ -458,14 +470,16 @@ class GuideTube:
         ----------
         moderator_xs : CrossSection
             Cross sections to use for the moderator surrounding the fuel pin.
-        pitch : float
-            Spacing between fuel pins. Must be larger than the outer diameter
-            of the cladding.
+        dx : float
+            Width of the cell along x.
+        dy : float
+            Width of the cell along y.
+        pintype : PinCellType
+            How the pin cell should be split (along x, y, or only a quadrant).
         """
         if self._clad_xs is None:
             raise RuntimeError("Clad cross section has not yet been built.")
-        if pitch < 2.0 * self.outer_radius:
-            raise RuntimeError("Pitch must be >= twice the outer cladding radius.")
+        self._check_dx_dy(dx, dy, pintype)
 
         # Create list of inner moderator radii
         radii = []
@@ -488,11 +502,28 @@ class GuideTube:
         xss.append(self._clad_xs)
 
         # Add another ring of moderator if possible
-        if pitch > 2.0 * self.outer_radius:
-            radii.append(0.5 * pitch)
+        if pintype == PinCellType.Full and min(dx, dy) > 2.0 * self.outer_radius:
+            radii.append(0.5 * min(dx, dy))
+            xss.append(moderator_xs)
+        elif (
+            pintype in [PinCellType.XN, PinCellType.XP]
+            and dx > self.outer_radius
+            and dy > 2.0 * self.outer_radius
+        ):
+            radii.append(min(dx, 0.5 * dy))
+            xss.append(moderator_xs)
+        elif (
+            pintype in [PinCellType.YN, PinCellType.YP]
+            and dy > self.outer_radius
+            and dx > 2.0 * self.outer_radius
+        ):
+            radii.append(min(0.5 * dx, dy))
+            xss.append(moderator_xs)
+        elif dx > self.outer_radius and dy > self.outer_radius:
+            radii.append(min(dx, dy))
             xss.append(moderator_xs)
 
         # Add moderator to the end of materials
         xss.append(moderator_xs)
 
-        return PinCell(radii, xss, pitch, pitch)
+        return PinCell(radii, xss, dx, dy, pintype)
