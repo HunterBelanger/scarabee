@@ -366,10 +366,10 @@ void MOCDriver::solve_isotropic() {
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative source values set to zero");
+      spdlog::info("Negative source values set to zero");
     }
     if (set_neg_flux_to_zero) {
-      spdlog::warn("Negative flux values set to zero");
+      spdlog::info("Negative flux values set to zero");
     }
   }
 }
@@ -492,10 +492,10 @@ void MOCDriver::solve_anisotropic() {
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative zero-mometn-source values set to zero.");
+      spdlog::info("Negative zero-moment-source values set to zero.");
     }
     if (set_neg_flux_to_zero) {
-      spdlog::warn("Negative zero-moment-flux values set to zero.");
+      spdlog::info("Negative zero-moment-flux values set to zero.");
     }
   }
 }

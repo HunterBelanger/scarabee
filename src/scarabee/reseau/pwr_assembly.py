@@ -1,5 +1,6 @@
 from .fuel_pin import FuelPin
 from .guide_tube import GuideTube
+from .critical_leakage import CriticalLeakage
 from .._scarabee import (
     borated_water,
     Material,
@@ -11,6 +12,8 @@ from .._scarabee import (
     BoundaryCondition,
     SimulationMode,
     YamamotoTabuchi6,
+    P1CriticalitySpectrum,
+    B1CriticalitySpectrum,
     set_logging_level,
     scarabee_log,
     LogLevel,
@@ -165,8 +168,11 @@ class PWRAssembly:
         self._moc_num_angles = 64
 
         self._asmbly_cells = []
-        self._asmbly_geom = None
-        self._asmbly_moc = None
+        self._asmbly_geom: Optional[Cartesian2D] = None
+        self._asmbly_moc: Optional[MOCDriver] = None
+
+
+        self._leakage_model: CriticalLeakage = CriticalLeakage.P1
 
     @property
     def shape(self):
@@ -271,6 +277,14 @@ class PWRAssembly:
             for i in range(len(cells[j])):
                 self._cells[-1].append(copy.deepcopy(cells[j][i]))
         self._cells_set = True
+
+    @property    
+    def leakage_model(self):
+        return self._leakage_model
+
+    @leakage_model.setter 
+    def leakage_model(self, clm: CriticalLeakage):
+        self._leakage_model = clm
 
     # ==========================================================================
     # Dancoff Correction Related Methods
@@ -761,3 +775,24 @@ class PWRAssembly:
                 cell = self.cells[j][i]
                 if isinstance(cell, FuelPin):
                     cell.set_gap_xs(self._ndl)
+
+    def apply_leakage_model(self) -> None:
+        # If no leakage, just return
+        if self.leakage_model == CriticalLeakage.NoLeakage:
+            return
+
+        scarabee_log(LogLevel.Info, "")
+
+        homogenized_moc = self._asmbly_moc.homogenize()
+
+        if self.leakage_model == CriticalLeakage.P1:
+            scarabee_log(LogLevel.Info, "Performing P1 criticality spectrum calculation")
+            critical_spectrum = P1CriticalitySpectrum(homogenized_moc)
+        else:
+            scarabee_log(LogLevel.Info, "Performing B1 criticality spectrum calculation")
+            critical_spectrum = B1CriticalitySpectrum(homogenized_moc)
+        
+        self._asmbly_moc.apply_criticality_spectrum(critical_spectrum.flux)
+
+        scarabee_log(LogLevel.Info, "Kinf    : {:.5f}".format(critical_spectrum.k_inf))
+        scarabee_log(LogLevel.Info, "Buckling: {:.5f}".format(critical_spectrum.buckling))
