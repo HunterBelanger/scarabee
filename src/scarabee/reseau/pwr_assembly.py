@@ -142,7 +142,7 @@ class PWRAssembly:
 
         # Dancoff factor parameters
         self._dancoff_moc_track_spacing = 0.05
-        self._dancoff_moc_num_angles = 32
+        self._dancoff_moc_num_angles = 64
 
         self._fuel_dancoff_factors = np.zeros(
             (self._simulated_shape[1], self._simulated_shape[0])
@@ -286,7 +286,7 @@ class PWRAssembly:
 
     def _init_isolated_dancoff_components(self) -> None:
         # Isolated pitch
-        iso_pitch = 10. * self.pitch
+        iso_pitch = 20. * self.pitch
 
         for j in range(len(self.cells)):
             self._isolated_dancoff_cells.append([])
