@@ -47,8 +47,8 @@ class FuelPin:
     fuel_ring_flux_spectra : list of list of ndarray
         Contains the average flux spectrum in each fuel ring for each depletion
         time step.
-    fuel_dancoff_factors : list of float
-        Dancoff factors to be used when self-shielding the fuel at each
+    fuel_dancoff_corrections : list of float
+        Dancoff corrections to be used when self-shielding the fuel at each
         depletion time step.
     gap : Material, optional
         Material which describes the composition, density, and temperature of
@@ -60,8 +60,8 @@ class FuelPin:
         temperature.
     clad_radius : float
         Outer radius of the cladding.
-    clad_dancoff_factors : list of float
-        Dancoff factors to be used when self-shielding the cladding at each
+    clad_dancoff_corrections : list of float
+        Dancoff corrections to be used when self-shielding the cladding at each
         depletion time step.
     num_fuel_rings : int, default 1
         Number of rings which should be used to discretize the fuel material.
@@ -108,16 +108,16 @@ class FuelPin:
         self._clad_radius = clad_radius
 
         # ======================================================================
-        # DANCOFF FACTOR CALCULATION DATA
+        # DANCOFF CORRECTION CALCULATION DATA
         # ----------------------------------------------------------------------
 
-        # Initialize empty list of Dancoff factors for the fuel
-        self._fuel_dancoff_factors: List[float] = []
+        # Initialize empty list of Dancoff corrections for the fuel
+        self._fuel_dancoff_corrections: List[float] = []
 
-        # Initialize empty list of Dancoff factors for the cladding
-        self._clad_dancoff_factors: List[float] = []
+        # Initialize empty list of Dancoff corrections for the cladding
+        self._clad_dancoff_corrections: List[float] = []
 
-        # Initialize empty variables for Dancoff factor calculations.
+        # Initialize empty variables for Dancoff correction calculations.
         # These are all kept private.
         self._fuel_dancoff_xs: CrossSection = CrossSection(
             np.array([1.0e5]), np.array([1.0e5]), np.array([[0.0]]), "Fuel"
@@ -230,8 +230,8 @@ class FuelPin:
         return self._fuel_ring_materials
 
     @property
-    def fuel_dancoff_factors(self) -> List[float]:
-        return self._fuel_dancoff_factors
+    def fuel_dancoff_corrections(self) -> List[float]:
+        return self._fuel_dancoff_corrections
 
     @property
     def gap(self) -> Optional[Material]:
@@ -250,8 +250,8 @@ class FuelPin:
         return self._clad_radius
 
     @property
-    def clad_dancoff_factors(self) -> List[float]:
-        return self._clad_dancoff_factors
+    def clad_dancoff_corrections(self) -> List[float]:
+        return self._clad_dancoff_corrections
 
     def _check_dx_dy(self, dx, dy, pintype):
         if pintype == PinCellType.Full:
@@ -309,10 +309,10 @@ class FuelPin:
         self.clad.load_nuclides(ndl)
 
     # ==========================================================================
-    # Dancoff Factor Related Methods
+    # Dancoff Correction Related Methods
     def set_xs_for_fuel_dancoff_calculation(self) -> None:
         """
-        Sets the 1-group cross sections to calculate the fuel Dancoff factors.
+        Sets the 1-group cross sections to calculate the fuel Dancoff correction.
         """
         self._fuel_dancoff_xs.set(
             CrossSection(
@@ -341,7 +341,7 @@ class FuelPin:
 
     def set_xs_for_clad_dancoff_calculation(self, ndl: NDLibrary) -> None:
         """
-        Sets the 1-group cross sections to calculate the clad Dancoff factors.
+        Sets the 1-group cross sections to calculate the clad Dancoff correction.
 
         Parameters
         ----------
@@ -396,7 +396,7 @@ class FuelPin:
         isolated: bool,
     ) -> SimplePinCell:
         """
-        Makes a simplified cell suitable for performing Dancoff factor
+        Makes a simplified cell suitable for performing Dancoff correction
         calculations. The flat source region IDs are stored locally in the
         FuelPin object.
 
@@ -419,7 +419,7 @@ class FuelPin:
         Returns
         -------
         SimplifiedPinCell
-            Pin cell object for MOC Dancoff factor calculation.
+            Pin cell object for MOC Dancoff correction calculation.
         """
         self._check_dx_dy(dx, dy, pintype)
 
@@ -472,7 +472,7 @@ class FuelPin:
     ) -> None:
         """
         Obtains the flat source region indexes for all of the flat source
-        regions used in the Dancoff factor calculations.
+        regions used in the Dancoff correction calculations.
 
         Parameters
         ----------
@@ -514,8 +514,8 @@ class FuelPin:
     ) -> None:
         """
         Initializes the fixed sources for the isolated MOC calculation required
-        in computing Dancoff factors. Sources are set for a fuel Dancoff factor
-        calculation.
+        in computing Dancoff corrections. Sources are set for a fuel Dancoff
+        corrections calculation.
 
         Parameters
         ----------
@@ -550,8 +550,8 @@ class FuelPin:
     ) -> None:
         """
         Initializes the fixed sources for the isolated MOC calculation required
-        in computing Dancoff factors. Sources are set for a clad Dancoff factor
-        calculation.
+        in computing Dancoff corrections. Sources are set for a clad Dancoff
+        correction calculation.
 
         Parameters
         ----------
@@ -599,8 +599,8 @@ class FuelPin:
     ) -> None:
         """
         Initializes the fixed sources for the full MOC calculation required
-        in computing Dancoff factors. Sources are set for a fuel Dancoff factor
-        calculation.
+        in computing Dancoff corrections. Sources are set for a fuel Dancoff
+        correction calculation.
 
         Parameters
         ----------
@@ -635,8 +635,8 @@ class FuelPin:
     ) -> None:
         """
         Initializes the fixed sources for the full MOC calculation required
-        in computing Dancoff factors. Sources are set for a clad Dancoff factor
-        calculation.
+        in computing Dancoff corrections. Sources are set for a clad Dancoff
+        correction calculation.
 
         Parameters
         ----------
@@ -679,11 +679,11 @@ class FuelPin:
         for ind in self._mod_full_dancoff_fsr_inds:
             fullmoc.set_extern_src(ind, 0, pot_xs)
 
-    def compute_fuel_dancoff_factor(
+    def compute_fuel_dancoff_correction(
         self, isomoc: MOCDriver, fullmoc: MOCDriver
     ) -> float:
         """
-        Computes the Dancoff factor for the fuel region of the fuel pin.
+        Computes the Dancoff correction for the fuel region of the fuel pin.
 
         Parameters
         ----------
@@ -695,7 +695,7 @@ class FuelPin:
         Returns
         -------
         float
-            Dancoff factor for the fuel region.
+            Dancoff correction for the fuel region.
         """
         iso_flux = isomoc.homogenize_flux_spectrum(
             self._fuel_isolated_dancoff_fsr_inds
@@ -703,15 +703,13 @@ class FuelPin:
         full_flux = fullmoc.homogenize_flux_spectrum(self._fuel_full_dancoff_fsr_inds)[
             0
         ]
-        C = (iso_flux - full_flux) / iso_flux
-        D = 1.0 - C
-        return D
+        return (iso_flux - full_flux) / iso_flux
 
-    def compute_clad_dancoff_factor(
+    def compute_clad_dancoff_correction(
         self, isomoc: MOCDriver, fullmoc: MOCDriver
     ) -> float:
         """
-        Computes the Dancoff factor for the cladding region of the fuel pin.
+        Computes the Dancoff correction for the cladding region of the fuel pin.
 
         Parameters
         ----------
@@ -723,7 +721,7 @@ class FuelPin:
         Returns
         -------
         float
-            Dancoff factor for the cladding region.
+            Dancoff correction for the cladding region.
         """
         iso_flux = isomoc.homogenize_flux_spectrum(
             self._clad_isolated_dancoff_fsr_inds
@@ -731,41 +729,39 @@ class FuelPin:
         full_flux = fullmoc.homogenize_flux_spectrum(self._clad_full_dancoff_fsr_inds)[
             0
         ]
-        C = (iso_flux - full_flux) / iso_flux
-        D = 1.0 - C
-        return D
+        return (iso_flux - full_flux) / iso_flux
 
-    def append_fuel_dancoff_factor(self, D) -> None:
+    def append_fuel_dancoff_correction(self, C) -> None:
         """
-        Saves new Dancoff factor for the fuel that will be used for all
+        Saves new Dancoff correction for the fuel that will be used for all
         subsequent cross section updates.
 
         Parameters
         ----------
-        D : float
-            New Dancoff factor.
+        C : float
+            New Dancoff correction.
         """
-        if D < 0.0 or D > 1.0:
+        if C < 0.0 or C > 1.0:
             raise ValueError(
-                f"Dancoff factor must be in range [0, 1]. Was provided {D}."
+                f"Dancoff correction must be in range [0, 1]. Was provided {C}."
             )
-        self._fuel_dancoff_factors.append(D)
+        self._fuel_dancoff_corrections.append(C)
 
-    def append_clad_dancoff_factor(self, D) -> None:
+    def append_clad_dancoff_correction(self, C) -> None:
         """
-        Saves new Dancoff factor for the cladding that will be used for all
+        Saves new Dancoff correction for the cladding that will be used for all
         subsequent cross section updates.
 
         Parameters
         ----------
-        D : float
-            New Dancoff factor.
+        C : float
+            New Dancoff correction.
         """
-        if D < 0.0 or D > 1.0:
+        if C < 0.0 or C > 1.0:
             raise ValueError(
-                f"Dancoff factor must be in range [0, 1]. Was provided {D}."
+                f"Dancoff correction must be in range [0, 1]. Was provided {C}."
             )
-        self._clad_dancoff_factors.append(D)
+        self._clad_dancoff_corrections.append(C)
 
     # ==========================================================================
     # Transport Calculation Related Methods
@@ -789,7 +785,7 @@ class FuelPin:
                 Ee = 1.0 / (2.0 * self.fuel_radius)
                 self._fuel_ring_xs.append(
                     self._fuel_ring_materials[0][t].carlvik_xs(
-                        self._fuel_dancoff_factors[t], Ee, ndl
+                        self._fuel_dancoff_corrections[t], Ee, ndl
                     )
                 )
                 if self._fuel_ring_xs[-1].name == "":
@@ -803,7 +799,7 @@ class FuelPin:
                     Rout = self._fuel_radii[ri]
                     self._fuel_ring_xs.append(
                         self._fuel_ring_materials[ri][t].ring_carlvik_xs(
-                            self._fuel_dancoff_factors[t],
+                            self._fuel_dancoff_corrections[t],
                             self.fuel_radius,
                             Rin,
                             Rout,
@@ -820,7 +816,7 @@ class FuelPin:
                 Ee = 1.0 / (2.0 * self.fuel_radius)
                 self._fuel_ring_xs[0].set(
                     self._fuel_ring_materials[0][t].carlvik_xs(
-                        self._fuel_dancoff_factors[t], Ee, ndl
+                        self._fuel_dancoff_corrections[t], Ee, ndl
                     )
                 )
                 if self._fuel_ring_xs[0].name == "":
@@ -834,7 +830,7 @@ class FuelPin:
                     Rout = self._fuel_radii[ri]
                     self._fuel_ring_xs[ri].set(
                         self._fuel_ring_materials[ri][t].ring_carlvik_xs(
-                            self._fuel_dancoff_factors[t],
+                            self._fuel_dancoff_corrections[t],
                             self.fuel_radius,
                             Rin,
                             Rout,
@@ -871,7 +867,7 @@ class FuelPin:
         """
         Constructs the CrossSection object for the cladding of the pin at the
         specified depletion step. The depletion step only changes the Dancoff
-        factor, not the cladding composition.
+        correction, not the cladding composition.
 
         Parameters
         ----------
@@ -889,10 +885,12 @@ class FuelPin:
 
         # Get / set the xs
         if self._clad_xs is None:
-            self._clad_xs = self.clad.roman_xs(self._clad_dancoff_factors[t], Ee, ndl)
+            self._clad_xs = self.clad.roman_xs(
+                self._clad_dancoff_corrections[t], Ee, ndl
+            )
         else:
             self._clad_xs.set(
-                self.clad.roman_xs(self._clad_dancoff_factors[t], Ee, ndl)
+                self.clad.roman_xs(self._clad_dancoff_corrections[t], Ee, ndl)
             )
 
         if self._clad_xs.name == "":

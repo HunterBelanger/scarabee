@@ -120,7 +120,7 @@ class PWRAssembly:
             self._x_max_bc = BoundaryCondition.Reflective
 
         # ======================================================================
-        # DANCOFF FACTOR CALCULATION DATA
+        # DANCOFF CORRECTION CALCULATION DATA
         # ----------------------------------------------------------------------
 
         # Make water xs for dancoff calculation
@@ -131,23 +131,24 @@ class PWRAssembly:
             "Moderator",
         )
 
-        # Isolated cell geometry for Dancoff factor calculations
+        # Isolated cell geometry for Dancoff correction calculations
         self._isolated_dancoff_cells = []
         self._isolated_dancoff_mocs = []
 
-        # Full geometry for Dancoff factor calculations
+        # Full geometry for Dancoff correction calculations
         self._full_dancoff_cells = []
         self._full_dancoff_geom = None
         self._full_dancoff_moc = None
 
-        # Dancoff factor parameters
+        # Dancoff correction parameters
+        self._dancoff_isolation_scale = 10.0
         self._dancoff_moc_track_spacing = 0.05
-        self._dancoff_moc_num_angles = 64
+        self._dancoff_moc_num_angles = 32
 
-        self._fuel_dancoff_factors = np.zeros(
+        self._fuel_dancoff_corrections = np.zeros(
             (self._simulated_shape[1], self._simulated_shape[0])
         )
-        self._clad_dancoff_factors = np.zeros(
+        self._clad_dancoff_corrections = np.zeros(
             (self._simulated_shape[1], self._simulated_shape[0])
         )
 
@@ -213,11 +214,11 @@ class PWRAssembly:
     def dancoff_moc_num_angles(self, dna: int):
         if dna % 4 != 0:
             raise ValueError(
-                "Number of angles for Dancoff factor calculation must be a multiple of 4."
+                "Number of angles for Dancoff correction calculation must be a multiple of 4."
             )
         if dna < 4:
             raise ValueError(
-                "Number of angles for Dancoff factor calculation must be > 4."
+                "Number of angles for Dancoff correction calculation must be > 4."
             )
         self._dancoff_moc_num_angles = int(dna)
 
@@ -272,11 +273,11 @@ class PWRAssembly:
         self._cells_set = True
 
     # ==========================================================================
-    # Dancoff Factor Related Methods
+    # Dancoff Correction Related Methods
 
     def _init_dancoff_components(self) -> None:
         scarabee_log(
-            LogLevel.Info, "Initializing Dancoff factor calculation components."
+            LogLevel.Info, "Initializing Dancoff correction calculation components."
         )
         set_logging_level(LogLevel.Warning)
         self._init_isolated_dancoff_components()
@@ -286,7 +287,7 @@ class PWRAssembly:
 
     def _init_isolated_dancoff_components(self) -> None:
         # Isolated pitch
-        iso_pitch = 20. * self.pitch
+        iso_pitch = self._dancoff_isolation_scale * self.pitch
 
         for j in range(len(self.cells)):
             self._isolated_dancoff_cells.append([])
@@ -295,7 +296,7 @@ class PWRAssembly:
                 cell = None
                 geom = None
                 moc = None
-                
+
                 x_min_bc = BoundaryCondition.Vacuum
                 x_max_bc = BoundaryCondition.Vacuum
                 y_min_bc = BoundaryCondition.Vacuum
@@ -314,9 +315,9 @@ class PWRAssembly:
                         0.5 * iso_pitch,
                         0.5 * iso_pitch,
                         PinCellType.I,
-                        True
+                        True,
                     )
-                    geom = Cartesian2D([0.5*iso_pitch], [0.5*iso_pitch])
+                    geom = Cartesian2D([0.5 * iso_pitch], [0.5 * iso_pitch])
                     geom.set_tiles([cell])
                     x_min_bc = BoundaryCondition.Reflective
                     y_min_bc = BoundaryCondition.Reflective
@@ -331,9 +332,9 @@ class PWRAssembly:
                         0.5 * iso_pitch,
                         iso_pitch,
                         PinCellType.XP,
-                        True
+                        True,
                     )
-                    geom = Cartesian2D([0.5*iso_pitch], [iso_pitch])
+                    geom = Cartesian2D([0.5 * iso_pitch], [iso_pitch])
                     geom.set_tiles([cell])
                     x_min_bc = BoundaryCondition.Reflective
                 # Next, check for being on the bottom row with a half pin
@@ -347,9 +348,9 @@ class PWRAssembly:
                         iso_pitch,
                         0.5 * iso_pitch,
                         PinCellType.YP,
-                        True
+                        True,
                     )
-                    geom = Cartesian2D([iso_pitch], [0.5*iso_pitch])
+                    geom = Cartesian2D([iso_pitch], [0.5 * iso_pitch])
                     geom.set_tiles([cell])
                     y_min_bc = BoundaryCondition.Reflective
                 # Otherwise, we just make the full cell
@@ -359,22 +360,21 @@ class PWRAssembly:
                         iso_pitch,
                         iso_pitch,
                         PinCellType.Full,
-                        True
+                        True,
                     )
                     geom = Cartesian2D([iso_pitch], [iso_pitch])
                     geom.set_tiles([cell])
 
-                
                 # Save to cells
                 self._isolated_dancoff_cells[-1].append(cell)
 
                 # Make the MOCDriver
                 moc = MOCDriver(geom)
                 moc.sim_mode = SimulationMode.FixedSource
-                moc.x_min_bc = x_min_bc 
-                moc.x_max_bc = x_max_bc 
-                moc.y_min_bc = y_min_bc 
-                moc.y_max_bc = y_max_bc 
+                moc.x_min_bc = x_min_bc
+                moc.x_max_bc = x_max_bc
+                moc.y_min_bc = y_min_bc
+                moc.y_max_bc = y_max_bc
 
                 # Generate tracks in serial as each call will run with threads
                 moc.generate_tracks(
@@ -406,7 +406,7 @@ class PWRAssembly:
                         0.5 * self.pitch,
                         0.5 * self.pitch,
                         PinCellType.I,
-                        False
+                        False,
                     )
                 # Next, check for being on the side with a half pin in quarter symmetry
                 elif (
@@ -419,7 +419,7 @@ class PWRAssembly:
                         0.5 * self.pitch,
                         self.pitch,
                         PinCellType.XP,
-                        False
+                        False,
                     )
                 # Next, check for being on the bottom row with a half pin
                 elif (
@@ -432,7 +432,7 @@ class PWRAssembly:
                         self.pitch,
                         0.5 * self.pitch,
                         PinCellType.YP,
-                        False
+                        False,
                     )
                 # Otherwise, we just make the full cell
                 else:
@@ -441,7 +441,7 @@ class PWRAssembly:
                         self.pitch,
                         self.pitch,
                         PinCellType.Full,
-                        False
+                        False,
                     )
 
                 # Save to cells
@@ -484,7 +484,7 @@ class PWRAssembly:
 
     def set_dancoff_moderator_xs(self) -> None:
         """
-        Updates the moderator cross section for all Dancoff factor calculations.
+        Updates the moderator cross section for all Dancoff correction calculations.
         """
         self._moderator_dancoff_xs.set(
             CrossSection(
@@ -495,13 +495,13 @@ class PWRAssembly:
             )
         )
 
-    def compute_fuel_dancoff_factors(self):
+    def compute_fuel_dancoff_corrections(self):
         """
-        Recomputes all Dancoff factors for the fuel regions in the problem,
+        Recomputes all Dancoff corrections for the fuel regions in the problem,
         using the most recent material definitions. All fuel is shelf-shielded
-        together, regarless of wether or not is is UO2 or MOX.
+        together, regardless of wether or not is is UO2 or MOX.
         """
-        scarabee_log(LogLevel.Info, "Computing Dancoff factors for the fuel.")
+        scarabee_log(LogLevel.Info, "Computing Dancoff corrections for the fuel.")
         set_logging_level(LogLevel.Warning)
         if not self._dancoff_components_initialized():
             raise RuntimeError(
@@ -536,7 +536,7 @@ class PWRAssembly:
         for t in threads:
             t.join()
 
-        # Go through and let each cell compute the Dancoff factor if it holds
+        # Go through and let each cell compute the Dancoff correction if it holds
         # a fuel pin.
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
@@ -544,17 +544,19 @@ class PWRAssembly:
                 isomoc = self._isolated_dancoff_mocs[j][i]
 
                 if isinstance(cell, FuelPin):
-                    D = cell.compute_fuel_dancoff_factor(isomoc, self._full_dancoff_moc)
-                    self._fuel_dancoff_factors[j, i] = D
+                    C = cell.compute_fuel_dancoff_correction(
+                        isomoc, self._full_dancoff_moc
+                    )
+                    self._fuel_dancoff_corrections[j, i] = C
         set_logging_level(LogLevel.Info)
 
-    def compute_clad_dancoff_factors(self):
+    def compute_clad_dancoff_corrections(self):
         """
-        Recomputes all Dancoff factors for the fuel pin claddin regions in the
-        problem, using the most recent material definitions. All cladding is
-        shelf-shielded together.
+        Recomputes all Dancoff corrections for the fuel pin cladding regions
+        in the problem, using the most recent material definitions. All
+        cladding is shelf-shielded together.
         """
-        scarabee_log(LogLevel.Info, "Computing Dancoff factors for the cladding.")
+        scarabee_log(LogLevel.Info, "Computing Dancoff corrections for the cladding.")
         set_logging_level(LogLevel.Warning)
         if self._full_dancoff_moc is None:
             raise RuntimeError(
@@ -590,39 +592,43 @@ class PWRAssembly:
         for t in threads:
             t.join()
 
-        # Go through and let each cell compute the Dancoff factor if it holds
+        # Go through and let each cell compute the Dancoff correction if it holds
         # a fuel pin.
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
                 cell = self.cells[j][i]
                 isomoc = self._isolated_dancoff_mocs[j][i]
 
-                D = cell.compute_clad_dancoff_factor(isomoc, self._full_dancoff_moc)
-                self._clad_dancoff_factors[j, i] = D
+                C = cell.compute_clad_dancoff_correction(isomoc, self._full_dancoff_moc)
+                self._clad_dancoff_corrections[j, i] = C
         set_logging_level(LogLevel.Info)
 
-    def apply_dancoff_factors(self):
+    def apply_dancoff_corrections(self):
         """
-        Appends all fuel and cladding Dancoff factors to the appropriate cell.
+        Appends all fuel and cladding Dancoff corrections to the appropriate cell.
         """
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
                 cell = self.cells[j][i]
                 if isinstance(cell, FuelPin):
-                    cell.append_fuel_dancoff_factor(self._fuel_dancoff_factors[j, i])
-                cell.append_clad_dancoff_factor(self._clad_dancoff_factors[j, i])
+                    cell.append_fuel_dancoff_correction(
+                        self._fuel_dancoff_corrections[j, i]
+                    )
+                cell.append_clad_dancoff_correction(
+                    self._clad_dancoff_corrections[j, i]
+                )
 
     def self_shield_and_xs_update(self):
         """
-        Computes a new set of Dancoff factors for the fuel and the cladding.
-        After, these are applied to all the cells in the problem.
+        Computes a new set of Dancoff corrections for the fuel and the
+        cladding.  After, these are applied to all the cells in the problem.
         """
         if not self._dancoff_components_initialized():
             self._init_dancoff_components()
 
-        self.compute_fuel_dancoff_factors()
-        self.compute_clad_dancoff_factors()
-        self.apply_dancoff_factors()
+        self.compute_fuel_dancoff_corrections()
+        self.compute_clad_dancoff_corrections()
+        self.apply_dancoff_corrections()
 
     # ==========================================================================
     # Transport Calculation Related Methods
@@ -646,7 +652,7 @@ class PWRAssembly:
                         self._moderator_xs,
                         0.5 * self.pitch,
                         0.5 * self.pitch,
-                        PinCellType.I
+                        PinCellType.I,
                     )
                 # Next, check for being on the side with a half pin in quarter symmetry
                 elif (
@@ -655,10 +661,7 @@ class PWRAssembly:
                     and i == 0
                 ):
                     cell = self.cells[j][i].make_moc_cell(
-                        self._moderator_xs,
-                        0.5 * self.pitch,
-                        self.pitch,
-                        PinCellType.XP
+                        self._moderator_xs, 0.5 * self.pitch, self.pitch, PinCellType.XP
                     )
                 # Next, check for being on the bottom row with a half pin
                 elif (
@@ -667,18 +670,12 @@ class PWRAssembly:
                     and j == self._simulated_shape[1] - 1
                 ):
                     cell = self.cells[j][i].make_moc_cell(
-                        self._moderator_xs,
-                        self.pitch,
-                        0.5 * self.pitch,
-                        PinCellType.YP
+                        self._moderator_xs, self.pitch, 0.5 * self.pitch, PinCellType.YP
                     )
                 # Otherwise, we just make the full cell
                 else:
                     cell = self.cells[j][i].make_moc_cell(
-                        self._moderator_xs,
-                        self.pitch,
-                        self.pitch,
-                        PinCellType.Full
+                        self._moderator_xs, self.pitch, self.pitch, PinCellType.Full
                     )
 
                 # Save to cells
@@ -717,7 +714,7 @@ class PWRAssembly:
     def recompute_all_xs(self) -> None:
         """
         Computes and applies all cross sections using the most recent material
-        information and Dancoff factors.
+        information and Dancoff corrections.
         """
         self.recompute_all_fuel_xs()
         self.recompute_all_gap_xs()
@@ -728,7 +725,7 @@ class PWRAssembly:
     def recompute_all_self_shielded_xs(self) -> None:
         """
         Computes and applies all fuel and caldding cross sections using the
-        most recent material information and Dancoff factors.
+        most recent material information and Dancoff corrections.
         """
         self.recompute_all_fuel_xs()
         self.recompute_all_clad_xs()
@@ -736,7 +733,7 @@ class PWRAssembly:
     def recompute_all_fuel_xs(self) -> None:
         """
         Computes and applies all fuel cross sections using the most recent
-        material information and Dancoff factors.
+        material information and Dancoff corrections.
         """
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
@@ -747,7 +744,7 @@ class PWRAssembly:
     def recompute_all_clad_xs(self) -> None:
         """
         Computes and applies all cladding cross sections using the most recent
-        material information and Dancoff factors.
+        material information and Dancoff corrections.
         """
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
