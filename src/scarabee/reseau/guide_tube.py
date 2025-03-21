@@ -506,13 +506,18 @@ class GuideTube:
         xss.append(self._clad_xs)
 
         # Add another ring of moderator if possible
-        if pintype == PinCellType.Full and min(dx, dy) > 2.0 * self.outer_radius:
+        if (
+            pintype == PinCellType.Full
+            and min(dx, dy) > 2.0 * self.outer_radius
+            and 0.5*min(dx, dy) - self.outer_radius >= 0.1
+        ):
             radii.append(0.5 * min(dx, dy))
             xss.append(moderator_xs)
         elif (
             pintype in [PinCellType.XN, PinCellType.XP]
             and dx > self.outer_radius
             and dy > 2.0 * self.outer_radius
+            and min(dx, 0.5 * dy) - self.outer_radius >= 0.1
         ):
             radii.append(min(dx, 0.5 * dy))
             xss.append(moderator_xs)
@@ -520,14 +525,66 @@ class GuideTube:
             pintype in [PinCellType.YN, PinCellType.YP]
             and dy > self.outer_radius
             and dx > 2.0 * self.outer_radius
+            and min(0.5 * dx, dy) - self.outer_radius >= 0.1
         ):
             radii.append(min(0.5 * dx, dy))
             xss.append(moderator_xs)
-        elif dx > self.outer_radius and dy > self.outer_radius:
+        elif (
+            pintype in [PinCellType.I, PinCellType.II, PinCellType.III, PinCellType.IV]
+            and dx > self.outer_radius
+            and dy > self.outer_radius
+            and min(dx, dy) - self.outer_radius >= 0.1
+        ):
             radii.append(min(dx, dy))
             xss.append(moderator_xs)
 
         # Add moderator to the end of materials
         xss.append(moderator_xs)
 
-        return PinCell(radii, xss, dx, dy, pintype)
+        cell = PinCell(radii, xss, dx, dy, pintype)
+
+        # Get the FSR IDs for the regions of interest
+        cell_fsr_ids = list(cell.get_all_fsr_ids())
+        cell_fsr_ids.sort()
+
+        # Number of angular divisions
+        NA = 8
+        if pintype in [PinCellType.XN, PinCellType.XP, PinCellType.YN, PinCellType.YP]:
+            NA = 4
+        elif pintype in [PinCellType.I, PinCellType.II, PinCellType.III, PinCellType.IV]:
+            NA = 2
+
+        I = 0 # Starting index for cell_fsr_inds
+        # Go through all rings of moderator and get FSR IDs
+        for a in range(3*NA):
+            self._mod_fsr_ids.append(cell_fsr_ids[I])
+            I += 1
+
+        # Get FSR IDs for the cladding 
+        for a in range(NA):
+            self._clad_fsr_ids.append(cell_fsr_ids[I])
+            I += 1
+        
+        # Everything outside the clad should be moderator
+        self._mod_fsr_ids = list(cell_fsr_ids[I:])
+
+        return cell
+
+    def populate_fsr_indexes(self, moc: MOCDriver) -> None:
+        """
+        Obtains the flat source region indexes for all of the flat source
+        regions used in the full MOC calculations.
+
+        Parameters
+        ----------
+        moc : MOCDriver
+            MOC simulation for the full calculations.
+        """
+        self._clad_fsr_inds: List[int] = []
+        self._mod_fsr_inds: List[int] = []
+        
+        for id in self._clad_fsr_ids:
+            self._clad_fsr_inds.append(moc.get_fsr_indx(id, 0))
+        for id in self._mod_fsr_ids:
+            self._mod_fsr_inds.append(moc.get_fsr_indx(id, 0))
+

@@ -717,6 +717,12 @@ class PWRAssembly:
             YamamotoTabuchi6(),
         )
 
+    def _save_fsr_indexes(self):
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                cell.populate_fsr_indexes(self._asmbly_moc)
+
     def set_moderator_xs(self) -> None:
         """
         Updates the moderator cross section for transport calculations.

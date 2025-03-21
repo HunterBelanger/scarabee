@@ -928,7 +928,7 @@ class FuelPin:
             raise RuntimeError("Gap cross section has not yet been built.")
         if self._clad_xs is None:
             raise RuntimeError("Clad cross section has not yet been built.")
-        self._check_dx_dy(dx, dy, pintype)
+        self._check_dx_dy(dx, dy, pintype) 
 
         # Initialize the radii and cross section lists with the fuel info
         radii = [r for r in self._fuel_radii]
@@ -968,4 +968,67 @@ class FuelPin:
         # Add moderator to the end of materials
         xss.append(moderator_xs)
 
-        return PinCell(radii, xss, dx, dy, pintype)
+        # Create the cell object
+        cell = PinCell(radii, xss, dx, dy, pintype)
+        
+        # Get the FSR IDs for the regions of interest
+        cell_fsr_ids = list(cell.get_all_fsr_ids())
+        cell_fsr_ids.sort()
+
+        # Number of angular divisions
+        NA = 8
+        if pintype in [PinCellType.XN, PinCellType.XP, PinCellType.YN, PinCellType.YP]:
+            NA = 4
+        elif pintype in [PinCellType.I, PinCellType.II, PinCellType.III, PinCellType.IV]:
+            NA = 2
+
+        I = 0 # Starting index for cell_fsr_inds
+        # Go through all rings, and get FSR IDs
+        for r in range(self.num_fuel_rings):
+            for a in range(NA):
+                self._fuel_ring_fsr_ids[r].append(cell_fsr_ids[I])
+                I += 1
+        
+        # Get the FSRs for the gap, if present
+        if self._gap_xs is not None:
+            for a in range(NA):
+                self._gap_fsr_ids.append(cell_fsr_ids[I])
+                I += 1
+
+        # Get the FSRs for the cladding
+        for a in range(NA):
+                self._clad_fsr_ids.append(cell_fsr_ids[I])
+                I += 1
+
+        # Everything else should be a moderator FSR
+        self._mod_fsr_ids = list(cell_fsr_ids[I:])
+
+        return cell
+
+    def populate_fsr_indexes(self, moc: MOCDriver) -> None:
+        """
+        Obtains the flat source region indexes for all of the flat source
+        regions used in the full MOC calculations.
+
+        Parameters
+        ----------
+        moc : MOCDriver
+            MOC simulation for the full calculations.
+        """
+        self._fuel_ring_fsr_inds: List[List[int]] = []
+        for r in range(self.num_fuel_rings):
+            self._fuel_ring_fsr_inds.append([])
+        self._gap_fsr_inds: List[int] = []
+        self._clad_fsr_inds: List[int] = []
+        self._mod_fsr_inds: List[int] = []
+        
+        for r in range(self.num_fuel_rings):
+            for id in self._fuel_ring_fsr_ids[r]:
+                self._fuel_ring_fsr_inds[r].append(moc.get_fsr_indx(id, 0))
+        for id in self._gap_fsr_ids:
+            self._gap_fsr_inds.append(moc.get_fsr_indx(id, 0))
+        for id in self._clad_fsr_ids:
+            self._clad_fsr_inds.append(moc.get_fsr_indx(id, 0))
+        for id in self._mod_fsr_ids:
+            self._mod_fsr_inds.append(moc.get_fsr_indx(id, 0))
+
