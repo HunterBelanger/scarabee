@@ -9,9 +9,10 @@
 #include <cereal/types/string.hpp>
 #include <cereal/types/vector.hpp>
 
-#include <string>
 #include <memory>
 #include <optional>
+#include <span>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -108,6 +109,10 @@ class Material {
       std::optional<std::size_t> max_l = std::nullopt);
 
   void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
+
+  double compute_fission_power_density(
+      std::span<const double> flux,
+      const std::shared_ptr<const NDLibrary> ndl) const;
 
  private:
   MaterialComposition composition_;

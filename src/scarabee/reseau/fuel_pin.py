@@ -85,9 +85,11 @@ class FuelPin:
         if num_fuel_rings <= 0:
             raise ValueError("Number of fuel rings must be >= 1.")
         self._num_fuel_rings = num_fuel_rings
-        
+
         # Mass of fissionable matter in g / cm (i.e. per unit length)
-        self._initial_fissionable_linear_mass = fuel.fissionable_grams_per_cm3 * np.pi * self._fuel_radius ** 2.
+        self._initial_fissionable_linear_mass = (
+            fuel.fissionable_grams_per_cm3 * np.pi * self._fuel_radius**2.0
+        )
 
         # Get gap related parameters
         if gap is None and gap_radius is not None:
@@ -202,12 +204,11 @@ class FuelPin:
             # All rings initially start with the same composition
             self._fuel_ring_materials.append([copy.deepcopy(fuel)])
 
-        # Initialize an array to hold the flux spectrum for each fuel ring and
-        # for each depletion step.
-        self._fuel_ring_flux_spectra: List[List[np.ndarray]] = []
+        # Initialize an array to hold the flux spectrum for each fuel ring.
+        self._fuel_ring_flux_spectra: List[np.ndarray] = []
         for r in range(self.num_fuel_rings):
             # All rings initially start with empty flux spectrum list
-            self._fuel_ring_flux_spectra.append([])
+            self._fuel_ring_flux_spectra.append(np.array([]))
 
         # Holds all the CrossSection objects used for the real transport
         # calculation. These are NOT stored for each depletion step like with
@@ -224,7 +225,7 @@ class FuelPin:
     def num_fuel_rings(self) -> int:
         return self._num_fuel_rings
 
-    @property 
+    @property
     def initial_fissionable_linear_mass(self) -> float:
         return self._initial_fissionable_linear_mass
 
@@ -935,7 +936,7 @@ class FuelPin:
             raise RuntimeError("Gap cross section has not yet been built.")
         if self._clad_xs is None:
             raise RuntimeError("Clad cross section has not yet been built.")
-        self._check_dx_dy(dx, dy, pintype) 
+        self._check_dx_dy(dx, dy, pintype)
 
         # Initialize the radii and cross section lists with the fuel info
         radii = [r for r in self._fuel_radii]
@@ -977,7 +978,7 @@ class FuelPin:
 
         # Create the cell object
         cell = PinCell(radii, xss, dx, dy, pintype)
-        
+
         # Get the FSR IDs for the regions of interest
         cell_fsr_ids = list(cell.get_all_fsr_ids())
         cell_fsr_ids.sort()
@@ -986,16 +987,21 @@ class FuelPin:
         NA = 8
         if pintype in [PinCellType.XN, PinCellType.XP, PinCellType.YN, PinCellType.YP]:
             NA = 4
-        elif pintype in [PinCellType.I, PinCellType.II, PinCellType.III, PinCellType.IV]:
+        elif pintype in [
+            PinCellType.I,
+            PinCellType.II,
+            PinCellType.III,
+            PinCellType.IV,
+        ]:
             NA = 2
 
-        I = 0 # Starting index for cell_fsr_inds
+        I = 0  # Starting index for cell_fsr_inds
         # Go through all rings, and get FSR IDs
         for r in range(self.num_fuel_rings):
             for a in range(NA):
                 self._fuel_ring_fsr_ids[r].append(cell_fsr_ids[I])
                 I += 1
-        
+
         # Get the FSRs for the gap, if present
         if self._gap_xs is not None:
             for a in range(NA):
@@ -1004,8 +1010,8 @@ class FuelPin:
 
         # Get the FSRs for the cladding
         for a in range(NA):
-                self._clad_fsr_ids.append(cell_fsr_ids[I])
-                I += 1
+            self._clad_fsr_ids.append(cell_fsr_ids[I])
+            I += 1
 
         # Everything else should be a moderator FSR
         self._mod_fsr_ids = list(cell_fsr_ids[I:])
@@ -1028,7 +1034,7 @@ class FuelPin:
         self._gap_fsr_inds: List[int] = []
         self._clad_fsr_inds: List[int] = []
         self._mod_fsr_inds: List[int] = []
-        
+
         for r in range(self.num_fuel_rings):
             for id in self._fuel_ring_fsr_ids[r]:
                 self._fuel_ring_fsr_inds[r].append(moc.get_fsr_indx(id, 0))
@@ -1039,3 +1045,54 @@ class FuelPin:
         for id in self._mod_fsr_ids:
             self._mod_fsr_inds.append(moc.get_fsr_indx(id, 0))
 
+    def obtain_fuel_flux_spectra(self, moc: MOCDriver) -> None:
+        """
+        Computes the average flux spectrum for each fuel ring from the MOC
+        simulation. Each ring's flux spectrum is volume averaged.
+        """
+        for r in range(self.num_fuel_rings):
+            self._fuel_ring_flux_spectra[r] = moc.homogenize_flux_spectrum(
+                self._fuel_ring_fsr_inds[r]
+            )
+
+    def compute_pin_linear_power(self, ndl):
+        """
+        Computes the linear power density of the fuel pin based on the current
+        flux spectra, in units of w / cm. Does not consider the partial pin
+        geometry at the assembly level (i.e. a half pin in a quarter assembly).
+
+        Parameters
+        ----------
+        ndl : NDLibrary
+            Nuclear data library for the fission energy release.
+
+        Returns
+        -------
+        float
+            Linear power density in w / cm.
+        """
+        power = 0.0
+        A = np.pi * self.fuel_radius**2.0 / self.num_fuel_rings
+        for r in range(self.num_fuel_rings):
+            mat = self._fuel_ring_materials[r][-1]
+            flux = self._fuel_ring_flux_spectra[r]
+            power += A * mat.compute_fission_power_density(flux, ndl)
+        # Convert from MeV/cm/s to J/cm/s = w/cm
+        power *= 1.6021766339999e-13
+        return power
+
+    def normalize_flux_spectrum(self, f) -> None:
+        """
+        Applies a multiplicative factor to the flux spectra for the fuel rings.
+        This permits normalizing the flux to a known assembly power.
+
+        Parameters
+        ----------
+        f : float
+            Normalization factor.
+        """
+        if f <= 0.0:
+            raise ValueError("Normalization factor must be > 0.")
+
+        for r in range(self.num_fuel_rings):
+            self._fuel_ring_flux_spectra[r] *= f

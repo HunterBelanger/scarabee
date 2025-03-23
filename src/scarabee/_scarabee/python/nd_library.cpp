@@ -44,6 +44,9 @@ void init_NuclideHandle(py::module& m) {
       .def_readonly("fissile", &NuclideHandle::fissile,
                     "True if the nuclide is fissile, False otherwise.")
 
+      .def_readonly("fission_energy", &NuclideHandle::fission_energy,
+                    "Average energy release per fission of the nuclide, in MeV.")
+
       .def_readonly("resonant", &NuclideHandle::resonant,
                     "True if the nuclide is resonant, False otherwise.");
 }

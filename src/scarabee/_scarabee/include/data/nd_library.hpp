@@ -30,6 +30,7 @@ struct NuclideHandle {
   std::vector<double> ir_lambda;
   double awr;
   double potential_xs;
+  double fission_energy;
   std::uint32_t ZA;
   bool fissile;
   bool resonant;

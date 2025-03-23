@@ -1659,13 +1659,25 @@ void MOCDriver::apply_criticality_spectrum(const xt::xtensor<double, 1>& flux) {
     throw ScarabeeException(mssg);
   }
 
+  // Compute unique group normalizations
   xt::xtensor<double, 1> group_mult = this->homogenize_flux_spectrum();
-  group_mult = 1. / group_mult;
-  group_mult *= flux;
+  const double ratio = xt::sum(group_mult)() / xt::sum(flux)();
+  group_mult = (flux / group_mult) * ratio;
 
+  // Apply correction to FSRs
   for (std::size_t g = 0; g < this->ngroups(); g++) {
     for (std::size_t i = 0; i < this->nfsr(); i++) {
       flux_(g, i, 0) *= group_mult(g);
+    }
+  }
+
+  // Apply correciton to boundary angular fluxes
+  for (auto& angle : tracks_) {
+    for (auto& track : angle) {
+      for (std::size_t g = 0; g < this->ngroups(); g++) {
+        xt::view(track.entry_flux(), g, xt::all()) *= group_mult(g);
+        xt::view(track.exit_flux(), g, xt::all()) *= group_mult(g);
+      }
     }
   }
 }

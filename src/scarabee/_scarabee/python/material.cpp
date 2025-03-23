@@ -1,6 +1,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <xtensor-python/pytensor.hpp>
+
 #include <data/material.hpp>
 #include <data/nd_library.hpp>
 
@@ -268,6 +270,27 @@ void init_Material(py::module& m) {
       .def("clear_micro_xs_data", &Material::clear_micro_xs_data,
            "Clears all of the previously computed microscopic cross section "
            "data.")
+
+      .def(
+          "compute_fission_power_density",
+          [](const Material& mat, const xt::pytensor<double, 1>& flx,
+             const std::shared_ptr<const NDLibrary> ndl) {
+            std::span<const double> flx_spn(flx.data(), flx.size());
+            return mat.compute_fission_power_density(flx_spn, ndl);
+          },
+          "Computes the fission power density in units of MeV/cm3/s, based on "
+          "the provided flux spectrum.\n\n"
+          "Parameters\n"
+          "----------\n"
+          "flux : ndarray\n"
+          "    1D array with the flux spectrum.\n"
+          "ndl : NDLibrary\n"
+          "    Nuclear data library for fission energy release.\n\n"
+          "Returns\n"
+          "-------\n"
+          "float\n"
+          "    Computed fission power density.\n",
+          py::arg("flux"), py::arg("ndl"))
 
       .def_property("max_legendre_order", &Material::max_legendre_order,
                     &Material::set_max_legendre_order,

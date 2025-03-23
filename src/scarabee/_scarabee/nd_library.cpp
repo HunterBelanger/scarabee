@@ -386,6 +386,12 @@ void NDLibrary::init() {
       handle.ir_lambda = std::vector<double>(ngroups_, 1.);
     }
 
+    if (grp.hasAttribute("fission-energy")) {
+      handle.fission_energy = grp.getAttribute("fission-energy").read<double>();
+    } else {
+      handle.fission_energy = 0.;
+    }
+
     handle.ZA = grp.getAttribute("ZA").read<std::uint32_t>();
     handle.fissile = grp.getAttribute("fissile").read<bool>();
     handle.resonant = grp.getAttribute("resonant").read<bool>();

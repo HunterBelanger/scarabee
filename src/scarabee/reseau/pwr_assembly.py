@@ -23,6 +23,7 @@ import numpy as np
 from typing import Optional, List, Tuple, Union
 import copy
 from threading import Thread
+import matplotlib.pyplot as plt
 
 
 class Symmetry(Enum):
@@ -68,6 +69,8 @@ class PWRAssembly:
         Moderator pressure in MPa. Default is 15.5.
     symmetry : Symmetry
         Symmetry of the fuel assembly. Default is Symmetry.Full.
+    linear_power : float
+        Linear power density of the assembly in w/cm. Default is 155.
 
     Attributes
     ----------
@@ -77,6 +80,8 @@ class PWRAssembly:
         The spacing between fuel pins.
     symmetry : Symmetry
         Symmetry of the fuel assembly. Default is Symmetry.Full.
+    linear_power : float
+        Linear power density of the assembly in w/cm. Default is 155.
     initial_heavy_metal_linear_mass : float
         Linear density of heavy metal in the assembly at the beginning of life.
         Has units of kg / cm.
@@ -114,6 +119,7 @@ class PWRAssembly:
         moderator_temp: float = 570.0,
         moderator_pressure: float = 15.5,
         symmetry: Symmetry = Symmetry.Full,
+        linear_power: float = 155.
     ):
         self._ndl = ndl
         self._symmetry = symmetry
@@ -157,6 +163,10 @@ class PWRAssembly:
         if moderator_pressure <= 0.0:
             raise ValueError("Moderator pressure must be > 0.")
         self._moderator_pressure = moderator_pressure
+
+        if linear_power <= 0.:
+            raise ValueError("Linear power must be > 0.")
+        self._linear_power = linear_power
 
         # Make material for borated water
         self._moderator: Material = borated_water(
@@ -243,6 +253,10 @@ class PWRAssembly:
     @property
     def symmetry(self):
         return self._symmetry
+
+    @property
+    def linear_power(self):
+        return self._linear_power
 
     @property
     def initial_heavy_metal_linear_mass(self):
@@ -818,6 +832,8 @@ class PWRAssembly:
             YamamotoTabuchi6(),
         )
 
+        self._save_fsr_indexes()
+
     def _save_fsr_indexes(self):
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
@@ -907,3 +923,71 @@ class PWRAssembly:
 
         scarabee_log(LogLevel.Info, "Kinf    : {:.5f}".format(critical_spectrum.k_inf))
         scarabee_log(LogLevel.Info, "Buckling: {:.5f}".format(critical_spectrum.buckling))
+
+    def obtain_fuel_flux_spectra(self) -> None:
+        """
+        Computes the average flux spectrum for each fuel ring from the MOC
+        simulation, and saves it in the FuelPin instance.
+        """
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+
+                if isinstance(cell, FuelPin):
+                    cell.obtain_fuel_flux_spectra(self._asmbly_moc)
+
+    def normalize_flux_to_power(self) -> None:
+        """
+        Normalizes the flux spectra based on the specified linear power density
+        for the assembly. It assumes that all power comes from fission.
+        """
+        assembly_linear_power = 0.
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+
+                if not isinstance(cell, FuelPin):
+                    continue
+
+                pin_linear_power = cell.compute_pin_linear_power(self._ndl)
+
+                # First check for quarter symmetry and being corner pin
+                if (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                    and i == 0
+                ):
+                    pin_linear_power *= 0.25 
+                # Next, check for being on the side with a half pin in quarter symmetry
+                elif (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and i == 0
+                ):
+                    pin_linear_power *= 0.5 
+                # Next, check for being on the bottom row with a half pin
+                elif (
+                    self.symmetry != Symmetry.Full
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                ):
+                    pin_linear_power *= 0.5 
+                
+                assembly_linear_power += pin_linear_power
+        
+        if self.symmetry == Symmetry.Half:
+            assembly_linear_power *= 2.
+        elif self.symmetry == Symmetry.Quarter:
+            assembly_linear_power *= 4.
+        
+        # Compute normalization factor
+        f = self.linear_power / assembly_linear_power
+        
+        # Normalize flux spectra
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                if isinstance(cell, FuelPin):
+                    cell.normalize_flux_spectrum(f)

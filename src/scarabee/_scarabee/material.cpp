@@ -602,6 +602,40 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
   return this->create_xs_from_micro_data();
 }
 
+double Material::compute_fission_power_density(
+    std::span<const double> flux,
+    const std::shared_ptr<const NDLibrary> ndl) const {
+  double pd = 0.;
+
+  for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
+    const auto& comp = composition_.nuclides[i];
+    const auto& nuc = ndl->get_nuclide(comp.name);
+
+    if (nuc.fissile == false) continue;
+
+    const double Ni = comp.fraction * atoms_per_bcm_;
+    const double Q = nuc.fission_energy;
+
+    if (micro_dep_xs_data_[i].n_fission.has_value() == false) {
+      const auto mssg = "Fissile nuclide " + comp.name +
+                        " has no loaded fission cross section.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    const XS1D& sig_f = micro_dep_xs_data_[i].n_fission.value();
+
+    double sig_f_flx_inner_prod = 0.;
+    for (std::size_t g = 0; g < flux.size(); g++) {
+      sig_f_flx_inner_prod += sig_f(g) * flux[g];
+    }
+
+    pd += Q * Ni * sig_f_flx_inner_prod;
+  }
+
+  return pd;
+}
+
 void Material::assign_resonant_xs(const std::size_t i, const std::size_t g,
                                   const ResonantOneGroupXS& res_data) {
   micro_nuc_xs_data_[i].Dtr.set_value(g, res_data.Dtr);
