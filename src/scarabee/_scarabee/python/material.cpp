@@ -302,6 +302,11 @@ void init_Material(py::module& m) {
           "grams_per_cm3", &Material::grams_per_cm3,
           "Density of the material in grams per cubic-centimeter.")
 
+      .def_property_readonly("fissionable_grams_per_cm3",
+                             &Material::fissionable_grams_per_cm3,
+                             "Density of fissionable matter in the material in "
+                             "grams per cubic-centimeter.")
+
       .def_property_readonly(
           "fissile", &Material::fissile,
           "True if the material is fissile, False otherwise.")
@@ -313,7 +318,8 @@ void init_Material(py::module& m) {
       .def_property("name", &Material::name, &Material::set_name,
                     "String with the name of the Material.")
 
-      .def("__deepcopy__", [](const Material& mat, py::dict) { return Material(mat); });
+      .def("__deepcopy__",
+           [](const Material& mat, py::dict) { return Material(mat); });
 
   py::enum_<MixingFraction>(m, "MixingFraction")
       .value("Atoms", MixingFraction::Atoms,

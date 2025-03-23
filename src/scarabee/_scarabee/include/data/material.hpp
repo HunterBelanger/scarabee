@@ -79,6 +79,7 @@ class Material {
 
   double atoms_per_bcm() const { return atoms_per_bcm_; }
   double grams_per_cm3() const { return grams_per_cm3_; }
+  double fissionable_grams_per_cm3() const;
   double potential_xs() const { return potential_xs_; }
   double temperature() const { return temperature_; }
   void set_temperature(double T);

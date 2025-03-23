@@ -85,6 +85,9 @@ class FuelPin:
         if num_fuel_rings <= 0:
             raise ValueError("Number of fuel rings must be >= 1.")
         self._num_fuel_rings = num_fuel_rings
+        
+        # Mass of fissionable matter in g / cm (i.e. per unit length)
+        self._initial_fissionable_linear_mass = fuel.fissionable_grams_per_cm3 * np.pi * self._fuel_radius ** 2.
 
         # Get gap related parameters
         if gap is None and gap_radius is not None:
@@ -220,6 +223,10 @@ class FuelPin:
     @property
     def num_fuel_rings(self) -> int:
         return self._num_fuel_rings
+
+    @property 
+    def initial_fissionable_linear_mass(self) -> float:
+        return self._initial_fissionable_linear_mass
 
     @property
     def fuel_ring_materials(self) -> List[List[Material]]:

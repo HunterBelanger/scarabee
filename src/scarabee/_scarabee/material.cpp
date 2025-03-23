@@ -5,6 +5,7 @@
 #include <utils/scarabee_exception.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <map>
 #include <sstream>
 
@@ -18,6 +19,20 @@ std::string nuclide_name_to_simple_name(const std::string& name) {
     simp_name.resize(loc_undr_scr);
   }
   return simp_name;
+}
+
+std::string nuclide_name_to_element_symbol(const std::string& name) {
+  std::string elem_name;
+
+  for (std::size_t i = 0; i < 2; i++) {
+    if (std::isalpha(name[i])) {
+      elem_name += name[i];
+    } else {
+      break;
+    }
+  }
+
+  return elem_name;
 }
 
 MaterialComposition::MaterialComposition(Fraction f, const std::string& name)
@@ -315,6 +330,40 @@ void Material::set_temperature(double T) {
   }
 
   temperature_ = T;
+}
+
+double Material::fissionable_grams_per_cm3() const {
+  double fiss_density = 0.;
+
+  for (const auto& comp : composition_.nuclides) {
+    // Get the element symbol
+    const std::string elem_symb = nuclide_name_to_element_symbol(comp.name);
+
+    // Get the element number
+    int Z = 0;
+    for (int iZ = 1; iZ < static_cast<int>(ELEMENTS.size()); iZ++) {
+      if (elem_symb == ELEMENTS[iZ].symbol) {
+        Z = iZ;
+        break;
+      }
+    }
+
+    if (Z == 0) {
+      const auto mssg =
+          "Could not find element with symbol \"" + elem_symb + "\".";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    if (Z >= 90) {
+      const double AM = ISOTOPE_MASSES.at(comp.name);
+      fiss_density += comp.fraction * AM;
+    }
+  }
+
+  fiss_density *= atoms_per_bcm_ / N_AVAGADRO;
+
+  return fiss_density;
 }
 
 double Material::atom_density(const std::string& name) const {

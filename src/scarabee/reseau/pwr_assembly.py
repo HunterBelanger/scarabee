@@ -47,7 +47,63 @@ class Symmetry(Enum):
 
 
 class PWRAssembly:
-    """ """
+    """
+    A PWRAssembly instance is responsible for performing all the lattice
+    calculations necessary to produce few-group cross sections for a 
+    single PWR assembly.
+
+    Parameters
+    ----------
+    shape : tuple of int
+        The number of pin cells in the full assembly along x and y.
+    pitch : float
+        The spacing between fuel pins.
+    ndl : NDLibrary
+        Nuclear data library used for the calculation.
+    boron_ppm : float
+        Moderator boron concentration in parts per million. Default is 800.
+    moderator_temp : float
+        Moderator temperature in Kelvin. Default is 570.
+    moderator_pressure : float
+        Moderator pressure in MPa. Default is 15.5.
+    symmetry : Symmetry
+        Symmetry of the fuel assembly. Default is Symmetry.Full.
+
+    Attributes
+    ----------
+    shape : tuple of int
+        The number of pin cells in the full assembly along x and y.
+    pitch : float
+        The spacing between fuel pins.
+    symmetry : Symmetry
+        Symmetry of the fuel assembly. Default is Symmetry.Full.
+    initial_heavy_metal_linear_mass : float
+        Linear density of heavy metal in the assembly at the beginning of life.
+        Has units of kg / cm.
+    boron_ppm : float
+        Moderator boron concentration in parts per million.
+    moderator_temp : float
+        Moderator temperature in Kelvin.
+    moderator_pressure : float
+        Moderator pressure in MPa.
+    moderator : Material
+        Material representing the assembly moderator.
+    dancoff_moc_track_spacing : float
+        Spacing between tracks in the MOC calculations for determining Dancoff
+        corrections. Default value is 0.05 cm.
+    dancoff_moc_num_angles : int
+        Number of azimuthal angles in the MOC calculations for determining
+        Dancoff corrections. Default value is 32.
+    moc_track_spacing : float
+        Spacing between tracks in the assembly MOC calculations. Default value
+        is 0.05 cm.
+    moc_num_angles : int
+        Number of azimuthal angles in the assembly MOC calculations. Default
+        value is 32.
+    leakage_model : CriticalLeakage
+        Model used to determine the critical leakage flux spectrum, also known
+        as the fundamental mode. Default method is homogeneous P1.
+    """
 
     def __init__(
         self,
@@ -122,6 +178,8 @@ class PWRAssembly:
             self._x_min_bc = BoundaryCondition.Reflective
             self._x_max_bc = BoundaryCondition.Reflective
 
+        self._initial_heavy_metal_linear_mass = 0.
+
         # ======================================================================
         # DANCOFF CORRECTION CALCULATION DATA
         # ----------------------------------------------------------------------
@@ -185,6 +243,10 @@ class PWRAssembly:
     @property
     def symmetry(self):
         return self._symmetry
+
+    @property
+    def initial_heavy_metal_linear_mass(self):
+        return self._initial_heavy_metal_linear_mass
 
     @property
     def boron_ppm(self):
@@ -272,11 +334,50 @@ class PWRAssembly:
         # that each duplicate FuelPin or GuideTube instance is unique.
         self._cells = []
         self._cells_set = False
+        self._initial_heavy_metal_linear_mass = 0.
         for j in range(len(cells)):
             self._cells.append([])
             for i in range(len(cells[j])):
                 self._cells[-1].append(copy.deepcopy(cells[j][i]))
+
+                if isinstance(cells[j][i], FuelPin):
+                    lfm = cells[j][i].initial_fissionable_linear_mass
+
+                    # First check for quarter symmetry and being corner pin
+                    if (
+                        self.symmetry == Symmetry.Quarter
+                        and self.shape[0] % 2 == 1
+                        and self.shape[1] % 2 == 1
+                        and j == self._simulated_shape[1] - 1
+                        and i == 0
+                    ):
+                       lfm *= 0.25 
+                    # Next, check for being on the side with a half pin in quarter symmetry
+                    elif (
+                        self.symmetry == Symmetry.Quarter
+                        and self.shape[0] % 2 == 1
+                        and i == 0
+                    ):
+                        lfm *= 0.5 
+                    # Next, check for being on the bottom row with a half pin
+                    elif (
+                        self.symmetry != Symmetry.Full
+                        and self.shape[1] % 2 == 1
+                        and j == self._simulated_shape[1] - 1
+                    ):
+                        lfm *= 0.5 
+
+                    self._initial_heavy_metal_linear_mass += lfm
+
         self._cells_set = True
+
+        if self.symmetry == Symmetry.Half:
+            self._initial_heavy_metal_linear_mass *= 2.
+        elif self.symmetry == Symmetry.Quarter:
+            self._initial_heavy_metal_linear_mass *= 4.
+        
+        # Convert HM mass from g to kg
+        self._initial_heavy_metal_linear_mass *= 1.E-3
 
     @property    
     def leakage_model(self):
@@ -783,6 +884,10 @@ class PWRAssembly:
                     cell.set_gap_xs(self._ndl)
 
     def apply_leakage_model(self) -> None:
+        """
+        Applied the critical leakage model to the assembly, modifying the flux
+        in the MOC simulation directly.
+        """
         # If no leakage, just return
         if self.leakage_model == CriticalLeakage.NoLeakage:
             return
