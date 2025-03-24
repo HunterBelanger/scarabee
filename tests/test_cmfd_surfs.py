@@ -34,7 +34,7 @@ class TestCMFDSurfaces:
         surface = cmfd.get_surface(r,u)
 
         check.equal(surface.is_valid, True)
-        check.equal(surface.cell_tile, [1,0])
+        check.equal(surface.cell_index, 1)
         check.equal(surface.crossing, CMFDSurfaceCrossingType.XN)
 
     def test_XN_to_outside_left(self, make_cmfd):
@@ -68,7 +68,7 @@ class TestCMFDSurfaces:
         surface = cmfd.get_surface(r,u)
 
         check.equal(surface.is_valid, True)
-        check.equal(surface.cell_tile, [0,1])
+        check.equal(surface.cell_index, 2)
         check.equal(surface.crossing, CMFDSurfaceCrossingType.YN)
 
     def test_YN_to_outside_bottom(self, make_cmfd):
@@ -103,7 +103,7 @@ class TestCMFDSurfaces:
         surface = cmfd.get_surface(r,u)
 
         check.equal(surface.is_valid, True)
-        check.equal(surface.cell_tile, [1,1])
+        check.equal(surface.cell_index, 3)
         check.equal(surface.crossing, CMFDSurfaceCrossingType.BL)
 
     def test_TL_to_BR(self, make_cmfd):
@@ -122,7 +122,7 @@ class TestCMFDSurfaces:
         surface = cmfd.get_surface(r,u)
 
         check.equal(surface.is_valid, True)
-        check.equal(surface.cell_tile, [0,1])
+        check.equal(surface.cell_index, 2)
         check.equal(surface.crossing, CMFDSurfaceCrossingType.BR)
 
     def test_BR_to_TL(self, make_cmfd):
@@ -141,7 +141,7 @@ class TestCMFDSurfaces:
         surface = cmfd.get_surface(r,u)
 
         check.equal(surface.is_valid, True)
-        check.equal(surface.cell_tile, [1,0])
+        check.equal(surface.cell_index, 1)
         check.equal(surface.crossing, CMFDSurfaceCrossingType.TL)
 
     def test_BL_to_TR(self, make_cmfd):
@@ -160,7 +160,7 @@ class TestCMFDSurfaces:
         surface = cmfd.get_surface(r,u)
 
         check.equal(surface.is_valid, True)
-        check.equal(surface.cell_tile, [0,0])
+        check.equal(surface.cell_index, 0)
         check.equal(surface.crossing, CMFDSurfaceCrossingType.TR)
 
 

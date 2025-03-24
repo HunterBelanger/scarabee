@@ -178,8 +178,7 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u) const
   const std::size_t i = (*otile)[0];
   const std::size_t j = (*otile)[1];
 
-  //surface.cell_index = tile_to_indx(*otile);
-  surface.cell_tile = otile;
+  surface.cell_index = tile_to_indx(*otile);
 
   // Now we get our surfaces for this tile 
   const auto& x_n = x_bounds_[i];
@@ -229,6 +228,13 @@ std::size_t CMFD::tile_to_indx(const std::array<std::size_t, 2>& tile) const {
 std::size_t CMFD::tile_to_indx(const std::size_t& i,
                                const std::size_t& j) const {
   return j * nx_ + i;
+}
+
+std::array<std::size_t, 2> CMFD::indx_to_tile(std::size_t cell_index){
+  std::array<std::size_t, 2> tile;
+  tile[0] = cell_index % nx_;
+  tile[1] = (cell_index - tile[0] ) / nx_;
+  return tile;
 }
 
 void CMFD::insert_fsr(const std::array<std::size_t, 2>& tile, std::size_t fsr) {
@@ -303,59 +309,169 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
+  
+  const auto tile = indx_to_tile(surf.cell_index);
+  std::size_t i = tile[0];
+  std::size_t j = tile[1];
 
-  std::size_t i = (*surf.cell_tile)[0];
-  std::size_t j = (*surf.cell_tile)[1];
+  //std::size_t i = surf.cell_index % nx_;
+  //std::size_t j = (surf.cell_index - i ) / nx_;
+  //spdlog::info("Tile indexes ({:d}, {:d})", i, j);
 
   //Get surface index(s) from CMFDSurfaceCrossing
   //need cell indexes
   htl::static_vector<std::size_t,4> surf_indexes;
   bool is_corner = false;
-  if (surf.crossing == CMFDSurfaceCrossing::Type::XN){
-    surf_indexes.push_back( (nx_ * j + i) + j );
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::XP){
-    surf_indexes.push_back( (nx_ * j + i) + j + 1);
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::YN){
-    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j);
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::YP){
-    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j +1);
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TR){
-    is_corner = true;
-    //YP and XP surfaces of current cell
-    surf_indexes.push_back((nx_ + 1)*ny_ + (ny_ + 1)*i + j +1 );
-    surf_indexes.push_back((nx_ * j + i) + j + 1);
-    //YN and XN surfaces of diagonal cell
-    i += 1, j += 1;
-    surf_indexes.push_back((nx_ + 1)*ny_ + (ny_ + 1)*i + j);
-    surf_indexes.push_back((nx_ * j + i) + j );
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BR){
-    is_corner = true;
-    //XP and YN surfaces of current cell
-    surf_indexes.push_back((nx_ * j + i) + j + 1);
-    surf_indexes.push_back((nx_ + 1)*ny_ + (ny_ + 1)*i + j);
-    //YP and XN surfaces of diagonal cell
-    i += 1, j -= 1;
-    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j +1);
-    surf_indexes.push_back( (nx_ * j + i) + j);
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BL){
-    is_corner = true;
-    //YN and XN surfaces of current cell
-    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j);
-    surf_indexes.push_back((nx_ * j + i) + j);
-    //XP and YP surfaces of diagonal cell
-    i -= 1, j -= 1;
-    surf_indexes.push_back((nx_ * j + i) + j + 1);
-    surf_indexes.push_back((nx_ + 1)*ny_ + (ny_ + 1)*i + j +1);
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TL){
-    is_corner = true;
-    //XN and YP surfaces of current cell
-    surf_indexes.push_back( (nx_ * j + i) + j );
-    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j +1);
-    //XP and YN surfaces of diagonal cell
-    i -= 1, j += 1;
-    surf_indexes.push_back( (nx_ * j + i) + j + 1);
-    surf_indexes.push_back( (nx_ + 1)*ny_ + (ny_ + 1)*i + j);
+  //Interior Cells
+  if (i != 0 && i != nx_ && j != 0 && j != ny_){
+    if (surf.crossing == CMFDSurfaceCrossing::Type::XN){
+      surf_indexes.push_back(get_x_neg_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::XP){
+      surf_indexes.push_back(get_x_pos_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::YN){
+      surf_indexes.push_back(get_y_neg_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::YP){
+      surf_indexes.push_back(get_y_pos_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::TR){
+      is_corner = true;
+      //YP and XP surfaces of current cell
+      surf_indexes.push_back(get_y_pos_surf(i,j));
+      surf_indexes.push_back(get_x_pos_surf(i,j));
+      //YN and XN surfaces of diagonal cell
+      i += 1, j += 1;
+      surf_indexes.push_back(get_y_neg_surf(i,j));
+      surf_indexes.push_back(get_x_neg_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::BR){
+      is_corner = true;
+      //XP and YN surfaces of current cell
+      surf_indexes.push_back(get_x_pos_surf(i,j));
+      surf_indexes.push_back(get_y_neg_surf(i,j));
+      //YP and XN surfaces of diagonal cell
+      i += 1, j -= 1;
+      surf_indexes.push_back(get_y_pos_surf(i,j));
+      surf_indexes.push_back(get_x_neg_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::BL){
+      is_corner = true;
+      //YN and XN surfaces of current cell
+      surf_indexes.push_back(get_y_neg_surf(i,j));
+      surf_indexes.push_back(get_x_neg_surf(i,j));
+      //XP and YP surfaces of diagonal cell
+      i -= 1, j -= 1;
+      surf_indexes.push_back(get_x_pos_surf(i,j));
+      surf_indexes.push_back(get_y_pos_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::TL){
+      is_corner = true;
+      //XN and YP surfaces of current cell
+      surf_indexes.push_back(get_x_neg_surf(i,j));
+      surf_indexes.push_back(get_y_pos_surf(i,j));
+      //XP and YN surfaces of diagonal cell
+      i -= 1, j += 1;
+      surf_indexes.push_back(get_x_pos_surf(i,j));
+      surf_indexes.push_back(get_y_neg_surf(i,j));
+    }
+  //boundary cells
+  } else {
+    //Single side
+    if (surf.crossing == CMFDSurfaceCrossing::Type::XN){
+      surf_indexes.push_back(get_x_neg_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::XP){
+      surf_indexes.push_back(get_x_pos_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::YN){
+      surf_indexes.push_back(get_y_neg_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::YP){
+      surf_indexes.push_back(get_y_pos_surf(i,j));
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::TR){
+      is_corner = true;
+      if (i != nx_ && j != ny_){
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+        i += 1, j += 1;
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+      } else if (i == nx_ && j != ny_) {
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+        j += 1;
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+      } else if (i != nx_ && j == ny_) {
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+        i+=1;
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+      } else if (i == nx_ && j == ny_){
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+      }
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::BR){
+      is_corner = true;
+      if (i != nx_ && j != 0){
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+        i += 1, j -= 1;
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+      } else if (i != nx_ && j == 0){
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+        i+=1;
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+      } else if (i == nx_ && j != 0){
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+        i+=1;
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+      } else if (i == nx_ && j == 0){
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+      }
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::BL){
+      is_corner = true;
+      if (i != 0 && j != 0){
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+        i -= 1, j -= 1;
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+      } else if (i == 0 && j != 0){
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+        j -= 1;
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+      } else if (i != 0 && j == 0){
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+        i -= 1;
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+      } else if (i == 0 && j == 0){
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+      }
+      
+    } else if (surf.crossing == CMFDSurfaceCrossing::Type::TL){
+      is_corner = true;
+      if (i != 0 && j != ny_ ) {
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+        i -= 1, j += 1;
+        surf_indexes.push_back(get_x_pos_surf(i,j));
+        surf_indexes.push_back(get_y_neg_surf(i,j));
+      } else if (i == 0 && j != ny_){
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+        j += 1;
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+      } else if (i != 0 && j == ny_){
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+        i -= 1;
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+      } else if (i == 0 && j == ny_){
+        surf_indexes.push_back(get_x_neg_surf(i,j));
+        surf_indexes.push_back(get_y_pos_surf(i,j));
+      }   
+    }
   }
+
 
   //Check surface indexes are not out of range
   for (std::size_t k=0; k < surf_indexes.size(); ++k){
@@ -370,13 +486,13 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
     //Split flux between two surfaces evenly
     aflx *= 0.5;
 
-    for (std::size_t i = 0; i < 4; ++i){
-      if (surf_indexes[i] < nx_surfs_) {
+    for (auto si: surf_indexes){
+      if (si < nx_surfs_) {
         #pragma omp atomic
-            surface_currents_(G, surf_indexes[i]) += std::copysign(aflx, u.x());
+            surface_currents_(G, si) += std::copysign(aflx, u.x());
           } else {
         #pragma omp atomic
-            surface_currents_(G, surf_indexes[i]) += std::copysign(aflx, u.y());
+            surface_currents_(G, si) += std::copysign(aflx, u.y());
           }
     }
   } else {
@@ -388,9 +504,6 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
           surface_currents_(G, surf_indexes[0]) += std::copysign(aflx, u.y());
         }
   }
-
-
-
 }
 
 void CMFD::normalize_currents() {
@@ -485,6 +598,8 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
   if (residual >= 1.E-5) {
     spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a neutron balance residual of {:.5E}.", i, j, g, residual);
   }
+  //debugging for testing
+  spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a leakage rate of {:.5E}", i, j, g, leak_rate);
 }
 
 void CMFD::solve(MOCDriver& moc, double keff) {

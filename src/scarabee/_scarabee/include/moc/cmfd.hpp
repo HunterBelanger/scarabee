@@ -24,7 +24,7 @@ struct CMFDSurfaceCrossing {
 //left, right, bottom, top, top right, bottom right, bottom left, top left 
 
 enum class Type : std::uint8_t {XN, XP, YN, YP, TR, BR, BL, TL};
-std::optional<std::array<std::size_t, 2>> cell_tile;
+std::size_t cell_index;
 bool is_valid;
 Type crossing;
 
@@ -32,7 +32,7 @@ constexpr explicit operator bool() const noexcept { return is_valid; }
 
 template <class Archive>
 void serialize(Archive& arc) {
-  arc(CEREAL_NVP(cell_tile),CEREAL_NVP(is_valid),CEREAL_NVP(crossing));
+  arc(CEREAL_NVP(cell_index),CEREAL_NVP(is_valid),CEREAL_NVP(crossing));
 }
 
 };
@@ -53,8 +53,15 @@ class CMFD {
   std::size_t tile_to_indx(const std::array<std::size_t, 2>& tile) const;
   std::size_t tile_to_indx(const std::size_t& i, const std::size_t& j) const;
 
+  std::array<std::size_t, 2> indx_to_tile(std::size_t cell_index);
+
   CMFDSurfaceCrossing get_surface(const Vector& r,
                                          const Direction& u) const;
+  
+  std::size_t get_x_neg_surf(const std::size_t i, const std::size_t j) const {return (nx_ + 1)*j + i;}
+  std::size_t get_x_pos_surf(const std::size_t i, const std::size_t j) const {return get_x_neg_surf(i,j) + 1;}
+  std::size_t get_y_neg_surf(const std::size_t i, const std::size_t j) const {return nx_surfs_ + (ny_ + 1)*i + j;}
+  std::size_t get_y_pos_surf(const std::size_t i, const std::size_t j) const {return get_y_neg_surf(i,j) + 1;}
 
   void insert_fsr(const std::array<std::size_t, 2>& tile, std::size_t fsr);
   void insert_fsr(std::size_t tile_indx, std::size_t fsr);
