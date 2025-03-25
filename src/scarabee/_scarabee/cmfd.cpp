@@ -164,7 +164,7 @@ std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
   // Return nullopt
   return std::nullopt;
 }
-//test in python by literally giving the arguments and seeing if the right answer is returned
+
 CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u) const {
   CMFDSurfaceCrossing surface;
 
@@ -314,165 +314,61 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
   std::size_t i = tile[0];
   std::size_t j = tile[1];
 
-  //std::size_t i = surf.cell_index % nx_;
-  //std::size_t j = (surf.cell_index - i ) / nx_;
-  //spdlog::info("Tile indexes ({:d}, {:d})", i, j);
 
   //Get surface index(s) from CMFDSurfaceCrossing
   //need cell indexes
   htl::static_vector<std::size_t,4> surf_indexes;
   bool is_corner = false;
-  //Interior Cells
-  if (i != 0 && i != nx_ && j != 0 && j != ny_){
-    if (surf.crossing == CMFDSurfaceCrossing::Type::XN){
-      surf_indexes.push_back(get_x_neg_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::XP){
-      surf_indexes.push_back(get_x_pos_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::YN){
-      surf_indexes.push_back(get_y_neg_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::YP){
-      surf_indexes.push_back(get_y_pos_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::TR){
-      is_corner = true;
-      //YP and XP surfaces of current cell
-      surf_indexes.push_back(get_y_pos_surf(i,j));
-      surf_indexes.push_back(get_x_pos_surf(i,j));
-      //YN and XN surfaces of diagonal cell
-      i += 1, j += 1;
-      surf_indexes.push_back(get_y_neg_surf(i,j));
-      surf_indexes.push_back(get_x_neg_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::BR){
-      is_corner = true;
-      //XP and YN surfaces of current cell
-      surf_indexes.push_back(get_x_pos_surf(i,j));
-      surf_indexes.push_back(get_y_neg_surf(i,j));
-      //YP and XN surfaces of diagonal cell
-      i += 1, j -= 1;
-      surf_indexes.push_back(get_y_pos_surf(i,j));
-      surf_indexes.push_back(get_x_neg_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::BL){
-      is_corner = true;
-      //YN and XN surfaces of current cell
-      surf_indexes.push_back(get_y_neg_surf(i,j));
-      surf_indexes.push_back(get_x_neg_surf(i,j));
-      //XP and YP surfaces of diagonal cell
-      i -= 1, j -= 1;
-      surf_indexes.push_back(get_x_pos_surf(i,j));
-      surf_indexes.push_back(get_y_pos_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::TL){
-      is_corner = true;
-      //XN and YP surfaces of current cell
-      surf_indexes.push_back(get_x_neg_surf(i,j));
-      surf_indexes.push_back(get_y_pos_surf(i,j));
-      //XP and YN surfaces of diagonal cell
-      i -= 1, j += 1;
-      surf_indexes.push_back(get_x_pos_surf(i,j));
-      surf_indexes.push_back(get_y_neg_surf(i,j));
+  if (surf.crossing == CMFDSurfaceCrossing::Type::XN){
+    surf_indexes.push_back(get_x_neg_surf(i,j));
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::XP){
+    surf_indexes.push_back(get_x_pos_surf(i,j));
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::YN){
+    surf_indexes.push_back(get_y_neg_surf(i,j));
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::YP){
+    surf_indexes.push_back(get_y_pos_surf(i,j));
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TR){
+    is_corner = true;
+    surf_indexes.push_back(get_x_pos_surf(i,j));
+    surf_indexes.push_back(get_y_pos_surf(i,j));
+    if (i+1 < nx_){
+      surf_indexes.push_back(get_y_pos_surf(i+1,j));
     }
-  //boundary cells
-  } else {
-    //Single side
-    if (surf.crossing == CMFDSurfaceCrossing::Type::XN){
-      surf_indexes.push_back(get_x_neg_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::XP){
-      surf_indexes.push_back(get_x_pos_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::YN){
-      surf_indexes.push_back(get_y_neg_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::YP){
-      surf_indexes.push_back(get_y_pos_surf(i,j));
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::TR){
-      is_corner = true;
-      if (i != nx_ && j != ny_){
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-        i += 1, j += 1;
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-      } else if (i == nx_ && j != ny_) {
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-        j += 1;
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-      } else if (i != nx_ && j == ny_) {
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-        i+=1;
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-      } else if (i == nx_ && j == ny_){
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-      }
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::BR){
-      is_corner = true;
-      if (i != nx_ && j != 0){
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-        i += 1, j -= 1;
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-      } else if (i != nx_ && j == 0){
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-        i+=1;
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-      } else if (i == nx_ && j != 0){
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-        i+=1;
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-      } else if (i == nx_ && j == 0){
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-      }
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::BL){
-      is_corner = true;
-      if (i != 0 && j != 0){
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-        i -= 1, j -= 1;
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-      } else if (i == 0 && j != 0){
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-        j -= 1;
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-      } else if (i != 0 && j == 0){
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-        i -= 1;
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-      } else if (i == 0 && j == 0){
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-      }
-      
-    } else if (surf.crossing == CMFDSurfaceCrossing::Type::TL){
-      is_corner = true;
-      if (i != 0 && j != ny_ ) {
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-        i -= 1, j += 1;
-        surf_indexes.push_back(get_x_pos_surf(i,j));
-        surf_indexes.push_back(get_y_neg_surf(i,j));
-      } else if (i == 0 && j != ny_){
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-        j += 1;
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-      } else if (i != 0 && j == ny_){
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-        i -= 1;
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-      } else if (i == 0 && j == ny_){
-        surf_indexes.push_back(get_x_neg_surf(i,j));
-        surf_indexes.push_back(get_y_pos_surf(i,j));
-      }   
+    if (j+1 < ny_){
+      surf_indexes.push_back(get_x_pos_surf(i,j+1));
+    }
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BR){
+    is_corner = true;
+    surf_indexes.push_back(get_x_pos_surf(i,j));
+    surf_indexes.push_back(get_y_neg_surf(i,j));
+    if (i+1 < nx_){
+      surf_indexes.push_back(get_y_neg_surf(i+1,j));
+    }
+    if (j != 0){
+      surf_indexes.push_back(get_x_pos_surf(i,j-1));
+    }
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BL){
+    is_corner = true;
+    surf_indexes.push_back(get_x_neg_surf(i,j));
+    surf_indexes.push_back(get_y_neg_surf(i,j));
+    if (i != 0){
+      surf_indexes.push_back(get_y_neg_surf(i-1,j));
+    }
+    if (j != 0){
+      surf_indexes.push_back(get_x_neg_surf(i,j-1));
+    }
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TL){
+    is_corner = true;
+    surf_indexes.push_back(get_x_neg_surf(i,j));
+    surf_indexes.push_back(get_y_pos_surf(i,j));
+    if (i != 0){
+      surf_indexes.push_back(get_y_pos_surf(i-1,j));
+    }
+    if (j+1 < ny_){
+      surf_indexes.push_back(get_x_neg_surf(i,j+1));
     }
   }
-
-
+  
   //Check surface indexes are not out of range
   for (std::size_t k=0; k < surf_indexes.size(); ++k){
     if (surf_indexes[k] >= surface_currents_.shape()[1]) {

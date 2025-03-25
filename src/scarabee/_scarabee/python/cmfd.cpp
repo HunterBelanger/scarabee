@@ -68,5 +68,31 @@ void init_CMFD(py::module& m) {
       "-------\n"
       "surface: CMFDSurfaceCrossing object\n"
       "         Contains the surface crossing information for the segement end\n",
-      py::arg("point"),py::arg("direction"));
+      py::arg("point"),py::arg("direction"))
+  .def("tally_current",&CMFD::tally_current,
+      "Tallies the MOC current onto the appropriate CMFD surface(s)\n\n"
+      "Parameters\n"
+      "----------\n"
+      "aflx: float\n"
+      "      value of the angular flux to be tallied"
+      "u: Direction\n"
+          "Direction of the flux\n"
+      "G: unsigned int\n"
+      "   Int which gives the # of the flux energy group"
+      "surf: CMFDSurfaceCrossing"
+      "      CMFDSurfaceCrossing object which gives the information about the surface to tally on\n"
+      "Returns\n"
+      "-------\n"
+      "None",
+      py::arg("aflx"),py::arg("u"),py::arg("G"),py::arg("surf"))
+  .def("current",
+      py::overload_cast<const std::size_t, const std::size_t>(
+      &CMFD::current, py::const_),
+      "TODO: Fill in docstring",
+      py::arg("G"),py::arg("surface"))
+  .def("current",
+      py::overload_cast<const std::size_t, const std::size_t>(
+        &CMFD::current),
+      "TODO: Fill in docstring",
+      py::arg("G"),py::arg("surface"));
 }
