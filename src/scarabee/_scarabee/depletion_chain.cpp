@@ -60,7 +60,7 @@ FissionYields::FissionYields(const std::vector<std::string>& targets,
     throw ScarabeeException(mssg);
   }
 
-  if (incident_energies_.fron() <= 0.) {
+  if (incident_energies_.front() <= 0.) {
     const auto mssg = "Incident energies must be > 0.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -92,14 +92,14 @@ FissionYields::FissionYields(const std::vector<std::string>& targets,
   }
 }
 
-double FissionYield::yield(std::size_t t, double E) const {
+double FissionYields::yield(std::size_t t, double E) const {
   if (t >= this->size()) {
     const auto mssg = "Target index is out of range.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
-  if (incident_energies_.size() = 1) {
+  if (incident_energies_.size() == 1) {
     return yields_(0, t);
   }
 

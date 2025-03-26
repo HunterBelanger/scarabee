@@ -47,6 +47,7 @@ extern void init_BurnablePoisonPin(py::module&);
 extern void init_PWRAssembly(py::module&);
 extern void init_ReflectorSN(py::module&);
 extern void init_WaterFuncs(py::module&);
+extern void init_DepletionChain(py::module&);
 
 PYBIND11_MODULE(_scarabee, m) {
   xt::import_numpy();
@@ -91,6 +92,7 @@ PYBIND11_MODULE(_scarabee, m) {
   //init_PWRAssembly(m);
   init_ReflectorSN(m);
   init_WaterFuncs(m);
+  init_DepletionChain(m);
 
   m.attr("__author__") = "Hunter Belanger";
   m.attr("__copyright__") = "Copyright 2024, Hunter Belanger";

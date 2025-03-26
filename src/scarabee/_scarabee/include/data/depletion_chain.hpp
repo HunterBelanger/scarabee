@@ -73,7 +73,7 @@ class BranchingTargets {
   std::vector<Branch> branches_;
 
   friend class cereal::access;
-  BranchTargets() {}
+  BranchingTargets() {}
 
   template <class Archive>
   void serialize(Archive& arc) {
@@ -128,8 +128,8 @@ class ChainEntry {
   std::optional<double>& half_life() { return half_life_; }
   const std::optional<double>& half_life() const { return half_life_; }
 
-  std::optional<Targets>& decay_targets() { return decay_targets_; }
-  const std::optional<Targets>& decay_targets() const { return decay_targets_; }
+  std::optional<Target>& decay_targets() { return decay_targets_; }
+  const std::optional<Target>& decay_targets() const { return decay_targets_; }
 
   std::optional<Target>& n_gamma() { return n_gamma_; }
   const std::optional<Target>& n_gamma() const { return n_gamma_; }

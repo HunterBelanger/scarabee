@@ -199,6 +199,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/pwr_assembly.cpp
                               src/scarabee/_scarabee/reflector_sn.cpp
                               src/scarabee/_scarabee/spherical_harmonics.cpp
+                              src/scarabee/_scarabee/depletion_chain.cpp
                               #=================================================
                               src/scarabee/_scarabee/python/scarabee.cpp
                               src/scarabee/_scarabee/python/vector.cpp
@@ -236,6 +237,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/python/pwr_assembly.cpp
                               src/scarabee/_scarabee/python/reflector_sn.cpp
                               src/scarabee/_scarabee/python/water.cpp
+                              src/scarabee/_scarabee/python/depletion_chain.cpp
                             )
 
 target_include_directories(_scarabee PRIVATE include)
