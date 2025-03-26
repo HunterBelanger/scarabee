@@ -57,7 +57,7 @@ void init_DepletionChain(py::module& m) {
       .def_property_readonly(
           "branches", &BranchingTargets::branches,
           "List of all branches with the target name and branch ratio.");
-  
+
   //===========================================================================
   // Fission Yields
   py::class_<FissionYields>(
@@ -100,7 +100,7 @@ void init_DepletionChain(py::module& m) {
            "    Yield of the specified target at the specified incident "
            "energy.\n",
            py::arg("t"), py::arg("E"));
-  
+
   //===========================================================================
   // Chain Entry
   py::class_<ChainEntry>(
@@ -128,43 +128,80 @@ void init_DepletionChain(py::module& m) {
           [](const ChainEntry& c) { return c.decay_targets(); },
           [](ChainEntry& c, std::optional<Target> t) { c.decay_targets() = t; },
           "Targets for the radioactive decay of the nuclide.")
-          
+
       .def_property(
-          "n_gamma",
-          [](const ChainEntry& c) { return c.n_gamma(); },
+          "n_gamma", [](const ChainEntry& c) { return c.n_gamma(); },
           [](ChainEntry& c, std::optional<Target> t) { c.n_gamma() = t; },
           "Targets for the (n,gamma) transmutation of the nuclide.")
-          
+
       .def_property(
-          "n_2n",
-          [](const ChainEntry& c) { return c.n_2n(); },
+          "n_2n", [](const ChainEntry& c) { return c.n_2n(); },
           [](ChainEntry& c, std::optional<Target> t) { c.n_2n() = t; },
           "Targets for the (n,2n) transmutation of the nuclide.")
-      
+
       .def_property(
-          "n_3n",
-          [](const ChainEntry& c) { return c.n_3n(); },
+          "n_3n", [](const ChainEntry& c) { return c.n_3n(); },
           [](ChainEntry& c, std::optional<Target> t) { c.n_3n() = t; },
           "Targets for the (n,3n) transmutation of the nuclide.")
-      
+
       .def_property(
-          "n_p",
-          [](const ChainEntry& c) { return c.n_p(); },
+          "n_p", [](const ChainEntry& c) { return c.n_p(); },
           [](ChainEntry& c, std::optional<Target> t) { c.n_p() = t; },
           "Targets for the (n,p) transmutation of the nuclide.")
 
       .def_property(
-          "n_alpha",
-          [](const ChainEntry& c) { return c.n_alpha(); },
+          "n_alpha", [](const ChainEntry& c) { return c.n_alpha(); },
           [](ChainEntry& c, std::optional<Target> t) { c.n_alpha() = t; },
           "Targets for the (n,alpha) transmutation of the nuclide.")
-          
+
       .def_property(
-          "n_fission",
-          [](const ChainEntry& c) { return c.n_fission(); },
-          [](ChainEntry& c, std::optional<FissionYields> f) { c.n_fission() = f; },
+          "n_fission", [](const ChainEntry& c) { return c.n_fission(); },
+          [](ChainEntry& c, std::optional<FissionYields> f) {
+            c.n_fission() = f;
+          },
           "Energy dependent fission yields for the nuclide.");
 
   //===========================================================================
   // Depletion Chain
+  py::class_<DepletionChain>(
+      m, "DepletionChain",
+      "Represents a full depletion chain for use with a nuclear data library "
+      "when performing depletion calculations. Holds data to account for "
+      "radioactive decay and transmutation of nuclides.")
+
+      .def(py::init<>())
+
+      .def("holds_nuclide_data", &DepletionChain::holds_nuclide_data,
+           "Returns True if a chain entry for the specified nuclide exists. If "
+           "not, False is returned.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "nuclide : string\n"
+           "    Name of nuclide.\n\n"
+           "Returns\n"
+           "-------\n"
+           "bool\n"
+           "    True if there is data for the nuclide. False otherwise.\n",
+           py::arg("nuclide"))
+
+      .def("nuclide_data", &DepletionChain::nuclide_data,
+           "Returns the :class:`ChainEntry` for the specified nuclide.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "nuclide : string\n"
+           "    Name of nuclide.\n\n"
+           "Returns\n"
+           "-------\n"
+           "ChainEntry\n"
+           "    Decay and transmutation data for the nuclide.\n",
+           py::arg("nuclide"))
+          
+      .def("insert_entry", &DepletionChain::insert_entry,
+           "Inserts decay and transmutation data for a new nuclide.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "nuclide : string\n"
+           "    Name of nuclide.\n"
+           "entry : ChainEntry\n"
+           "    Decay and transmutation data for the nuclide.");
 }

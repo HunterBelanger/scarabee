@@ -174,14 +174,17 @@ class ChainEntry {
 
 class DepletionChain {
  public:
+  DepletionChain(): data_() {}
+
   bool holds_nuclide_data(const std::string& nuclide) const;
   const ChainEntry& nuclide_data(const std::string& nuclide) const;
+
+  void insert_entry(const std::string& nuclide, const ChainEntry& entry);
 
  private:
   std::map<std::string, ChainEntry> data_;
 
   friend class cereal::access;
-  DepletionChain() {}
 
   template <class Archive>
   void serialize(Archive& arc) {

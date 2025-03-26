@@ -107,12 +107,12 @@ double FissionYields::yield(std::size_t t, double E) const {
   double fE = 0.;
 
   if (E >= incident_energies_.back()) {
-    iE = incident_energies_.size()-2;
+    iE = incident_energies_.size() - 2;
     fE = 1.;
   } else if (E > incident_energies_.front()) {
-    for (iE = 0; iE < incident_energies_.size()-1; iE++) {
+    for (iE = 0; iE < incident_energies_.size() - 1; iE++) {
       const double El = incident_energies_[iE];
-      const double Eh = incident_energies_[iE+1];
+      const double Eh = incident_energies_[iE + 1];
 
       if (El <= E && E <= Eh) {
         fE = (E - El) / (Eh - El);
@@ -121,7 +121,40 @@ double FissionYields::yield(std::size_t t, double E) const {
     }
   }
 
-  return yields_(iE, t)*(1. - fE) + yields_(iE+1, t)*fE;
+  return yields_(iE, t) * (1. - fE) + yields_(iE + 1, t) * fE;
+}
+
+bool DepletionChain::holds_nuclide_data(const std::string& nuclide) const {
+  if (data_.find(nuclide) == data_.end()) {
+    return false;
+  }
+
+  return true;
+}
+
+const ChainEntry& DepletionChain::nuclide_data(
+    const std::string& nuclide) const {
+  const auto it = data_.find(nuclide);
+  if (it == data_.end()) {
+    const auto mssg =
+        "Nuclide \"" + nuclide + "\" is not present in the depletion chain.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  return it->second;
+}
+
+void DepletionChain::insert_entry(const std::string& nuclide,
+                                  const ChainEntry& entry) {
+  if (this->holds_nuclide_data(nuclide)) {
+    const auto mssg = "Nuclide \"" + nuclide +
+                      "\" is already present in the depletion chain.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  data_[nuclide] = entry;
 }
 
 }  // namespace scarabee
