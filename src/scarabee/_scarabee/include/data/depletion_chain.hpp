@@ -146,8 +146,8 @@ class ChainEntry {
   std::optional<Target>& n_alpha() { return n_alpha_; }
   const std::optional<Target>& n_alpha() const { return n_alpha_; }
 
-  std::optional<FissionYields>& n_fission() { return n_fission_; }
-  const std::optional<FissionYields>& n_fission() const { return n_fission_; }
+  std::optional<std::variant<std::string, FissionYields>>& n_fission() { return n_fission_; }
+  const std::optional<std::variant<std::string, FissionYields>>& n_fission() const { return n_fission_; }
 
  private:
   // Radioactive Decay
@@ -160,7 +160,7 @@ class ChainEntry {
   std::optional<Target> n_3n_;
   std::optional<Target> n_p_;
   std::optional<Target> n_alpha_;
-  std::optional<FissionYields> n_fission_;
+  std::optional<std::variant<std::string, FissionYields>> n_fission_;
 
   friend class cereal::access;
 

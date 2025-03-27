@@ -78,7 +78,8 @@ void init_DepletionChain(py::module& m) {
            "are provided.\n"
            "yields : ndarray\n"
            "    2D Numpy array containing the fission yields where first axis "
-           "is incident energy and second is target.\n")
+           "is incident energy and second is target.\n",
+           py::arg("targets"), py::arg("incident_energies"), py::arg("yields"))
       .def_property_readonly("size", &FissionYields::size, "Number of targets.")
       .def_property_readonly("targets", &FissionYields::targets,
                              "List of possible target nuclides.")
@@ -156,10 +157,12 @@ void init_DepletionChain(py::module& m) {
 
       .def_property(
           "n_fission", [](const ChainEntry& c) { return c.n_fission(); },
-          [](ChainEntry& c, std::optional<FissionYields> f) {
+          [](ChainEntry& c,
+             std::optional<std::variant<std::string, FissionYields>> f) {
             c.n_fission() = f;
           },
-          "Energy dependent fission yields for the nuclide.");
+          "Energy dependent fission yields for the nuclide, or a string "
+          "referring to the nuclide who's fission yields should be used.");
 
   //===========================================================================
   // Depletion Chain
@@ -195,7 +198,7 @@ void init_DepletionChain(py::module& m) {
            "ChainEntry\n"
            "    Decay and transmutation data for the nuclide.\n",
            py::arg("nuclide"))
-          
+
       .def("insert_entry", &DepletionChain::insert_entry,
            "Inserts decay and transmutation data for a new nuclide.\n\n"
            "Parameters\n"
