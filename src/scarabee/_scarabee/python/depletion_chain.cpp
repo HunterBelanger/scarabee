@@ -206,5 +206,29 @@ void init_DepletionChain(py::module& m) {
            "nuclide : string\n"
            "    Name of nuclide.\n"
            "entry : ChainEntry\n"
-           "    Decay and transmutation data for the nuclide.");
+           "    Decay and transmutation data for the nuclide.")
+
+      .def("save_xml", &DepletionChain::save_xml,
+           "Saves the depletion chain to an XML file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : string\n"
+           "    Name of the output file.\n",
+           py::arg("fname"))
+
+      .def("save_json", &DepletionChain::save_json,
+           "Saves the depletion chain to a JSON file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : string\n"
+           "    Name of the output file.\n",
+           py::arg("fname"))
+
+      .def("save_bin", &DepletionChain::save_bin,
+           "Saves the depletion chain to a binary file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : string\n"
+           "    Name of the output file.\n",
+           py::arg("fname"));
 }

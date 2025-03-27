@@ -125,5 +125,9 @@ def main():
 
         dc.insert_entry(nuclide_name, ce)
 
+    dc.save_xml("chain.xml")
+    dc.save_json("chain.json")
+    dc.save_bin("chain.bin")
+
 if __name__ == "__main__":
     main()

@@ -30,9 +30,7 @@ class NoTarget {
   friend class cereal::access;
 
   template <class Archive>
-  void serialize(Archive& arc) {
-    arc();
-  }
+  void serialize(Archive& /*arc*/) { }
 };
 
 class SingleTarget {
@@ -180,6 +178,11 @@ class DepletionChain {
   const ChainEntry& nuclide_data(const std::string& nuclide) const;
 
   void insert_entry(const std::string& nuclide, const ChainEntry& entry);
+
+
+  void save_xml(const std::string& fname) const;
+  void save_json(const std::string& fname) const;
+  void save_bin(const std::string& fname) const;
 
  private:
   std::map<std::string, ChainEntry> data_;

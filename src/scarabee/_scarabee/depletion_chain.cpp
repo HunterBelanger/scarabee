@@ -2,7 +2,13 @@
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 
+#include <cereal/archives/xml.hpp>
+#include <cereal/archives/json.hpp>
+#include <cereal/archives/portable_binary.hpp>
+
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 
 namespace scarabee {
 
@@ -155,6 +161,42 @@ void DepletionChain::insert_entry(const std::string& nuclide,
   }
 
   data_[nuclide] = entry;
+}
+
+void DepletionChain::save_xml(const std::string& fname) const {
+  if (std::filesystem::exists(fname)) {
+    std::filesystem::remove(fname);
+  }
+
+  std::ofstream file(fname);
+
+  cereal::XMLOutputArchive arc(file);
+
+  arc(*this);
+}
+
+void DepletionChain::save_json(const std::string& fname) const {
+  if (std::filesystem::exists(fname)) {
+    std::filesystem::remove(fname);
+  }
+
+  std::ofstream file(fname);
+
+  cereal::JSONOutputArchive arc(file);
+
+  arc(*this);
+}
+
+void DepletionChain::save_bin(const std::string& fname) const {
+  if (std::filesystem::exists(fname)) {
+    std::filesystem::remove(fname);
+  }
+
+  std::ofstream file(fname, std::ios_base::binary);
+
+  cereal::PortableBinaryOutputArchive arc(file);
+
+  arc(*this);
 }
 
 }  // namespace scarabee
