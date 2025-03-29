@@ -9,25 +9,27 @@ from scarabee._scarabee import (
     DepletionChain,
 )
 import numpy as np
+import sys
+
 
 def strip_name(name):
-    if '_' in name:
-        return name.replace('_', '')
+    if "_" in name:
+        return name.replace("_", "")
     return name
 
 def read_fission_yields(node):
-    if 'parent' in node.attrib:
-        #raise RuntimeError("Fission yields refers to parent nuclide {:}.".format(node.attrib['parent']))
-        return strip_name(node.attrib['parent'])
+    if "parent" in node.attrib:
+        # raise RuntimeError("Fission yields refers to parent nuclide {:}.".format(node.attrib['parent']))
+        return strip_name(node.attrib["parent"])
 
     energies = node[0].text.split()
     energies = [float(E) for E in energies]
-    NE = len(energies) # Number of energies
+    NE = len(energies)  # Number of energies
 
     products = None
     yields = []
 
-    for i in range(1, NE+1):
+    for i in range(1, NE + 1):
         fiss_yields = node[i]
 
         prods = fiss_yields[0].text.split()
@@ -37,10 +39,14 @@ def read_fission_yields(node):
         else:
             # Make sure products are in the same order !
             if len(products) != len(prods):
-                raise RuntimeError("Product lists at different energies are of different lengths.")
+                raise RuntimeError(
+                    "Product lists at different energies are of different lengths."
+                )
             for i in range(len(products)):
                 if products[i] != prods[i]:
-                    raise RuntimeError("Product lists at different energies do not agree.")
+                    raise RuntimeError(
+                        "Product lists at different energies do not agree."
+                    )
 
         i_yields = fiss_yields[1].text.split()
         yields.append([float(y) for y in i_yields])
@@ -50,14 +56,24 @@ def read_fission_yields(node):
     return FissionYields(products, energies, yields)
 
 def main():
-    root = ET.parse("chain_casl_pwr.xml").getroot()
+    if len(sys.argv) != 2:
+        raise RuntimeError("Script takes exactly 1 argument, the file name of an xml depletion chain.")
+
+    root = ET.parse(sys.argv[1]).getroot()
 
     dc = DepletionChain()
+
+    # First, go through all nuclides and obtain all fission yields which don't
+    # just refer to a different nuclide.
+    fiss_yields = {}
+    for nuc in root:
+        if nuc[-1].tag == "neutron_fission_yields" and "parent" not in nuc[-1].attrib:
+            nuclide_name = strip_name(nuc.attrib["name"])
+            fiss_yields[nuclide_name] = read_fission_yields(nuc[-1])
 
     # Parse all nuclides in the chain
     for nuc in root:
         nuclide_name = strip_name(nuc.attrib["name"])
-        print("Running {:}".format(nuclide_name))
 
         half_life = None
         decay_branches_list = []
@@ -77,7 +93,7 @@ def main():
                 branch = Branch()
                 branch.target = strip_name(entry.attrib["target"])
                 branch.branch_ratio = float(entry.attrib["branching_ratio"])
-                if branch.branch_ratio > 0.:
+                if branch.branch_ratio > 0.0:
                     decay_branches_list.append(branch)
 
             elif entry.tag == "reaction":
@@ -85,25 +101,27 @@ def main():
                 transmut_target = NoTarget()
                 if "target" in entry.attrib:
                     transmut_target = SingleTarget(strip_name(entry.attrib["target"]))
-                
-                
-                if reaction == '(n,gamma)':
+
+                if reaction == "(n,gamma)":
                     n_gamma = transmut_target
-                elif reaction == '(n,2n)':
+                elif reaction == "(n,2n)":
                     n_2n = transmut_target
-                elif reaction == '(n,3n)':
+                elif reaction == "(n,3n)":
                     n_3n = transmut_target
-                elif reaction == '(n,p)':
+                elif reaction == "(n,p)":
                     n_p = transmut_target
-                elif reaction == '(n,a)':
+                elif reaction == "(n,a)":
                     n_alpha = transmut_target
                 else:
                     # OpenMC considers others like (n,4n), but Scarabée doesn't
                     # track these other transmutation reactions.
                     pass
-            
-            elif entry.tag == 'neutron_fission_yields':
-                n_fission = read_fission_yields(entry)
+
+            elif entry.tag == "neutron_fission_yields":
+                parent = nuclide_name
+                if 'parent' in entry.attrib:
+                    parent = strip_name(entry.attrib['parent'])
+                n_fission = fiss_yields[parent]
 
         # Create decay targets (if there are any)
         decay_targets = None
@@ -125,9 +143,7 @@ def main():
 
         dc.insert_entry(nuclide_name, ce)
 
-    dc.save_xml("chain.xml")
-    dc.save_json("chain.json")
-    dc.save_bin("chain.bin")
+    dc.save("chain.bin")
 
 if __name__ == "__main__":
     main()

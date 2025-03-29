@@ -157,16 +157,14 @@ void init_DepletionChain(py::module& m) {
 
       .def_property(
           "n_fission", [](const ChainEntry& c) { return c.n_fission(); },
-          [](ChainEntry& c,
-             std::optional<std::variant<std::string, FissionYields>> f) {
+          [](ChainEntry& c, std::optional<FissionYields> f) {
             c.n_fission() = f;
           },
-          "Energy dependent fission yields for the nuclide, or a string "
-          "referring to the nuclide who's fission yields should be used.");
+          "Energy dependent fission yields for the nuclide.");
 
   //===========================================================================
   // Depletion Chain
-  py::class_<DepletionChain>(
+  py::class_<DepletionChain, std::shared_ptr<DepletionChain>>(
       m, "DepletionChain",
       "Represents a full depletion chain for use with a nuclear data library "
       "when performing depletion calculations. Holds data to account for "
@@ -208,27 +206,40 @@ void init_DepletionChain(py::module& m) {
            "entry : ChainEntry\n"
            "    Decay and transmutation data for the nuclide.")
 
-      .def("save_xml", &DepletionChain::save_xml,
-           "Saves the depletion chain to an XML file.\n\n"
+      .def("descend_chains", &DepletionChain::descend_chains,
+           "Finds the set of all possible nuclides given an initial set of "
+           "nuclides.\n\n"
            "Parameters\n"
            "----------\n"
-           "fname : string\n"
-           "    Name of the output file.\n",
-           py::arg("fname"))
+           "nuclides : set of string\n"
+           "    Set of initial nuclides.\n"
+           "decay_only : bool\n"
+           "    Only include target nuclides from radioactive decay. Default "
+           "is False.\n\n"
+           "Returns\n"
+           "-------\n"
+           "list of string\n"
+           "    Sorted list of all possible nuclides given the initial set of "
+           "nuclides.\n",
+           py::arg("nuclides"), py::arg("decay_only") = false)
 
-      .def("save_json", &DepletionChain::save_json,
-           "Saves the depletion chain to a JSON file.\n\n"
-           "Parameters\n"
-           "----------\n"
-           "fname : string\n"
-           "    Name of the output file.\n",
-           py::arg("fname"))
-
-      .def("save_bin", &DepletionChain::save_bin,
+      .def("save", &DepletionChain::save,
            "Saves the depletion chain to a binary file.\n\n"
            "Parameters\n"
            "----------\n"
            "fname : string\n"
            "    Name of the output file.\n",
-           py::arg("fname"));
+           py::arg("fname"))
+
+      .def_static("load", &DepletionChain::load,
+                  "Loads a DepletionChain from a binary file.\n\n"
+                  "Parameters\n"
+                  "----------\n"
+                  "fname : string\n"
+                  "    Name of the binary file.\n\n"
+                  "Returns\n"
+                  "-------\n"
+                  "DepletionChain\n"
+                  "    Depletion chain from the file.\n",
+                  py::arg("fname"));
 }

@@ -2,6 +2,7 @@
 #define SCARABEE_DEPLETION_CHAIN_H
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -30,12 +31,14 @@ class NoTarget {
   friend class cereal::access;
 
   template <class Archive>
-  void serialize(Archive& /*arc*/) { }
+  void serialize(Archive& /*arc*/) {}
 };
 
 class SingleTarget {
  public:
   SingleTarget(const std::string& target) : target_(target) {}
+
+  SingleTarget() = default;
 
   const std::string& target() const { return target_; }
 
@@ -43,7 +46,6 @@ class SingleTarget {
   std::string target_;
 
   friend class cereal::access;
-  SingleTarget() {}
 
   template <class Archive>
   void serialize(Archive& arc) {
@@ -65,13 +67,14 @@ class BranchingTargets {
 
   BranchingTargets(const std::vector<Branch>& branches);
 
+  BranchingTargets() = default;
+
   const std::vector<Branch>& branches() const { return branches_; }
 
  private:
   std::vector<Branch> branches_;
 
   friend class cereal::access;
-  BranchingTargets() {}
 
   template <class Archive>
   void serialize(Archive& arc) {
@@ -86,6 +89,8 @@ class FissionYields {
   FissionYields(const std::vector<std::string>& targets,
                 const std::vector<double>& incident_energies,
                 const xt::xtensor<double, 2>& yields);
+
+  FissionYields() = default;
 
   std::size_t size() const { return targets_.size(); }
   const std::vector<std::string>& targets() const { return targets_; }
@@ -102,7 +107,6 @@ class FissionYields {
   xt::xtensor<double, 2> yields_;
 
   friend class cereal::access;
-  FissionYields() {}
 
   template <class Archive>
   void serialize(Archive& arc) {
@@ -144,8 +148,8 @@ class ChainEntry {
   std::optional<Target>& n_alpha() { return n_alpha_; }
   const std::optional<Target>& n_alpha() const { return n_alpha_; }
 
-  std::optional<std::variant<std::string, FissionYields>>& n_fission() { return n_fission_; }
-  const std::optional<std::variant<std::string, FissionYields>>& n_fission() const { return n_fission_; }
+  std::optional<FissionYields>& n_fission() { return n_fission_; }
+  const std::optional<FissionYields>& n_fission() const { return n_fission_; }
 
  private:
   // Radioactive Decay
@@ -158,7 +162,7 @@ class ChainEntry {
   std::optional<Target> n_3n_;
   std::optional<Target> n_p_;
   std::optional<Target> n_alpha_;
-  std::optional<std::variant<std::string, FissionYields>> n_fission_;
+  std::optional<FissionYields> n_fission_;
 
   friend class cereal::access;
 
@@ -172,17 +176,18 @@ class ChainEntry {
 
 class DepletionChain {
  public:
-  DepletionChain(): data_() {}
+  DepletionChain() : data_() {}
 
   bool holds_nuclide_data(const std::string& nuclide) const;
   const ChainEntry& nuclide_data(const std::string& nuclide) const;
 
   void insert_entry(const std::string& nuclide, const ChainEntry& entry);
 
+  std::vector<std::string> descend_chains(std::set<std::string> nuclides,
+                                          bool decay_only = false) const;
 
-  void save_xml(const std::string& fname) const;
-  void save_json(const std::string& fname) const;
-  void save_bin(const std::string& fname) const;
+  void save(const std::string& fname) const;
+  static std::shared_ptr<DepletionChain> load(const std::string& fname);
 
  private:
   std::map<std::string, ChainEntry> data_;
