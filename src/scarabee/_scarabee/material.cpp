@@ -2,38 +2,14 @@
 #include <data/nd_library.hpp>
 #include <utils/constants.hpp>
 #include <utils/logging.hpp>
+#include <utils/nuclide_names.hpp>
 #include <utils/scarabee_exception.hpp>
 
 #include <algorithm>
-#include <cctype>
 #include <map>
 #include <sstream>
 
 namespace scarabee {
-
-std::string nuclide_name_to_simple_name(const std::string& name) {
-  // Must remove any _ from nuclide name (for TSLs like H1_H2O)
-  std::string simp_name = name;
-  auto loc_undr_scr = simp_name.find('_');
-  if (loc_undr_scr != std::string::npos) {
-    simp_name.resize(loc_undr_scr);
-  }
-  return simp_name;
-}
-
-std::string nuclide_name_to_element_symbol(const std::string& name) {
-  std::string elem_name;
-
-  for (std::size_t i = 0; i < 2; i++) {
-    if (std::isalpha(name[i])) {
-      elem_name += name[i];
-    } else {
-      break;
-    }
-  }
-
-  return elem_name;
-}
 
 MaterialComposition::MaterialComposition(Fraction f, const std::string& name)
     : nuclides(), fractions(f), name(name) {}
