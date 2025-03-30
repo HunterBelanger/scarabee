@@ -79,19 +79,19 @@ void init_DepletionMatrix(py::module& m) {
           "exponential of the depletion matrix. The array N is modified in "
           "place to contain the result of this product.\n\n"
           ".. math:: N' = \\exp{A} N.\n\n"
-          "This products is approximated using a Chebyshev Rational "
-          "Approximation (CRAM). By default, at 16th order CRAM is used, but a "
+          "This product is approximated using a Chebyshev Rational "
+          "Approximation (CRAM). By default, a 16th order CRAM is used, but a "
           "48th order approximation is available.\n\n"
           "Parameters\n"
           "----------\n"
           "N : ndarray\n"
           "    1D array of the number densities of the nuclides in the "
-          "depletion matrix (in the same order). This array is modified in "
-          "place, and will contain the result of the product after the "
-          "function is complete.\n"
+          "    depletion matrix (in the same order). This array is modified"
+          "    in place, and will contain the result of the product after the"
+          "    function is complete.\n"
           "cram48 : bool\n"
-          "    If True, a 48th order CRAM is used. If False, a 16th order CRAM "
-          "is employed. Default value is False.\n",
+          "    If True, a 48th order CRAM is used. If False, a 16th order CRAM"
+          "    is employed. Default value is False.\n",
           py::arg("N"), py::arg("cram48") = false)
 
       .def("__getitem__",

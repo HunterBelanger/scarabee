@@ -75,10 +75,10 @@ void init_DepletionChain(py::module& m) {
            "    List of all possible targets.\n"
            "incident_energies : list of float\n"
            "    Sorted list of tabulated incident energies for which yields "
-           "are provided.\n"
+           "    are provided.\n"
            "yields : ndarray\n"
            "    2D Numpy array containing the fission yields where first axis "
-           "is incident energy and second is target.\n",
+           "    is incident energy and second is target.\n",
            py::arg("targets"), py::arg("incident_energies"), py::arg("yields"))
       .def_property_readonly("size", &FissionYields::size, "Number of targets.")
       .def_property_readonly("targets", &FissionYields::targets,
