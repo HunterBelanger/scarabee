@@ -349,12 +349,7 @@ double Material::atom_density(const std::string& name) const {
     }
   }
 
-  std::stringstream mssg;
-  mssg << "Could not find nuclide with name \"" << name << "\".";
-  spdlog::error(mssg.str());
-  throw ScarabeeException(mssg.str());
-
-  // NEVER GETS HERE
+  // Nuclide not in the material, so we just return zero
   return 0.;
 }
 

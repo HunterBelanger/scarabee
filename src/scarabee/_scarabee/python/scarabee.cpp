@@ -7,6 +7,7 @@
 
 namespace py = pybind11;
 
+extern void init_NuclideNameFuncs(py::module&);
 extern void init_XS1D(py::module&);
 extern void init_XS2D(py::module&);
 extern void init_CrossSection(py::module&);
@@ -48,12 +49,13 @@ extern void init_PWRAssembly(py::module&);
 extern void init_ReflectorSN(py::module&);
 extern void init_WaterFuncs(py::module&);
 extern void init_DepletionChain(py::module&);
-extern void init_NuclideNameFuncs(py::module&);
+extern void init_DepletionMatrix(py::module&);
 
 PYBIND11_MODULE(_scarabee, m) {
   xt::import_numpy();
 
   init_Logging(m);
+  init_NuclideNameFuncs(m);
   init_Vector(m);
   init_Direction(m);
   init_XS1D(m);
@@ -94,7 +96,7 @@ PYBIND11_MODULE(_scarabee, m) {
   init_ReflectorSN(m);
   init_WaterFuncs(m);
   init_DepletionChain(m);
-  init_NuclideNameFuncs(m);
+  init_DepletionMatrix(m);
 
   m.attr("__author__") = "Hunter Belanger";
   m.attr("__copyright__") = "Copyright 2024, Hunter Belanger";
