@@ -98,20 +98,77 @@ def main():
 
             elif entry.tag == "reaction":
                 reaction = entry.attrib["type"]
-                transmut_target = NoTarget()
+                transmut_target = None
+                branch_ratio = None
                 if "target" in entry.attrib:
-                    transmut_target = SingleTarget(strip_name(entry.attrib["target"]))
+                    transmut_target = strip_name(entry.attrib["target"])
+                if "branching_ratio" in entry.attrib:
+                    branch_ratio = float(entry.attrib["branching_ratio"])
 
                 if reaction == "(n,gamma)":
-                    n_gamma = transmut_target
+                    if branch_ratio is None and transmut_target is None:
+                        n_gamma = NoTarget()
+                    elif branch_ratio is None:
+                        n_gamma = SingleTarget(transmut_target)
+                    else:
+                        if n_gamma is None:
+                            n_gamma = []
+                        branch = Branch()
+                        branch.target = transmut_target
+                        branch.branch_ratio = branch_ratio
+                        n_gamma.append(branch)
+
                 elif reaction == "(n,2n)":
-                    n_2n = transmut_target
+                    if branch_ratio is None and transmut_target is None:
+                        n_2n = NoTarget()
+                    elif branch_ratio is None:
+                        n_2n = SingleTarget(transmut_target)
+                    else:
+                        if n_2n is None:
+                            n_2n = []
+                        branch = Branch()
+                        branch.target = transmut_target
+                        branch.branch_ratio = branch_ratio
+                        n_2n.append(branch)
+
                 elif reaction == "(n,3n)":
-                    n_3n = transmut_target
+                    if branch_ratio is None and transmut_target is None:
+                        n_3n = NoTarget()
+                    elif branch_ratio is None:
+                        n_3n = SingleTarget(transmut_target)
+                    else:
+                        if n_3n is None:
+                            n_3n = []
+                        branch = Branch()
+                        branch.target = transmut_target
+                        branch.branch_ratio = branch_ratio
+                        n_3n.append(branch)
+
                 elif reaction == "(n,p)":
-                    n_p = transmut_target
+                    if branch_ratio is None and transmut_target is None:
+                        n_p = NoTarget()
+                    elif branch_ratio is None:
+                        n_p = SingleTarget(transmut_target)
+                    else:
+                        if n_p is None:
+                            n_p = []
+                        branch = Branch()
+                        branch.target = transmut_target
+                        branch.branch_ratio = branch_ratio
+                        n_p.append(branch)                   
+
                 elif reaction == "(n,a)":
-                    n_alpha = transmut_target
+                    if branch_ratio is None and transmut_target is None:
+                        n_alpha = NoTarget()
+                    elif branch_ratio is None:
+                        n_alpha = SingleTarget(transmut_target)
+                    else:
+                        if n_alpha is None:
+                            n_alpha = []
+                        branch = Branch()
+                        branch.target = transmut_target
+                        branch.branch_ratio = branch_ratio
+                        n_alpha.append(branch)                   
                 else:
                     # OpenMC considers others like (n,4n), but Scarabée doesn't
                     # track these other transmutation reactions.
@@ -129,6 +186,17 @@ def main():
             decay_targets = SingleTarget(decay_branches_list[0].target)
         elif len(decay_branches_list) > 1:
             decay_targets = BranchingTargets(decay_branches_list)
+
+        if isinstance(n_gamma, list):
+            n_gamma = BranchingTargets(n_gamma)
+        if isinstance(n_2n, list):
+            n_2n = BranchingTargets(n_2n)
+        if isinstance(n_3n, list):
+            n_3n = BranchingTargets(n_3n)
+        if isinstance(n_p, list):
+            n_p = BranchingTargets(n_p)
+        if isinstance(n_alpha, list):
+            n_alpha = BranchingTargets(n_alpha)
 
         # Build the chain entry for the nuclide
         ce = ChainEntry()
