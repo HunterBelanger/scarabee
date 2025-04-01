@@ -206,6 +206,9 @@ void init_DepletionChain(py::module& m) {
            "entry : ChainEntry\n"
            "    Decay and transmutation data for the nuclide.")
 
+      .def_property_readonly("nuclides", &DepletionChain::nuclides,
+                             "Set of all nuclides that have a chain entry.")
+
       .def("descend_chains", &DepletionChain::descend_chains,
            "Finds the set of all possible nuclides given an initial set of "
            "nuclides.\n\n"

@@ -162,6 +162,12 @@ void DepletionChain::insert_entry(const std::string& nuclide,
   data_[nuclide] = entry;
 }
 
+std::set<std::string> DepletionChain::nuclides() const {
+  std::set<std::string> nucs;
+  for (const auto& nuc : data_) nucs.insert(nuc.first);
+  return nucs;
+}
+
 // Helper functions for extracting new targets from various types of targets
 void extract_targets(const NoTarget& /*t*/,
                      std::set<std::string>& /*found_nuclides*/,

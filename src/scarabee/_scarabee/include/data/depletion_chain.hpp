@@ -181,6 +181,8 @@ class DepletionChain {
   bool holds_nuclide_data(const std::string& nuclide) const;
   const ChainEntry& nuclide_data(const std::string& nuclide) const;
 
+  std::set<std::string> nuclides() const;
+
   void insert_entry(const std::string& nuclide, const ChainEntry& entry);
 
   std::vector<std::string> descend_chains(std::set<std::string> nuclides,
