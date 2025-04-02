@@ -38,10 +38,31 @@ c2d = Cartesian2D(dx, dy)
 c2d.set_tiles([U])
 
 moc = MOCDriver(c2d)
-#moc.cmfd = CMFD([1.26], [1.26], [[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]])
-moc.cmfd = CMFD([1.26], [1.26], [[0,6]])
+moc.cmfd = CMFD([1.26], [1.26], [[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]])
+#moc.cmfd = CMFD([1.26], [1.26], [[0,6]])
 moc.generate_tracks(64, 0.01, YamamotoTabuchi6())
+moc.keff_tolerance = 1.e-15
+moc.flux_tolerance = 1.e-15
 moc.solve()
+
+print(f"""
+Current Diagram
+ -----------^  {moc.cmfd.current(0,3)}  ^------------
+ -          |                           |           -
+ -                                                  -
+ -                                                  -
+ -                                                  -
+<-                                                  ->
+ ({moc.cmfd.current(0,0)})                          ({moc.cmfd.current(0,1)})
+<-                                                  ->
+ -                                                  -
+ -                                                  -
+ -                                                  -
+ -                                                  -
+ ------------! {moc.cmfd.current(0,2)}  !------------
+
+      
+      """)
 
 #flux, x, y = moc.rasterize_flux(500, 250)
 #for g in range(moc.ngroups):

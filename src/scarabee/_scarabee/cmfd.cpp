@@ -381,23 +381,15 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
   if (is_corner){
     //Split flux between two surfaces evenly
     aflx *= 0.5;
+  }
 
-    for (auto si: surf_indexes){
-      if (si < nx_surfs_) {
-        #pragma omp atomic
-            surface_currents_(G, si) += std::copysign(aflx, u.x());
-          } else {
-        #pragma omp atomic
-            surface_currents_(G, si) += std::copysign(aflx, u.y());
-          }
-    }
-  } else {
-    if (surf_indexes[0] < nx_surfs_) {
+  for (auto si: surf_indexes){
+    if (si < nx_surfs_) {
       #pragma omp atomic
-          surface_currents_(G, surf_indexes[0]) += std::copysign(aflx, u.x());
+          surface_currents_(G, si) += std::copysign(aflx, u.x());
         } else {
       #pragma omp atomic
-          surface_currents_(G, surf_indexes[0]) += std::copysign(aflx, u.y());
+          surface_currents_(G, si) += std::copysign(aflx, u.y());
         }
   }
 }
@@ -489,17 +481,20 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
   const double tot_reac_rate = Et_(g, i, j) * flux_.at(g, i, j);
 
   // Compute the residual of the balance equation
-  const double residual = std::abs(leak_rate + tot_reac_rate - (scat_source + fiss_source));
+  const double residual = leak_rate + tot_reac_rate - (scat_source + fiss_source);
+  const double req_leak = scat_source + fiss_source - tot_reac_rate;
 
-  if (residual >= 1.E-5) {
+  //if (std::abs(residual) >= 1.E-5) {
     spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a neutron balance residual of {:.5E}.", i, j, g, residual);
-  }
+    spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} requires leakage rate of {:.5E}.", i, j, g, req_leak);
+  //}
   //debugging for testing
-  spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a leakage rate of {:.5E}", i, j, g, leak_rate);
+  spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a true leakage rate of {:.5E}", i, j, g, leak_rate);
+  spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a leakage ratio of {:.5E}.", i, j, g, req_leak/leak_rate);
 }
 
 void CMFD::solve(MOCDriver& moc, double keff) {
-  this->normalize_currents();
+  //this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
 
   for (std::size_t i = 0; i < nx_; i++) {
