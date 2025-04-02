@@ -211,6 +211,19 @@ def main():
 
         dc.insert_entry(nuclide_name, ce)
 
+    # Expunge all short-lives nuclides (i.e. half life less than 24 hrs) that
+    # aren't in important chains.
+    nuclide_names = dc.nuclides
+    for nuc_name in nuclide_names:
+        if nuc_name in ["I135", "Xe135", "Xe135m1"]:
+            continue
+
+        nuc = dc.nuclide_data(nuc_name)
+
+        if nuc.half_life is not None and nuc.half_life < 60.*60.*24.:
+            print("Removing {:} from chain".format(nuc_name))
+            dc.remove_nuclide(nuc_name)
+
     dc.save("chain.bin")
 
 if __name__ == "__main__":

@@ -204,7 +204,17 @@ void init_DepletionChain(py::module& m) {
            "nuclide : string\n"
            "    Name of nuclide.\n"
            "entry : ChainEntry\n"
-           "    Decay and transmutation data for the nuclide.")
+           "    Decay and transmutation data for the nuclide.",
+           py::arg("nuclide"), py::arg("entry"))
+
+      .def("remove_nuclide", &DepletionChain::remove_nuclide,
+           "Removes a nuclide from the chain. All targets referencing this "
+           "nuclide are replaced with its radioactive decay targets.\n\n"
+           "Parameters\n"
+           "---------\n"
+           "nuclide : string\n"
+           "    Name of nuclide to remove.\n",
+           py::arg("nuclide"))
 
       .def_property_readonly("nuclides", &DepletionChain::nuclides,
                              "Set of all nuclides that have a chain entry.")

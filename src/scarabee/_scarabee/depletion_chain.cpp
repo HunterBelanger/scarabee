@@ -5,6 +5,8 @@
 
 #include <cereal/archives/portable_binary.hpp>
 
+#include <xtensor/xview.hpp>
+
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -33,9 +35,18 @@ BranchingTargets::BranchingTargets(const std::vector<Branch>& branches)
     ratios_sum += branch.branch_ratio;
   }
 
-  for (auto& branch : branches_) {
-    branch.branch_ratio /= ratios_sum;
+  // Make sure sum isn't greater than 1 + a small tolerance
+  if (ratios_sum > 1. + 1.E-5) {
+    const auto mssg = "Sum of branching ratios exceeds unity.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
+
+  // We don't normalize the branching ratios and don't care if the sum < 1.
+  // This is due to the fact that if we remove short lived nuclides, and they
+  // don't have a decay target, we then the ratios wouldn't sum to unity
+  // anymore ! Normalizing after would artificially increase production of the
+  // other possible targets in the branch which we don't want either.
 }
 
 FissionYields::FissionYields(const std::vector<std::string>& targets,
@@ -129,6 +140,172 @@ double FissionYields::yield(std::size_t t, double E) const {
   return yields_(iE, t) * (1. - fE) + yields_(iE + 1, t) * fE;
 }
 
+void FissionYields::remove_nuclide(const std::string& nuclide) {
+  auto has_nuclide = [this, &nuclide]() {
+    for (const auto& target : this->targets_) {
+      if (target == nuclide) return true;
+    }
+    return false;
+  };
+
+  while (has_nuclide()) {
+    // Get the index of the nuclide
+    std::size_t i = 0;
+    auto it = targets_.begin();
+    for (i = 0; i < targets_.size(); i++) {
+      if (nuclide == targets_[i]) break;
+      it++;
+    }
+    targets_.erase(it);  // Remove target name
+
+    // We have the index, now we remove it from the array.
+    // To do this, we first make a view
+    auto view = xt::view(yields_, xt::all(), xt::drop(i));
+    xt::xtensor<double, 2> temp_yields = view;
+    yields_ = temp_yields;
+  }
+}
+
+void FissionYields::replace_nuclide(const std::string& nuclide,
+                                    const std::string& new_nuclide) {
+  for (auto& target : targets_) {
+    if (target == nuclide) target = new_nuclide;
+  }
+}
+
+void FissionYields::replace_nuclide(const std::string& nuclide,
+                                    const BranchingTargets& targets) {
+  // Get the total yield of the nuclide we want to remove
+  std::vector<double> nuclide_yield_sums(incident_energies_.size(), 0.);
+  for (std::size_t i = 0; i < targets_.size(); i++) {
+    if (nuclide == targets_[i]) {
+      for (std::size_t e = 0; e < incident_energies_.size(); e++) {
+        nuclide_yield_sums[e] += yields_(e, i);
+      }
+    }
+  }
+
+  // Remove all instances of the nuclide
+  this->remove_nuclide(nuclide);
+
+  // Make copy of yields and then zero yields
+  xt::xtensor<double, 2> old_yields = yields_;
+  yields_ =
+      xt::zeros<double>({old_yields.shape()[0],
+                         old_yields.shape()[1] + targets.branches().size()});
+  
+  // Re-fill yields
+  for (std::size_t e = 0; e < yields_.shape()[0]; e++) {
+    std::size_t ti = 0;
+    for (std::size_t i = 0; i < yields_.shape()[1]; i++) {
+      if (i < old_yields.shape()[1]) {
+        // Use old data if in that region
+        yields_(e,i) = old_yields(e,i);
+      } else {
+        // If in region of new target, get info from branch ratios
+        yields_(e,i) = targets.branches()[ti].branch_ratio * nuclide_yield_sums[e];
+        ti++;
+      }
+    }
+  }
+
+  // Add the new targets to target list
+  for (const auto& branch : targets.branches()) {
+    targets_.push_back(branch.target);
+  }
+}
+
+void ChainEntry::remove_nuclide(const std::string& nuclide,
+                                const Target& new_target) {
+  auto target_eliminator = [this, &nuclide](const auto& t) {
+    this->remove_nuclide(nuclide, t);
+  };
+  std::visit(target_eliminator, new_target);
+}
+
+void ChainEntry::remove_nuclide(const std::string& nuclide,
+                                const NoTarget& new_target) {
+  if (decay_targets_) remove_nuclide(nuclide, new_target, decay_targets_.value());
+  if (n_gamma_) remove_nuclide(nuclide, new_target, n_gamma_.value());
+  if (n_2n_) remove_nuclide(nuclide, new_target, n_2n_.value());
+  if (n_3n_) remove_nuclide(nuclide, new_target, n_3n_.value());
+  if (n_p_) remove_nuclide(nuclide, new_target, n_p_.value());
+  if (n_alpha_) remove_nuclide(nuclide, new_target, n_alpha_.value());
+  if (n_fission_) remove_nuclide(nuclide, new_target, n_fission_.value());
+}
+
+void ChainEntry::remove_nuclide(const std::string& nuclide,
+                                const SingleTarget& new_target) {
+  if (decay_targets_) remove_nuclide(nuclide, new_target, decay_targets_.value());
+  if (n_gamma_) remove_nuclide(nuclide, new_target, n_gamma_.value());
+  if (n_2n_) remove_nuclide(nuclide, new_target, n_2n_.value());
+  if (n_3n_) remove_nuclide(nuclide, new_target, n_3n_.value());
+  if (n_p_) remove_nuclide(nuclide, new_target, n_p_.value());
+  if (n_alpha_) remove_nuclide(nuclide, new_target, n_alpha_.value());
+  if (n_fission_) remove_nuclide(nuclide, new_target, n_fission_.value());
+}
+
+void ChainEntry::remove_nuclide(const std::string& nuclide,
+                                const BranchingTargets& new_targets) {
+  if (decay_targets_) remove_nuclide(nuclide, new_targets, decay_targets_.value());
+  if (n_gamma_) remove_nuclide(nuclide, new_targets, n_gamma_.value());
+  if (n_2n_) remove_nuclide(nuclide, new_targets, n_2n_.value());
+  if (n_3n_) remove_nuclide(nuclide, new_targets, n_3n_.value());
+  if (n_p_) remove_nuclide(nuclide, new_targets, n_p_.value());
+  if (n_alpha_) remove_nuclide(nuclide, new_targets, n_alpha_.value());
+  if (n_fission_) remove_nuclide(nuclide, new_targets, n_fission_.value());
+}
+
+void ChainEntry::remove_nuclide(const std::string& nuclide,
+                                const NoTarget& new_target, Target& target) {
+  if (std::holds_alternative<NoTarget>(target)) {
+    // Transfering NoTarget to NoTarget. Nothing to do.
+  } else if (std::holds_alternative<SingleTarget>(target)) {
+    const auto target_name = std::get<SingleTarget>(target).target();
+    if (target_name == nuclide) {
+      target = new_target;
+    }
+  } else {
+    // BranchingTargets
+    auto& branch_targets = std::get<BranchingTargets>(target);
+    branch_targets.remove_nuclide(nuclide);
+  }
+}
+
+void ChainEntry::remove_nuclide(const std::string& nuclide,
+                                const SingleTarget& new_target,
+                                Target& target) {
+  if (std::holds_alternative<NoTarget>(target)) {
+    // Nothing to do. Target is empty so don't need to replace anything.
+  } else if (std::holds_alternative<SingleTarget>(target)) {
+    const auto& target_name = std::get<SingleTarget>(target).target();
+    if (target_name == nuclide) {
+      target = new_target;
+    }
+  } else {
+    // BranchingTargets
+    auto& branch_targets = std::get<BranchingTargets>(target);
+    branch_targets.replace_nuclide(nuclide, new_target.target());
+  }
+}
+
+void ChainEntry::remove_nuclide(const std::string& nuclide,
+                                const BranchingTargets& new_targets,
+                                Target& target) {
+  if (std::holds_alternative<NoTarget>(target)) {
+    // Nothing to do. Target is empty so don't need to replace anything.
+  } else if (std::holds_alternative<SingleTarget>(target)) {
+    const auto& target_name = std::get<SingleTarget>(target).target();
+    if (target_name == nuclide) {
+      target = new_targets;
+    }
+  } else {
+    // BranchingTargets
+    auto& branch_targets = std::get<BranchingTargets>(target);
+    branch_targets.replace_nuclide(nuclide, new_targets);
+  }
+}
+
 bool DepletionChain::holds_nuclide_data(const std::string& nuclide) const {
   if (data_.find(nuclide) == data_.end()) {
     return false;
@@ -166,6 +343,39 @@ std::set<std::string> DepletionChain::nuclides() const {
   std::set<std::string> nucs;
   for (const auto& nuc : data_) nucs.insert(nuc.first);
   return nucs;
+}
+
+void DepletionChain::remove_nuclide(const std::string& nuclide) {
+  // If nuclide isn't in the chain, we can't remove it
+  if (this->holds_nuclide_data(nuclide) == false) {
+    const auto mssg = "Cannot remove nuclide \"" + nuclide +
+                      "\", as not present in depletion chain.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Get the ChainEntry for the nuclide
+  const auto& nuc = this->nuclide_data(nuclide);
+
+  // Does the nuclide have decay data ? If not, we can't exactly replace it.
+  if (nuc.decay_targets().has_value() == false) {
+    const auto mssg = "Nuclide \"" + nuclide + "\" has no decay targets.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  const auto& decay_targets = nuc.decay_targets().value();
+
+  // Go through all other chain entries (but not ourself!) and replace
+  // instances of this nuclide in targets with its decay targets.
+  for (auto& entry : data_) {
+    if (&entry.second == &nuc) continue;  // Don't do ourself !
+
+    entry.second.remove_nuclide(nuclide, decay_targets);
+  }
+
+  // Delete nuclide from the chain
+  data_.erase(nuclide);
 }
 
 // Helper functions for extracting new targets from various types of targets

@@ -71,6 +71,41 @@ class BranchingTargets {
 
   const std::vector<Branch>& branches() const { return branches_; }
 
+  void remove_nuclide(const std::string& nuclide) {
+    for (auto it = branches_.begin(); it != branches_.end(); it++) {
+      if (it->target == nuclide) {
+        it = branches_.erase(it);
+        if (it == branches_.end()) break;
+      }
+    }
+  }
+
+  void replace_nuclide(const std::string& nuclide,
+                       const std::string& new_nuclide) {
+    for (auto it = branches_.begin(); it != branches_.end(); it++) {
+      if (it->target == nuclide) {
+        it->target = new_nuclide;
+      }
+    }
+  }
+
+  void replace_nuclide(const std::string& nuclide,
+                       const BranchingTargets& targets) {
+    double sum_ratios = 0.;
+    for (auto it = branches_.begin(); it != branches_.end(); it++) {
+      if (it->target == nuclide) {
+        sum_ratios += it->branch_ratio;
+
+        it = branches_.erase(it);
+        if (it == branches_.end()) break;
+      }
+    }
+
+    for (const auto& branch : targets.branches()) {
+      branches_.push_back({branch.target, sum_ratios * branch.branch_ratio});
+    }
+  }
+
  private:
   std::vector<Branch> branches_;
 
@@ -99,6 +134,12 @@ class FissionYields {
   }
 
   double yield(std::size_t t, double E) const;
+
+  void remove_nuclide(const std::string& nuclide);
+  void replace_nuclide(const std::string& nuclide,
+                       const std::string& new_nuclide);
+  void replace_nuclide(const std::string& nuclide,
+                       const BranchingTargets& targets);
 
  private:
   std::vector<std::string> targets_;
@@ -151,6 +192,8 @@ class ChainEntry {
   std::optional<FissionYields>& n_fission() { return n_fission_; }
   const std::optional<FissionYields>& n_fission() const { return n_fission_; }
 
+  void remove_nuclide(const std::string& nuclide, const Target& new_target);
+
  private:
   // Radioactive Decay
   std::optional<double> half_life_;
@@ -163,6 +206,33 @@ class ChainEntry {
   std::optional<Target> n_p_;
   std::optional<Target> n_alpha_;
   std::optional<FissionYields> n_fission_;
+
+  void remove_nuclide(const std::string& nuclide, const NoTarget& new_target);
+  void remove_nuclide(const std::string& nuclide,
+                      const SingleTarget& new_target);
+  void remove_nuclide(const std::string& nuclide,
+                      const BranchingTargets& new_targets);
+
+  void remove_nuclide(const std::string& nuclide, const NoTarget& new_target,
+                      Target& target);
+  void remove_nuclide(const std::string& nuclide,
+                      const SingleTarget& new_target, Target& target);
+  void remove_nuclide(const std::string& nuclide,
+                      const BranchingTargets& new_targets, Target& target);
+
+  // FissionYield removals
+  void remove_nuclide(const std::string& nuclide,
+                      const NoTarget& /*new_target*/, FissionYields& fy) {
+    fy.remove_nuclide(nuclide);
+  }
+  void remove_nuclide(const std::string& nuclide,
+                      const SingleTarget& new_target, FissionYields& fy) {
+    fy.replace_nuclide(nuclide, new_target.target());
+  }
+  void remove_nuclide(const std::string& nuclide,
+                      const BranchingTargets& new_targets, FissionYields& fy) {
+    fy.replace_nuclide(nuclide, new_targets);
+  }
 
   friend class cereal::access;
 
@@ -187,6 +257,8 @@ class DepletionChain {
 
   std::vector<std::string> descend_chains(std::set<std::string> nuclides,
                                           bool decay_only = false) const;
+
+  void remove_nuclide(const std::string& nuclide);
 
   void save(const std::string& fname) const;
   static std::shared_ptr<DepletionChain> load(const std::string& fname);
