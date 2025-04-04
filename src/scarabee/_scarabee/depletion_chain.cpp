@@ -193,17 +193,18 @@ void FissionYields::replace_nuclide(const std::string& nuclide,
   yields_ =
       xt::zeros<double>({old_yields.shape()[0],
                          old_yields.shape()[1] + targets.branches().size()});
-  
+
   // Re-fill yields
   for (std::size_t e = 0; e < yields_.shape()[0]; e++) {
     std::size_t ti = 0;
     for (std::size_t i = 0; i < yields_.shape()[1]; i++) {
       if (i < old_yields.shape()[1]) {
         // Use old data if in that region
-        yields_(e,i) = old_yields(e,i);
+        yields_(e, i) = old_yields(e, i);
       } else {
         // If in region of new target, get info from branch ratios
-        yields_(e,i) = targets.branches()[ti].branch_ratio * nuclide_yield_sums[e];
+        yields_(e, i) =
+            targets.branches()[ti].branch_ratio * nuclide_yield_sums[e];
         ti++;
       }
     }
@@ -225,7 +226,8 @@ void ChainEntry::remove_nuclide(const std::string& nuclide,
 
 void ChainEntry::remove_nuclide(const std::string& nuclide,
                                 const NoTarget& new_target) {
-  if (decay_targets_) remove_nuclide(nuclide, new_target, decay_targets_.value());
+  if (decay_targets_)
+    remove_nuclide(nuclide, new_target, decay_targets_.value());
   if (n_gamma_) remove_nuclide(nuclide, new_target, n_gamma_.value());
   if (n_2n_) remove_nuclide(nuclide, new_target, n_2n_.value());
   if (n_3n_) remove_nuclide(nuclide, new_target, n_3n_.value());
@@ -236,7 +238,8 @@ void ChainEntry::remove_nuclide(const std::string& nuclide,
 
 void ChainEntry::remove_nuclide(const std::string& nuclide,
                                 const SingleTarget& new_target) {
-  if (decay_targets_) remove_nuclide(nuclide, new_target, decay_targets_.value());
+  if (decay_targets_)
+    remove_nuclide(nuclide, new_target, decay_targets_.value());
   if (n_gamma_) remove_nuclide(nuclide, new_target, n_gamma_.value());
   if (n_2n_) remove_nuclide(nuclide, new_target, n_2n_.value());
   if (n_3n_) remove_nuclide(nuclide, new_target, n_3n_.value());
@@ -247,7 +250,8 @@ void ChainEntry::remove_nuclide(const std::string& nuclide,
 
 void ChainEntry::remove_nuclide(const std::string& nuclide,
                                 const BranchingTargets& new_targets) {
-  if (decay_targets_) remove_nuclide(nuclide, new_targets, decay_targets_.value());
+  if (decay_targets_)
+    remove_nuclide(nuclide, new_targets, decay_targets_.value());
   if (n_gamma_) remove_nuclide(nuclide, new_targets, n_gamma_.value());
   if (n_2n_) remove_nuclide(nuclide, new_targets, n_2n_.value());
   if (n_3n_) remove_nuclide(nuclide, new_targets, n_3n_.value());
@@ -303,6 +307,10 @@ void ChainEntry::remove_nuclide(const std::string& nuclide,
     // BranchingTargets
     auto& branch_targets = std::get<BranchingTargets>(target);
     branch_targets.replace_nuclide(nuclide, new_targets);
+
+    if (branch_targets.branches().size() == 0) {
+      target = NoTarget();
+    }
   }
 }
 
@@ -355,7 +363,7 @@ void DepletionChain::remove_nuclide(const std::string& nuclide) {
   }
 
   // Get the ChainEntry for the nuclide
-  const auto& nuc = this->nuclide_data(nuclide);
+  auto& nuc = this->data_[nuclide];
 
   // Does the nuclide have decay data ? If not, we can't exactly replace it.
   if (nuc.decay_targets().has_value() == false) {
@@ -364,7 +372,25 @@ void DepletionChain::remove_nuclide(const std::string& nuclide) {
     throw ScarabeeException(mssg);
   }
 
-  const auto& decay_targets = nuc.decay_targets().value();
+  auto& decay_targets = nuc.decay_targets().value();
+
+  // We need to make sure the decay target doesn't contain itself !!
+  if (std::holds_alternative<SingleTarget>(decay_targets)) {
+    if (std::get<SingleTarget>(decay_targets).target() == nuclide) {
+      // If we only decay to ourself, set the decay to no target.
+      decay_targets = NoTarget();
+    }
+  } else if (std::holds_alternative<BranchingTargets>(decay_targets)) {
+    // If we have branches, remove ourself
+    auto& dt = std::get<BranchingTargets>(decay_targets);
+    dt.remove_nuclide(nuclide);
+
+    if (dt.branches().size() == 0) {
+      // We once we removed ourself there are no branches,
+      // just set to no target.
+      decay_targets = NoTarget();
+    }
+  }
 
   // Go through all other chain entries (but not ourself!) and replace
   // instances of this nuclide in targets with its decay targets.
