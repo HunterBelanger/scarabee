@@ -215,12 +215,15 @@ def main():
     # aren't in important chains.
     nuclide_names = dc.nuclides
     for nuc_name in nuclide_names:
-        if nuc_name in ["I135", "Xe135", "Xe135m1"]:
+        if nuc_name in ["I135", "Xe135"]:
             continue
 
         nuc = dc.nuclide_data(nuc_name)
 
         if nuc.half_life is not None and nuc.half_life < 60.*60.*24.:
+            print("Removing {:} from chain".format(nuc_name))
+            dc.remove_nuclide(nuc_name)
+        elif nuc_name in ["Cd115", "Rh102", "Rh102m1", "Sb127"]: # No Evals in ENDF-8.0 for these. RIP
             print("Removing {:} from chain".format(nuc_name))
             dc.remove_nuclide(nuc_name)
 
