@@ -12,8 +12,10 @@ include(FetchContent)
 # Get Eigen version 3.4.0
 message(STATUS "Downloading Eigen")
 FetchContent_Declare(eigen
+  #GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
   GIT_REPOSITORY https://gitlab.com/HunterBelanger/eigen.git
-  GIT_TAG        fix/uninstall-target
+  #GIT_TAG        b8600422  # April 2 2025
+  GIT_TAG        fix/parallelizer_conversion_warning
   EXCLUDE_FROM_ALL
 )
 set(BUILD_TESTING OFF)
@@ -23,10 +25,10 @@ FetchContent_MakeAvailable(eigen)
 
 #===============================================================================
 # Get SPDLOG
-message(STATUS "Downloading spdlog v1.13.0")
+message(STATUS "Downloading spdlog v1.15.2")
 FetchContent_Declare(spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG        v1.13.0
+  GIT_TAG        v1.15.2
   EXCLUDE_FROM_ALL
 )
 set(SPDLOG_BUILD_PIC ON CACHE BOOL "Build position independent code (-fPIC)")
@@ -105,7 +107,7 @@ message(STATUS "Numpy includes: ${NUMPY_INCLUDE_DIRS}")
 
 #===============================================================================
 # Get HDF5
-message(STATUS "Downloading HDF5 v1.14.3")
+message(STATUS "Downloading HDF5 v1.14.6")
 set(HDF5_ENABLE_Z_LIB_SUPPORT OFF)
 set(HDF5_EXTERNALLY_CONFIGURED  1)
 set(HDF5_ENABLE_SZIP_SUPPORT  OFF)
@@ -116,7 +118,7 @@ set(HDF5_BUILD_HL_LIB         OFF)
 set(BUILD_SHARED_LIBS         OFF)
 FetchContent_Declare(hdf5
   GIT_REPOSITORY https://github.com/HDFGroup/hdf5.git
-  GIT_TAG        hdf5-1_14_3
+  GIT_TAG        hdf5_1.14.6
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(hdf5)
@@ -130,8 +132,8 @@ set(HIGHFIVE_EXAMPLES OFF)
 set(HIGHFIVE_BUILD_DOCS OFF)
 set(HIGHFIVE_FIND_HDF5 OFF)
 FetchContent_Declare(HighFive
-  GIT_REPOSITORY https://github.com/BlueBrain/HighFive.git
-  GIT_TAG        master
+  GIT_REPOSITORY https://github.com/highfive-devs/highfive.git
+  GIT_TAG        main
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(HighFive)

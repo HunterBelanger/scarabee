@@ -86,7 +86,16 @@ class Material {
   void set_temperature(double T);
   double average_molar_mass() const { return average_molar_mass_; }
 
-  void clear_micro_xs_data();
+  void clear_all_micro_xs_data();
+  void clear_transport_micro_xs_data();
+  void clear_depletion_micro_xs_data();
+
+  bool has_transport_micro_xs_data() const {
+    return micro_nuc_xs_data_.size() > 0;
+  }
+  bool has_depletion_micro_xs_data() const {
+    return micro_dep_xs_data_.size() > 0;
+  }
 
   bool fissile() const { return fissile_; }
   bool resonant() const { return resonant_; }
@@ -111,6 +120,10 @@ class Material {
   void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
 
   double compute_fission_power_density(
+      std::span<const double> flux,
+      const std::shared_ptr<const NDLibrary> ndl) const;
+
+  std::vector<DepletionReactionRates> compute_depletion_reaction_rates(
       std::span<const double> flux,
       const std::shared_ptr<const NDLibrary> ndl) const;
 

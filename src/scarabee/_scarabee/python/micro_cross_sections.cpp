@@ -18,7 +18,8 @@ void init_MicroCrossSectionStructs(py::module& m) {
                     "Capture cross section.")
       .def_readonly("n_2n", &MicroDepletionXS::n_2n, "(n,2n) cross section.")
       .def_readonly("n_3n", &MicroDepletionXS::n_3n, "(n,3n) cross section.")
-      .def_readonly("n_a", &MicroDepletionXS::n_a, "(n,a) cross section.")
+      .def_readonly("n_alpha", &MicroDepletionXS::n_alpha,
+                    "(n,alpha) cross section.")
       .def_readonly("n_p", &MicroDepletionXS::n_p, "(n,p) cross section.");
 
   py::class_<MicroNuclideXS>(
@@ -42,4 +43,29 @@ void init_MicroCrossSectionStructs(py::module& m) {
                     "First outgoing energy group.")
       .def_readonly("n_gamma", &ResonantOneGroupXS::n_gamma,
                     "Capture cross section.");
+
+  py::class_<DepletionReactionRates>(
+      m, "DepletionReactionRates",
+      "Holds the reaction rate data for a single nuclide, used in depletion "
+      "calculations.")
+      .def_readwrite("nuclide", &DepletionReactionRates::nuclide,
+                     "Name of the nuclide.")
+      .def_readwrite(
+          "number_density", &DepletionReactionRates::number_density,
+          "Number of the specified nuclide in units of atoms per barn-cm.")
+      .def_readwrite("n_gamma", &DepletionReactionRates::n_gamma,
+                     "Energy integrated (n,gamma) microscopic reaction rate.")
+      .def_readwrite("n_2n", &DepletionReactionRates::n_2n,
+                     "Energy integrated (n,2n) microscopic reaction rate.")
+      .def_readwrite("n_3n", &DepletionReactionRates::n_3n,
+                     "Energy integrated (n,3n) microscopic reaction rate.")
+      .def_readwrite("n_p", &DepletionReactionRates::n_p,
+                     "Energy integrated (n,p) microscopic reaction rate.")
+      .def_readwrite("n_alpha", &DepletionReactionRates::n_alpha,
+                     "Energy integrated (n,alpha) microscopic reaction rate.")
+      .def_readwrite("n_fission", &DepletionReactionRates::n_fission,
+                     "Energy integrated (n,fission) microscopic reaction rate.")
+      .def_readwrite("average_fission_energy",
+                     &DepletionReactionRates::average_fission_energy,
+                     "Average energy, in eV, of a neutron inducing fission.");
 }

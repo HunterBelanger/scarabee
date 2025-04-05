@@ -28,6 +28,8 @@ class XS1D {
     return xs_(g);
   }
 
+  double xs_fast(const std::size_t g) const { return xs_(g); }
+
   void set_value(const std::size_t g, const double v) {
     if (g >= xs_.size()) {
       const auto mssg = "Group index is out of range.";

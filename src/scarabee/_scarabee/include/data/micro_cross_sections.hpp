@@ -19,13 +19,13 @@ struct MicroDepletionXS {
   std::optional<XS1D> n_gamma{std::nullopt};
   std::optional<XS1D> n_2n{std::nullopt};
   std::optional<XS1D> n_3n{std::nullopt};
-  std::optional<XS1D> n_a{std::nullopt};
+  std::optional<XS1D> n_alpha{std::nullopt};
   std::optional<XS1D> n_p{std::nullopt};
 
   template <class Archive>
   void serialize(Archive& arc) {
     arc(CEREAL_NVP(n_fission), CEREAL_NVP(n_gamma), CEREAL_NVP(n_2n),
-        CEREAL_NVP(n_3n), CEREAL_NVP(n_a), CEREAL_NVP(n_p));
+        CEREAL_NVP(n_3n), CEREAL_NVP(n_alpha), CEREAL_NVP(n_p));
   }
 };
 
@@ -57,6 +57,18 @@ struct ResonantOneGroupXS {
 
   // Scarabée assumes that (n,2n), (n,3n), (n,a), and (n,p) are not resonant
   // i.e. not dilution dependent.
+};
+
+struct DepletionReactionRates {
+  std::string nuclide{};
+  double number_density{0.};
+  double n_gamma{0.};
+  double n_2n{0.};
+  double n_3n{0.};
+  double n_p{0.};
+  double n_alpha{0.};
+  double n_fission{0.};
+  double average_fission_energy{0.};
 };
 
 }  // namespace scarabee

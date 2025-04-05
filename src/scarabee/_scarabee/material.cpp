@@ -607,6 +607,127 @@ double Material::compute_fission_power_density(
   return pd;
 }
 
+std::vector<DepletionReactionRates> Material::compute_depletion_reaction_rates(
+    std::span<const double> flux,
+    const std::shared_ptr<const NDLibrary> ndl) const {
+  if (this->has_depletion_micro_xs_data() == false) {
+    const auto mssg =
+        "No depletion cross section information is loaded in the material.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Initialize vector to hold all nuclide reaction rates.
+  std::vector<DepletionReactionRates> dep_rrs;
+  dep_rrs.reserve(composition_.nuclides.size());
+
+  // Loop over all nuclides
+  for (std::size_t ni = 0; ni < composition_.nuclides.size(); ni++) {
+    // Add new reaction rate to the end
+    dep_rrs.emplace_back();
+
+    // Save nuclide name and number density
+    dep_rrs.back().nuclide = composition_.nuclides[ni].name;
+    dep_rrs.back().number_density =
+        composition_.nuclides[ni].fraction * atoms_per_bcm_;
+
+    // Get the depletion xs object
+    const auto& nucxs = micro_dep_xs_data_[ni];
+
+    if (nucxs.n_gamma) {
+      const auto& xs = nucxs.n_gamma.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,gamma) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_gamma;
+      for (std::size_t g = 0; g < xs.ngroups(); g++)
+        rr += xs.xs_fast(g) * flux[g];
+    }
+
+    if (nucxs.n_2n) {
+      const auto& xs = nucxs.n_2n.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,2n) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_2n;
+      for (std::size_t g = 0; g < xs.ngroups(); g++)
+        rr += xs.xs_fast(g) * flux[g];
+    }
+
+    if (nucxs.n_3n) {
+      const auto& xs = nucxs.n_3n.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,3n) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_3n;
+      for (std::size_t g = 0; g < xs.ngroups(); g++)
+        rr += xs.xs_fast(g) * flux[g];
+    }
+
+    if (nucxs.n_p) {
+      const auto& xs = nucxs.n_p.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,p) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_p;
+      for (std::size_t g = 0; g < xs.ngroups(); g++)
+        rr += xs.xs_fast(g) * flux[g];
+    }
+
+    if (nucxs.n_alpha) {
+      const auto& xs = nucxs.n_alpha.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,alpha) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_alpha;
+      for (std::size_t g = 0; g < xs.ngroups(); g++)
+        rr += xs.xs_fast(g) * flux[g];
+    }
+
+    if (nucxs.n_fission) {
+      const auto& xs = nucxs.n_fission.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,fission) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_fission;
+      double Err = 0.;
+      for (std::size_t g = 0; g < xs.ngroups(); g++) {
+        const double Ef_flx_g = xs.xs_fast(g) * flux[g];
+        rr += Ef_flx_g;
+        Err += std::sqrt(ndl->group_bounds()[g] * ndl->group_bounds()[g + 1]) *
+               Ef_flx_g;
+      }
+      dep_rrs.back().average_fission_energy = Err / rr;
+    }
+  }
+
+  return dep_rrs;
+}
+
 void Material::assign_resonant_xs(const std::size_t i, const std::size_t g,
                                   const ResonantOneGroupXS& res_data) {
   micro_nuc_xs_data_[i].Dtr.set_value(g, res_data.Dtr);
@@ -681,14 +802,18 @@ double Material::lambda_pot_xs(std::shared_ptr<NDLibrary> ndl, std::size_t g) {
   return lmbd_pot_xs;
 }
 
-void Material::clear_micro_xs_data() {
-  micro_nuc_xs_data_.clear();
-  micro_dep_xs_data_.clear();
+void Material::clear_transport_micro_xs_data() { micro_nuc_xs_data_.clear(); }
+
+void Material::clear_depletion_micro_xs_data() { micro_dep_xs_data_.clear(); }
+
+void Material::clear_all_micro_xs_data() {
+  this->clear_transport_micro_xs_data();
+  this->clear_depletion_micro_xs_data();
 }
 
 void Material::initialize_inf_dil_xs(std::shared_ptr<NDLibrary> ndl,
                                      std::size_t max_l) {
-  this->clear_micro_xs_data();
+  this->clear_all_micro_xs_data();
   micro_nuc_xs_data_.reserve(composition_.nuclides.size());
   micro_dep_xs_data_.reserve(composition_.nuclides.size());
 

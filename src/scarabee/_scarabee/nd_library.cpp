@@ -540,9 +540,10 @@ std::pair<MicroNuclideXS, MicroDepletionXS> NDLibrary::infinite_dilution_xs(
   }
 
   if (nuc.inf_n_a) {
-    xt::xtensor<double, 1> n_a = xt::zeros<double>({nuc.inf_n_a->shape()[1]});
-    this->interp_temp(n_a, *nuc.inf_n_a, it, f_temp);
-    dep_xs.n_a = XS1D(n_a);
+    xt::xtensor<double, 1> n_alpha =
+        xt::zeros<double>({nuc.inf_n_a->shape()[1]});
+    this->interp_temp(n_alpha, *nuc.inf_n_a, it, f_temp);
+    dep_xs.n_alpha = XS1D(n_alpha);
   }
 
   if (nuc.inf_n_p) {

@@ -28,6 +28,18 @@ Materials
    :members:
    :special-members: __init__
 
+.. autoclass:: MicroDepletionXS
+   :members:
+
+.. autoclass:: MicroNuclideXS
+   :members:
+
+.. autoclass:: ResonantOneGroupXS
+   :members:
+
+.. autoclass:: DepletionReactionRates
+   :members:
+
 .. autoclass:: Nuclide
    :members:
 
