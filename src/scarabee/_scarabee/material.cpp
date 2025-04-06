@@ -646,6 +646,7 @@ std::vector<DepletionReactionRates> Material::compute_depletion_reaction_rates(
       double& rr = dep_rrs.back().n_gamma;
       for (std::size_t g = 0; g < xs.ngroups(); g++)
         rr += xs.xs_fast(g) * flux[g];
+      rr *= CM2_PER_BARN;
     }
 
     if (nucxs.n_2n) {
@@ -660,6 +661,7 @@ std::vector<DepletionReactionRates> Material::compute_depletion_reaction_rates(
       double& rr = dep_rrs.back().n_2n;
       for (std::size_t g = 0; g < xs.ngroups(); g++)
         rr += xs.xs_fast(g) * flux[g];
+      rr *= CM2_PER_BARN;
     }
 
     if (nucxs.n_3n) {
@@ -674,6 +676,7 @@ std::vector<DepletionReactionRates> Material::compute_depletion_reaction_rates(
       double& rr = dep_rrs.back().n_3n;
       for (std::size_t g = 0; g < xs.ngroups(); g++)
         rr += xs.xs_fast(g) * flux[g];
+      rr *= CM2_PER_BARN;
     }
 
     if (nucxs.n_p) {
@@ -688,6 +691,7 @@ std::vector<DepletionReactionRates> Material::compute_depletion_reaction_rates(
       double& rr = dep_rrs.back().n_p;
       for (std::size_t g = 0; g < xs.ngroups(); g++)
         rr += xs.xs_fast(g) * flux[g];
+      rr *= CM2_PER_BARN;
     }
 
     if (nucxs.n_alpha) {
@@ -702,6 +706,7 @@ std::vector<DepletionReactionRates> Material::compute_depletion_reaction_rates(
       double& rr = dep_rrs.back().n_alpha;
       for (std::size_t g = 0; g < xs.ngroups(); g++)
         rr += xs.xs_fast(g) * flux[g];
+      rr *= CM2_PER_BARN;
     }
 
     if (nucxs.n_fission) {
@@ -722,6 +727,7 @@ std::vector<DepletionReactionRates> Material::compute_depletion_reaction_rates(
                Ef_flx_g;
       }
       dep_rrs.back().average_fission_energy = Err / rr;
+      rr *= CM2_PER_BARN;
     }
   }
 
@@ -832,7 +838,7 @@ std::shared_ptr<Material> mix_materials(
 
   // Make sure all fractions are positive
   for (const auto& v : fracs) {
-    if (v <= 0.) {
+    if (v < 0.) {
       auto mssg = "All fractions must be > 0.";
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
@@ -868,6 +874,11 @@ std::shared_ptr<Material> mix_materials(
 
   // First, we normalize the fractions
   double norm = std::accumulate(fracs.begin(), fracs.end(), 0.);
+  if (norm == 0.) {
+    auto mssg = "Sum of material fractions must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
   for (auto& v : fracs) v /= norm;
 
   std::vector<double> wgts(mats.size(), 0.);

@@ -2,6 +2,8 @@
 #define SCARABEE_DEPLETION_MATRIX_H
 
 #include <data/depletion_chain.hpp>
+#include <data/nd_library.hpp>
+#include <data/material.hpp>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 
@@ -9,6 +11,7 @@
 
 #include <array>
 #include <complex>
+#include <memory>
 #include <span>
 #include <string>
 #include <vector>
@@ -113,6 +116,10 @@ class DepletionMatrix {
   static const std::array<std::complex<double>, 24> cram48_theta_;
   static const double cram48_alpha0_;
 };
+
+std::shared_ptr<DepletionMatrix> build_depletion_matrix(
+    std::shared_ptr<DepletionChain> chain, std::shared_ptr<Material> mat,
+    std::span<const double> flux, std::shared_ptr<NDLibrary> ndl);
 
 }  // namespace scarabee
 

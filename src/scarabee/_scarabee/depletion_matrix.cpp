@@ -1,4 +1,5 @@
 #include <data/depletion_matrix.hpp>
+#include <utils/constants.hpp>
 #include <utils/logging.hpp>
 #include <utils/nuclide_names.hpp>
 #include <utils/scarabee_exception.hpp>
@@ -8,6 +9,7 @@
 #include <Eigen/SparseLU>
 
 #include <algorithm>
+#include <set>
 
 namespace scarabee {
 
@@ -112,6 +114,12 @@ void DepletionMatrix::detail_exp_product(
     // Solve the system for Acmplx @ x = N
     solver.analyzePattern(Acmplx);
     solver.factorize(Acmplx);
+    if (solver.info() != Eigen::ComputationInfo::Success) {
+      const auto mssg =
+          "Could not factorize complex depletion matrix in CRAM iterations.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
     Ncmplx_out = solver.solve(Ncmplx);
 
     // Multiply by complex alpha[i]
@@ -129,6 +137,141 @@ void DepletionMatrix::detail_exp_product(
     if (N[n] < 0.) N[n] = 0.;
   }
 }
+
+double compute_loss_term(const ChainEntry& nucinfo,
+                         const DepletionReactionRates& nucrr) {
+  double loss = 0.;
+
+  // Get losses due to radioactive decay
+  if (nucinfo.half_life()) loss += nucinfo.half_life().value();
+
+  // Accumulate losses due to transmutation.
+  if (nucinfo.n_gamma()) loss += nucrr.n_gamma;
+  if (nucinfo.n_2n()) loss += nucrr.n_2n;
+  if (nucinfo.n_3n()) loss += nucrr.n_3n;
+  if (nucinfo.n_p()) loss += nucrr.n_p;
+  if (nucinfo.n_alpha()) loss += nucrr.n_alpha;
+  if (nucinfo.n_fission()) loss += nucrr.n_fission;
+
+  return loss;
+}
+
+void fill_target_gains(DepletionMatrix& /*matrix*/, const NoTarget& /*target*/,
+                       const double /*rate*/,
+                       const std::size_t /*parent_index*/) {
+  // Nothing to do when there is no target
+}
+
+void fill_target_gains(DepletionMatrix& matrix, const SingleTarget& target,
+                       const double rate, const std::size_t parent_index) {
+  const std::size_t target_index = matrix.get_nuclide_index(target.target());
+  matrix.ref(target_index, parent_index) += rate;
+}
+
+void fill_target_gains(DepletionMatrix& matrix, const BranchingTargets& targets,
+                       const double rate, const std::size_t parent_index) {
+  for (const auto& branch : targets.branches()) {
+    const std::size_t target_index = matrix.get_nuclide_index(branch.target);
+    matrix.ref(target_index, parent_index) += rate * branch.branch_ratio;
+  }
+}
+
+void fill_target_gains(DepletionMatrix& matrix, const FissionYields& fy,
+                       const double rate, const double E,
+                       const std::size_t parent_index) {
+  for (std::size_t fyi = 0; fyi < fy.size(); fyi++) {
+    const std::size_t target_index =
+        matrix.get_nuclide_index(fy.targets()[fyi]);
+    matrix.ref(target_index, parent_index) += rate * fy.yield(fyi, E);
+  }
+}
+
+void fill_target_gains(DepletionMatrix& matrix, const Target& target,
+                       const double rate, const std::size_t parent_index) {
+  if (std::holds_alternative<NoTarget>(target)) {
+    fill_target_gains(matrix, std::get<NoTarget>(target), rate, parent_index);
+  } else if (std::holds_alternative<SingleTarget>(target)) {
+    fill_target_gains(matrix, std::get<SingleTarget>(target), rate,
+                      parent_index);
+  } else {
+    // Must hold BranchingTargets
+    fill_target_gains(matrix, std::get<BranchingTargets>(target), rate,
+                      parent_index);
+  }
+}
+
+void fill_gain_terms(DepletionMatrix& matrix, const ChainEntry& nucinfo,
+                     const DepletionReactionRates& nucrr, const std::size_t i) {
+  if (nucinfo.decay_targets())
+    fill_target_gains(matrix, nucinfo.decay_targets().value(),
+                      nucinfo.half_life().value(), i);
+
+  if (nucinfo.n_2n() && nucrr.n_2n > 0.)
+    fill_target_gains(matrix, nucinfo.n_2n().value(), nucrr.n_2n, i);
+
+  if (nucinfo.n_3n() && nucrr.n_3n > 0.)
+    fill_target_gains(matrix, nucinfo.n_3n().value(), nucrr.n_3n, i);
+
+  if (nucinfo.n_p() && nucrr.n_p > 0.)
+    fill_target_gains(matrix, nucinfo.n_p().value(), nucrr.n_p, i);
+
+  if (nucinfo.n_alpha() && nucrr.n_alpha > 0.)
+    fill_target_gains(matrix, nucinfo.n_alpha().value(), nucrr.n_alpha, i);
+
+  if (nucinfo.n_fission() && nucrr.n_fission > 0.)
+    fill_target_gains(matrix, nucinfo.n_fission().value(), nucrr.n_fission,
+                      nucrr.average_fission_energy, i);
+}
+
+std::shared_ptr<DepletionMatrix> build_depletion_matrix(
+    std::shared_ptr<DepletionChain> chain, std::shared_ptr<Material> mat,
+    std::span<const double> flux, std::shared_ptr<NDLibrary> ndl) {
+  // Start by making a set of initial nuclides.
+  // These are only the depletable nuclides !!
+  std::set<std::string> initial_dep_nuclides;
+  for (const auto& nuc : mat->composition().nuclides) {
+    initial_dep_nuclides.insert(nuclide_name_to_simple_name(nuc.name));
+  }
+
+  // Get the sorted list of all possible targets
+  std::vector<std::string> all_targets =
+      chain->descend_chains(initial_dep_nuclides);
+
+  // Get the vector of all reaction rate objects for the nuclides in the
+  // material
+  std::vector<DepletionReactionRates> nuc_rrs =
+      mat->compute_depletion_reaction_rates(flux, ndl);
+
+  // With this, we can build the matrix object
+  std::shared_ptr<DepletionMatrix> matrix_ptr =
+      std::make_shared<DepletionMatrix>(all_targets);
+  DepletionMatrix& matrix = *matrix_ptr;
+
+  // Now, go through each initial nuclide and fill in the matrix elements
+  for (const auto& nucrr : nuc_rrs) {
+    // Skip the nuclide if it isn't in the depletion chain, even if it might
+    // have depletion cross section nuclear data and reaction rates.
+    if (chain->holds_nuclide_data(nucrr.nuclide) == false) continue;
+
+    // Get the depletion chain entry for the nuclide
+    const auto& nucinfo = chain->nuclide_data(nucrr.nuclide);
+
+    // Get the index of the nuclide
+    const std::size_t i = matrix.get_nuclide_index(nucrr.nuclide);
+
+    // First, account for all losses due to decay and transmutation.
+    matrix.ref(i, i) -= compute_loss_term(nucinfo, nucrr);
+
+    // Now we fill the gain terms for all targets
+    fill_gain_terms(matrix, nucinfo, nucrr, i);
+  }
+
+  matrix.compress();
+  return matrix_ptr;
+}
+
+// Constants for taking matrix exponential with CRAM.
+// Tables can be found in reference [1].
 
 const std::array<std::complex<double>, 8> DepletionMatrix::cram16_alpha_{
     std::complex<double>{5.464930576870210e+3, -3.797983575308356e+4},
@@ -205,5 +348,9 @@ const std::array<std::complex<double>, 24> DepletionMatrix::cram48_theta_{
     std::complex<double>{+1.316284237125190e+1, 2.042951874827759e+1}};
 
 const double DepletionMatrix::cram48_alpha0_{2.258038182743983e-47};
+
+// [1] P. Maria, “Higher-Order Chebyshev Rational Approximation Method and
+//     Application to Burnup Equations,” Nucl. Sci. Eng., vol. 182, no. 3,
+//     pp. 297–318, 2016, doi: 10.13182/nse15-26.
 
 }  // namespace scarabee

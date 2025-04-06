@@ -455,13 +455,9 @@ std::vector<std::string> DepletionChain::descend_chains(
       // Save this nuclide as having been "found"
       found_nuclides.insert(nuc_name);
 
-      // Get the chain entry for the nuclides
-      if (this->holds_nuclide_data(nuc_name) == false) {
-        const auto mssg =
-            "The nuclide \"" + nuc_name + "\" has no depletion chain entry.";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      }
+      // Get the chain entry for the nuclides. If it doesn't have an entry,
+      // go to the next nuclide.
+      if (this->holds_nuclide_data(nuc_name) == false) continue;
       const auto& entry = this->nuclide_data(nuc_name);
 
       // For each decay or transmutation reaction (including fission), save all

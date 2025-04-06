@@ -54,17 +54,23 @@ void init_MicroCrossSectionStructs(py::module& m) {
           "number_density", &DepletionReactionRates::number_density,
           "Number of the specified nuclide in units of atoms per barn-cm.")
       .def_readwrite("n_gamma", &DepletionReactionRates::n_gamma,
-                     "Energy integrated (n,gamma) microscopic reaction rate.")
-      .def_readwrite("n_2n", &DepletionReactionRates::n_2n,
-                     "Energy integrated (n,2n) microscopic reaction rate.")
-      .def_readwrite("n_3n", &DepletionReactionRates::n_3n,
-                     "Energy integrated (n,3n) microscopic reaction rate.")
-      .def_readwrite("n_p", &DepletionReactionRates::n_p,
-                     "Energy integrated (n,p) microscopic reaction rate.")
+                     "Energy integrated (n,gamma) microscopic reaction rate in "
+                     "units of 1/s.")
+      .def_readwrite(
+          "n_2n", &DepletionReactionRates::n_2n,
+          "Energy integrated (n,2n) microscopic reaction rate in units of 1/s.")
+      .def_readwrite(
+          "n_3n", &DepletionReactionRates::n_3n,
+          "Energy integrated (n,3n) microscopic reaction rate in units of 1/s.")
+      .def_readwrite(
+          "n_p", &DepletionReactionRates::n_p,
+          "Energy integrated (n,p) microscopic reaction rate in units of 1/s.")
       .def_readwrite("n_alpha", &DepletionReactionRates::n_alpha,
-                     "Energy integrated (n,alpha) microscopic reaction rate.")
+                     "Energy integrated (n,alpha) microscopic reaction rate in "
+                     "units of 1/s.")
       .def_readwrite("n_fission", &DepletionReactionRates::n_fission,
-                     "Energy integrated (n,fission) microscopic reaction rate.")
+                     "Energy integrated (n,fission) microscopic reaction rate "
+                     "in units of 1/s.")
       .def_readwrite("average_fission_energy",
                      &DepletionReactionRates::average_fission_energy,
                      "Average energy, in eV, of a neutron inducing fission.");
