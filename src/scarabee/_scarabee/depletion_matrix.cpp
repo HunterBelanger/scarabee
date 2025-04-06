@@ -247,8 +247,15 @@ std::shared_ptr<DepletionMatrix> build_depletion_matrix(
       std::make_shared<DepletionMatrix>(all_targets);
   DepletionMatrix& matrix = *matrix_ptr;
 
-  // Now, go through each initial nuclide and fill in the matrix elements
+  // Now, go through each initial nuclide that is in the material and has
+  // reaction rates. We fill the matrix elements for targets of this nuclide.
   for (const auto& nucrr : nuc_rrs) {
+    // Remove the nuclide from the all_targets list if it has reaction rates.
+    // This way, after the reaction rate terms, we can go through all the
+    // remaining nuclides in all_targets which don't have a reaction rate, but
+    // which almost certainly have radioactive decay !
+    std::remove(all_targets.begin(), all_targets.end(), nucrr.nuclide);
+
     // Skip the nuclide if it isn't in the depletion chain, even if it might
     // have depletion cross section nuclear data and reaction rates.
     if (chain->holds_nuclide_data(nucrr.nuclide) == false) continue;
@@ -264,6 +271,27 @@ std::shared_ptr<DepletionMatrix> build_depletion_matrix(
 
     // Now we fill the gain terms for all targets
     fill_gain_terms(matrix, nucinfo, nucrr, i);
+  }
+
+  // Now we need to go over all the nuclides that remain in all_targets, which
+  // weren't in the material and therefore don't have reaction rates.
+  DepletionReactionRates zero_rr;
+  for (const auto& nuclide : all_targets) {
+    // Skip the nuclide if it isn't in the depletion chain, even if it might
+    // have depletion cross section nuclear data and reaction rates.
+    if (chain->holds_nuclide_data(nuclide) == false) continue;
+
+    // Get the depletion chain entry for the nuclide
+    const auto& nucinfo = chain->nuclide_data(nuclide);
+
+    // Get the index of the nuclide
+    const std::size_t i = matrix.get_nuclide_index(nuclide);
+
+    // First, account for all losses due to decay and transmutation.
+    matrix.ref(i, i) -= compute_loss_term(nucinfo, zero_rr);
+
+    // Now we fill the gain terms for all targets
+    fill_gain_terms(matrix, nucinfo, zero_rr, i);
   }
 
   matrix.compress();
