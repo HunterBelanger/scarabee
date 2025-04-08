@@ -90,11 +90,12 @@ def main():
 
         for entry in nuc:
             if entry.tag == "decay":
-                branch = Branch()
-                branch.target = strip_name(entry.attrib["target"])
-                branch.branch_ratio = float(entry.attrib["branching_ratio"])
-                if branch.branch_ratio > 0.0:
-                    decay_branches_list.append(branch)
+                if "target" in entry.attrib:
+                    branch = Branch()
+                    branch.target = strip_name(entry.attrib["target"])
+                    branch.branch_ratio = float(entry.attrib["branching_ratio"])
+                    if branch.branch_ratio > 0.0:
+                        decay_branches_list.append(branch)
 
             elif entry.tag == "reaction":
                 reaction = entry.attrib["type"]
@@ -186,6 +187,8 @@ def main():
             decay_targets = SingleTarget(decay_branches_list[0].target)
         elif len(decay_branches_list) > 1:
             decay_targets = BranchingTargets(decay_branches_list)
+        if half_life is not None and decay_targets is None:
+            decay_targets = NoTarget()
 
         if isinstance(n_gamma, list):
             n_gamma = BranchingTargets(n_gamma)
