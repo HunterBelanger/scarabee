@@ -9,13 +9,11 @@ option(SCARABEE_USE_OMP "Compile Scarabée with OpenMP for shared memory paralle
 include(FetchContent)
 
 #===============================================================================
-# Get Eigen version 3.4.0
+# Get Eigen version 3.4.0 + 
 message(STATUS "Downloading Eigen")
 FetchContent_Declare(eigen
-  #GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-  GIT_REPOSITORY https://gitlab.com/HunterBelanger/eigen.git
-  #GIT_TAG        b8600422  # April 2 2025
-  GIT_TAG        fix/parallelizer_conversion_warning
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+  GIT_TAG        2cd47d743e8e921629c066f3543d58cf6ba724de  # April 8 2025
   EXCLUDE_FROM_ALL
 )
 set(BUILD_TESTING OFF)
