@@ -1,5 +1,8 @@
 from .._scarabee import (
     NDLibrary,
+    MaterialComposition,
+    Fraction,
+    DensityUnits,
     Material,
     CrossSection,
     PinCellType,
@@ -7,7 +10,9 @@ from .._scarabee import (
     PinCell,
     MOCDriver,
     MixingFraction,
+    DepletionChain,
     mix_materials,
+    build_depletion_matrix,
 )
 import numpy as np
 from typing import Optional, List
@@ -797,7 +802,7 @@ class FuelPin:
                     )
                 )
                 if self._fuel_ring_xs[-1].name == "":
-                    self._fuel_ring_xs[-1].set_name("Fuel")
+                    self._fuel_ring_xs[-1].name = "Fuel"
             else:
                 # Do each ring
                 for ri in range(self.num_fuel_rings):
@@ -815,7 +820,7 @@ class FuelPin:
                         )
                     )
                     if self._fuel_ring_xs[-1].name == "":
-                        self._fuel_ring_xs[-1].set_name("Fuel")
+                        self._fuel_ring_xs[-1].name = "Fuel"
 
         elif len(self._fuel_ring_xs) == self.num_fuel_rings:
             # Reset XS values. Cannot reassign or pointers will be broken !
@@ -828,7 +833,7 @@ class FuelPin:
                     )
                 )
                 if self._fuel_ring_xs[0].name == "":
-                    self._fuel_ring_xs[0].set_name("Fuel")
+                    self._fuel_ring_xs[0].name = "Fuel"
             else:
                 # Do each ring
                 for ri in range(self.num_fuel_rings):
@@ -846,7 +851,7 @@ class FuelPin:
                         )
                     )
                     if self._fuel_ring_xs[ri].name == "":
-                        self._fuel_ring_xs[ri].set_name("Fuel")
+                        self._fuel_ring_xs[ri].name = "Fuel"
         else:
             raise RuntimeError(
                 "Number of fuel cross sections does not agree with the number of fuel rings."
@@ -869,7 +874,7 @@ class FuelPin:
                 self._gap_xs.set(self.gap.dilution_xs([1.0e10] * self.gap.size, ndl))
 
             if self._gap_xs.name == "":
-                self._gap_xs.set_name("Gap")
+                self._gap_xs.name = "Gap"
 
     def set_clad_xs_for_depletion_step(self, t: int, ndl: NDLibrary) -> None:
         """
@@ -902,7 +907,7 @@ class FuelPin:
             )
 
         if self._clad_xs.name == "":
-            self._clad_xs.set_name("Clad")
+            self._clad_xs.name = "Clad"
 
     def make_moc_cell(
         self,
@@ -1055,7 +1060,7 @@ class FuelPin:
                 self._fuel_ring_fsr_inds[r]
             )
 
-    def compute_pin_linear_power(self, ndl):
+    def compute_pin_linear_power(self, ndl: NDLibrary):
         """
         Computes the linear power density of the fuel pin based on the current
         flux spectra, in units of w / cm. Does not consider the partial pin
@@ -1096,3 +1101,104 @@ class FuelPin:
 
         for r in range(self.num_fuel_rings):
             self._fuel_ring_flux_spectra[r] *= f
+
+    def predict_depletion(
+        self, dt: float, chain: DepletionChain, ndl: NDLibrary
+    ) -> None:
+        """
+        Performs the predictor in the integration of the Bateman equation.
+        The provided time step should therefore be half of the anticipated full
+        time step. The predicted material compositions are appended to the
+        materials lists.
+
+        Paramters
+        ---------
+        dt : float
+            Time step for the predictor in seconds.
+        chain : DepletionChain
+            Depletion chain to use for radioactive decay and transmutation.
+        ndl : NDLibrary
+            Nuclear data library.
+        """
+        if dt <= 0:
+            raise ValueError("Predictor time step must be > 0.")
+
+        # Do the prediction step for each fuel ring
+        for r in range(self.num_fuel_rings):
+            # Get the flux and initial material
+            flux = self._fuel_ring_flux_spectra[r]
+            mat = self._fuel_ring_materials[r][-1]  # Use last available mat !
+
+            # Build depletion matrix and multiply by time step
+            dep_matrix = build_depletion_matrix(chain, mat, flux, ndl)
+            dep_matrix *= dt
+
+            # Initialize an array with the initial target number densities
+            N = np.zeros(dep_matrix.size)
+            nuclides = dep_matrix.nuclides
+            for i, nuclide in enumerate(nuclides):
+                N[i] = mat.atom_density(nuclide)
+
+            # Do the matrix exponential
+            dep_matrix.exponential_product(N)
+
+            # Now we can build a new material composition
+            new_mat_comp = MaterialComposition()
+            for i, nuclide in enumerate(nuclides):
+                if N[i] > 0.0:
+                    new_mat_comp.add_nuclide(nuclide, N[i])
+
+            # Make the new material
+            new_mat = Material(new_mat_comp, mat.temperature, ndl)
+            self._fuel_ring_materials[r].append(new_mat)
+
+    def correct_depletion(
+        self, dt: float, chain: DepletionChain, ndl: NDLibrary
+    ) -> None:
+        """
+        Performs the corrector in the integration of the Bateman equation.
+        The provided time step should therefore be the full anticipated time
+        step. The corrected material compositions replace the ones where were
+        appended in the corrector step.
+
+        Paramters
+        ---------
+        dt : float
+            Time step for the predictor in seconds.
+        chain : DepletionChain
+            Depletion chain to use for radioactive decay and transmutation.
+        ndl : NDLibrary
+            Nuclear data library.
+        """
+        if dt <= 0:
+            raise ValueError("Predictor time step must be > 0.")
+
+        # Do the prediction step for each fuel ring
+        for r in range(self.num_fuel_rings):
+            # Get the flux and initial material
+            flux = self._fuel_ring_flux_spectra[r]
+            mat_pred = self._fuel_ring_materials[r][-1]  # Use last available mat !
+
+            # Build depletion matrix and multiply by time step
+            dep_matrix = build_depletion_matrix(chain, mat_pred, flux, ndl)
+            dep_matrix *= dt
+
+            # Initialize an array with the initial target number densities
+            mat_old = self._fuel_ring_materials[r][-2]  # Go 2 steps back !!
+            N = np.zeros(dep_matrix.size)
+            nuclides = dep_matrix.nuclides
+            for i, nuclide in enumerate(nuclides):
+                N[i] = mat_old.atom_density(nuclide)
+
+            # Do the matrix exponential
+            dep_matrix.exponential_product(N)
+
+            # Now we can build a new material composition
+            new_mat_comp = MaterialComposition()
+            for i, nuclide in enumerate(nuclides):
+                if N[i] > 0.0:
+                    new_mat_comp.add_nuclide(nuclide, N[i])
+
+            # Make the new material
+            new_mat = Material(new_mat_comp, mat_pred.temperature, ndl)
+            self._fuel_ring_materials[r][-1] = new_mat

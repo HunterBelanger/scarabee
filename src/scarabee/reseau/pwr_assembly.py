@@ -6,6 +6,7 @@ from .._scarabee import (
     Material,
     CrossSection,
     NDLibrary,
+    DepletionChain,
     PinCellType,
     Cartesian2D,
     MOCDriver,
@@ -122,6 +123,7 @@ class PWRAssembly:
         shape: Tuple[int, int],
         pitch: float,
         ndl: NDLibrary,
+        chain: DepletionChain,
         cells: List[List[Union[FuelPin, GuideTube]]],
         boron_ppm: float = 800.0,
         moderator_temp: float = 570.0,
@@ -130,6 +132,7 @@ class PWRAssembly:
         linear_power: float = 42.0,
     ):
         self._ndl = ndl
+        self._chain = chain
         self._symmetry = symmetry
 
         if len(shape) != 2:
@@ -1095,6 +1098,22 @@ class PWRAssembly:
     def _run_assembly_calculation(
         self, self_shield: bool, apply_dancoff_corrections: bool = False
     ) -> None:
+        """
+        Runs a single MOC calculation, applies critical leakage model, obtains
+        the flux spectra for each fuel region, and then normalize the flux
+        based on the linear assembly power. Self-shielding can be performed
+        if desired. If not, the last computed Dancoff corrections can be
+        applied to all fuel pins (to run a time step without explicit
+        self-shielding step, using previously known Dancoff corrections).
+
+        Paramters
+        ---------
+        self_shield : bool
+            If True, self-shielding is performed for the fuel and cladding. 
+        apply_dancoff_corrections : bool, default False
+            If self_shield is False and this option is True, the previously
+            obtained Dancoff corrections are applied to all cells.
+        """
         if self_shield:
             # If we want self-shielding, do that stuff
             self.self_shield_and_xs_update()
@@ -1115,12 +1134,31 @@ class PWRAssembly:
         self.apply_infinite_spectrum()
 
     def _predict_depletion(self, dt: float) -> None:
-        pass
+        # Do all depletions in parallel
+        threads = []
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                threads.append(Thread(target=cell.predict_depletion, args=(dt, self._chain, self._ndl)))
+                threads[-1].start()
+        for t in threads:
+            t.join()
 
     def _correct_depletion(self, dt: float) -> None:
-        pass
+        # Do all depletions in parallel
+        threads = []
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                threads.append(Thread(target=cell.correct_depletion, args=(dt, self._chain, self._ndl)))
+                threads[-1].start()
+        for t in threads:
+            t.join()
 
     def _run_depletion_steps(self) -> None:
+        if self._chain is None:
+            raise RuntimeError("No depletion chain is present. Cannot run depletion calculation.")
+
         self._keff = np.zeros(self.depletion_exposure_steps.size + 1)
         self._exposures = np.zeros(self.depletion_exposure_steps.size + 1)
         self._times = np.zeros(self.depletion_exposure_steps.size + 1)

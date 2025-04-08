@@ -6,6 +6,7 @@ from .._scarabee import (
     SimplePinCell,
     PinCell,
     MOCDriver,
+    DepletionChain,
 )
 import numpy as np
 from typing import Optional, List
@@ -462,7 +463,7 @@ class GuideTube:
             )
 
         if self._clad_xs.name == "":
-            self._clad_xs.set_name("Clad")
+            self._clad_xs.name = "Clad"
 
     def make_moc_cell(
         self, moderator_xs: CrossSection, dx: float, dy: float, pintype: PinCellType
@@ -509,7 +510,7 @@ class GuideTube:
         if (
             pintype == PinCellType.Full
             and min(dx, dy) > 2.0 * self.outer_radius
-            and 0.5*min(dx, dy) - self.outer_radius >= 0.1
+            and 0.5 * min(dx, dy) - self.outer_radius >= 0.1
         ):
             radii.append(0.5 * min(dx, dy))
             xss.append(moderator_xs)
@@ -551,20 +552,25 @@ class GuideTube:
         NA = 8
         if pintype in [PinCellType.XN, PinCellType.XP, PinCellType.YN, PinCellType.YP]:
             NA = 4
-        elif pintype in [PinCellType.I, PinCellType.II, PinCellType.III, PinCellType.IV]:
+        elif pintype in [
+            PinCellType.I,
+            PinCellType.II,
+            PinCellType.III,
+            PinCellType.IV,
+        ]:
             NA = 2
 
-        I = 0 # Starting index for cell_fsr_inds
+        I = 0  # Starting index for cell_fsr_inds
         # Go through all rings of moderator and get FSR IDs
-        for a in range(3*NA):
+        for a in range(3 * NA):
             self._mod_fsr_ids.append(cell_fsr_ids[I])
             I += 1
 
-        # Get FSR IDs for the cladding 
+        # Get FSR IDs for the cladding
         for a in range(NA):
             self._clad_fsr_ids.append(cell_fsr_ids[I])
             I += 1
-        
+
         # Everything outside the clad should be moderator
         self._mod_fsr_ids = list(cell_fsr_ids[I:])
 
@@ -582,9 +588,54 @@ class GuideTube:
         """
         self._clad_fsr_inds: List[int] = []
         self._mod_fsr_inds: List[int] = []
-        
+
         for id in self._clad_fsr_ids:
             self._clad_fsr_inds.append(moc.get_fsr_indx(id, 0))
         for id in self._mod_fsr_ids:
             self._mod_fsr_inds.append(moc.get_fsr_indx(id, 0))
 
+    def predict_depletion(
+        self, dt: float, chain: DepletionChain, ndl: NDLibrary
+    ) -> None:
+        """
+        Performs the predictor in the integration of the Bateman equation.
+        The provided time step should therefore be half of the anticipated full
+        time step. The predicted material compositions are appended to the
+        materials lists.
+
+        Paramters
+        ---------
+        dt : float
+            Time step for the predictor in seconds.
+        chain : DepletionChain
+            Depletion chain to use for radioactive decay and transmutation.
+        ndl : NDLibrary
+            Nuclear data library.
+        """
+        if dt <= 0:
+            raise ValueError("Predictor time step must be > 0.")
+        # Nothing to do here yet, as guide tube "fills" with burnable
+        # absorber pins is not yet supported. In the future, those will
+        # need to be depleted !
+
+    def correct_depletion(
+        self, dt: float, chain: DepletionChain, ndl: NDLibrary
+    ) -> None:
+        """
+        Performs the corrector in the integration of the Bateman equation.
+        The provided time step should therefore be the full anticipated time
+        step. The corrected material compositions replace the ones where were
+        appended in the corrector step.
+
+        Paramters
+        ---------
+        dt : float
+            Time step for the predictor in seconds.
+        chain : DepletionChain
+            Depletion chain to use for radioactive decay and transmutation.
+        ndl : NDLibrary
+            Nuclear data library.
+        """
+        # Nothing to do here yet, as guide tube "fills" with burnable
+        # absorber pins is not yet supported. In the future, those will
+        # need to be depleted !
