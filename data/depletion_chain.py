@@ -67,7 +67,7 @@ def main():
     # just refer to a different nuclide.
     fiss_yields = {}
     for nuc in root:
-        if nuc[-1].tag == "neutron_fission_yields" and "parent" not in nuc[-1].attrib:
+        if len(nuc) > 0 and nuc[-1].tag == "neutron_fission_yields" and "parent" not in nuc[-1].attrib:
             nuclide_name = strip_name(nuc.attrib["name"])
             fiss_yields[nuclide_name] = read_fission_yields(nuc[-1])
 

@@ -50,7 +50,7 @@ class Symmetry(Enum):
 class PWRAssembly:
     """
     A PWRAssembly instance is responsible for performing all the lattice
-    calculations necessary to produce few-group cross sections for a 
+    calculations necessary to produce few-group cross sections for a
     single PWR assembly.
 
     Parameters
@@ -61,6 +61,9 @@ class PWRAssembly:
         The spacing between fuel pins.
     ndl : NDLibrary
         Nuclear data library used for the calculation.
+    cells : list of list of FuelPin or GuideTube
+        All of the cells which describe the assembly geometry. Should be
+        consistent with the symmetry argument.
     boron_ppm : float
         Moderator boron concentration in parts per million. Default is 800.
     moderator_temp : float
@@ -81,7 +84,7 @@ class PWRAssembly:
     symmetry : Symmetry
         Symmetry of the fuel assembly. Default is Symmetry.Full.
     linear_power : float
-        Linear power density of the assembly in w/cm. Default is 155.
+        Linear power density of the assembly in kW/cm. Default is 42.
     initial_heavy_metal_linear_mass : float
         Linear density of heavy metal in the assembly at the beginning of life.
         Has units of kg / cm.
@@ -108,6 +111,10 @@ class PWRAssembly:
     leakage_model : CriticalLeakage
         Model used to determine the critical leakage flux spectrum, also known
         as the fundamental mode. Default method is homogeneous P1.
+    depletion_exposure_steps : ndarray
+        1D Numpy array of assembly exposure steps in units of MWd/kg.
+    depletion_time_steps : ndarray
+        1D Numpy array of time steps in units of days.
     """
 
     def __init__(
@@ -115,11 +122,12 @@ class PWRAssembly:
         shape: Tuple[int, int],
         pitch: float,
         ndl: NDLibrary,
+        cells: List[List[Union[FuelPin, GuideTube]]],
         boron_ppm: float = 800.0,
         moderator_temp: float = 570.0,
         moderator_pressure: float = 15.5,
         symmetry: Symmetry = Symmetry.Full,
-        linear_power: float = 155.
+        linear_power: float = 42.0,
     ):
         self._ndl = ndl
         self._symmetry = symmetry
@@ -145,8 +153,11 @@ class PWRAssembly:
             expx = (expx // 2) + (expx % 2)
         self._simulated_shape = (expx, expy)
 
+        self._initial_heavy_metal_linear_mass = 0.0
+
         self._cells_set = False
         self._cells: List[List[Union[FuelPin, GuideTube]]] = [[]]
+        self._set_cells(cells)
 
         if pitch <= 0.5:
             raise ValueError("Pitch must be > 0.5.")
@@ -164,7 +175,7 @@ class PWRAssembly:
             raise ValueError("Moderator pressure must be > 0.")
         self._moderator_pressure = moderator_pressure
 
-        if linear_power <= 0.:
+        if linear_power <= 0.0:
             raise ValueError("Linear power must be > 0.")
         self._linear_power = linear_power
 
@@ -187,8 +198,6 @@ class PWRAssembly:
         if self.symmetry == Symmetry.Quarter:
             self._x_min_bc = BoundaryCondition.Reflective
             self._x_max_bc = BoundaryCondition.Reflective
-
-        self._initial_heavy_metal_linear_mass = 0.
 
         # ======================================================================
         # DANCOFF CORRECTION CALCULATION DATA
@@ -239,8 +248,29 @@ class PWRAssembly:
         self._asmbly_geom: Optional[Cartesian2D] = None
         self._asmbly_moc: Optional[MOCDriver] = None
 
-
         self._leakage_model: CriticalLeakage = CriticalLeakage.P1
+        self._infinite_flux_spectrum = None # To reset to infinite spectrum in MOC driver
+
+        # Depletion time steps in MWd/kg
+        self._depletion_exposure_steps = np.array([])
+        # Depletion time steps in days
+        self._depletion_time_steps = np.array([])
+
+        # Up to 20 MWd/kg, use 0.5 MWd/kg time steps.
+        # From 20 MWd/kg up to 40 MWd/kg, use 2 MWd/kg time steps
+        depletion_exposures = 40 * [0.5] + 10 * [2.0]
+        self.depletion_exposure_steps = np.array(depletion_exposures)
+
+        # Now we add 4 X 0.5 day time steps for accurate Xe equilibrium
+        temp_times = 4 * [0.5] + self.depletion_time_steps.tolist()
+        self.depletion_time_steps = np.array(temp_times)
+
+        # Arrays for the depletion exposures (MWd/kg) and times (days)
+        self._exposures = np.array([])
+        self._times = np.array([])
+
+        # Either a single value or list of values (for each depletion step)
+        self._keff: Union[float, List[float]] = 1.0
 
     @property
     def shape(self):
@@ -332,8 +362,59 @@ class PWRAssembly:
     def cells(self):
         return self._cells
 
-    @cells.setter
-    def cells(self, cells: List[List[Union[FuelPin, GuideTube]]]):
+    @property
+    def leakage_model(self):
+        return self._leakage_model
+
+    @leakage_model.setter
+    def leakage_model(self, clm: CriticalLeakage):
+        self._leakage_model = clm
+
+    @property
+    def depletion_exposure_steps(self):
+        return self._depletion_exposure_steps
+
+    @depletion_exposure_steps.setter
+    def depletion_exposure_steps(self, steps):
+        if not isinstance(steps, np.ndarray):
+            raise TypeError("Depletion exposure steps must be a 1D Numpy array.")
+        if steps.ndim != 1:
+            raise ValueError("Depletion exposure steps must be a 1D Numpy array.")
+        for step in steps:
+            if step <= 0.0:
+                raise ValueError("Depletion exposure steps must be > 0.")
+            elif step > 5.0:
+                raise ValueError("Depletion exposure steps should be <= 5 MWd/kg.")
+        self._depletion_exposure_steps = steps
+
+        self._depletion_time_steps = self._depletion_exposure_steps.copy()
+        self._depletion_time_steps *= (
+            1.0e3 * (1.0 / self.linear_power) * self.initial_heavy_metal_linear_mass
+        )
+
+    @property
+    def depletion_time_steps(self):
+        return self._depletion_time_steps
+
+    @depletion_time_steps.setter
+    def depletion_time_steps(self, steps):
+        if not isinstance(steps, np.ndarray):
+            raise TypeError("Depletion time steps must be a 1D Numpy array.")
+        if steps.ndim != 1:
+            raise ValueError("Depletion time steps must be a 1D Numpy array.")
+        for step in steps:
+            if step <= 0.0:
+                raise ValueError("Depletion time steps must be > 0.")
+            elif step > 100:
+                raise ValueError("Depletion time steps should be <= 100 days.")
+        self._depletion_time_steps = steps
+
+        self._depletion_exposure_steps = self._depletion_time_steps.copy()
+        self._depletion_exposure_steps /= (
+            1.0e3 * (1.0 / self.linear_power) * self.initial_heavy_metal_linear_mass
+        )
+
+    def _set_cells(self, cells: List[List[Union[FuelPin, GuideTube]]]):
         if len(cells) != self._simulated_shape[1]:
             raise ValueError(
                 "Shape along y of cells list does not agree with assembly shape and symmetry."
@@ -348,7 +429,7 @@ class PWRAssembly:
         # that each duplicate FuelPin or GuideTube instance is unique.
         self._cells = []
         self._cells_set = False
-        self._initial_heavy_metal_linear_mass = 0.
+        self._initial_heavy_metal_linear_mass = 0.0
         for j in range(len(cells)):
             self._cells.append([])
             for i in range(len(cells[j])):
@@ -365,41 +446,33 @@ class PWRAssembly:
                         and j == self._simulated_shape[1] - 1
                         and i == 0
                     ):
-                       lfm *= 0.25 
+                        lfm *= 0.25
                     # Next, check for being on the side with a half pin in quarter symmetry
                     elif (
                         self.symmetry == Symmetry.Quarter
                         and self.shape[0] % 2 == 1
                         and i == 0
                     ):
-                        lfm *= 0.5 
+                        lfm *= 0.5
                     # Next, check for being on the bottom row with a half pin
                     elif (
                         self.symmetry != Symmetry.Full
                         and self.shape[1] % 2 == 1
                         and j == self._simulated_shape[1] - 1
                     ):
-                        lfm *= 0.5 
+                        lfm *= 0.5
 
                     self._initial_heavy_metal_linear_mass += lfm
 
         self._cells_set = True
 
         if self.symmetry == Symmetry.Half:
-            self._initial_heavy_metal_linear_mass *= 2.
+            self._initial_heavy_metal_linear_mass *= 2.0
         elif self.symmetry == Symmetry.Quarter:
-            self._initial_heavy_metal_linear_mass *= 4.
-        
+            self._initial_heavy_metal_linear_mass *= 4.0
+
         # Convert HM mass from g to kg
-        self._initial_heavy_metal_linear_mass *= 1.E-3
-
-    @property    
-    def leakage_model(self):
-        return self._leakage_model
-
-    @leakage_model.setter 
-    def leakage_model(self, clm: CriticalLeakage):
-        self._leakage_model = clm
+        self._initial_heavy_metal_linear_mass *= 1.0e-3
 
     # ==========================================================================
     # Dancoff Correction Related Methods
@@ -840,6 +913,16 @@ class PWRAssembly:
                 cell = self.cells[j][i]
                 cell.populate_fsr_indexes(self._asmbly_moc)
 
+    def plot(self) -> None:
+        """
+        Launches the graphical geometry plotter for the assembly calculation.
+        """
+        if self._asmbly_moc is None:
+            raise RuntimeError(
+                "Cannot launch plotter. MOCDriver has not been initialized."
+            )
+        self._asmbly_moc.plot()
+
     def set_moderator_xs(self) -> None:
         """
         Updates the moderator cross section for transport calculations.
@@ -910,19 +993,35 @@ class PWRAssembly:
 
         scarabee_log(LogLevel.Info, "")
 
+        self._infinite_flux_spectrum = self._asmbly_moc.homogenize_flux_spectrum()
+
         homogenized_moc = self._asmbly_moc.homogenize()
 
         if self.leakage_model == CriticalLeakage.P1:
-            scarabee_log(LogLevel.Info, "Performing P1 criticality spectrum calculation")
+            scarabee_log(
+                LogLevel.Info, "Performing P1 criticality spectrum calculation"
+            )
             critical_spectrum = P1CriticalitySpectrum(homogenized_moc)
         else:
-            scarabee_log(LogLevel.Info, "Performing B1 criticality spectrum calculation")
+            scarabee_log(
+                LogLevel.Info, "Performing B1 criticality spectrum calculation"
+            )
             critical_spectrum = B1CriticalitySpectrum(homogenized_moc)
-        
+
         self._asmbly_moc.apply_criticality_spectrum(critical_spectrum.flux)
 
         scarabee_log(LogLevel.Info, "Kinf    : {:.5f}".format(critical_spectrum.k_inf))
-        scarabee_log(LogLevel.Info, "Buckling: {:.5f}".format(critical_spectrum.buckling))
+        scarabee_log(
+            LogLevel.Info, "Buckling: {:.5f}".format(critical_spectrum.buckling)
+        )
+
+    def apply_infinite_spectrum(self) -> None:
+        """
+        Undoes the critical flux spectrum adjustment to the MOCDriver.
+        This permits subsequent transport calcualtions to converge much faster.
+        """
+        if self._infinite_flux_spectrum is not None and self._asmbly_moc is not None:
+            self._asmbly_moc.apply_criticality_spectrum(self._infinite_flux_spectrum)
 
     def obtain_fuel_flux_spectra(self) -> None:
         """
@@ -941,7 +1040,7 @@ class PWRAssembly:
         Normalizes the flux spectra based on the specified linear power density
         for the assembly. It assumes that all power comes from fission.
         """
-        assembly_linear_power = 0.
+        assembly_linear_power = 0.0
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
                 cell = self.cells[j][i]
@@ -959,35 +1058,108 @@ class PWRAssembly:
                     and j == self._simulated_shape[1] - 1
                     and i == 0
                 ):
-                    pin_linear_power *= 0.25 
+                    pin_linear_power *= 0.25
                 # Next, check for being on the side with a half pin in quarter symmetry
                 elif (
                     self.symmetry == Symmetry.Quarter
                     and self.shape[0] % 2 == 1
                     and i == 0
                 ):
-                    pin_linear_power *= 0.5 
+                    pin_linear_power *= 0.5
                 # Next, check for being on the bottom row with a half pin
                 elif (
                     self.symmetry != Symmetry.Full
                     and self.shape[1] % 2 == 1
                     and j == self._simulated_shape[1] - 1
                 ):
-                    pin_linear_power *= 0.5 
-                
+                    pin_linear_power *= 0.5
+
                 assembly_linear_power += pin_linear_power
-        
+
         if self.symmetry == Symmetry.Half:
-            assembly_linear_power *= 2.
+            assembly_linear_power *= 2.0
         elif self.symmetry == Symmetry.Quarter:
-            assembly_linear_power *= 4.
-        
-        # Compute normalization factor
-        f = self.linear_power / assembly_linear_power
-        
+            assembly_linear_power *= 4.0
+
+        # Compute normalization factor.
+        # Multiply by 10^3 to go from kW to W on linear power
+        f = 1.0e3 * self.linear_power / assembly_linear_power
+
         # Normalize flux spectra
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
                 cell = self.cells[j][i]
                 if isinstance(cell, FuelPin):
                     cell.normalize_flux_spectrum(f)
+
+    def _run_assembly_calculation(
+        self, self_shield: bool, apply_dancoff_corrections: bool = False
+    ) -> None:
+        if self_shield:
+            # If we want self-shielding, do that stuff
+            self.self_shield_and_xs_update()
+        elif apply_dancoff_corrections:
+            # Sets dancoff corrections, even if self-shielding wasn't performed
+            self.apply_dancoff_corrections()
+
+        self.recompute_all_xs()
+
+        if self._asmbly_moc is None:
+            self._init_moc()
+
+        self._asmbly_moc.solve()
+
+        self.apply_leakage_model()
+        self.obtain_fuel_flux_spectra()
+        self.normalize_flux_to_power()
+        self.apply_infinite_spectrum()
+
+    def _predict_depletion(self, dt: float) -> None:
+        pass
+
+    def _correct_depletion(self, dt: float) -> None:
+        pass
+
+    def _run_depletion_steps(self) -> None:
+        self._keff = np.zeros(self.depletion_exposure_steps.size + 1)
+        self._exposures = np.zeros(self.depletion_exposure_steps.size + 1)
+        self._times = np.zeros(self.depletion_exposure_steps.size + 1)
+
+        for t, dt in enumerate(self.depletion_time_steps):
+            if t > 0:
+                self._exposures[t] = (
+                    self._exposures[t - 1] + self.depletion_exposure_steps[t - 1]
+                )
+                self._times[t] = self._times[t - 1] + dt
+
+            scarabee_log(LogLevel.Info, "")
+            scarabee_log(LogLevel.Info, "Running Time Step {:}".format(t))
+            scarabee_log(LogLevel.Info, "Exposure: {:.3E} MWd/kg".format(self._exposures[t]))
+            scarabee_log(LogLevel.Info, "Time    : {:.3E} days".format(self._times[t]))
+            # Convert days to seconds
+            dt_sec = dt * 60.0 * 60.0 * 24.0
+
+            # Run initial calcualtion for this time step
+            self._run_assembly_calculation(True)
+            scarabee_log(LogLevel.Info, "")
+            self._keff[t] = self._asmbly_moc.keff
+
+            # Predic isotopes at midpoint of step
+            self._predict_depletion(0.5 * dt_sec)
+
+            # Run the a new transport calcualtion to get rates
+            self._run_assembly_calculation(False)
+
+            # Do correction step for isotopes
+            self._correct_depletion(dt_sec)
+            
+            scarabee_log(LogLevel.Info, "")
+
+    def solve(self) -> None:
+        if self.depletion_exposure_steps.size == 0:
+            # Single one-off calulcation
+            self._run_assembly_calculation(True)
+            self._keff = self._asmbly_moc.keff
+        else:
+            # Run depletion steps
+            self._run_depletion_steps()
