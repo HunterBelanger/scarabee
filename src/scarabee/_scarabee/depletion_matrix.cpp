@@ -1,3 +1,7 @@
+// Disable parallelization of Eigen in this translation unit, because we will
+// be running depletion of different materials in parallel already !
+#define EIGEN_DONT_PARALLELIZE
+
 #include <data/depletion_matrix.hpp>
 #include <utils/constants.hpp>
 #include <utils/logging.hpp>
