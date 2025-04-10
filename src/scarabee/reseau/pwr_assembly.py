@@ -74,7 +74,7 @@ class PWRAssembly:
     symmetry : Symmetry
         Symmetry of the fuel assembly. Default is Symmetry.Full.
     linear_power : float
-        Linear power density of the assembly in w/cm. Default is 155.
+        Linear power density of the assembly in kW/cm. Default is 42.
 
     Attributes
     ----------
@@ -85,7 +85,7 @@ class PWRAssembly:
     symmetry : Symmetry
         Symmetry of the fuel assembly. Default is Symmetry.Full.
     linear_power : float
-        Linear power density of the assembly in kW/cm. Default is 42.
+        Linear power density of the assembly in kW/cm.
     initial_heavy_metal_linear_mass : float
         Linear density of heavy metal in the assembly at the beginning of life.
         Has units of kg / cm.
@@ -1192,6 +1192,12 @@ class PWRAssembly:
             self._correct_depletion(dt_sec)
             
             scarabee_log(LogLevel.Info, "")
+
+        # Run last step at the end to get keff for our final material compositions 
+        self._exposures[-1] = self._exposures[-2] + self.depletion_exposure_steps[-1]
+        self._times[-1] = self._times[-2] + dt
+        self._run_assembly_calculation(True)
+        self._keff[-1] = self._asmbly_moc.keff
 
     def solve(self) -> None:
         if self.depletion_exposure_steps.size == 0:
