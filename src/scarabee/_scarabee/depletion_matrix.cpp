@@ -146,8 +146,9 @@ double compute_loss_term(const ChainEntry& nucinfo,
                          const DepletionReactionRates& nucrr) {
   double loss = 0.;
 
-  // Get losses due to radioactive decay
-  if (nucinfo.half_life()) loss += nucinfo.half_life().value();
+  // Get losses due to radioactive decay.
+  // Must convert half life to decay constant !
+  if (nucinfo.half_life()) loss += LN_2 / nucinfo.half_life().value();
 
   // Accumulate losses due to transmutation.
   if (nucinfo.n_gamma()) loss += nucrr.n_gamma;
@@ -208,7 +209,7 @@ void fill_gain_terms(DepletionMatrix& matrix, const ChainEntry& nucinfo,
                      const DepletionReactionRates& nucrr, const std::size_t i) {
   if (nucinfo.decay_targets())
     fill_target_gains(matrix, nucinfo.decay_targets().value(),
-                      nucinfo.half_life().value(), i);
+                      LN_2 / nucinfo.half_life().value(), i);
 
   if (nucinfo.n_2n() && nucrr.n_2n > 0.)
     fill_target_gains(matrix, nucinfo.n_2n().value(), nucrr.n_2n, i);

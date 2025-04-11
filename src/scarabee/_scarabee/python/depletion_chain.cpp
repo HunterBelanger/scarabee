@@ -122,7 +122,7 @@ void init_DepletionChain(py::module& m) {
             }
             c.half_life() = hl;
           },
-          "Half life of the nuclide.")
+          "Half life of the nuclide in seconds.")
 
       .def_property(
           "decay_targets",
