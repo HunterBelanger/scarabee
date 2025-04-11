@@ -23,12 +23,12 @@ few_grp_cond_spec = np.array([[0, 18], [19, 24]])
 ref_few_grp_cond_spec = np.array([[0, 246], [247, 280]])
 
 # Set the default group strucutre
-fdy.set_default_group_structure("SHEM-361")
+fdy.set_default_group_structure("SHEM-281")
 fdy.set_default_max_legendre_moments(3)
 
 print(fdy.get_default_group_structure())
 
-h5 = h5py.File('endf8_shem361.h5', 'w')
+h5 = h5py.File('endf8_shem281.h5', 'w')
 #h5 = h5py.File('endf8_xmas172.h5', 'w')
 h5.attrs['group-structure'] = fdy.get_default_group_structure().name
 h5.attrs['group-bounds'] = fdy.get_default_group_structure().bounds
@@ -38,10 +38,10 @@ h5.attrs['last-resonance-group'] = fdy.get_default_group_structure().last_res_gr
 h5.attrs['library'] = lib_name
 
 
-if fdy.get_default_group_structure().name == "SHEM-281":
-    h5.attrs['macro-group-condensation-scheme'] = cond_spec
-    h5.attrs['few-group-condensation-scheme'] = few_grp_cond_spec
-    h5.attrs['reflector-few-group-condensation-scheme'] = ref_few_grp_cond_spec
+#if fdy.get_default_group_structure().name == "SHEM-281":
+#    h5.attrs['macro-group-condensation-scheme'] = cond_spec
+#    h5.attrs['few-group-condensation-scheme'] = few_grp_cond_spec
+#    h5.attrs['reflector-few-group-condensation-scheme'] = ref_few_grp_cond_spec
 
 # We process U235 first so that we can steal its fission spectrum for
 # performing transport correciton calculations
@@ -441,14 +441,6 @@ N.dilutions = [1.E10]
 N.process(h5)
 
 N = fdy.FrendyMG()
-N.name = "Br82"
-N.endf_file = base + "n-035_Br_082.endf"
-N.label = N.name + " from ENDF/B-8.0"
-N.temps = temps
-N.dilutions = [1.E10]
-N.process(h5)
-
-N = fdy.FrendyMG()
 N.name = "Kr82"
 N.endf_file = base + "n-036_Kr_082.endf"
 N.label = N.name + " from ENDF/B-8.0"
@@ -487,7 +479,6 @@ N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
 N.dilutions = [1.E10]
 N.process(h5)
-
 
 N = fdy.FrendyMG()
 N.name = "Sr89"
@@ -1668,6 +1659,13 @@ N.temps = temps
 N.process(h5)
 
 N = fdy.FrendyMG()
+N.name = "Hf181"
+N.endf_file = base + "n-072_Hf_181.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
 N.name = "Ta181"
 N.endf_file = base + "n-073_Ta_181.endf"
 N.label = N.name + " from ENDF/B-8.0"
@@ -1680,13 +1678,6 @@ N.endf_file = base + "n-073_Ta_182.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
 N.dilutions = [1.E10] # Fission Product
-N.process(h5)
-
-N = fdy.FrendyMG()
-N.name = "Hf181"
-N.endf_file = base + "n-072_Hf_181.endf"
-N.label = N.name + " from ENDF/B-8.0"
-N.temps = temps
 N.process(h5)
 
 N = fdy.FrendyMG()
