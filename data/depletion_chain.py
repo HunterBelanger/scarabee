@@ -226,7 +226,7 @@ def main():
         if nuc.half_life is not None and nuc.half_life < 60.*60.*24.:
             print("Removing {:} from chain".format(nuc_name))
             dc.remove_nuclide(nuc_name)
-        elif nuc_name in ["Cd115", "Rh102", "Rh102m1", "Sb127"]: # No Evals in ENDF-8.0 for these. RIP
+        elif nuc_name in ["Cd115", "Rh102", "Rh102m1", "Sb127", "Br82"]: # No Evals in ENDF-8.0 for these. RIP
             print("Removing {:} from chain".format(nuc_name))
             dc.remove_nuclide(nuc_name)
 

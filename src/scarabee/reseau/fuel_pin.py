@@ -1133,6 +1133,10 @@ class FuelPin:
             dep_matrix = build_depletion_matrix(chain, mat, flux, ndl)
             dep_matrix *= dt
 
+            # At this point, we can clear the xs data from the last material as
+            # depletion matrix is now built.
+            mat.clear_all_micro_xs_data()
+
             # Initialize an array with the initial target number densities
             N = np.zeros(dep_matrix.size)
             nuclides = dep_matrix.nuclides

@@ -74,7 +74,8 @@ class PWRAssembly:
     symmetry : Symmetry
         Symmetry of the fuel assembly. Default is Symmetry.Full.
     linear_power : float
-        Linear power density of the assembly in kW/cm. Default is 42.
+        Linear power density of the full assembly in kW/cm. This value should
+        not be reduced due to symmetry. Default is 42.
 
     Attributes
     ----------
@@ -85,10 +86,10 @@ class PWRAssembly:
     symmetry : Symmetry
         Symmetry of the fuel assembly. Default is Symmetry.Full.
     linear_power : float
-        Linear power density of the assembly in kW/cm.
+        Linear power density of the full assembly in kW/cm.
     initial_heavy_metal_linear_mass : float
-        Linear density of heavy metal in the assembly at the beginning of life.
-        Has units of kg / cm.
+        Initial linear density of heavy metal in the full assembly at the
+        beginning of life in units of kg/cm.
     boron_ppm : float
         Moderator boron concentration in parts per million.
     moderator_temp : float
@@ -113,9 +114,22 @@ class PWRAssembly:
         Model used to determine the critical leakage flux spectrum, also known
         as the fundamental mode. Default method is homogeneous P1.
     depletion_exposure_steps : ndarray
-        1D Numpy array of assembly exposure steps in units of MWd/kg.
+        1D Numpy array of assembly burn-up exposure steps, in units of MWd/kg.
     depletion_time_steps : ndarray
-        1D Numpy array of time steps in units of days.
+        1D Numpy array of burn-up time steps, in units of days.
+    exposures : ndarray
+        1D Numpy array of the total assembly burn-up exposures at which
+        material information is available, in units of MWd/kg. Default value
+        is an empty array before solve has been called.
+    times : ndarray
+        1D Numpy array of the total assembly burn-up times at which material
+        information is available, in units of days. Default value is an empty
+        array before solve has been called.
+    keff : float or ndarray
+        If depletion was not performed, this is a single float with keff for
+        the infinite assembly. If depletion was performed, this is a 1D Numpy
+        array for the values of keff at the tabulated burn-up exposures/times.
+        Default value is 1 before solve has been called.
     """
 
     def __init__(
@@ -416,6 +430,18 @@ class PWRAssembly:
         self._depletion_exposure_steps /= (
             1.0e3 * (1.0 / self.linear_power) * self.initial_heavy_metal_linear_mass
         )
+
+    @property
+    def exposures(self):
+        return self._exposures
+
+    @property
+    def times(self):
+        return self._times
+
+    @property
+    def keff(self):
+        return self._keff
 
     def _set_cells(self, cells: List[List[Union[FuelPin, GuideTube]]]):
         if len(cells) != self._simulated_shape[1]:
@@ -1126,7 +1152,11 @@ class PWRAssembly:
         if self._asmbly_moc is None:
             self._init_moc()
 
+        set_logging_level(LogLevel.Warning)
         self._asmbly_moc.solve()
+        set_logging_level(LogLevel.Info)
+        scarabee_log(LogLevel.Info, "")
+        scarabee_log(LogLevel.Info, "Kinf: {:.5f}".format(self._asmbly_moc.keff))
 
         self.apply_leakage_model()
         self.obtain_fuel_flux_spectra()
@@ -1168,15 +1198,18 @@ class PWRAssembly:
                 self._exposures[t] = (
                     self._exposures[t - 1] + self.depletion_exposure_steps[t - 1]
                 )
-                self._times[t] = self._times[t - 1] + dt
+                self._times[t] = self._times[t - 1] + self.depletion_time_steps[t-1]
 
             scarabee_log(LogLevel.Info, "")
+            scarabee_log(LogLevel.Info, 60*"-")
             scarabee_log(LogLevel.Info, "Running Time Step {:}".format(t))
             scarabee_log(LogLevel.Info, "Exposure: {:.3E} MWd/kg".format(self._exposures[t]))
             scarabee_log(LogLevel.Info, "Time    : {:.3E} days".format(self._times[t]))
+            scarabee_log(LogLevel.Info, "")
             # Convert days to seconds
             dt_sec = dt * 60.0 * 60.0 * 24.0
 
+            scarabee_log(LogLevel.Info, "Predictor:")
             # Run initial calcualtion for this time step
             self._run_assembly_calculation(True)
             scarabee_log(LogLevel.Info, "")
@@ -1184,15 +1217,14 @@ class PWRAssembly:
 
             # Predic isotopes at midpoint of step
             self._predict_depletion(0.5 * dt_sec)
-
+            
+            scarabee_log(LogLevel.Info, "Corrector:")
             # Run the a new transport calcualtion to get rates
             self._run_assembly_calculation(False)
 
             # Do correction step for isotopes
             self._correct_depletion(dt_sec)
             
-            scarabee_log(LogLevel.Info, "")
-
         # Run last step at the end to get keff for our final material compositions 
         self._exposures[-1] = self._exposures[-2] + self.depletion_exposure_steps[-1]
         self._times[-1] = self._times[-2] + dt
