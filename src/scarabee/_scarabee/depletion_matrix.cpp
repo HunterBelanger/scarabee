@@ -211,6 +211,9 @@ void fill_gain_terms(DepletionMatrix& matrix, const ChainEntry& nucinfo,
     fill_target_gains(matrix, nucinfo.decay_targets().value(),
                       LN_2 / nucinfo.half_life().value(), i);
 
+  if (nucinfo.n_gamma() && nucrr.n_gamma > 0.)
+    fill_target_gains(matrix, nucinfo.n_gamma().value(), nucrr.n_gamma, i);
+
   if (nucinfo.n_2n() && nucrr.n_2n > 0.)
     fill_target_gains(matrix, nucinfo.n_2n().value(), nucrr.n_2n, i);
 

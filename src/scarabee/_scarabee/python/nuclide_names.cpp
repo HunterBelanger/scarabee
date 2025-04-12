@@ -9,7 +9,7 @@ using namespace scarabee;
 
 void init_NuclideNameFuncs(py::module& m) {
   m.def("nuclide_name_to_simple_name", &nuclide_name_to_simple_name,
-        "Removes any scattering law names appended to nuclide. For example, "
+        "Removes any scattering law names appended to nuclide. For example, \n"
         "H1_H2O becomes H1.\n\n"
         "Parameters\n"
         "----------\n"

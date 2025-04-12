@@ -7,6 +7,26 @@
 
 namespace scarabee {
 
+std::string nuclide_name_to_internal_name(const std::string& name) {
+  // Must remove any _ from nuclide name (for TSLs like H1_H2O)
+  // Also discards isomer information (Ag110m1 -> Ag110)
+
+  std::string simp_name;
+  simp_name.reserve(name.size());
+
+  bool doing_nums = false;
+  for (std::size_t i = 0; i < 5; i++) {
+    const bool i_is_digit = std::isdigit(name[i]);
+
+    if (i_is_digit) doing_nums = true;
+    if (doing_nums && i_is_digit == false) break;
+
+    simp_name += name[i];
+  }
+
+  return simp_name;
+}
+
 std::string nuclide_name_to_simple_name(const std::string& name) {
   // Must remove any _ from nuclide name (for TSLs like H1_H2O)
   std::string simp_name = name;
@@ -101,7 +121,7 @@ std::uint32_t nuclide_name_to_za(const std::string& name) {
     }
   }
 
-  return (Z * 1000 + A)*10 + m;
+  return (Z * 1000 + A) * 10 + m;
 }
 
 }  // namespace scarabee

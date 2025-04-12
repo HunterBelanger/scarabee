@@ -6,6 +6,8 @@
 
 namespace scarabee {
 
+std::string nuclide_name_to_internal_name(const std::string& name);
+
 std::string nuclide_name_to_simple_name(const std::string& name);
 
 std::string nuclide_name_to_element_symbol(const std::string& name);

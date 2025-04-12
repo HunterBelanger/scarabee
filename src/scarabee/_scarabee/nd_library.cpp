@@ -606,7 +606,7 @@ ResonantOneGroupXS NDLibrary::dilution_xs(const std::string& name,
     out.Ef =
         this->interp_temp_dil(*nuc.res_fission, g_res, it, f_temp, id, f_dil);
   }
-  out.n_gamma = 0.;
+  // out.n_gamma is initially nullopt
   if (nuc.res_n_gamma) {
     out.n_gamma =
         this->interp_temp_dil(*nuc.res_n_gamma, g_res, it, f_temp, id, f_dil);
