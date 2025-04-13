@@ -705,6 +705,10 @@ class FrendyMG:
     mf1mt451 = tape.MAT(self.mat).MF(1).MT(451).parse()
     self.awr = mf1mt451.AWR
     self.ZA = mf1mt451.ZA
+    self.isomeric_state = mf1mt451.LISO
+    self.ZAM = self.ZA
+    if self.isomeric_state > 0:
+      self.ZAM += 300 + (self.isomeric_state*100)
     self.fissile = mf1mt451.is_fissile
 
     # Get potential scattering xs
@@ -823,7 +827,7 @@ class FrendyMG:
     fls = os.listdir()
 
     # read in (n,gamma) data
-    fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT102.mg"
+    fname = self.name + "_1DXS_" + str(self.ZAM) + ".00c_MT102.mg"
     if fname in fls:
       if itemp == 0:
         self.Egamma = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
@@ -831,7 +835,7 @@ class FrendyMG:
       self.Egamma[itemp,:,:] = ngamma
 
     # Check for (n,2n) data
-    fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT16.mg"
+    fname = self.name + "_1DXS_" + str(self.ZAM) + ".00c_MT16.mg"
     if fname in fls:
       if itemp == 0:
         self.En2n = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
@@ -839,7 +843,7 @@ class FrendyMG:
       self.En2n[itemp,:,:] = n2n
 
     # Check for (n,3n) data
-    fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT17.mg"
+    fname = self.name + "_1DXS_" + str(self.ZAM) + ".00c_MT17.mg"
     if fname in fls:
       if itemp == 0:
         self.En3n = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
@@ -847,7 +851,7 @@ class FrendyMG:
       self.En3n[itemp,:,:] = n3n
 
     # Check for (n,p) data
-    fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT103.mg"
+    fname = self.name + "_1DXS_" + str(self.ZAM) + ".00c_MT103.mg"
     if fname in fls:
       if itemp == 0:
         self.Enp = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))
@@ -855,7 +859,7 @@ class FrendyMG:
       self.Enp[itemp,:,:] = nprt
 
     # Check for (n,a) data
-    fname = self.name + "_1DXS_" + str(self.ZA) + ".00c_MT107.mg"
+    fname = self.name + "_1DXS_" + str(self.ZAM) + ".00c_MT107.mg"
     if fname in fls:
       if itemp == 0:
         self.Ena = np.zeros((len(self.temps), len(self.dilutions), self.ngroups))

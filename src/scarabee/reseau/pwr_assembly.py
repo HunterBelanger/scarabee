@@ -1226,10 +1226,17 @@ class PWRAssembly:
             self._correct_depletion(dt_sec)
             
         # Run last step at the end to get keff for our final material compositions 
+        scarabee_log(LogLevel.Info, "")
+        scarabee_log(LogLevel.Info, 60*"-")
         self._exposures[-1] = self._exposures[-2] + self.depletion_exposure_steps[-1]
         self._times[-1] = self._times[-2] + dt
+        scarabee_log(LogLevel.Info, "Running Time Step {:}".format(t))
+        scarabee_log(LogLevel.Info, "Exposure: {:.3E} MWd/kg".format(self._exposures[-1]))
+        scarabee_log(LogLevel.Info, "Time    : {:.3E} days".format(self._times[-1]))
+        scarabee_log(LogLevel.Info, "")
         self._run_assembly_calculation(True)
         self._keff[-1] = self._asmbly_moc.keff
+        scarabee_log(LogLevel.Info, "")
 
     def solve(self) -> None:
         if self.depletion_exposure_steps.size == 0:
