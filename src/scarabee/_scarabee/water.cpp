@@ -160,7 +160,7 @@ std::shared_ptr<Material> borated_water(double boron_ppm, double temperature,
   water_comp.add_nuclide("H1_H2O", 2. * frac_H2O * NATURAL_ABUNDANCES.at("H1"));
   water_comp.add_nuclide("H2", 2. * frac_H2O * NATURAL_ABUNDANCES.at("H2"));
   water_comp.add_element("O", frac_H2O);
-  water_comp.add_element("B", frac_B);
+  if (frac_B > 0.) water_comp.add_element("B", frac_B);
 
   return std::make_shared<Material>(water_comp, temperature, solution_density,
                                     DensityUnits::g_cm3, ndl);
