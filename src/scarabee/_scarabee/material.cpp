@@ -808,9 +808,15 @@ double Material::lambda_pot_xs(std::shared_ptr<NDLibrary> ndl, std::size_t g) {
   return lmbd_pot_xs;
 }
 
-void Material::clear_transport_micro_xs_data() { micro_nuc_xs_data_.clear(); }
+void Material::clear_transport_micro_xs_data() {
+  micro_nuc_xs_data_.clear();
+  micro_nuc_xs_data_.shrink_to_fit();
+}
 
-void Material::clear_depletion_micro_xs_data() { micro_dep_xs_data_.clear(); }
+void Material::clear_depletion_micro_xs_data() {
+  micro_dep_xs_data_.clear();
+  micro_dep_xs_data_.shrink_to_fit();
+}
 
 void Material::clear_all_micro_xs_data() {
   this->clear_transport_micro_xs_data();
