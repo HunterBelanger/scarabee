@@ -13,7 +13,7 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/utility.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <array>
 #include <cmath>

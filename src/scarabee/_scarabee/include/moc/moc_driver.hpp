@@ -10,7 +10,7 @@
 #include <utils/spherical_harmonics.hpp>
 #include <utils/serialization.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/vector.hpp>

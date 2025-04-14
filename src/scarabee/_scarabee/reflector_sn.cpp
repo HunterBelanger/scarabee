@@ -4,7 +4,7 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/timer.hpp>
 
-#include <xtensor/xio.hpp>
+#include <xtensor/io/xio.hpp>
 
 #include <sstream>
 

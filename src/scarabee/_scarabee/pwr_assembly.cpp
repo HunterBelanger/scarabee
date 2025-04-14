@@ -6,7 +6,7 @@
 #include <moc/moc_plotter.hpp>
 #include <diffusion/diffusion_data.hpp>
 
-#include <xtensor/xio.hpp>
+#include <xtensor/io/xio.hpp>
 
 #include <cereal/archives/portable_binary.hpp>
 

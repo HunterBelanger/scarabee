@@ -3,7 +3,7 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cmath>
 

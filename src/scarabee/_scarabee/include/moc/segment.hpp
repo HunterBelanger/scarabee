@@ -4,7 +4,7 @@
 #include <moc/flat_source_region.hpp>
 #include <data/cross_section.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/memory.hpp>

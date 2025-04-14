@@ -5,8 +5,8 @@
 #include <diffusion/diffusion_geometry.hpp>
 #include <utils/serialization.hpp>
 
-#include <xtensor/xarray.hpp>
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xarray.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/memory.hpp>

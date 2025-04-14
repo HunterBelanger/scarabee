@@ -18,7 +18,7 @@
 #include <utils/criticality_spectrum.hpp>
 #include <utils/serialization.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/variant.hpp>

@@ -3,7 +3,7 @@
 #include <utils/logging.hpp>
 #include <utils/timer.hpp>
 
-#include <xtensor/xbuilder.hpp>
+#include <xtensor/generators/xbuilder.hpp>
 
 namespace scarabee {
 

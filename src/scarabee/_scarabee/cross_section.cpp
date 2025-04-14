@@ -3,7 +3,7 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
 
-#include <xtensor/xbuilder.hpp>
+#include <xtensor/generators/xbuilder.hpp>
 
 #include <cereal/archives/portable_binary.hpp>
 

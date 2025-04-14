@@ -5,8 +5,8 @@
 #include <data/xs2d.hpp>
 #include <data/diffusion_cross_section.hpp>
 
-#include <xtensor/xtensor.hpp>
-#include <xtensor/xview.hpp>
+#include <xtensor/containers/xtensor.hpp>
+#include <xtensor/views/xview.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/string.hpp>

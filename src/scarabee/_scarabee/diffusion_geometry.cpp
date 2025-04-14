@@ -2,7 +2,7 @@
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 
-#include <xtensor/xstrides.hpp>
+#include <xtensor/core/xstrides.hpp>
 
 #include <algorithm>
 #include <sstream>

@@ -4,7 +4,7 @@
 #include <data/diffusion_cross_section.hpp>
 #include <utils/serialization.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/string.hpp>

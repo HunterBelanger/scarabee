@@ -5,7 +5,8 @@
 #include <data/cross_section.hpp>
 #include <data/micro_cross_sections.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
+
 #include <highfive/highfive.hpp>
 
 namespace H5 = HighFive;

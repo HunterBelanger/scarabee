@@ -5,8 +5,8 @@
 #include <utils/timer.hpp>
 #include <utils/math.hpp>
 
-#include <xtensor/xmath.hpp>
-#include <xtensor/xview.hpp>
+#include <xtensor/core/xmath.hpp>
+#include <xtensor/views/xview.hpp>
 
 #include <cereal/archives/portable_binary.hpp>
 

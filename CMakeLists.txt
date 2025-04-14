@@ -44,30 +44,30 @@ FetchContent_MakeAvailable(htl)
 
 #===============================================================================
 # Get XTL
-message(STATUS "Downloading xtl v0.7.7")
+message(STATUS "Downloading xtl v0.8.0")
 FetchContent_Declare(xtl
   GIT_REPOSITORY https://github.com/xtensor-stack/xtl.git
-  GIT_TAG        0.7.7
+  GIT_TAG        0.8.0
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(xtl)
 
 #===============================================================================
 # Get XSIMD
-message(STATUS "Downloading xsimd v12.1.1")
+message(STATUS "Downloading xsimd v13.2.0")
 FetchContent_Declare(xsimd
   GIT_REPOSITORY https://github.com/xtensor-stack/xsimd.git
-  GIT_TAG        12.1.1
+  GIT_TAG        13.2.0
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(xsimd)
 
 #===============================================================================
 # Get XTENSOR
-message(STATUS "Downloading xtensor v0.25.0")
+message(STATUS "Downloading xtensor v0.26.0")
 FetchContent_Declare(xtensor
   GIT_REPOSITORY https://github.com/xtensor-stack/xtensor.git
-  GIT_TAG        0.25.0
+  GIT_TAG        0.26.0
   EXCLUDE_FROM_ALL
 )
 set(XTENSOR_USE_XSIMD ON CACHE BOOL "Enable SIMD acceleration.")
@@ -94,10 +94,10 @@ execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/get_numpy_incl
 
 #===============================================================================
 # Get XTENSOR-PYTHON
-message(STATUS "Downloading xtensor-python v0.27.0")
+message(STATUS "Downloading xtensor-python v0.28.0")
 FetchContent_Declare(xtensor-python
   GIT_REPOSITORY https://github.com/xtensor-stack/xtensor-python.git
-  GIT_TAG        0.27.0
+  GIT_TAG        0.28.0
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(xtensor-python)

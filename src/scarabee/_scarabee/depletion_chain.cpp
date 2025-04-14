@@ -5,7 +5,7 @@
 
 #include <cereal/archives/portable_binary.hpp>
 
-#include <xtensor/xview.hpp>
+#include <xtensor/views/xview.hpp>
 
 #include <algorithm>
 #include <filesystem>

@@ -3,8 +3,8 @@
 
 #include <cereal/cereal.hpp>
 
-#include <xtensor/xtensor.hpp>
-#include <xtensor/xarray.hpp>
+#include <xtensor/containers/xtensor.hpp>
+#include <xtensor/containers/xarray.hpp>
 
 #include <htl/static_vector.hpp>
 
