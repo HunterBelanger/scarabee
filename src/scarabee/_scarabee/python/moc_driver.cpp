@@ -449,6 +449,22 @@ void init_MOCDriver(py::module& m) {
            "       Criticality spectrum from a P1 or B1 calculation.\n",
            py::arg("flux"))
 
+      .def("trace_fsr_segments", &MOCDriver::trace_fsr_segments,
+           "Starting from a given position and direction, this function traces "
+           "across the geometry until leaving the problem domain, returning a "
+           "list of FSR index - distance pairs.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "r_start : Vector\n"
+           "    Starting position.\n"
+           "u : Direction\n"
+           "    Direction to trace segments.\n\n"
+           "Returns\n"
+           "-------\n"
+           "list of pairs of int and float\n"
+           "    All the FSR index - distance pairs.\n",
+           py::arg("r_start"), py::arg("u"))
+
       .def(
           "plot",
           [](const MOCDriver& md) {
