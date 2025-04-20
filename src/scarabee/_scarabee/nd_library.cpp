@@ -457,7 +457,7 @@ std::pair<MicroNuclideXS, MicroDepletionXS> NDLibrary::infinite_dilution_xs(
   if (max_l == 2 && nuc.inf_p2_scatter == nullptr) max_l--;
   if (max_l == 1 && nuc.inf_p1_scatter == nullptr) max_l--;
   xt::xtensor<double, 2> Es =
-      xt::zeros<double>({max_l + 1, nuc.inf_scatter->shape()[2]});
+      xt::zeros<double>({max_l + 1, nuc.inf_scatter->shape()[1]});
 
   //--------------------------------------------------------
   // Do P0 scattering interpolation
