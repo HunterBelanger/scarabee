@@ -509,7 +509,7 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
         if (cmfd_ && track.begin()->entry_cmfd_surface()) {
           const auto surf_indx = track.begin()->entry_cmfd_surface();
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
+            const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
             cmfd_->tally_current(flx, u_forw, G, surf_indx);
           }
         }
@@ -532,7 +532,7 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
 
             
             if (cmfd_surf) {
-              const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
+              const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
               cmfd_->tally_current(flx, u_forw, G, cmfd_surf);
             }
             
@@ -560,7 +560,7 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
         if (cmfd_ && track.rbegin()->exit_cmfd_surface()) {
           auto surf_indx = track.rbegin()->exit_cmfd_surface();
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
+            const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
             cmfd_->tally_current(flx, u_back, G, surf_indx);
           }
         }
@@ -583,7 +583,7 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
             
             if (cmfd_surf) {
-              const double flx = 0.5 * tw * polar_quad_.wsin()[p] * angflux[p];
+              const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
               cmfd_->tally_current(flx, u_back, G, cmfd_surf);
             }
             

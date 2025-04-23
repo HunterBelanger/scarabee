@@ -41,8 +41,8 @@ moc = MOCDriver(c2d)
 moc.cmfd = CMFD([1.26], [1.26], [[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]])
 #moc.cmfd = CMFD([1.26], [1.26], [[0,6]])
 moc.generate_tracks(64, 0.01, YamamotoTabuchi6())
-moc.keff_tolerance = 1.e-15
-moc.flux_tolerance = 1.e-15
+moc.keff_tolerance = 1.e-5
+moc.flux_tolerance = 1.e-5
 moc.solve()
 
 print(f"""

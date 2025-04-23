@@ -494,7 +494,7 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
 }
 
 void CMFD::solve(MOCDriver& moc, double keff) {
-  //this->normalize_currents();
+  this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
 
   for (std::size_t i = 0; i < nx_; i++) {
