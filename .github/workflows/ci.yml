@@ -26,16 +26,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libx11-dev           \ # X11 core headers & libs
+            libx11-dev           \
             libxrandr-dev        \
             libxinerama-dev      \
             libxcursor-dev       \
             libxi-dev            \
-            libomp-dev           \ # OpenMP support
-            mesa-common-dev      \ # Core Mesa/OpenGL headers & utils
-            libgl1-mesa-dev      \ # Provides libGL.so (GLVND OpenGL)
-            libglu1-mesa-dev     \ # Provides GLU (OpenGL Utility Library)  :contentReference[oaicite:1]{index=1}
-
+            libomp-dev           \ 
+            mesa-common-dev      \ 
+            libgl1-mesa-dev      \ 
+            libglu1-mesa-dev     \ 
+        
       - name: Build CMake project
         run: |
           mkdir -p build
