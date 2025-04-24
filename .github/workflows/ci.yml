@@ -26,16 +26,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libx11-dev           \
-            libxrandr-dev        \
-            libxinerama-dev      \
-            libxcursor-dev       \
-            libxi-dev            \
-            libomp-dev           \ 
-            mesa-common-dev      \ 
-            libgl1-mesa-dev      \ 
-            libglu1-mesa-dev     \ 
-        
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libomp-dev \
+            mesa-common-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev
+
       - name: Build CMake project
         run: |
           mkdir -p build
