@@ -12,22 +12,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-       #Setup Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'  #Can be changed
+          python-version: '3.11'
 
-      #Install dependencies
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pytest scikit-build-core numpy
-        
-      - name: Install X11 dependencies
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
 
-      #Build
+      - name: Install system dependencies (X11, OpenMP, OpenGL)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libx11-dev           \ # X11 core headers & libs
+            libxrandr-dev        \
+            libxinerama-dev      \
+            libxcursor-dev       \
+            libxi-dev            \
+            libomp-dev           \ # OpenMP support
+            mesa-common-dev      \ # Core Mesa/OpenGL headers & utils
+            libgl1-mesa-dev      \ # Provides libGL.so (GLVND OpenGL)
+            libglu1-mesa-dev     \ # Provides GLU (OpenGL Utility Library)  :contentReference[oaicite:1]{index=1}
+
       - name: Build CMake project
         run: |
           mkdir -p build
@@ -35,7 +43,6 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=Release
           cmake --build . --config Release
 
-      #Set PYTHONPATH to point to build output (so Python can find _scarabee)
       - name: Run Python tests with pytest
         run: |
           export PYTHONPATH=$PWD/build:$PYTHONPATH
