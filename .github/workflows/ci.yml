@@ -36,14 +36,14 @@ jobs:
             libgl1-mesa-dev \
             libglu1-mesa-dev
 
-      - name: Build CMake project
+      - name: Build and install Python module
         run: |
           mkdir -p build
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release
           cmake --build . --config Release
+          cd ..
+          python -m pip install .
 
       - name: Run Python tests with pytest
-        run: |
-          export PYTHONPATH=$PWD/build:$PYTHONPATH
-          pytest tests/
+        run: pytest tests/
