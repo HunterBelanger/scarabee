@@ -80,7 +80,7 @@ class CMFD {
     surface_currents_normalized_ = false;
   }
 
-  double calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf);
+  double calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,const MOCDriver& moc);
 
   double calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,
                                              double D_surf,const MOCDriver& moc);
