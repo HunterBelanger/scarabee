@@ -493,9 +493,118 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
   spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a leakage ratio of {:.5E}.", i, j, g, req_leak/leak_rate);
 }
 
+double CMFD::calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf){
+  //surf is int: 0 for right, 1 for up, 2 for left, 3 for down
+  double Ds;
+  double Dij = D_transp_corr_(g,i,j);
+  double dx_ij;
+  double dx_s;
+  if (surf==0){
+    Ds = D_transp_corr_(g,i+1,j);
+    dx_ij = dx_[i];
+    dx_s = dx_[i+1];
+  } else if (surf == 1){
+    Ds = D_transp_corr_(g,i,j+1);
+    dx_ij = dy_[j];
+    dx_s = dy_[j+1];
+  } else if (surf == 2){
+    Ds = D_transp_corr_(g,i-1,j);
+    dx_ij = dx_[i];
+    dx_s = dx_[i-1];
+  } else if (surf == 3){
+    Ds = D_transp_corr_(g,i,j-1);
+    dx_ij = dy_[j];
+    dx_s = dy_[j-1];
+  }
+
+  //from OpenMOC documentation
+  double D_surf = (2*Dij*Ds)/(Dij*dx_s + Ds*dx_ij);
+  return D_surf;
+}
+
+double CMFD::calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,
+   double D_surf,const MOCDriver& moc){
+  
+  std::size_t cell_index = tile_to_indx(i,j);
+  double flx_ij = moc.flux(cell_index,g);
+  double flx_s;
+  double dx_ij;
+  std::size_t next_cell;
+  std::size_t surf_index;
+  if (surf==0){
+    dx_ij = dx_[i];
+    next_cell = tile_to_indx(i+1,j);
+    flx_s = moc.flux(next_cell,g);
+    surf_index = get_x_pos_surf(i,j);
+  } else if (surf == 1){
+    dx_ij = dy_[j];
+    next_cell = tile_to_indx(i,j+1);
+    flx_s = moc.flux(next_cell,g);
+    surf_index = get_y_pos_surf(i,j);
+  } else if (surf == 2){
+    dx_ij = dx_[i];
+    next_cell = tile_to_indx(i-1,j);
+    flx_s = moc.flux(next_cell,g);
+    surf_index = get_x_neg_surf(i,j);
+  } else if (surf == 3){
+    dx_ij = dy_[j];
+    next_cell = tile_to_indx(i,j-1);
+    flx_s = moc.flux(next_cell,g);
+    surf_index = get_y_neg_surf(i,j);
+  }
+  double current = surface_currents_(g, surf_index);
+  
+  double D_nl = (-D_surf*(flx_s - flx_ij)-(current/dx_ij))/(flx_s + flx_ij);
+
+  return D_nl;
+}
+
+void CMFD::create_loss_matrix(const MOCDriver& moc){
+  bool interior;
+  //have to implement different boundary conditions
+  //Reflective is simple
+  std::size_t tot_cells = nx_ * ny_ ;
+  double Dxp;
+  double Dyp;
+  double Dxn;
+  double Dyn;
+  double Dnl_xp;
+  double Dnl_yp;
+  double Dnl_xn;
+  double Dnl_yn;
+
+  for (std::size_t g=0; g < ng_; ++g){
+
+    for (std::size_t l=0; l < nx_ * ny_; ++l){
+      interior = true;
+
+      auto [i, j] = indx_to_tile(l);
+      double Dij = D_transp_corr_(g,i,j);
+
+      if (interior){
+
+        //calculate surface diffusion coefficients
+        Dxp = calc_surf_diffusion_coef(i,j,g,0);
+        Dyp = calc_surf_diffusion_coef(i,j,g,1);
+        Dxn = calc_surf_diffusion_coef(i,j,g,2);
+        Dyn = calc_surf_diffusion_coef(i,j,g,3);
+
+        //calculate nonlinear diffusion coefficients
+        Dnl_xp = calc_nonlinear_diffusion_coef(i,j,g,0,Dxp,moc);
+        Dnl_yp = calc_nonlinear_diffusion_coef(i,j,g,0,Dyp,moc);
+        Dnl_xn = calc_nonlinear_diffusion_coef(i,j,g,0,Dxn,moc);
+        Dnl_yn = calc_nonlinear_diffusion_coef(i,j,g,0,Dyn,moc);
+        
+
+      }
+    }
+  }
+}
+
 void CMFD::solve(MOCDriver& moc, double keff) {
   this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
+  this->create_loss_matrix(moc);
 
   for (std::size_t i = 0; i < nx_; i++) {
     for (std::size_t j = 0; j < ny_; j++) {
