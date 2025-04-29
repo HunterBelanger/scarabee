@@ -114,6 +114,7 @@ class CMFD {
   xt::xtensor<double, 3> Et_; // g, i, j
   xt::xtensor<double, 3> D_transp_corr_; // g, i, j
   xt::xtensor<double, 3> flux_;  // g, x, y
+  xt::xtensor<double, 3> Er_; //g, i, j
 
   Eigen::SparseMatrix<double> M;  // Loss Matrix
 

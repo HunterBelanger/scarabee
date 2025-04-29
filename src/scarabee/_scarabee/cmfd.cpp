@@ -138,6 +138,7 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   flux_ = xt::zeros<double>({ng_, nx_, ny_});
   Et_ = xt::zeros<double>({ng_, nx_, ny_});
   D_transp_corr_ = xt::zeros<double>({ng_, nx_, ny_});
+  Er_ = xt::zeros<double>({ng_, nx_, ny_});
 }
 
 std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
@@ -442,16 +443,18 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       xt::view(flux_, xt::all(), i, j) = 0.;
       xt::view(Et_, xt::all(), i, j) = 0.;
       xt::view(D_transp_corr_,xt::all(),i,j) = 0.;
+      xt::view(Er_, xt::all(),i,j) = 0.;
       for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
         flux_(moc_to_cmfd_group_map_[g], i, j) += flux_spec(g);
-        Et_(moc_to_cmfd_group_map_[g], i, j) += fg_xs->Et(g) * flux_spec(g);
-        //Need to verify this is correct, but it should be similar to the Etr homogenization
-        //Not sure if this variable is what I think it is actually
-        D_transp_corr_(moc_to_cmfd_group_map_[g],i,j) += fg_dxs-> D(g) *flux_spec(g);
+        Et_(moc_to_cmfd_group_map_[g], i, j) += fg_xs->Etr(g) * flux_spec(g);
       }
       xt::view(Et_, xt::all(), i, j) /= xt::view(flux_, xt::all(), i, j);
-      //should be divided by the cmfd group flux
-      xt::view(D_transp_corr_, xt::all(), i, j) /= xt::view(flux_, xt::all(),i,j);
+
+      //assign collapsed diffusion XS, g is CMFD group 
+      for (std::size_t g = 0; g < ng_; g++){
+        D_transp_corr_(g,i,j) = fg_dxs->D(g);
+        Er_(g,i,j) = fg_dxs -> Er(g);
+      }
     }
   }
 }
@@ -602,7 +605,7 @@ double CMFD::calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t 
     }
   }
 
-  spdlog::info("calc_surf_diffusion_coef: Dij = {}, Ds = {}, dx_s = {}, dx_ij = {}", Dij, Ds, dx_s, dx_ij);
+  //spdlog::info("calc_surf_diffusion_coef: Dij = {}, Ds = {}, dx_s = {}, dx_ij = {}", Dij, Ds, dx_s, dx_ij);
 
   //from OpenMOC documentation
   double D_surf = (2*Dij*Ds)/(Dij*dx_s + Ds*dx_ij);
@@ -701,6 +704,7 @@ double CMFD::calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::si
   double current = surface_currents_(g, surf_index);
   
   double D_nl = (-D_surf*(flx_s - flx_ij)-(current/dx_ij))/(flx_s + flx_ij);
+  //spdlog::info("calc_surf_diffusion_coef: Dsurf = {}, Flx_next = {}, Flx_ij = {}, current = {}, dx_ij = {}", D_surf, flx_s, flx_ij, current, dx_ij);
 
   return D_nl;
 }
@@ -737,7 +741,10 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
       Dnl_xn = calc_nonlinear_diffusion_coef(i,j,g,2,Dxn,moc);
       Dnl_yn = calc_nonlinear_diffusion_coef(i,j,g,3,Dyn,moc);
 
-      spdlog::error("Test diffusion coef Dnl_xp {:f}",Dnl_xp);
+      spdlog::info("Test Dnl_xp {:f}",Dnl_xp);
+      spdlog::info("Test Dnl_yp {:f}",Dnl_yp);
+      spdlog::info("Test Dnl_xn {:f}",Dnl_xn);
+      spdlog::info("Test Dnl_yn {:f}",Dnl_yn);
         
 
     }
@@ -750,6 +757,7 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   this->compute_homogenized_xs_and_flux(moc);
   this->create_loss_matrix(moc);
 
+  /** 
   for (std::size_t i = 0; i < nx_; i++) {
     for (std::size_t j = 0; j < ny_; j++) {
       for (std::size_t g = 0; g < ng_; g++) {
@@ -757,6 +765,8 @@ void CMFD::solve(MOCDriver& moc, double keff) {
       }
     }
   }
+  */
+
 }
 
 }  // namespace scarabee
