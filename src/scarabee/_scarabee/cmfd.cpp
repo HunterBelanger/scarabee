@@ -502,7 +502,7 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
   //spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a leakage ratio of {:.5E}.", i, j, g, req_leak/leak_rate);
 }
 
-double CMFD::calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,const MOCDriver& moc){
+double CMFD::calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,const MOCDriver& moc) const {
   //surf is int: 0 for right, 1 for up, 2 for left, 3 for down
   //TODO: the order of checks can likely be rearranged to reduce repeated statements
   //TODO: May need to correct for optical thickness using Larsens effective diffusion coefficient
@@ -613,7 +613,7 @@ double CMFD::calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t 
 }
 
 double CMFD::calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,
-   double D_surf,const MOCDriver& moc){
+   double D_surf,const MOCDriver& moc) const {
   
   std::size_t cell_index = tile_to_indx(i,j);
   double flx_ij = flux_(g,i,j);
@@ -714,20 +714,35 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
   //have to implement different boundary conditions
   //Reflective is simple
   std::size_t tot_cells = nx_ * ny_ ;
-  double Dxp;
-  double Dyp;
-  double Dxn;
-  double Dyn;
-  double Dnl_xp;
-  double Dnl_yp;
-  double Dnl_xn;
-  double Dnl_yn;
+  M_.resize(ng_*tot_cells, ng_*tot_cells);
+  std::vector<Eigen::Triplet<double>> global_triplets;
 
+  
+#pragma omp parallel for
   for (std::size_t g=0; g < ng_; ++g){
+    std::vector<Eigen::Triplet<double>> groupwise_vals;
+    double Dxp;
+    double Dyp;
+    double Dxn;
+    double Dyn;
+    double Dnl_xp;
+    double Dnl_yp;
+    double Dnl_xn;
+    double Dnl_yn;
+    double flx_ij;
+    double flx_yp;
+    double flx_yn;
+    double flx_xp;
+    double flx_xn;
 
     for (std::size_t l=0; l < nx_ * ny_; ++l){
       auto [i, j] = indx_to_tile(l);
-      double Dij = D_transp_corr_(g,i,j);
+      double row_indx = g *tot_cells + l;
+
+      double loss_xp;
+      double loss_xn;
+      double loss_yp;
+      double loss_yn;
 
       //calculate surface diffusion coefficients
       Dxp = calc_surf_diffusion_coef(i,j,g,0,moc);
@@ -741,15 +756,87 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
       Dnl_xn = calc_nonlinear_diffusion_coef(i,j,g,2,Dxn,moc);
       Dnl_yn = calc_nonlinear_diffusion_coef(i,j,g,3,Dyn,moc);
 
-      spdlog::info("Test Dnl_xp {:f}",Dnl_xp);
-      spdlog::info("Test Dnl_yp {:f}",Dnl_yp);
-      spdlog::info("Test Dnl_xn {:f}",Dnl_xn);
-      spdlog::info("Test Dnl_yn {:f}",Dnl_yn);
-        
+      //spdlog::info("Test Dnl_xp {:f}",Dnl_xp);
+      //spdlog::info("Test Dnl_yp {:f}",Dnl_yp);
+      //spdlog::info("Test Dnl_xn {:f}",Dnl_xn);
+      //spdlog::info("Test Dnl_yn {:f}",Dnl_yn);
+      double dx = dx_[i];
+      double dy = dy_[j];
 
+      //not efficient to do this again after calculating is it
+      flx_ij = flux_(g,i,j);
+
+      double loss_ij = dy*(Dxn + Dnl_xn + Dxp - Dnl_xp) +
+                dx*(Dyn + Dnl_yn + Dyp - Dnl_yp) +
+                dx*dy*Er_(g,i,j)*flx_ij;
+      groupwise_vals.emplace_back(row_indx,row_indx,loss_ij);
+
+      //set x current diff for current cell
+      //X pos boundary
+      if (i+1 == nx_ ){
+        if (moc.x_max_bc() == BoundaryCondition::Reflective){
+          flx_xp = flx_ij;
+          flx_xn = flux_(g,i-1,j);
+          loss_xn = dy*(-Dxn + Dnl_xn)*flx_xn;
+          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i-1,j), loss_xn);
+          loss_xp = dy*(Dxp + Dnl_xp)*flx_xp;
+          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_xp);
+        }
+      //X negative boundary
+      } else if (i == 0){
+          if (moc.x_min_bc() == BoundaryCondition::Reflective){
+            flx_xn = flx_ij;
+            flx_xp = flux_(g,i+1,j);
+            loss_xn = dy*(-Dxn + Dnl_xn)*flx_xn;
+            groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_xn);
+            loss_xp = dy*(Dxp + Dnl_xp)*flx_xp;
+            groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i+1,j), loss_xp);
+          }
+      } else {
+        flx_xp = flux_(g,i+1,j);
+        flx_xn = flux_(g,i-1,j);
+        loss_xn = dy*(-Dxn + Dnl_xn)*flx_xn;
+        groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i-1,j), loss_xn);
+        loss_xp = dy*(Dxp + Dnl_xp)*flx_xp;
+        groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i+1,j), loss_xp);
+      }
+
+      //set y current diff for current cell
+      if (j + 1 == ny_){
+        if (moc.y_max_bc() == BoundaryCondition::Reflective){
+          flx_yp = flx_ij;
+          flx_yn = flux_(g,i,j-1);
+          loss_yn = dx*(-Dyn + Dnl_yn)*flx_yn;
+          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j-1), loss_yn);
+          loss_yp = dx*(Dyp + Dnl_yp)*flx_yp;
+          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_yp);
+        }
+      } else if (j == 0){
+        if (moc.y_min_bc() == BoundaryCondition::Reflective){
+          flx_yn = flx_ij;
+          flx_yp = flux_(g,i,j+1);
+          loss_yn = dx*(-Dyn + Dnl_yn)*flx_yn;
+          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_yn);
+          loss_yp = dx*(Dyp + Dnl_yp)*flx_yp;
+          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j+1), loss_yp);
+        }
+      } else {
+        flx_yp = flux_(g,i,j+1);
+        flx_yn = flux_(g,i,j-1);
+        loss_yn = dx*(-Dyn + Dnl_yn)*flx_yn;
+        groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j-1), loss_yn);
+        loss_yp = dx*(Dyp + Dnl_yp)*flx_yp;
+        groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j+1), loss_yp);
+      }
     }
+    #pragma omp critical
+        {
+            global_triplets.insert(global_triplets.end(), groupwise_vals.begin(), groupwise_vals.end());
+        }
   }
+  M_.setFromTriplets(global_triplets.begin(), global_triplets.end());
 }
+
 
 
 void CMFD::solve(MOCDriver& moc, double keff) {

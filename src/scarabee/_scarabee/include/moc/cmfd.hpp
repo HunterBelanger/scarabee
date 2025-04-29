@@ -80,10 +80,10 @@ class CMFD {
     surface_currents_normalized_ = false;
   }
 
-  double calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,const MOCDriver& moc);
+  double calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,const MOCDriver& moc) const;
 
   double calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,
-                                             double D_surf,const MOCDriver& moc);
+                                             double D_surf,const MOCDriver& moc) const;
   
   void create_loss_matrix(const MOCDriver& moc);
 
@@ -116,7 +116,7 @@ class CMFD {
   xt::xtensor<double, 3> flux_;  // g, x, y
   xt::xtensor<double, 3> Er_; //g, i, j
 
-  Eigen::SparseMatrix<double> M;  // Loss Matrix
+  Eigen::SparseMatrix<double> M_;  // Loss Matrix
 
   void normalize_currents();
   void compute_homogenized_xs_and_flux(const MOCDriver& moc);
