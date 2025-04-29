@@ -89,6 +89,7 @@ class CMFD {
   void create_source_matrix();
 
   Eigen::SparseMatrix<double> get_loss_matrix() const {return M_;}
+  Eigen::SparseMatrix<double> get_source_matrix() const {return QM_;}
 
   Eigen::VectorXd flatten_flux() const;
 
@@ -102,6 +103,9 @@ class CMFD {
   std::vector<std::pair<std::size_t, std::size_t>> group_condensation_;
   std::size_t nx_, ny_, ng_;
   std::size_t nx_surfs_, ny_surfs_;
+
+  double keff_tol_ = 1E-5;
+  double flux_tol_ = 1E-5;
 
   // List of flat source region indices for each CMFD cell
   std::vector<std::set<std::size_t>> temp_fsrs_;

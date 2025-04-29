@@ -1,6 +1,7 @@
 #include <moc/cmfd.hpp>
 #include <moc/moc_driver.hpp>
 #include <utils/logging.hpp>
+#include <utils/timer.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
 
@@ -502,7 +503,7 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
 
   // Compute the residual of the balance equation
   const double residual = leak_rate + tot_reac_rate - (scat_source + fiss_source);
-  const double req_leak = scat_source + fiss_source - tot_reac_rate;
+  //const double req_leak = scat_source + fiss_source - tot_reac_rate;
 
   //if (std::abs(residual) >= 1.E-5) {
     spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a neutron balance residual of {:.5E}.", i, j, g, residual);
@@ -886,6 +887,7 @@ void CMFD::create_source_matrix(){
 }
 
 Eigen::VectorXd CMFD::flatten_flux() const {
+  //Turns g, i, j flux to linearly indexed flux
   const std::size_t tot_cells = nx_ * ny_;
   Eigen::VectorXd flx_flat(ng_ * tot_cells);
 
@@ -908,11 +910,81 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   this->normalize_currents();
   spdlog::info("Computing homogenized xs");
   this->compute_homogenized_xs_and_flux(moc);
-  spdlog::info("Creating loss matrix");
+  spdlog::info("Creating loss and source matrix");
   this->create_loss_matrix(moc);
   this->create_source_matrix();
+  spdlog::info("Starting CMFD solve");
+
+  std::size_t max_iter = 1000; //just for initial testing, shouldn't use more than this.
 
   Eigen::VectorXd flux_moc = flatten_flux();
+
+  // Initialize flux and source vectors
+  Eigen::VectorXd flux(ng_*nx_*ny_);
+  Eigen::VectorXd new_flux(ng_*nx_*ny_);
+  Eigen::VectorXd Q(ng_*nx_*ny_);
+  Eigen::VectorXd Q_new(ng_*nx_*ny_);
+
+  //Use moc homogenized flux as initial guess?
+  //Maybe should just start with 1
+  flux = flux_moc;
+
+  Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
+  solver.analyzePattern(M_);
+  solver.factorize(M_);
+
+  // Begin power iteration
+  double keff_diff = 100.;
+  double flux_diff = 100.;
+  std::size_t iteration = 0;
+  Timer iteration_timer;
+  while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
+    iteration_timer.reset();
+    iteration_timer.start();
+    iteration++;
+
+    // Compute "old" source vector
+    Q = (1. / keff) * QM_ * flux;
+
+    new_flux = solver.solve(Q);
+    if (solver.info() != Eigen::Success) {
+      spdlog::error("Solution impossible.");
+      throw ScarabeeException("Solution impossible");
+    }
+
+    // Compute new source vector
+    Q_new = (1. / keff) * QM_ *new_flux;
+
+    // Estiamte keff - not sure about this part, might need to be volume-weighed?  Q.dot(volumes)
+    double prev_keff = keff;
+    keff = prev_keff * Q_new.sum() / Q.sum();
+    keff_diff = std::abs(keff - prev_keff) / keff;
+
+    // Normalize our new flux
+    new_flux *= prev_keff / keff;
+
+    // Find the max flux error
+    flux_diff = 0.;
+    for (std::size_t i = 0; i < ng_ * nx_ * ny_; i++) {
+      double flux_diff_i = std::abs(new_flux(i) - flux(i)) / new_flux(i);
+      if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
+    }
+    flux = new_flux;
+
+    // Write information
+    spdlog::info("-----------------CMFD-----------------");
+    spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff);
+    spdlog::info("     keff difference:     {:.5E}", keff_diff);
+    spdlog::info("     max flux difference: {:.5E}", flux_diff);
+    spdlog::info("     iteration time: {:.5E} s",
+                 iteration_timer.elapsed_time());
+    
+    if (iteration > max_iter){
+      auto mssg = "Max iterations exceeded, maybe problem can't converge";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+  }
 
   /** 
   for (std::size_t i = 0; i < nx_; i++) {
@@ -923,7 +995,6 @@ void CMFD::solve(MOCDriver& moc, double keff) {
     }
   }
   */
-
 }
 
 }  // namespace scarabee
