@@ -139,6 +139,9 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   Et_ = xt::zeros<double>({ng_, nx_, ny_});
   D_transp_corr_ = xt::zeros<double>({ng_, nx_, ny_});
   Er_ = xt::zeros<double>({ng_, nx_, ny_});
+  Chi_ = xt::zeros<double>({ng_, nx_, ny_});
+  vEf_ = xt::zeros<double>({ng_, nx_, ny_});
+  Es_ = xt::zeros<double>({ng_, ng_, nx_, ny_});
 }
 
 std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
@@ -444,6 +447,9 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       xt::view(Et_, xt::all(), i, j) = 0.;
       xt::view(D_transp_corr_,xt::all(),i,j) = 0.;
       xt::view(Er_, xt::all(),i,j) = 0.;
+      xt::view(Chi_, xt::all(), i, j) = 0.;
+      xt::view(vEf_, xt::all(), i, j) = 0.;
+      xt::view(Es_, xt::all(), xt::all(), i, j) = 0.;
       for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
         flux_(moc_to_cmfd_group_map_[g], i, j) += flux_spec(g);
         Et_(moc_to_cmfd_group_map_[g], i, j) += fg_xs->Etr(g) * flux_spec(g);
@@ -454,6 +460,11 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       for (std::size_t g = 0; g < ng_; g++){
         D_transp_corr_(g,i,j) = fg_dxs->D(g);
         Er_(g,i,j) = fg_dxs -> Er(g);
+        Chi_(g,i,j) = fg_dxs -> chi(g);
+        vEf_(g,i,j) = fg_dxs -> vEf(g);
+        for (std::size_t gg = 0; gg < ng_; gg++){
+          Es_(g,gg,i,j) = fg_dxs -> Es(g,gg);
+        }
       }
     }
   }
@@ -717,7 +728,7 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
   M_.resize(ng_*tot_cells, ng_*tot_cells);
   std::vector<Eigen::Triplet<double>> global_triplets;
 
-  
+  //each equation is independent so it can be parallized, might be better to do so over cells rather than groups
 #pragma omp parallel for
   for (std::size_t g=0; g < ng_; ++g){
     std::vector<Eigen::Triplet<double>> groupwise_vals;
@@ -737,7 +748,7 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
 
     for (std::size_t l=0; l < nx_ * ny_; ++l){
       auto [i, j] = indx_to_tile(l);
-      double row_indx = g *tot_cells + l;
+      std::size_t row_indx = g *tot_cells + l;
 
       double loss_xp;
       double loss_xn;
@@ -760,8 +771,8 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
       //spdlog::info("Test Dnl_yp {:f}",Dnl_yp);
       //spdlog::info("Test Dnl_xn {:f}",Dnl_xn);
       //spdlog::info("Test Dnl_yn {:f}",Dnl_yn);
-      double dx = dx_[i];
-      double dy = dy_[j];
+      const double dx = dx_[i];
+      const double dy = dy_[j];
 
       //not efficient to do this again after calculating is it
       flx_ij = flux_(g,i,j);
@@ -835,14 +846,73 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
         }
   }
   M_.setFromTriplets(global_triplets.begin(), global_triplets.end());
+  M_.makeCompressed();
 }
 
+void CMFD::create_source_matrix(){
 
+  const std::size_t tot_cells = nx_ * ny_ ;
+  QM_.resize(ng_*tot_cells, ng_*tot_cells);
+  std::vector<Eigen::Triplet<double>> global_triplets;
+
+  //not entirely sure this order can be used, but the source matrix needs to be ordered the same as the loss matrix
+  //It makes sense from first glance because if we are in group g for cell l, we still want to sum over g' for that group g
+#pragma omp parallel for
+  for (std::size_t g=0; g<ng_; ++g){
+    std::vector<Eigen::Triplet<double>> groupwise_vals;
+
+    for (std::size_t l=0; l < nx_ * ny_; ++l){
+      auto [i, j] = indx_to_tile(l);
+      std::size_t row_indx = g *tot_cells + l;
+      const double dx = dx_[i];
+      const double dy = dy_[j];
+      for (std::size_t gg=0; gg < ng_; ++gg){
+        //Fission source
+        groupwise_vals.emplace_back(row_indx,gg*tot_cells + l, dx*dy*Chi_(g,i,j)*vEf_(gg,i,j));
+        //Scattering source Es_(g_in, g_out)
+        if (gg != g){
+          groupwise_vals.emplace_back(row_indx, gg*tot_cells + l, dx*dy*Es_(gg,g));
+        }
+      }
+    }
+    #pragma omp critical
+    {
+        global_triplets.insert(global_triplets.end(), groupwise_vals.begin(), groupwise_vals.end());
+    }
+  }
+  
+  QM_.setFromTriplets(global_triplets.begin(), global_triplets.end());
+  QM_.makeCompressed();
+}
+
+Eigen::VectorXd CMFD::flatten_flux() const {
+  const std::size_t tot_cells = nx_ * ny_;
+  Eigen::VectorXd flx_flat(ng_ * tot_cells);
+
+  for (std::size_t g = 0; g < ng_; ++g) {
+    //for each cell in row-major order (i fastest, then j)
+    for (std::size_t j = 0; j < ny_; ++j) {
+      for (std::size_t i = 0; i < nx_; ++i) {
+        std::size_t cell_idx = tile_to_indx(i,j);
+        std::size_t linear_idx = g * tot_cells + cell_idx;
+        flx_flat[linear_idx] = flux_(g, i, j);
+      }
+    }
+  }
+  return flx_flat;
+}
 
 void CMFD::solve(MOCDriver& moc, double keff) {
+  spdlog::info("Starting CMFD");
+  spdlog::info("Normalizing current");
   this->normalize_currents();
+  spdlog::info("Computing homogenized xs");
   this->compute_homogenized_xs_and_flux(moc);
+  spdlog::info("Creating loss matrix");
   this->create_loss_matrix(moc);
+  this->create_source_matrix();
+
+  Eigen::VectorXd flux_moc = flatten_flux();
 
   /** 
   for (std::size_t i = 0; i < nx_; i++) {
