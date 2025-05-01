@@ -75,6 +75,8 @@ class CMFD {
   void tally_current(double aflx, const Direction& u, std::size_t G,
                      const CMFDSurfaceCrossing& surf);
 
+  void set_solve(int solve) {solve_ = solve;}
+
   void zero_currents() {
     surface_currents_.fill(0.);
     surface_currents_normalized_ = false;
@@ -105,7 +107,8 @@ class CMFD {
   std::size_t nx_surfs_, ny_surfs_;
 
   double keff_tol_ = 1E-5;
-  double flux_tol_ = 1E-2;
+  double flux_tol_ = 1E-5;
+  int solve_ = 0; //0 to solve, 1 to only setup
 
   // List of flat source region indices for each CMFD cell
   std::vector<std::set<std::size_t>> temp_fsrs_;

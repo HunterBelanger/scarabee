@@ -525,6 +525,7 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
 }
 
 double CMFD::calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,const MOCDriver& moc) const {
+  //Calculates the surface diffusion coefficent from cell average diffusion coefficient
   //surf is int: 0 for right, 1 for up, 2 for left, 3 for down
   //TODO: the order of checks can likely be rearranged to reduce repeated statements
   //TODO: May need to correct for optical thickness using Larsens effective diffusion coefficient
@@ -636,6 +637,8 @@ double CMFD::calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t 
 
 double CMFD::calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,
    double D_surf,const MOCDriver& moc) const {
+
+  //Calculates nonlinear diffusion coefficients for a given surface 
   
   std::size_t cell_index = tile_to_indx(i,j);
   double flx_ij = flux_(g,i,j);
@@ -724,6 +727,7 @@ double CMFD::calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::si
   }
   double current = surface_currents_(g, surf_index);
   
+  //this might not be right for every direction, should check
   double D_nl = (-D_surf*(flx_s - flx_ij)-(current/dx_ij))/(flx_s + flx_ij);
   //spdlog::info("calc_surf_diffusion_coef: Dsurf = {}, Flx_next = {}, Flx_ij = {}, current = {}, dx_ij = {}", D_surf, flx_s, flx_ij, current, dx_ij);
 
@@ -928,93 +932,96 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   spdlog::info("Starting CMFD solve");
   spdlog::info("Keff passed to CMFD: {}", keff);
 
+  //Debug info
   spdlog::info("M_ nonzeros: {}", M_.nonZeros());
   spdlog::info("QM_ nonzeros: {}", QM_.nonZeros());
   spdlog::info("QM_ sum: {}", QM_.sum());
   
-  
-  std::size_t max_iter = 10000; //just for initial testing, shouldn't use more than this.
+  //Power Iteration to solve for Keff
+  if (solve_ == 0){
+    std::size_t max_iter = 1000; //just for initial testing, shouldn't use more than this.
 
-  Eigen::VectorXd flux_moc = flatten_flux();
+    Eigen::VectorXd flux_moc = flatten_flux();
 
-  // Initialize flux and source vectors
-  Eigen::VectorXd flux(ng_*nx_*ny_);
-  Eigen::VectorXd new_flux(ng_*nx_*ny_);
-  Eigen::VectorXd Q(ng_*nx_*ny_);
-  Eigen::VectorXd Q_new(ng_*nx_*ny_);
+    // Initialize flux and source vectors
+    Eigen::VectorXd flux(ng_*nx_*ny_);
+    Eigen::VectorXd new_flux(ng_*nx_*ny_);
+    Eigen::VectorXd Q(ng_*nx_*ny_);
+    Eigen::VectorXd Q_new(ng_*nx_*ny_);
 
-  // Initialize a vector for computing keff faster
-  Eigen::VectorXd VvEf(ng_ * nx_ * ny_);
-  for (std::size_t l = 0; l < nx_*ny_; l++) {
-    auto [i, j] = indx_to_tile(l);
-    for (std::size_t g = 0; g < ng_; g++) {
-      VvEf(l + g * ny_*nx_) = volumes_[l + g*nx_*ny_]*vEf_(g,i,j);
-    }
-  }
-
-  //Use moc homogenized flux as initial guess?
-  //Maybe should just start with 1
-  //flux = flux_moc;
-  flux.fill(1.);
-  flux.normalize();
-
-  Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
-  solver.analyzePattern(M_);
-  solver.factorize(M_);
-
-  // Begin power iteration
-  double keff_diff = 100.;
-  double flux_diff = 100.;
-  std::size_t iteration = 0;
-  Timer iteration_timer;
-  while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
-    iteration_timer.reset();
-    iteration_timer.start();
-    iteration++;
-
-    // Compute source vector
-    Q = (1. / keff) * QM_ * flux;
-
-    new_flux = solver.solve(Q);
-    if (solver.info() != Eigen::Success) {
-      spdlog::error("Solution impossible.");
-      throw ScarabeeException("Solution impossible");
+    // Initialize a vector for computing keff faster
+    Eigen::VectorXd VvEf(ng_ * nx_ * ny_);
+    for (std::size_t l = 0; l < nx_*ny_; l++) {
+      auto [i, j] = indx_to_tile(l);
+      for (std::size_t g = 0; g < ng_; g++) {
+        VvEf(l + g * ny_*nx_) = volumes_[l + g*nx_*ny_]*vEf_(g,i,j);
+      }
     }
 
-    spdlog::info("Sum of source vector: {}", Q.sum());
+    //Use moc homogenized flux as initial guess?
+    //Maybe should just start with 1
+    //flux = flux_moc;
+    flux.fill(1.);
+    flux.normalize();
 
-    // Estiamte keff - not sure about this part, might need to be volume-weighed?  Q.dot(volumes)
-    double prev_keff = keff;
-    keff = prev_keff * VvEf.dot(new_flux) / VvEf.dot(flux);
-    keff_diff = std::abs(keff - prev_keff) / keff;
+    Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
+    solver.analyzePattern(M_);
+    solver.factorize(M_);
 
-    spdlog::info("Sum of old flux: {}", flux.sum());
-    spdlog::info("Sum of new flux: {}", new_flux.sum());
+    // Begin power iteration
+    double keff_diff = 100.;
+    double flux_diff = 100.;
+    std::size_t iteration = 0;
+    Timer iteration_timer;
+    while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
+      iteration_timer.reset();
+      iteration_timer.start();
+      iteration++;
+
+      // Compute source vector
+      Q = (1. / keff) * QM_ * flux;
+
+      new_flux = solver.solve(Q);
+      if (solver.info() != Eigen::Success) {
+        spdlog::error("Solution impossible.");
+        throw ScarabeeException("Solution impossible");
+      }
+
+      spdlog::info("Sum of source vector: {}", Q.sum());
+
+      // Estiamte keff - not sure about this part, might need to be volume-weighed?  Q.dot(volumes)
+      double prev_keff = keff;
+      keff = prev_keff * VvEf.dot(new_flux) / VvEf.dot(flux);
+      keff_diff = std::abs(keff - prev_keff) / keff;
+
+      spdlog::info("Sum of old flux: {}", flux.sum());
+      spdlog::info("Sum of new flux: {}", new_flux.sum());
 
 
-    // Normalize our new flux
-    new_flux *= prev_keff / keff;
+      // Normalize our new flux
+      new_flux *= prev_keff / keff;
 
-    // Find the max flux error
-    flux_diff = 0.;
-    for (std::size_t i = 0; i < ng_ * nx_ * ny_; i++) {
-      double flux_diff_i = std::abs(new_flux(i) - flux(i)) / new_flux(i);
-      if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
-    }
-    flux = new_flux;
+      // Find the max flux error
+      flux_diff = 0.;
+      for (std::size_t i = 0; i < ng_ * nx_ * ny_; i++) {
+        double flux_diff_i = std::abs(new_flux(i) - flux(i)) / new_flux(i);
+        if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
+      }
+      flux = new_flux;
 
-    // Write information
-    spdlog::info("-----------------CMFD-----------------");
-    spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff);
-    spdlog::info("     keff difference:     {:.5E}", keff_diff);
-    spdlog::info("     max flux difference: {:.5E}", flux_diff);
-    spdlog::info("     iteration time: {:.5E} s",
-                 iteration_timer.elapsed_time());
-    
-    if (iteration > max_iter){
-      auto mssg = "Max iterations exceeded, maybe problem can't converge";
-      spdlog::error(mssg);
-      throw ScarabeeException(mssg);
+      // Write information
+      spdlog::info("-----------------CMFD-----------------");
+      spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff);
+      spdlog::info("     keff difference:     {:.5E}", keff_diff);
+      spdlog::info("     max flux difference: {:.5E}", flux_diff);
+      spdlog::info("     iteration time: {:.5E} s",
+                  iteration_timer.elapsed_time());
+      
+      if (iteration > max_iter){
+        auto mssg = "Max iterations exceeded, maybe problem can't converge";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
     }
   }
   
