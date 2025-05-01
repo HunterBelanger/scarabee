@@ -105,7 +105,7 @@ class CMFD {
   std::size_t nx_surfs_, ny_surfs_;
 
   double keff_tol_ = 1E-5;
-  double flux_tol_ = 1E-5;
+  double flux_tol_ = 1E-2;
 
   // List of flat source region indices for each CMFD cell
   std::vector<std::set<std::size_t>> temp_fsrs_;
@@ -128,6 +128,8 @@ class CMFD {
   xt::xtensor<double, 3> Chi_;
   xt::xtensor<double, 3> vEf_;
   xt::xtensor<double, 4> Es_; //Scatter matrix g, gg, i, j
+
+  Eigen::VectorXd volumes_;
 
   Eigen::SparseMatrix<double> M_;  // Loss Matrix
   Eigen::SparseMatrix<double> QM_;  // Source Matrix

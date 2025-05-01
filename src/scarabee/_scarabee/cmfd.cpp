@@ -135,6 +135,8 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   xs_.resize({nx_, ny_});
   xs_.fill(nullptr);
 
+  volumes_.resize(ng_ * nx_ * ny_);
+
   // Allocate the flux, Et, and D_transp_corr arrays
   flux_ = xt::zeros<double>({ng_, nx_, ny_});
   Et_ = xt::zeros<double>({ng_, nx_, ny_});
@@ -443,6 +445,12 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       else
         xs = fg_dxs->condense(group_condensation_, flux_spec);
 
+      //hopefully this is getting the correct fsr volumes
+      double cell_volume = 0.;
+      for (auto fsr: fsrs_[indx]){
+        cell_volume += moc.volume(fsr);
+      }
+
       // Generate the flux and Et values for the tile
       xt::view(flux_, xt::all(), i, j) = 0.;
       xt::view(Et_, xt::all(), i, j) = 0.;
@@ -459,6 +467,8 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
 
       //assign collapsed diffusion XS, g is CMFD group 
       for (std::size_t g = 0; g < ng_; g++){
+        std::size_t linear_idx = g * nx_ * ny_ + indx;
+        volumes_[linear_idx] = cell_volume;
         D_transp_corr_(g,i,j) = fg_dxs->D(g);
         Er_(g,i,j) = fg_dxs -> Er(g);
         Chi_(g,i,j) = fg_dxs -> chi(g);
@@ -631,7 +641,6 @@ double CMFD::calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::si
   double flx_ij = flux_(g,i,j);
   double flx_s;
   double dx_ij;
-  std::size_t next_cell;
   std::size_t surf_index;
   if (surf==0){
     dx_ij = dx_[i];
@@ -656,7 +665,7 @@ double CMFD::calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::si
   } else if (surf == 1){
     dx_ij = dy_[j];
     surf_index = get_y_pos_surf(i,j);
-    if (j+1 == nx_){
+    if (j+1 == ny_){
       auto y_max_bc = moc.y_max_bc();
       if (y_max_bc == BoundaryCondition::Reflective){
         flx_s = flx_ij;
@@ -840,6 +849,13 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
         loss_yp = dx*(Dyp + Dnl_yp)*flx_yp;
         groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j+1), loss_yp);
       }
+
+      for (std::size_t gg = 0; gg < ng_; ++gg){
+        //subtract scattering source Es_(g_in, g_out)
+        if (gg != g){
+          groupwise_vals.emplace_back(row_indx, gg*tot_cells + l, -dx*dy*Es_(gg,g));
+        }
+      }
     }
     #pragma omp critical
         {
@@ -870,10 +886,6 @@ void CMFD::create_source_matrix(){
       for (std::size_t gg=0; gg < ng_; ++gg){
         //Fission source
         groupwise_vals.emplace_back(row_indx,gg*tot_cells + l, dx*dy*Chi_(g,i,j)*vEf_(gg,i,j));
-        //Scattering source Es_(g_in, g_out)
-        if (gg != g){
-          groupwise_vals.emplace_back(row_indx, gg*tot_cells + l, dx*dy*Es_(gg,g));
-        }
       }
     }
     #pragma omp critical
@@ -914,8 +926,14 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   this->create_loss_matrix(moc);
   this->create_source_matrix();
   spdlog::info("Starting CMFD solve");
+  spdlog::info("Keff passed to CMFD: {}", keff);
 
-  std::size_t max_iter = 1000; //just for initial testing, shouldn't use more than this.
+  spdlog::info("M_ nonzeros: {}", M_.nonZeros());
+  spdlog::info("QM_ nonzeros: {}", QM_.nonZeros());
+  spdlog::info("QM_ sum: {}", QM_.sum());
+  
+  
+  std::size_t max_iter = 10000; //just for initial testing, shouldn't use more than this.
 
   Eigen::VectorXd flux_moc = flatten_flux();
 
@@ -925,9 +943,20 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   Eigen::VectorXd Q(ng_*nx_*ny_);
   Eigen::VectorXd Q_new(ng_*nx_*ny_);
 
+  // Initialize a vector for computing keff faster
+  Eigen::VectorXd VvEf(ng_ * nx_ * ny_);
+  for (std::size_t l = 0; l < nx_*ny_; l++) {
+    auto [i, j] = indx_to_tile(l);
+    for (std::size_t g = 0; g < ng_; g++) {
+      VvEf(l + g * ny_*nx_) = volumes_[l + g*nx_*ny_]*vEf_(g,i,j);
+    }
+  }
+
   //Use moc homogenized flux as initial guess?
   //Maybe should just start with 1
-  flux = flux_moc;
+  //flux = flux_moc;
+  flux.fill(1.);
+  flux.normalize();
 
   Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
   solver.analyzePattern(M_);
@@ -943,7 +972,7 @@ void CMFD::solve(MOCDriver& moc, double keff) {
     iteration_timer.start();
     iteration++;
 
-    // Compute "old" source vector
+    // Compute source vector
     Q = (1. / keff) * QM_ * flux;
 
     new_flux = solver.solve(Q);
@@ -952,13 +981,16 @@ void CMFD::solve(MOCDriver& moc, double keff) {
       throw ScarabeeException("Solution impossible");
     }
 
-    // Compute new source vector
-    Q_new = (1. / keff) * QM_ *new_flux;
+    spdlog::info("Sum of source vector: {}", Q.sum());
 
     // Estiamte keff - not sure about this part, might need to be volume-weighed?  Q.dot(volumes)
     double prev_keff = keff;
-    keff = prev_keff * Q_new.sum() / Q.sum();
+    keff = prev_keff * VvEf.dot(new_flux) / VvEf.dot(flux);
     keff_diff = std::abs(keff - prev_keff) / keff;
+
+    spdlog::info("Sum of old flux: {}", flux.sum());
+    spdlog::info("Sum of new flux: {}", new_flux.sum());
+
 
     // Normalize our new flux
     new_flux *= prev_keff / keff;
@@ -985,7 +1017,8 @@ void CMFD::solve(MOCDriver& moc, double keff) {
       throw ScarabeeException(mssg);
     }
   }
-
+  
+  
   /** 
   for (std::size_t i = 0; i < nx_; i++) {
     for (std::size_t j = 0; j < ny_; j++) {

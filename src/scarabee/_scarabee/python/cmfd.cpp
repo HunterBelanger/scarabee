@@ -96,5 +96,6 @@ void init_CMFD(py::module& m) {
         &CMFD::current),
       "TODO: Fill in docstring",
       py::arg("G"),py::arg("surface"))
-  .def("get_loss_matrix", &CMFD::get_loss_matrix);
+  .def("get_loss_matrix", &CMFD::get_loss_matrix)
+  .def("get_source_matrix",&CMFD::get_source_matrix);
 }
