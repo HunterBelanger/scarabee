@@ -646,11 +646,6 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
     double Dnl_yp;
     double Dnl_xn;
     double Dnl_yn;
-    double flx_ij;
-    double flx_yp;
-    double flx_yn;
-    double flx_xp;
-    double flx_xn;
 
     for (std::size_t l=0; l < nx_ * ny_; ++l){
       auto [i, j] = indx_to_tile(l);
@@ -670,71 +665,57 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
       const double dx = dx_[i];
       const double dy = dy_[j];
 
-      //not efficient to do this again after calculating is it
-      flx_ij = flux_(g,i,j);
 
       double Er_ij = xs_(i,j) -> Er(g);
 
       double loss_ij = dy*(Dxn + Dnl_xn + Dxp - Dnl_xp) +
                 dx*(Dyn + Dnl_yn + Dyp - Dnl_yp) +
-                dx*dy*Er_ij*flx_ij;
+                dx*dy*Er_ij;
       groupwise_vals.emplace_back(row_indx,row_indx,loss_ij);
 
       //set x current diff for current cell
       //X pos boundary
       if (i+1 == nx_ ){
         if (moc.x_max_bc() == BoundaryCondition::Reflective){
-          flx_xp = flx_ij;
-          flx_xn = flux_(g,i-1,j);
-          loss_xn = dy*(-Dxn + Dnl_xn)*flx_xn;
+          loss_xn = dy*(-Dxn + Dnl_xn);
           groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i-1,j), loss_xn);
-          loss_xp = dy*(Dxp + Dnl_xp)*flx_xp;
+          loss_xp = dy*(Dxp + Dnl_xp);
           groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_xp);
         }
       //X negative boundary
       } else if (i == 0){
           if (moc.x_min_bc() == BoundaryCondition::Reflective){
-            flx_xn = flx_ij;
-            flx_xp = flux_(g,i+1,j);
-            loss_xn = dy*(-Dxn + Dnl_xn)*flx_xn;
+            loss_xn = dy*(-Dxn + Dnl_xn);
             groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_xn);
-            loss_xp = dy*(Dxp + Dnl_xp)*flx_xp;
+            loss_xp = dy*(Dxp + Dnl_xp);
             groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i+1,j), loss_xp);
           }
       } else {
-        flx_xp = flux_(g,i+1,j);
-        flx_xn = flux_(g,i-1,j);
-        loss_xn = dy*(-Dxn + Dnl_xn)*flx_xn;
+        loss_xn = dy*(-Dxn + Dnl_xn);
         groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i-1,j), loss_xn);
-        loss_xp = dy*(Dxp + Dnl_xp)*flx_xp;
+        loss_xp = dy*(Dxp + Dnl_xp);
         groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i+1,j), loss_xp);
       }
 
       //set y current diff for current cell
       if (j + 1 == ny_){
         if (moc.y_max_bc() == BoundaryCondition::Reflective){
-          flx_yp = flx_ij;
-          flx_yn = flux_(g,i,j-1);
-          loss_yn = dx*(-Dyn + Dnl_yn)*flx_yn;
+          loss_yn = dx*(-Dyn + Dnl_yn);
           groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j-1), loss_yn);
-          loss_yp = dx*(Dyp + Dnl_yp)*flx_yp;
+          loss_yp = dx*(Dyp + Dnl_yp);
           groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_yp);
         }
       } else if (j == 0){
         if (moc.y_min_bc() == BoundaryCondition::Reflective){
-          flx_yn = flx_ij;
-          flx_yp = flux_(g,i,j+1);
-          loss_yn = dx*(-Dyn + Dnl_yn)*flx_yn;
+          loss_yn = dx*(-Dyn + Dnl_yn);
           groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_yn);
-          loss_yp = dx*(Dyp + Dnl_yp)*flx_yp;
+          loss_yp = dx*(Dyp + Dnl_yp);
           groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j+1), loss_yp);
         }
       } else {
-        flx_yp = flux_(g,i,j+1);
-        flx_yn = flux_(g,i,j-1);
-        loss_yn = dx*(-Dyn + Dnl_yn)*flx_yn;
+        loss_yn = dx*(-Dyn + Dnl_yn);
         groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j-1), loss_yn);
-        loss_yp = dx*(Dyp + Dnl_yp)*flx_yp;
+        loss_yp = dx*(Dyp + Dnl_yp);
         groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j+1), loss_yp);
       }
 
@@ -879,7 +860,7 @@ void CMFD::solve(MOCDriver& moc, double keff) {
 
       // Estiamte keff - not sure about this part, might need to be volume-weighed?  Q.dot(volumes)
       double prev_keff = keff;
-      keff = prev_keff * VvEf.dot(new_flux) / VvEf.dot(flux);
+      keff = prev_keff *(VvEf.dot(new_flux) / VvEf.dot(flux));
       keff_diff = std::abs(keff - prev_keff) / keff;
 
       spdlog::info("Sum of old flux: {}", flux.sum());
