@@ -141,10 +141,6 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   flux_ = xt::zeros<double>({ng_, nx_, ny_});
   Et_ = xt::zeros<double>({ng_, nx_, ny_});
   D_transp_corr_ = xt::zeros<double>({ng_, nx_, ny_});
-  Er_ = xt::zeros<double>({ng_, nx_, ny_});
-  Chi_ = xt::zeros<double>({ng_, nx_, ny_});
-  vEf_ = xt::zeros<double>({ng_, nx_, ny_});
-  Es_ = xt::zeros<double>({ng_, ng_, nx_, ny_});
 }
 
 std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
@@ -454,11 +450,6 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       // Generate the flux and Et values for the tile
       xt::view(flux_, xt::all(), i, j) = 0.;
       xt::view(Et_, xt::all(), i, j) = 0.;
-      xt::view(D_transp_corr_,xt::all(),i,j) = 0.;
-      xt::view(Er_, xt::all(),i,j) = 0.;
-      xt::view(Chi_, xt::all(), i, j) = 0.;
-      xt::view(vEf_, xt::all(), i, j) = 0.;
-      xt::view(Es_, xt::all(), xt::all(), i, j) = 0.;
       for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
         flux_(moc_to_cmfd_group_map_[g], i, j) += flux_spec(g);
         Et_(moc_to_cmfd_group_map_[g], i, j) += fg_xs->Etr(g) * flux_spec(g);
@@ -469,13 +460,6 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       for (std::size_t g = 0; g < ng_; g++){
         std::size_t linear_idx = g * nx_ * ny_ + indx;
         volumes_[linear_idx] = cell_volume;
-        D_transp_corr_(g,i,j) = fg_dxs->D(g);
-        Er_(g,i,j) = fg_dxs -> Er(g);
-        Chi_(g,i,j) = fg_dxs -> chi(g);
-        vEf_(g,i,j) = fg_dxs -> vEf(g);
-        for (std::size_t gg = 0; gg < ng_; gg++){
-          Es_(g,gg,i,j) = fg_dxs -> Es(g,gg);
-        }
       }
     }
   }
@@ -524,214 +508,122 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
   //spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a leakage ratio of {:.5E}.", i, j, g, req_leak/leak_rate);
 }
 
-double CMFD::calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,const MOCDriver& moc) const {
-  //Calculates the surface diffusion coefficent from cell average diffusion coefficient
-  //surf is int: 0 for right, 1 for up, 2 for left, 3 for down
-  //TODO: the order of checks can likely be rearranged to reduce repeated statements
-  //TODO: May need to correct for optical thickness using Larsens effective diffusion coefficient
-  double Ds;
-  double Dij = D_transp_corr_(g,i,j);
-  double dx_ij;
-  double dx_s;
-  if (surf==0){
-    //x positive
-    dx_ij = dx_[i];
-    if (i+1 == nx_){
-      auto x_max_bc = moc.x_max_bc();
-      //If we are on x positive boundary
-      if (x_max_bc == BoundaryCondition::Reflective){
-        Ds = Dij;
-        dx_s = dx_ij;
-      } else if (x_max_bc == BoundaryCondition::Vacuum){
-        //TODO Implement
-        auto mssg = "Vacuum BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      } else if (x_max_bc == BoundaryCondition::Periodic){
-        //TODO Implement
-        auto mssg = "Periodic BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      }
-    } else {
-      Ds = D_transp_corr_(g,i+1,j);
-      dx_s = dx_[i+1];
-    }
-    
-  } else if (surf == 1){
-    //y positive
-    dx_ij = dy_[j];
-    if (j+1 == ny_){
-      auto y_max_bc = moc.y_max_bc();
-      //If we are on y positive boundary
-      if (y_max_bc == BoundaryCondition::Reflective){
-        Ds = Dij;
-        dx_s = dx_ij;
-      } else if (y_max_bc == BoundaryCondition::Vacuum){
-        auto mssg = "Vacuum BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      } else if (y_max_bc == BoundaryCondition::Periodic){
-        auto mssg = "Periodic BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      }
-    } else {
-      Ds = D_transp_corr_(g,i,j+1);
-      dx_s = dy_[j+1];
-    }
 
-  } else if (surf == 2){
-    //x negative
-    dx_ij = dx_[i];
-    if (i == 0){
-      auto x_min_bc = moc.x_min_bc();
-      //If we are on x negative boundary
-      if (x_min_bc == BoundaryCondition::Reflective){
-        Ds= Dij;
-        dx_s = dx_ij;
-      } else if (x_min_bc == BoundaryCondition::Vacuum){
-        auto mssg = "Vacuum BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      } else if (x_min_bc == BoundaryCondition::Periodic){
-        auto mssg = "Periodic BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      }
-    } else {
-      Ds = D_transp_corr_(g,i-1,j);
-      dx_s = dx_[i-1];
-    }
-
-  } else if (surf == 3){
-    //y negative
-    dx_ij = dy_[j];
-    if (j == 0){
-      auto y_min_bc = moc.y_min_bc();
-      //If we are on y negative boundary
-      if (y_min_bc == BoundaryCondition::Reflective){
-        Ds = Dij;
-        dx_s = dx_ij;
-      } else if (y_min_bc == BoundaryCondition::Vacuum){
-        auto mssg = "Vacuum BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      } else if (y_min_bc == BoundaryCondition::Periodic){
-        auto mssg = "Periodic BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      }
-    } else {
-      Ds = D_transp_corr_(g,i,j-1);
-      dx_s = dy_[j-1];
-    }
-  }
-
-  //spdlog::info("calc_surf_diffusion_coef: Dij = {}, Ds = {}, dx_s = {}, dx_ij = {}", Dij, Ds, dx_s, dx_ij);
-
-  //from OpenMOC documentation
-  double D_surf = (2*Dij*Ds)/(Dij*dx_s + Ds*dx_ij);
-  return D_surf;
-}
-
-double CMFD::calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,
-   double D_surf,const MOCDriver& moc) const {
-
-  //Calculates nonlinear diffusion coefficients for a given surface 
-  
-  std::size_t cell_index = tile_to_indx(i,j);
+std::pair<double, double> CMFD::calc_surf_diffusion_coefs(std::size_t i, std::size_t j, std::size_t g,
+   CMFD::TileSurf surf,const MOCDriver& moc) const {
   double flx_ij = flux_(g,i,j);
   double flx_s;
   double dx_ij;
+  double dx_s;
+
+  double D_ij = xs_(i,j) -> D(g);
+  double D_surf;
+  double D_s;
   std::size_t surf_index;
-  if (surf==0){
+
+  if (surf==CMFD::TileSurf::XP){
     dx_ij = dx_[i];
     surf_index = get_x_pos_surf(i,j);
     if (i+1 == nx_){
       auto x_max_bc = moc.x_max_bc();
       if (x_max_bc == BoundaryCondition::Reflective){
-        flx_s = flx_ij;
+        return std::make_pair(0.0,0.0);
       } else if (x_max_bc == BoundaryCondition::Vacuum){
-        auto mssg = "Vacuum BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
+          D_surf = (2*D_ij)/(4*D_ij + dx_ij);
+          //not sure if this is right for vacuum
+          flx_s = 0.0;
+          dx_s = 0.0;
       } else if (x_max_bc == BoundaryCondition::Periodic){
-        auto mssg = "Periodic BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
+        flx_s = flux_(g,0,j);
+        dx_s = dx_[0];
+        D_s = xs_(0,j) -> D(g);
+        D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij); 
       }
     } else {
       flx_s = flux_(g,i+1,j);
+      D_s = xs_(i+1,j) -> D(g);
+      dx_s = dx_[i+1];
+      D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
     }
-    
-  } else if (surf == 1){
+  } else if (surf == CMFD::TileSurf::YP){
     dx_ij = dy_[j];
     surf_index = get_y_pos_surf(i,j);
     if (j+1 == ny_){
       auto y_max_bc = moc.y_max_bc();
       if (y_max_bc == BoundaryCondition::Reflective){
-        flx_s = flx_ij;
+        return std::make_pair(0.0,0.0);
       } else if (y_max_bc == BoundaryCondition::Vacuum){
-        auto mssg = "Vacuum BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
+          D_surf = (2*D_ij)/(4*D_ij + dx_ij);
+          //not sure if this is right for vacuum
+          flx_s = 0.0;
+          dx_s = 0.0;
       } else if (y_max_bc == BoundaryCondition::Periodic){
-        auto mssg = "Periodic BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
+          flx_s = flux_(g,i,0);
+          dx_s = dy_[0];
+          D_s = xs_(i,0) -> D(g);
+          D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
       }
     } else {
-      flx_s = flux_(g,i,j+1);
+        flx_s = flux_(g,i,j+1);
+        D_s = xs_(i,j+1) -> D(g);
+        dx_s = dy_[j+1];
+        D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
     }
-  } else if (surf == 2){
+  } else if (surf == CMFD::TileSurf::XN){
     dx_ij = dx_[i];
     surf_index = get_x_neg_surf(i,j);
     if (i == 0){
       auto x_min_bc = moc.x_min_bc();
       if (x_min_bc == BoundaryCondition::Reflective){
-        flx_s = flx_ij;
+        return std::make_pair(0.0,0.0);
       } else if (x_min_bc == BoundaryCondition::Vacuum){
-        auto mssg = "Vacuum BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
+          D_surf = (2*D_ij)/(4*D_ij + dx_ij);
+          //not sure if this is right for vacuum
+          flx_s = 0.0;
+          dx_s = 0.0;
       } else if (x_min_bc == BoundaryCondition::Periodic){
-        auto mssg = "Periodic BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
+          flx_s = flux_(g,nx_-1,j);
+          dx_s = dx_[nx_-1];
+          D_s = xs_(nx_-1,j) -> D(g);
+          D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
       }
     } else {
-      //flx_s = moc.flux(next_cell,g);
-      flx_s = flux_(g,i-1,j);
+        flx_s = flux_(g,i-1,j);
+        D_s = xs_(i-1,j) -> D(g);
+        dx_s = dx_[i-1];
+        D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
     }
-    
-  } else if (surf == 3){
+  } else if (surf == CMFD::TileSurf::YN){
     dx_ij = dy_[j];
     surf_index = get_y_neg_surf(i,j);
     if (j == 0){
       auto y_min_bc = moc.y_min_bc();
       if (y_min_bc == BoundaryCondition::Reflective){
-        flx_s = flx_ij;
+        return std::make_pair(0.0,0.0);
       } else if (y_min_bc == BoundaryCondition::Vacuum){
-        auto mssg = "Vacuum BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
+          D_surf = (2*D_ij)/(4*D_ij + dx_ij);
+          //not sure if this is right for vacuum
+          flx_s = 0.0;
+          dx_s = 0.0;
       } else if (y_min_bc == BoundaryCondition::Periodic){
-        auto mssg = "Periodic BC not implemented for CMFD";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
+          flx_s = flux_(g,i,ny_-1);
+          dx_s = dy_[ny_-1];
+          D_s = xs_(i,ny_-1) -> D(g);
+          D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
       }
     } else {
-      flx_s = flux_(g,i,j-1);
+        flx_s = flux_(g,i,j-1);
+        D_s = xs_(i,j-1) -> D(g);
+        dx_s = dy_[j-1];
+        D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
     }
   }
+  //not sure what current to use for periodic boundary
   double current = surface_currents_(g, surf_index);
-  
-  //this might not be right for every direction, should check
-  double D_nl = (-D_surf*(flx_s - flx_ij)-(current/dx_ij))/(flx_s + flx_ij);
-  //spdlog::info("calc_surf_diffusion_coef: Dsurf = {}, Flx_next = {}, Flx_ij = {}, current = {}, dx_ij = {}", D_surf, flx_s, flx_ij, current, dx_ij);
 
-  return D_nl;
+  double D_nl = (-D_surf*(flx_s - flx_ij)-(current/dx_ij))/(flx_s + flx_ij);
+
+  return std::pair<double, double>(D_surf, D_nl);
 }
 
 void CMFD::create_loss_matrix(const MOCDriver& moc){
@@ -770,30 +662,22 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
       double loss_yn;
 
       //calculate surface diffusion coefficients
-      Dxp = calc_surf_diffusion_coef(i,j,g,0,moc);
-      Dyp = calc_surf_diffusion_coef(i,j,g,1,moc);
-      Dxn = calc_surf_diffusion_coef(i,j,g,2,moc);
-      Dyn = calc_surf_diffusion_coef(i,j,g,3,moc);
+      std::tie(Dxp, Dnl_xp) = calc_surf_diffusion_coefs(i,j,g,CMFD::TileSurf::XP,moc);
+      std::tie(Dyp, Dnl_yp) = calc_surf_diffusion_coefs(i,j,g,CMFD::TileSurf::YP,moc);
+      std::tie(Dxn, Dnl_xn) = calc_surf_diffusion_coefs(i,j,g,CMFD::TileSurf::XN,moc);
+      std::tie(Dyn, Dnl_yn) = calc_surf_diffusion_coefs(i,j,g,CMFD::TileSurf::YN,moc);
 
-      //calculate nonlinear diffusion coefficients
-      Dnl_xp = calc_nonlinear_diffusion_coef(i,j,g,0,Dxp,moc);
-      Dnl_yp = calc_nonlinear_diffusion_coef(i,j,g,1,Dyp,moc);
-      Dnl_xn = calc_nonlinear_diffusion_coef(i,j,g,2,Dxn,moc);
-      Dnl_yn = calc_nonlinear_diffusion_coef(i,j,g,3,Dyn,moc);
-
-      //spdlog::info("Test Dnl_xp {:f}",Dnl_xp);
-      //spdlog::info("Test Dnl_yp {:f}",Dnl_yp);
-      //spdlog::info("Test Dnl_xn {:f}",Dnl_xn);
-      //spdlog::info("Test Dnl_yn {:f}",Dnl_yn);
       const double dx = dx_[i];
       const double dy = dy_[j];
 
       //not efficient to do this again after calculating is it
       flx_ij = flux_(g,i,j);
 
+      double Er_ij = xs_(i,j) -> Er(g);
+
       double loss_ij = dy*(Dxn + Dnl_xn + Dxp - Dnl_xp) +
                 dx*(Dyn + Dnl_yn + Dyp - Dnl_yp) +
-                dx*dy*Er_(g,i,j)*flx_ij;
+                dx*dy*Er_ij*flx_ij;
       groupwise_vals.emplace_back(row_indx,row_indx,loss_ij);
 
       //set x current diff for current cell
@@ -856,8 +740,9 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
 
       for (std::size_t gg = 0; gg < ng_; ++gg){
         //subtract scattering source Es_(g_in, g_out)
+        double Es = xs_(i,j) -> Es(gg,g);
         if (gg != g){
-          groupwise_vals.emplace_back(row_indx, gg*tot_cells + l, -dx*dy*Es_(gg,g));
+          groupwise_vals.emplace_back(row_indx, gg*tot_cells + l, -dx*dy*Es);
         }
       }
     }
@@ -887,9 +772,11 @@ void CMFD::create_source_matrix(){
       std::size_t row_indx = g *tot_cells + l;
       const double dx = dx_[i];
       const double dy = dy_[j];
+      double Chi = xs_(i,j) -> chi(g);
       for (std::size_t gg=0; gg < ng_; ++gg){
         //Fission source
-        groupwise_vals.emplace_back(row_indx,gg*tot_cells + l, dx*dy*Chi_(g,i,j)*vEf_(gg,i,j));
+        double vEf = xs_(i,j) -> vEf(gg);
+        groupwise_vals.emplace_back(row_indx,gg*tot_cells + l, dx*dy*Chi*vEf);
       }
     }
     #pragma omp critical
@@ -954,7 +841,8 @@ void CMFD::solve(MOCDriver& moc, double keff) {
     for (std::size_t l = 0; l < nx_*ny_; l++) {
       auto [i, j] = indx_to_tile(l);
       for (std::size_t g = 0; g < ng_; g++) {
-        VvEf(l + g * ny_*nx_) = volumes_[l + g*nx_*ny_]*vEf_(g,i,j);
+        double vEf = xs_(i,j) -> vEf(g);
+        VvEf(l + g * ny_*nx_) = volumes_[l + g*nx_*ny_]*vEf;
       }
     }
 

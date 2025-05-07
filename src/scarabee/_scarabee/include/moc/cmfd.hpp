@@ -82,13 +82,7 @@ class CMFD {
     surface_currents_normalized_ = false;
   }
 
-  double calc_surf_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,const MOCDriver& moc) const;
-
-  double calc_nonlinear_diffusion_coef(std::size_t i, std::size_t j, std::size_t g, std::size_t surf,
-                                             double D_surf,const MOCDriver& moc) const;
-  
-  void create_loss_matrix(const MOCDriver& moc);
-  void create_source_matrix();
+  enum class TileSurf: std::uint8_t {XN, XP, YN, YP};
 
   Eigen::SparseMatrix<double> get_loss_matrix() const {return M_;}
   Eigen::SparseMatrix<double> get_source_matrix() const {return QM_;}
@@ -125,18 +119,15 @@ class CMFD {
   xt::xtensor<double, 3> Et_; // g, i, j
   xt::xtensor<double, 3> D_transp_corr_; // g, i, j
   xt::xtensor<double, 3> flux_;  // g, x, y
-  //Maybe these should be flattened and ordered the same as the loss and source matrices
-  //Not sure what the performance difference might be, it is more readable this way though
-  xt::xtensor<double, 3> Er_; //g, i, j
-  xt::xtensor<double, 3> Chi_;
-  xt::xtensor<double, 3> vEf_;
-  xt::xtensor<double, 4> Es_; //Scatter matrix g, gg, i, j
 
   Eigen::VectorXd volumes_;
 
   Eigen::SparseMatrix<double> M_;  // Loss Matrix
   Eigen::SparseMatrix<double> QM_;  // Source Matrix
 
+  std::pair<double, double> calc_surf_diffusion_coefs(std::size_t i, std::size_t j, std::size_t g, TileSurf surf, const MOCDriver& moc) const;
+  void create_loss_matrix(const MOCDriver& moc);
+  void create_source_matrix();
   void normalize_currents();
   void compute_homogenized_xs_and_flux(const MOCDriver& moc);
   void check_neutron_balance(const std::size_t i, const std::size_t j, std::size_t g, const double keff) const;
