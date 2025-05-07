@@ -621,7 +621,8 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coefs(std::size_t i, std::si
   //not sure what current to use for periodic boundary
   double current = surface_currents_(g, surf_index);
 
-  double D_nl = (-D_surf*(flx_s - flx_ij)-(current/dx_ij))/(flx_s + flx_ij);
+  //current shouldn't be divided if normalize_currents is called 
+  double D_nl = (-D_surf*(flx_s - flx_ij)-current)/(flx_s + flx_ij);
 
   return std::pair<double, double>(D_surf, D_nl);
 }
