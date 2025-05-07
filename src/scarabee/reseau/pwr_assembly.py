@@ -8,6 +8,8 @@ from .._scarabee import (
     NDLibrary,
     DepletionChain,
     PinCellType,
+    Vector,
+    Direction,
     Cartesian2D,
     MOCDriver,
     BoundaryCondition,
@@ -15,6 +17,10 @@ from .._scarabee import (
     YamamotoTabuchi6,
     P1CriticalitySpectrum,
     B1CriticalitySpectrum,
+    ADF,
+    CDF,
+    DiffusionCrossSection,
+    DiffusionData,
     set_logging_level,
     scarabee_log,
     LogLevel,
@@ -110,6 +116,9 @@ class PWRAssembly:
     moc_num_angles : int
         Number of azimuthal angles in the assembly MOC calculations. Default
         value is 32.
+    condensation_scheme : list of list of int
+        Energy condensation scheme to condense from the group structure of the
+        library to the few-groups used in the core solver.
     leakage_model : CriticalLeakage
         Model used to determine the critical leakage flux spectrum, also known
         as the fundamental mode. Default method is homogeneous P1.
@@ -266,7 +275,9 @@ class PWRAssembly:
         self._asmbly_moc: Optional[MOCDriver] = None
 
         self._leakage_model: CriticalLeakage = CriticalLeakage.P1
-        self._infinite_flux_spectrum = None # To reset to infinite spectrum in MOC driver
+        self._infinite_flux_spectrum = (
+            None  # To reset to infinite spectrum in MOC driver
+        )
 
         # Depletion time steps in MWd/kg
         self._depletion_exposure_steps = np.array([])
@@ -288,6 +299,9 @@ class PWRAssembly:
 
         # Either a single value or list of values (for each depletion step)
         self._keff: Union[float, List[float]] = 1.0
+
+        # Condensation scheme to make few-group cross sections
+        self._condensation_scheme: Optional[List[List[int]]] = None
 
     @property
     def shape(self):
@@ -442,6 +456,56 @@ class PWRAssembly:
     @property
     def keff(self):
         return self._keff
+
+    @property
+    def condensation_scheme(self):
+        return self._condensation_scheme
+
+    @condensation_scheme.setter
+    def condensation_scheme(self, cs: List[List[int]]):
+        if not isinstance(cs, list):
+            raise TypeError("Condensation scheme must be a list of lists of ints.")
+
+        if len(cs) == 0:
+            raise TypeError("Condensation scheme must have at least one group.")
+
+        for G in range(len(cs)):
+            if not isinstance(cs[G], list):
+                raise TypeError("Condensation scheme must be a list of lists of ints.")
+
+            if len(cs[G]) != 2:
+                raise TypeError(
+                    "Each entry in condensation scheme must have 2 entries."
+                )
+
+            try:
+                cs[G][0] = int(cs[G][0])
+                cs[G][1] = int(cs[G][1])
+            except:
+                raise TypeError(
+                    f"Microgroup indices for macrogroup {G} are not convertible to ints."
+                )
+
+            if cs[G][1] < cs[G][0]:
+                raise ValueError(
+                    f"The microgroup indices in macrogroup {G} are not ordered."
+                )
+
+            if G == 0 and cs[G][0] != 0:
+                raise ValueError(
+                    "The first microgroup index of the 0 macrogroup must be 0."
+                )
+            elif G == len(cs) - 1 and cs[G][1] != self._ndl.ngroups - 1:
+                NG = self._ndl.ngroups - 1
+                raise ValueError(
+                    f"The last microgroup index of the last macrogroup must be {NG}."
+                )
+
+            if G > 0:
+                if cs[G][0] != cs[G - 1][1] + 1:
+                    raise ValueError("The condensation scheme is not continuous")
+
+        self._condensation_scheme = copy.deepcopy(cs)
 
     def _set_cells(self, cells: List[List[Union[FuelPin, GuideTube]]]):
         if len(cells) != self._simulated_shape[1]:
@@ -1121,6 +1185,319 @@ class PWRAssembly:
                 if isinstance(cell, FuelPin):
                     cell.normalize_flux_spectrum(f)
 
+    def _compute_few_group_flux(self, r: Vector, u: Direction) -> List[float]:
+        """
+        Computes the flux in the few-group scheme at the given position
+        and direction.
+
+        Parameters
+        ----------
+        r : Vector
+            Position where the flux is evaluated.
+        u : Direction
+            Direction vector to disambiguate the position.
+
+        Returns
+        -------
+        list of float
+            Values of the few-group flux at the given position.
+
+        Raises
+        ------
+        RuntimeError
+            If the condensation_scheme attribute is not set.
+        """
+        if self.condensation_scheme is None:
+            raise RuntimeError("Energy condensation scheme not set.")
+
+        flux = [0.0 for G in range(len(self.condensation_scheme))]
+
+        for G in range(len(self.condensation_scheme)):
+            gmin, gmax = self.condensation_scheme[G][:]
+
+            for g in range(gmin, gmax + 1):
+                flux[G] += self._asmbly_moc.flux(r, u, g)
+
+        return flux
+
+    def _compute_average_line_flux(
+        self, segments: List[Tuple[int, float]]
+    ) -> List[float]:
+        """
+        Computes the average flux along a set of line segments in the few-group
+        structure.
+
+        Paramters
+        ---------
+        segments : list of tuples of int and float
+            List of flat source region index and segment length tuples.
+
+        Returns
+        -------
+        list of float
+            Values of the few-group flux alone the line.
+
+        Raises
+        ------
+        RuntimeError
+            If the condensation_scheme attribute is not set.
+        """
+        if self.condensation_scheme is None:
+            raise RuntimeError("Energy condensation scheme not set.")
+
+        total_length = 0.0
+        for s in segments:
+            total_length += s[1]
+        invs_tot_length = 1.0 / total_length
+
+        flux = [0.0 for G in range(len(self.condensation_scheme))]
+
+        for G in range(len(self.condensation_scheme)):
+            gmin, gmax = self.condensation_scheme[G][:]
+            for g in range(gmin, gmax + 1):
+                for s in segments:
+                    flux[G] += s[1] * self._asmbly_moc.flux(s[0], g)
+
+        for G in range(len(self.condensation_scheme)):
+            flux[G] *= invs_tot_length
+
+        return flux
+
+    def _compute_adf_cdf(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Computes the assembly and corner discontinuity factors in the few-group
+        structure.
+
+        Returns
+        -------
+        ADF : ndarray
+            Assembly Discontinuity Factors
+        CDF : ndarray
+            Corner Discontinuity Factors
+
+        Raises
+        ------
+        RuntimeError
+            If the condensation_scheme attribute is not set.
+        """
+        if self.condensation_scheme is None:
+            raise RuntimeError("Energy condensation scheme not set.")
+
+        NG = len(self.condensation_scheme)
+        moc = self._asmbly_moc
+
+        # First, compute the homogeneous flux
+        homog_flux = [0.0 for G in range(NG)]
+        total_volume = 0.0
+        for i in range(moc.nfsr):
+            Vi = moc.volume(i)
+            total_volume += Vi
+
+            for G in range(NG):
+                gmin, gmax = self.condensation_scheme[G][:]
+                for g in range(gmin, gmax + 1):
+                    homog_flux[G] += Vi * moc.flux(i, g)
+        for G in range(NG):
+            homog_flux[G] /= total_volume
+
+        # Create empty arrays for ADFs and CDFs
+        adf = np.zeros((NG, 4))
+        cdf = np.zeros((NG, 4))
+
+        if self.symmetry == Symmetry.Full:
+            # Get flux along surfaces
+            xn_segments = moc.trace_fsr_segments(
+                Vector(moc.x_min + 0.001, moc.y_max), Direction(0.0, -1.0)
+            )
+            xp_segments = moc.trace_fsr_segments(
+                Vector(moc.x_max - 0.001, moc.y_max), Direction(0.0, -1.0)
+            )
+            yn_segments = moc.trace_fsr_segments(
+                Vector(moc.x_min, moc.y_min + 0.001), Direction(1.0, 0.0)
+            )
+            yp_segments = moc.trace_fsr_segments(
+                Vector(moc.x_min, moc.y_max - 0.001), Direction(1.0, 0.0)
+            )
+            xn_flx = self._compute_average_line_flux(xn_segments)
+            xp_flx = self._compute_average_line_flux(xp_segments)
+            yn_flx = self._compute_average_line_flux(yn_segments)
+            yp_flx = self._compute_average_line_flux(yp_segments)
+
+            # Get flux at corners
+            I_flx = self._compute_few_group_flux(
+                Vector(moc.x_max - 0.001, moc.y_max - 0.001), Direction(-1.0, -1.0)
+            )
+            II_flx = self._compute_few_group_flux(
+                Vector(moc.x_min + 0.001, moc.y_max - 0.001), Direction(1.0, -1.0)
+            )
+            III_flx = self._compute_few_group_flux(
+                Vector(moc.x_min + 0.001, moc.y_min + 0.001), Direction(1.0, 1.0)
+            )
+            IV_flx = self._compute_few_group_flux(
+                Vector(moc.x_max - 0.001, moc.y_min + 0.001), Direction(-1.0, 1.0)
+            )
+
+            for G in range(NG):
+                adf[G, ADF.XN] = xn_flx[G] / homog_flux[G]
+                adf[G, ADF.XP] = xp_flx[G] / homog_flux[G]
+                adf[G, ADF.YN] = yn_flx[G] / homog_flux[G]
+                adf[G, ADF.YP] = yp_flx[G] / homog_flux[G]
+
+                cdf[G, CDF.I] = I_flx[G] / homog_flux[G]
+                cdf[G, CDF.II] = II_flx[G] / homog_flux[G]
+                cdf[G, CDF.III] = III_flx[G] / homog_flux[G]
+                cdf[G, CDF.IV] = IV_flx[G] / homog_flux[G]
+
+        elif self.symmetry == Symmetry.Half:
+            # Get flux along surfaces
+            xn_segments = moc.trace_fsr_segments(
+                Vector(moc.x_min + 0.001, moc.y_max), Direction(0.0, -1.0)
+            )
+            xp_segments = moc.trace_fsr_segments(
+                Vector(moc.x_max - 0.001, moc.y_max), Direction(0.0, -1.0)
+            )
+            yp_segments = moc.trace_fsr_segments(
+                Vector(moc.x_min, moc.y_max - 0.001), Direction(1.0, 0.0)
+            )
+            xn_flx = self._compute_average_line_flux(xn_segments)
+            xp_flx = self._compute_average_line_flux(xp_segments)
+            yp_flx = self._compute_average_line_flux(yp_segments)
+
+            # Get flux at corners
+            I_flx = self._compute_few_group_flux(
+                Vector(moc.x_max - 0.001, moc.y_max - 0.001), Direction(-1.0, -1.0)
+            )
+            II_flx = self._compute_few_group_flux(
+                Vector(moc.x_min + 0.001, moc.y_max - 0.001), Direction(1.0, -1.0)
+            )
+
+            for G in range(NG):
+                adf[G, ADF.XN] = xn_flx[G] / homog_flux[G]
+                adf[G, ADF.XP] = xp_flx[G] / homog_flux[G]
+                adf[G, ADF.YP] = yp_flx[G] / homog_flux[G]
+                adf[G, ADF.YN] = adf[G, ADF.YP]
+
+                cdf[G, CDF.I] = I_flx[G] / homog_flux[G]
+                cdf[G, CDF.II] = II_flx[G] / homog_flux[G]
+                cdf[G, CDF.III] = cdf[G, CDF.II]
+                cdf[G, CDF.IV] = cdf[G, CDF.I]
+
+        else:  # Quarter symmetry
+            # Get flux along surfaces
+            xp_segments = moc.trace_fsr_segments(
+                Vector(moc.x_max - 0.001, moc.y_max), Direction(0.0, -1.0)
+            )
+            yp_segments = moc.trace_fsr_segments(
+                Vector(moc.x_min, moc.y_max - 0.001), Direction(1.0, 0.0)
+            )
+            xp_flx = self._compute_average_line_flux(xp_segments)
+            yp_flx = self._compute_average_line_flux(yp_segments)
+
+            # Get flux at corners
+            I_flx = self._compute_few_group_flux(
+                Vector(moc.x_max - 0.001, moc.y_max - 0.001), Direction(-1.0, -1.0)
+            )
+
+            for G in range(NG):
+                adf[G, ADF.XP] = xp_flx[G] / homog_flux[G]
+                adf[G, ADF.XN] = adf[G, ADF.XP]
+                adf[G, ADF.YP] = yp_flx[G] / homog_flux[G]
+                adf[G, ADF.YN] = adf[G, ADF.YP]
+
+                cdf[G, CDF.I] = I_flx[G] / homog_flux[G]
+                cdf[G, CDF.II] = cdf[G, CDF.I]
+                cdf[G, CDF.III] = cdf[G, CDF.I]
+                cdf[G, CDF.IV] = cdf[G, CDF.I]
+
+        return adf, cdf
+
+    def _compute_form_factors(self) -> np.ndarray:
+        """
+        Computes the one group pin power form factors for the full assembly.
+
+        Returns
+        -------
+        ndarray
+            A 2D Numpy array for the pin power form factors. First index is
+            y (from high to low) and the second index is x (from low to high).
+        """
+        ff = np.zeros((self.shape[1], self.shape[0]))
+
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+
+                if not isinstance(cell, FuelPin):
+                    continue
+
+                # Pin Power
+                pp = cell.compute_pin_linear_power(self._ndl)
+
+                if self.symmetry == Symmetry.Full:
+                    ff[j, i] = pp
+
+                elif self.symmetry == Symmetry.Half:
+                    ff[j, i] = pp
+                    ff[-(j + 1), i] = pp
+
+                elif self.symmetry == Symmetry.Quarter:
+                    ox = self.shape[1] // 2
+
+                    ff[j, i + ox] = pp
+                    ff[j, -(i + ox + 1)] = pp
+
+                    ff[-(j + 1), i + ox] = pp
+                    ff[-(j + 1), -(i + ox + 1)] = pp
+
+        mean_ff = np.mean(ff)
+        ff /= mean_ff
+
+        return ff
+
+    def _compute_few_group_xs(self) -> DiffusionCrossSection:
+        """
+        Computes the few-group diffusion cross sections for the problem.
+
+        Returns
+        -------
+        DiffusionCrossSection
+            Few-group diffusion cross sections for the assembly.
+
+        Raises
+        ------
+        RuntimeError
+            If the condensation_scheme attribute is not set.
+        """
+        if self.condensation_scheme is None:
+            raise RuntimeError("Energy condensation scheme not set.")
+
+        # According to Smith, one should do energy condensation on the
+        # diffusion coefficients, and not on the transport cross sections which
+        # one could then use to make diffusion coefficients [1]. This is in
+        # contradiction to Lattice Physics Computations which states that
+        # either method is acceptable [2]. In light of these comments, I have
+        # chosen to go with Smith's recommendation of performing energy
+        # condensation on the diffusion coefficients.
+
+        homog_xs = self._asmbly_moc.homogenize()
+        diff_xs = homog_xs.diffusion_xs()
+        flux_spectrum = self._asmbly_moc.homogenize_flux_spectrum()
+        return diff_xs.condense(self.condensation_scheme, flux_spectrum)
+
+    def _compute_diffusion_data(self) -> DiffusionData:
+        """
+        Computes the nodal diffusion data for the assembly.
+
+        Returns
+        -------
+        DiffusionData
+            Few-group diffusion cross sections and discontinuity factors.
+        """
+        diff_xs = self._compute_few_group_xs()
+        adf, cdf = self._compute_adf_cdf()
+        ff = self._compute_form_factors()
+        return DiffusionData(diff_xs, ff, adf, cdf)
+
     def _run_assembly_calculation(
         self, self_shield: bool, apply_dancoff_corrections: bool = False
     ) -> None:
@@ -1135,7 +1512,7 @@ class PWRAssembly:
         Paramters
         ---------
         self_shield : bool
-            If True, self-shielding is performed for the fuel and cladding. 
+            If True, self-shielding is performed for the fuel and cladding.
         apply_dancoff_corrections : bool, default False
             If self_shield is False and this option is True, the previously
             obtained Dancoff corrections are applied to all cells.
@@ -1169,7 +1546,11 @@ class PWRAssembly:
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
                 cell = self.cells[j][i]
-                threads.append(Thread(target=cell.predict_depletion, args=(dt, self._chain, self._ndl)))
+                threads.append(
+                    Thread(
+                        target=cell.predict_depletion, args=(dt, self._chain, self._ndl)
+                    )
+                )
                 threads[-1].start()
         for t in threads:
             t.join()
@@ -1180,14 +1561,20 @@ class PWRAssembly:
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
                 cell = self.cells[j][i]
-                threads.append(Thread(target=cell.correct_depletion, args=(dt, self._chain, self._ndl)))
+                threads.append(
+                    Thread(
+                        target=cell.correct_depletion, args=(dt, self._chain, self._ndl)
+                    )
+                )
                 threads[-1].start()
         for t in threads:
             t.join()
 
     def _run_depletion_steps(self) -> None:
         if self._chain is None:
-            raise RuntimeError("No depletion chain is present. Cannot run depletion calculation.")
+            raise RuntimeError(
+                "No depletion chain is present. Cannot run depletion calculation."
+            )
 
         self._keff = np.zeros(self.depletion_exposure_steps.size + 1)
         self._exposures = np.zeros(self.depletion_exposure_steps.size + 1)
@@ -1198,12 +1585,14 @@ class PWRAssembly:
                 self._exposures[t] = (
                     self._exposures[t - 1] + self.depletion_exposure_steps[t - 1]
                 )
-                self._times[t] = self._times[t - 1] + self.depletion_time_steps[t-1]
+                self._times[t] = self._times[t - 1] + self.depletion_time_steps[t - 1]
 
             scarabee_log(LogLevel.Info, "")
-            scarabee_log(LogLevel.Info, 60*"-")
+            scarabee_log(LogLevel.Info, 60 * "-")
             scarabee_log(LogLevel.Info, "Running Time Step {:}".format(t))
-            scarabee_log(LogLevel.Info, "Exposure: {:.3E} MWd/kg".format(self._exposures[t]))
+            scarabee_log(
+                LogLevel.Info, "Exposure: {:.3E} MWd/kg".format(self._exposures[t])
+            )
             scarabee_log(LogLevel.Info, "Time    : {:.3E} days".format(self._times[t]))
             scarabee_log(LogLevel.Info, "")
             # Convert days to seconds
@@ -1217,21 +1606,23 @@ class PWRAssembly:
 
             # Predic isotopes at midpoint of step
             self._predict_depletion(0.5 * dt_sec)
-            
+
             scarabee_log(LogLevel.Info, "Corrector:")
             # Run the a new transport calcualtion to get rates
             self._run_assembly_calculation(False)
 
             # Do correction step for isotopes
             self._correct_depletion(dt_sec)
-            
-        # Run last step at the end to get keff for our final material compositions 
+
+        # Run last step at the end to get keff for our final material compositions
         scarabee_log(LogLevel.Info, "")
-        scarabee_log(LogLevel.Info, 60*"-")
+        scarabee_log(LogLevel.Info, 60 * "-")
         self._exposures[-1] = self._exposures[-2] + self.depletion_exposure_steps[-1]
         self._times[-1] = self._times[-2] + dt
         scarabee_log(LogLevel.Info, "Running Time Step {:}".format(t))
-        scarabee_log(LogLevel.Info, "Exposure: {:.3E} MWd/kg".format(self._exposures[-1]))
+        scarabee_log(
+            LogLevel.Info, "Exposure: {:.3E} MWd/kg".format(self._exposures[-1])
+        )
         scarabee_log(LogLevel.Info, "Time    : {:.3E} days".format(self._times[-1]))
         scarabee_log(LogLevel.Info, "")
         self._run_assembly_calculation(True)
@@ -1246,3 +1637,11 @@ class PWRAssembly:
         else:
             # Run depletion steps
             self._run_depletion_steps()
+
+
+# REFERENCES
+# [1] K. S. Smith, “Nodal diffusion methods and lattice physics data in LWR
+#     analyses: Understanding numerous subtle details,” Prog Nucl Energ,
+#     vol. 101, pp. 360–369, 2017, doi: 10.1016/j.pnucene.2017.06.013.
+# [2] D. Knott and A. Yamamoto, "Lattice Physics Computations" in
+#     Handbook of Nuclear Engineering, 2010, p 1226.
