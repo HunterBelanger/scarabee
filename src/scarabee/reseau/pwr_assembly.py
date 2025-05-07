@@ -110,12 +110,21 @@ class PWRAssembly:
     dancoff_moc_num_angles : int
         Number of azimuthal angles in the MOC calculations for determining
         Dancoff corrections. Default value is 32.
+    dancoff_flux_tolerance : float
+        Flux convergence tolerance for Dancoff correction calculations. Must be
+        in range (0., 1.E-2). Default value is 1.E-5.
     moc_track_spacing : float
         Spacing between tracks in the assembly MOC calculations. Default value
         is 0.05 cm.
     moc_num_angles : int
         Number of azimuthal angles in the assembly MOC calculations. Default
         value is 32.
+    flux_tolerance : float
+        Flux convergence tolerance for assembly calculations. Must be in range
+        (0., 1.E-2). Default value is 1.E-5.
+    keff_tolerance : float
+        Keff convergence tolerance for assembly calculations. Must be in range
+        (0., 1.E-2). Default value is 1.E-5.
     condensation_scheme : list of list of int
         Energy condensation scheme to condense from the group structure of the
         library to the few-groups used in the core solver.
@@ -252,6 +261,7 @@ class PWRAssembly:
         self._dancoff_isolation_scale = 10.0
         self._dancoff_moc_track_spacing = 0.05
         self._dancoff_moc_num_angles = 32
+        self._dancoff_flux_tolerance = 1.0e-5
 
         self._fuel_dancoff_corrections = np.zeros(
             (self._simulated_shape[1], self._simulated_shape[0])
@@ -271,6 +281,8 @@ class PWRAssembly:
 
         self._moc_track_spacing = 0.05
         self._moc_num_angles = 64
+        self._flux_tolerance = 1.0e-5
+        self._keff_tolerance = 1.0e-5
 
         self._asmbly_cells = []
         self._asmbly_geom: Optional[Cartesian2D] = None
@@ -359,6 +371,24 @@ class PWRAssembly:
         self._dancoff_moc_num_angles = int(dna)
 
     @property
+    def dancoff_flux_tolerance(self) -> float:
+        return self._dancoff_flux_tolerance
+
+    @dancoff_flux_tolerance.setter
+    def dancoff_flux_tolerance(self, tol: float) -> None:
+        try:
+            tol = float(tol)
+        except:
+            raise TypeError(
+                "Dancoff flux tolerance must be a floating point value in (0,1.E-2)."
+            )
+
+        if tol <= 0.0 or tol >= 1.0e-2:
+            raise ValueError("Dancoff flux tolerance must be in (0,1.E-2).")
+
+        self._dancoff_flux_tolerance = tol
+
+    @property
     def moc_track_spacing(self):
         return self._moc_track_spacing
 
@@ -381,6 +411,42 @@ class PWRAssembly:
         if dna < 4:
             raise ValueError("Number of angles for MOC calculation must be > 4.")
         self._moc_num_angles = int(dna)
+
+    @property
+    def flux_tolerance(self) -> float:
+        return self._flux_tolerance
+
+    @flux_tolerance.setter
+    def flux_tolerance(self, tol: float) -> None:
+        try:
+            tol = float(tol)
+        except:
+            raise TypeError(
+                "Flux tolerance must be a floating point value in (0,1.E-2)."
+            )
+
+        if tol <= 0.0 or tol >= 1.0e-2:
+            raise ValueError("Flux tolerance must be in (0,1.E-2).")
+
+        self._flux_tolerance = tol
+
+    @property
+    def keff_tolerance(self) -> float:
+        return self._keff_tolerance
+
+    @keff_tolerance.setter
+    def keff_tolerance(self, tol: float) -> None:
+        try:
+            tol = float(tol)
+        except:
+            raise TypeError(
+                "Keff tolerance must be a floating point value in (0,1.E-2)."
+            )
+
+        if tol <= 0.0 or tol >= 1.0e-2:
+            raise ValueError("Keff tolerance must be in (0,1.E-2).")
+
+        self._keff_tolerance = tol
 
     @property
     def cells(self):
@@ -820,6 +886,8 @@ class PWRAssembly:
                 cell = self.cells[j][i]
                 isomoc = self._isolated_dancoff_mocs[j][i]
 
+                isomoc.flux_tolerance = self.dancoff_flux_tolerance
+
                 cell.set_xs_for_fuel_dancoff_calculation()
 
                 cell.set_isolated_dancoff_fuel_sources(isomoc, self.moderator)
@@ -827,6 +895,7 @@ class PWRAssembly:
                 cell.set_full_dancoff_fuel_sources(
                     self._full_dancoff_moc, self.moderator
                 )
+        self._full_dancoff_moc.flux_tolerance = self.dancoff_flux_tolerance
 
         # Solve all the MOCs in parallel
         threads = []
@@ -874,6 +943,7 @@ class PWRAssembly:
             for i in range(len(self.cells[j])):
                 cell = self.cells[j][i]
                 isomoc = self._isolated_dancoff_mocs[j][i]
+                isomoc.flux_tolerance = self.dancoff_flux_tolerance
 
                 cell.set_xs_for_clad_dancoff_calculation(self._ndl)
 
@@ -884,6 +954,7 @@ class PWRAssembly:
                 cell.set_full_dancoff_clad_sources(
                     self._full_dancoff_moc, self.moderator, self._ndl
                 )
+            self._full_dancoff_moc.flux_tolerance = self.dancoff_flux_tolerance
 
         # Solve all the MOCs in parallel
         threads = []
@@ -1539,6 +1610,9 @@ class PWRAssembly:
 
         if self._asmbly_moc is None:
             self._init_moc()
+
+        self._asmbly_moc.flux_tolerance = self.flux_tolerance
+        self._asmbly_moc.keff_tolerance = self.keff_tolerance
 
         set_logging_level(LogLevel.Warning)
         self._asmbly_moc.solve()
