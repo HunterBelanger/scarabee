@@ -2,7 +2,6 @@ import pytest
 import pytest_check as check
 from scarabee import *
 import numpy as np
-import matplotlib.pyplot as plt
 import scipy.sparse
 
 class TestLossMatrix:
