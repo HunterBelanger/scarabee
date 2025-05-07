@@ -126,6 +126,7 @@ class CMFD {
   Eigen::SparseMatrix<double> QM_;  // Source Matrix
 
   std::pair<double, double> calc_surf_diffusion_coefs(std::size_t i, std::size_t j, std::size_t g, TileSurf surf, const MOCDriver& moc) const;
+  std::optional<std::array<std::size_t, 2>> find_next_cell(std::size_t i, std::size_t j, TileSurf surf) const;
   void create_loss_matrix(const MOCDriver& moc);
   void create_source_matrix();
   void normalize_currents();

@@ -508,6 +508,28 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
   //spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a leakage ratio of {:.5E}.", i, j, g, req_leak/leak_rate);
 }
 
+std::optional<std::array<std::size_t, 2>> CMFD::find_next_cell(
+  std::size_t i, std::size_t j, CMFD::TileSurf surf) const
+{
+  switch (surf) {
+    case CMFD::TileSurf::XP:
+      if (i + 1 == nx_) return std::nullopt;
+      return std::array<std::size_t, 2>{i+1, j};
+
+    case CMFD::TileSurf::XN:
+      if (i == 0) return std::nullopt;
+      return std::array<std::size_t, 2>{i-1, j};
+
+    case CMFD::TileSurf::YP:
+      if (j + 1 == ny_) return std::nullopt;
+      return std::array<std::size_t, 2>{i, j+1};
+
+    case CMFD::TileSurf::YN:
+      if (j == 0) return std::nullopt;
+      return std::array<std::size_t, 2>{i, j-1};
+  }
+}
+
 
 std::pair<double, double> CMFD::calc_surf_diffusion_coefs(std::size_t i, std::size_t j, std::size_t g,
    CMFD::TileSurf surf,const MOCDriver& moc) const {
@@ -520,102 +542,88 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coefs(std::size_t i, std::si
   double D_surf;
   double D_s;
   std::size_t surf_index;
+  BoundaryCondition bc;
 
-  if (surf==CMFD::TileSurf::XP){
-    dx_ij = dx_[i];
-    surf_index = get_x_pos_surf(i,j);
-    if (i+1 == nx_){
-      auto x_max_bc = moc.x_max_bc();
-      if (x_max_bc == BoundaryCondition::Reflective){
-        return std::make_pair(0.0,0.0);
-      } else if (x_max_bc == BoundaryCondition::Vacuum){
-          D_surf = (2*D_ij)/(4*D_ij + dx_ij);
-          //not sure if this is right for vacuum
-          flx_s = 0.0;
-          dx_s = 0.0;
-      } else if (x_max_bc == BoundaryCondition::Periodic){
+  auto next_tile = find_next_cell(i,j,surf);
+
+  //Interior Surface
+  if (next_tile){
+    auto [ii, jj] = *next_tile;
+    flx_s = flux_(g,ii,jj);
+    D_s = xs_(ii,jj) -> D(g);
+    switch (surf) {
+      case CMFD::TileSurf::XP:
+        dx_s = dx_[ii];
+        dx_ij = dx_[i];
+        surf_index = get_x_pos_surf(i,j);
+        break;
+      case CMFD::TileSurf::XN:
+        dx_s = dx_[ii];
+        dx_ij = dx_[i];
+        surf_index = get_x_neg_surf(i,j);
+        break;
+      case CMFD::TileSurf::YP:
+        dx_s = dy_[jj];
+        dx_ij = dx_[j];
+        surf_index = get_y_pos_surf(i,j);
+        break;
+      case CMFD::TileSurf::YN:
+        dx_s = dy_[jj];
+        dx_ij = dx_[j];
+        surf_index = get_y_neg_surf(i,j);
+        break;
+    }
+    D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
+  } else {
+    // get boundary
+    // for now we can set variables as if it is periodic BC 
+    // to avoid checking twice and overwrite later if we need to 
+    switch (surf) {
+      case CMFD::TileSurf::XP:
+        bc = moc.x_max_bc();
+        surf_index = get_x_pos_surf(i,j);
         flx_s = flux_(g,0,j);
         dx_s = dx_[0];
+        dx_ij = dx_[i];
         D_s = xs_(0,j) -> D(g);
+        break;
+      case CMFD::TileSurf::XN:
+        bc = moc.x_min_bc();
+        surf_index = get_x_neg_surf(i,j);
+        flx_s = flux_(g,nx_-1,j);
+        dx_s = dx_[nx_-1];
+        dx_ij = dx_[i];
+        D_s = xs_(nx_-1,j) -> D(g);
+        break;
+      case CMFD::TileSurf::YP:
+        bc = moc.y_max_bc();
+        surf_index = get_y_pos_surf(i,j);
+        flx_s = flux_(g,i,0);
+        dx_s = dy_[0];
+        dx_ij = dy_[j];
+        D_s = xs_(i,0) -> D(g);
+        break;
+      case CMFD::TileSurf::YN:
+        bc = moc.y_min_bc();
+        surf_index = get_y_neg_surf(i,j);
+        flx_s = flux_(g,i,ny_-1);
+        dx_s = dy_[ny_-1];
+        dx_ij = dy_[j];
+        D_s = xs_(i,ny_-1) -> D(g);
+        break;
+    }
+    // handle boundary conditions
+    switch (bc) {
+      case BoundaryCondition::Reflective:
+        return {0.0, 0.0};
+      case BoundaryCondition::Vacuum:
+        D_surf = (2*D_ij)/(4*D_ij + dx_ij);
+        flx_s = 0.0;
+        dx_s = 0.0;
+        break;
+      case BoundaryCondition::Periodic:
         D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij); 
-      }
-    } else {
-      flx_s = flux_(g,i+1,j);
-      D_s = xs_(i+1,j) -> D(g);
-      dx_s = dx_[i+1];
-      D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
-    }
-  } else if (surf == CMFD::TileSurf::YP){
-    dx_ij = dy_[j];
-    surf_index = get_y_pos_surf(i,j);
-    if (j+1 == ny_){
-      auto y_max_bc = moc.y_max_bc();
-      if (y_max_bc == BoundaryCondition::Reflective){
-        return std::make_pair(0.0,0.0);
-      } else if (y_max_bc == BoundaryCondition::Vacuum){
-          D_surf = (2*D_ij)/(4*D_ij + dx_ij);
-          //not sure if this is right for vacuum
-          flx_s = 0.0;
-          dx_s = 0.0;
-      } else if (y_max_bc == BoundaryCondition::Periodic){
-          flx_s = flux_(g,i,0);
-          dx_s = dy_[0];
-          D_s = xs_(i,0) -> D(g);
-          D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
-      }
-    } else {
-        flx_s = flux_(g,i,j+1);
-        D_s = xs_(i,j+1) -> D(g);
-        dx_s = dy_[j+1];
-        D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
-    }
-  } else if (surf == CMFD::TileSurf::XN){
-    dx_ij = dx_[i];
-    surf_index = get_x_neg_surf(i,j);
-    if (i == 0){
-      auto x_min_bc = moc.x_min_bc();
-      if (x_min_bc == BoundaryCondition::Reflective){
-        return std::make_pair(0.0,0.0);
-      } else if (x_min_bc == BoundaryCondition::Vacuum){
-          D_surf = (2*D_ij)/(4*D_ij + dx_ij);
-          //not sure if this is right for vacuum
-          flx_s = 0.0;
-          dx_s = 0.0;
-      } else if (x_min_bc == BoundaryCondition::Periodic){
-          flx_s = flux_(g,nx_-1,j);
-          dx_s = dx_[nx_-1];
-          D_s = xs_(nx_-1,j) -> D(g);
-          D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
-      }
-    } else {
-        flx_s = flux_(g,i-1,j);
-        D_s = xs_(i-1,j) -> D(g);
-        dx_s = dx_[i-1];
-        D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
-    }
-  } else if (surf == CMFD::TileSurf::YN){
-    dx_ij = dy_[j];
-    surf_index = get_y_neg_surf(i,j);
-    if (j == 0){
-      auto y_min_bc = moc.y_min_bc();
-      if (y_min_bc == BoundaryCondition::Reflective){
-        return std::make_pair(0.0,0.0);
-      } else if (y_min_bc == BoundaryCondition::Vacuum){
-          D_surf = (2*D_ij)/(4*D_ij + dx_ij);
-          //not sure if this is right for vacuum
-          flx_s = 0.0;
-          dx_s = 0.0;
-      } else if (y_min_bc == BoundaryCondition::Periodic){
-          flx_s = flux_(g,i,ny_-1);
-          dx_s = dy_[ny_-1];
-          D_s = xs_(i,ny_-1) -> D(g);
-          D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
-      }
-    } else {
-        flx_s = flux_(g,i,j-1);
-        D_s = xs_(i,j-1) -> D(g);
-        dx_s = dy_[j-1];
-        D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
+        break;
     }
   }
   //not sure what current to use for periodic boundary
