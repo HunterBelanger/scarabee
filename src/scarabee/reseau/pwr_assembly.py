@@ -122,10 +122,12 @@ class PWRAssembly:
     leakage_model : CriticalLeakage
         Model used to determine the critical leakage flux spectrum, also known
         as the fundamental mode. Default method is homogeneous P1.
-    depletion_exposure_steps : ndarray
+    depletion_exposure_steps : optional ndarray
         1D Numpy array of assembly burn-up exposure steps, in units of MWd/kg.
-    depletion_time_steps : ndarray
+        Default is None.
+    depletion_time_steps : optional ndarray
         1D Numpy array of burn-up time steps, in units of days.
+        Default is None.
     exposures : ndarray
         1D Numpy array of the total assembly burn-up exposures at which
         material information is available, in units of MWd/kg. Default value
@@ -279,19 +281,10 @@ class PWRAssembly:
             None  # To reset to infinite spectrum in MOC driver
         )
 
-        # Depletion time steps in MWd/kg
-        self._depletion_exposure_steps = np.array([])
-        # Depletion time steps in days
-        self._depletion_time_steps = np.array([])
-
-        # Up to 20 MWd/kg, use 0.5 MWd/kg time steps.
-        # From 20 MWd/kg up to 40 MWd/kg, use 2 MWd/kg time steps
-        depletion_exposures = 40 * [0.5] + 10 * [2.0]
-        self.depletion_exposure_steps = np.array(depletion_exposures)
-
-        # Now we add 4 X 0.5 day time steps for accurate Xe equilibrium
-        temp_times = 4 * [0.5] + self.depletion_time_steps.tolist()
-        self.depletion_time_steps = np.array(temp_times)
+        # Depletion time steps in MWd/kg and depletion time steps in days.
+        # Initially starts as None (should be provided by user)
+        self._depletion_exposure_steps: Optional[np.ndarray] = None
+        self._depletion_time_steps: Optional[np.ndarray] = None
 
         # Arrays for the depletion exposures (MWd/kg) and times (days)
         self._exposures = np.array([])
@@ -402,15 +395,24 @@ class PWRAssembly:
         self._leakage_model = clm
 
     @property
-    def depletion_exposure_steps(self):
+    def depletion_exposure_steps(self) -> Optional[np.ndarray]:
         return self._depletion_exposure_steps
 
     @depletion_exposure_steps.setter
-    def depletion_exposure_steps(self, steps):
+    def depletion_exposure_steps(self, steps: Optional[np.ndarray]) -> None:
+        if steps is None:
+            self._depletion_exposure_steps = None
+            self._depletion_time_steps = None
+            return
+
         if not isinstance(steps, np.ndarray):
             raise TypeError("Depletion exposure steps must be a 1D Numpy array.")
         if steps.ndim != 1:
             raise ValueError("Depletion exposure steps must be a 1D Numpy array.")
+        if steps.size == 0:
+            raise ValueError(
+                "Depletion exposure steps must have at least one entry. Use None for no depletion."
+            )
         for step in steps:
             if step <= 0.0:
                 raise ValueError("Depletion exposure steps must be > 0.")
@@ -424,15 +426,24 @@ class PWRAssembly:
         )
 
     @property
-    def depletion_time_steps(self):
+    def depletion_time_steps(self) -> Optional[np.ndarray]:
         return self._depletion_time_steps
 
     @depletion_time_steps.setter
-    def depletion_time_steps(self, steps):
+    def depletion_time_steps(self, steps: Optional[np.ndarray]) -> None:
+        if steps is None:
+            self._depletion_time_steps = None
+            self._depletion_exposure_steps = None
+            return
+
         if not isinstance(steps, np.ndarray):
             raise TypeError("Depletion time steps must be a 1D Numpy array.")
         if steps.ndim != 1:
             raise ValueError("Depletion time steps must be a 1D Numpy array.")
+        if steps.size == 0:
+            raise ValueError(
+                "Depletion time steps must have at least one entry. Use None for no depletion."
+            )
         for step in steps:
             if step <= 0.0:
                 raise ValueError("Depletion time steps must be > 0.")
@@ -1630,7 +1641,7 @@ class PWRAssembly:
         scarabee_log(LogLevel.Info, "")
 
     def solve(self) -> None:
-        if self.depletion_exposure_steps.size == 0:
+        if self.depletion_exposure_steps is None:
             # Single one-off calulcation
             self._run_assembly_calculation(True)
             self._keff = self._asmbly_moc.keff
