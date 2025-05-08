@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <set>
+#include <utility>
 
 namespace scarabee {
 
@@ -262,7 +263,8 @@ std::shared_ptr<DepletionMatrix> build_depletion_matrix(
     // This way, after the reaction rate terms, we can go through all the
     // remaining nuclides in all_targets which don't have a reaction rate, but
     // which almost certainly have radioactive decay !
-    std::remove(all_targets.begin(), all_targets.end(), nucrr.nuclide);
+    std::ignore =
+        std::remove(all_targets.begin(), all_targets.end(), nucrr.nuclide);
 
     // Skip the nuclide if it isn't in the depletion chain, even if it might
     // have depletion cross section nuclear data and reaction rates.

@@ -1,7 +1,7 @@
 #ifndef SCARABEE_NUCLIDE_NAMES_H
 #define SCARABEE_NUCLIDE_NAMES_H
 
-#include <cctype>
+#include <cstdint>
 #include <string>
 
 namespace scarabee {
