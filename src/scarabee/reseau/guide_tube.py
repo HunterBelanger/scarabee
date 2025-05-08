@@ -636,6 +636,8 @@ class GuideTube:
         ndl : NDLibrary
             Nuclear data library.
         """
+        if dt <= 0:
+            raise ValueError("Predictor time step must be > 0.")
         # Nothing to do here yet, as guide tube "fills" with burnable
         # absorber pins is not yet supported. In the future, those will
         # need to be depleted !
