@@ -6,6 +6,7 @@
 #include <utils/constants.hpp>
 
 #include <cmath>
+#include <limits>
 
 namespace scarabee {
 
@@ -168,26 +169,27 @@ std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
   return std::nullopt;
 }
 
-CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u) const {
+CMFDSurfaceCrossing CMFD::get_surface(const Vector& r,
+                                      const Direction& u) const {
   CMFDSurfaceCrossing surface;
 
   // First, we try to get a tile
   auto otile = this->get_tile(r, u);
-  if (otile.has_value() == false){
+  if (otile.has_value() == false) {
     surface.is_valid = false;
     return surface;
-  } 
+  }
 
   const std::size_t i = (*otile)[0];
   const std::size_t j = (*otile)[1];
 
   surface.cell_index = tile_to_indx(*otile);
 
-  // Now we get our surfaces for this tile 
+  // Now we get our surfaces for this tile
   const auto& x_n = x_bounds_[i];
-  const auto& x_p = x_bounds_[i+1];
+  const auto& x_p = x_bounds_[i + 1];
   const auto& y_n = y_bounds_[j];
-  const auto& y_p = y_bounds_[j+1];
+  const auto& y_p = y_bounds_[j + 1];
 
   // Get the distances
   const double dx_n = std::abs(x_n.x0() - r.x());
@@ -195,8 +197,8 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u) const
   const double dy_n = std::abs(y_n.y0() - r.y());
   const double dy_p = std::abs(y_p.y0() - r.y());
 
-  //start with corners, then sides
-  //top right
+  // start with corners, then sides
+  // top right
   if (dx_p < SURFACE_COINCIDENT && dy_p < SURFACE_COINCIDENT) {
     surface.crossing = CMFDSurfaceCrossing::Type::TR;
   } else if (dx_p < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
@@ -214,7 +216,7 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r, const Direction& u) const
   } else if (dy_n < SURFACE_COINCIDENT) {
     surface.crossing = CMFDSurfaceCrossing::Type::YN;
   }
-  
+
   else {
     surface.is_valid = false;
     return surface;
@@ -233,10 +235,10 @@ std::size_t CMFD::tile_to_indx(const std::size_t& i,
   return j * nx_ + i;
 }
 
-std::array<std::size_t, 2> CMFD::indx_to_tile(std::size_t cell_index){
+std::array<std::size_t, 2> CMFD::indx_to_tile(std::size_t cell_index) {
   std::array<std::size_t, 2> tile;
   tile[0] = cell_index % nx_;
-  tile[1] = (cell_index - tile[0] ) / nx_;
+  tile[1] = (cell_index - tile[0]) / nx_;
   return tile;
 }
 
@@ -312,68 +314,67 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
-  
+
   const auto tile = indx_to_tile(surf.cell_index);
   std::size_t i = tile[0];
   std::size_t j = tile[1];
 
-
-  //Get surface index(s) from CMFDSurfaceCrossing
-  //need cell indexes
-  htl::static_vector<std::size_t,4> surf_indexes;
+  // Get surface index(s) from CMFDSurfaceCrossing
+  // need cell indexes
+  htl::static_vector<std::size_t, 4> surf_indexes;
   bool is_corner = false;
-  if (surf.crossing == CMFDSurfaceCrossing::Type::XN){
-    surf_indexes.push_back(get_x_neg_surf(i,j));
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::XP){
-    surf_indexes.push_back(get_x_pos_surf(i,j));
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::YN){
-    surf_indexes.push_back(get_y_neg_surf(i,j));
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::YP){
-    surf_indexes.push_back(get_y_pos_surf(i,j));
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TR){
+  if (surf.crossing == CMFDSurfaceCrossing::Type::XN) {
+    surf_indexes.push_back(get_x_neg_surf(i, j));
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::XP) {
+    surf_indexes.push_back(get_x_pos_surf(i, j));
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::YN) {
+    surf_indexes.push_back(get_y_neg_surf(i, j));
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::YP) {
+    surf_indexes.push_back(get_y_pos_surf(i, j));
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TR) {
     is_corner = true;
-    surf_indexes.push_back(get_x_pos_surf(i,j));
-    surf_indexes.push_back(get_y_pos_surf(i,j));
-    if (i+1 < nx_){
-      surf_indexes.push_back(get_y_pos_surf(i+1,j));
+    surf_indexes.push_back(get_x_pos_surf(i, j));
+    surf_indexes.push_back(get_y_pos_surf(i, j));
+    if (i + 1 < nx_) {
+      surf_indexes.push_back(get_y_pos_surf(i + 1, j));
     }
-    if (j+1 < ny_){
-      surf_indexes.push_back(get_x_pos_surf(i,j+1));
+    if (j + 1 < ny_) {
+      surf_indexes.push_back(get_x_pos_surf(i, j + 1));
     }
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BR){
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BR) {
     is_corner = true;
-    surf_indexes.push_back(get_x_pos_surf(i,j));
-    surf_indexes.push_back(get_y_neg_surf(i,j));
-    if (i+1 < nx_){
-      surf_indexes.push_back(get_y_neg_surf(i+1,j));
+    surf_indexes.push_back(get_x_pos_surf(i, j));
+    surf_indexes.push_back(get_y_neg_surf(i, j));
+    if (i + 1 < nx_) {
+      surf_indexes.push_back(get_y_neg_surf(i + 1, j));
     }
-    if (j != 0){
-      surf_indexes.push_back(get_x_pos_surf(i,j-1));
+    if (j != 0) {
+      surf_indexes.push_back(get_x_pos_surf(i, j - 1));
     }
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BL){
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BL) {
     is_corner = true;
-    surf_indexes.push_back(get_x_neg_surf(i,j));
-    surf_indexes.push_back(get_y_neg_surf(i,j));
-    if (i != 0){
-      surf_indexes.push_back(get_y_neg_surf(i-1,j));
+    surf_indexes.push_back(get_x_neg_surf(i, j));
+    surf_indexes.push_back(get_y_neg_surf(i, j));
+    if (i != 0) {
+      surf_indexes.push_back(get_y_neg_surf(i - 1, j));
     }
-    if (j != 0){
-      surf_indexes.push_back(get_x_neg_surf(i,j-1));
+    if (j != 0) {
+      surf_indexes.push_back(get_x_neg_surf(i, j - 1));
     }
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TL){
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TL) {
     is_corner = true;
-    surf_indexes.push_back(get_x_neg_surf(i,j));
-    surf_indexes.push_back(get_y_pos_surf(i,j));
-    if (i != 0){
-      surf_indexes.push_back(get_y_pos_surf(i-1,j));
+    surf_indexes.push_back(get_x_neg_surf(i, j));
+    surf_indexes.push_back(get_y_pos_surf(i, j));
+    if (i != 0) {
+      surf_indexes.push_back(get_y_pos_surf(i - 1, j));
     }
-    if (j+1 < ny_){
-      surf_indexes.push_back(get_x_neg_surf(i,j+1));
+    if (j + 1 < ny_) {
+      surf_indexes.push_back(get_x_neg_surf(i, j + 1));
     }
   }
-  
-  //Check surface indexes are not out of range
-  for (std::size_t k=0; k < surf_indexes.size(); ++k){
+
+  // Check surface indexes are not out of range
+  for (std::size_t k = 0; k < surf_indexes.size(); ++k) {
     if (surf_indexes[k] >= surface_currents_.shape()[1]) {
       auto mssg = "Surface index out of range.";
       spdlog::error(mssg);
@@ -381,19 +382,19 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
     }
   }
 
-  if (is_corner){
-    //Split flux between two surfaces evenly
+  if (is_corner) {
+    // Split flux between two surfaces evenly
     aflx *= 0.5;
   }
 
-  for (auto si: surf_indexes){
+  for (auto si : surf_indexes) {
     if (si < nx_surfs_) {
-      #pragma omp atomic
-          surface_currents_(G, si) += std::copysign(aflx, u.x());
-        } else {
-      #pragma omp atomic
-          surface_currents_(G, si) += std::copysign(aflx, u.y());
-        }
+#pragma omp atomic
+      surface_currents_(G, si) += std::copysign(aflx, u.x());
+    } else {
+#pragma omp atomic
+      surface_currents_(G, si) += std::copysign(aflx, u.y());
+    }
   }
 }
 
@@ -441,9 +442,9 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       else
         xs = fg_dxs->condense(group_condensation_, flux_spec);
 
-      //hopefully this is getting the correct fsr volumes
+      // hopefully this is getting the correct fsr volumes
       double cell_volume = 0.;
-      for (auto fsr: fsrs_[indx]){
+      for (auto fsr : fsrs_[indx]) {
         cell_volume += moc.volume(fsr);
       }
 
@@ -456,8 +457,8 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       }
       xt::view(Et_, xt::all(), i, j) /= xt::view(flux_, xt::all(), i, j);
 
-      //assign collapsed diffusion XS, g is CMFD group 
-      for (std::size_t g = 0; g < ng_; g++){
+      // assign collapsed diffusion XS, g is CMFD group
+      for (std::size_t g = 0; g < ng_; g++) {
         std::size_t linear_idx = g * nx_ * ny_ + indx;
         volumes_[linear_idx] = cell_volume;
       }
@@ -465,16 +466,19 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
   }
 }
 
-void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::size_t g, const double keff) const {
+void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j,
+                                 std::size_t g, const double keff) const {
   // First, we get the spacing of the tile
   const double dx = dx_[i];
   const double dy = dy_[j];
 
   // Next, get the surfaces for out tile
-  const double J_xn = surface_currents_.at(g, j*x_bounds_.size() + i);
-  const double J_xp = surface_currents_.at(g, j*x_bounds_.size() + i + 1);
-  const double J_yn = surface_currents_.at(g, nx_surfs_ + i*y_bounds_.size() + j);
-  const double J_yp = surface_currents_.at(g, nx_surfs_ + i*y_bounds_.size() + j + 1);
+  const double J_xn = surface_currents_.at(g, j * x_bounds_.size() + i);
+  const double J_xp = surface_currents_.at(g, j * x_bounds_.size() + i + 1);
+  const double J_yn =
+      surface_currents_.at(g, nx_surfs_ + i * y_bounds_.size() + j);
+  const double J_yp =
+      surface_currents_.at(g, nx_surfs_ + i * y_bounds_.size() + j + 1);
 
   // Get the xs for our tile
   const auto& xs = *xs_(i, j);
@@ -496,156 +500,182 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j, std::
   const double tot_reac_rate = Et_(g, i, j) * flux_.at(g, i, j);
 
   // Compute the residual of the balance equation
-  const double residual = leak_rate + tot_reac_rate - (scat_source + fiss_source);
-  //const double req_leak = scat_source + fiss_source - tot_reac_rate;
+  const double residual =
+      leak_rate + tot_reac_rate - (scat_source + fiss_source);
+  // const double req_leak = scat_source + fiss_source - tot_reac_rate;
 
-  //if (std::abs(residual) >= 1.E-5) {
-    spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a neutron balance residual of {:.5E}.", i, j, g, residual);
-    //spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} requires leakage rate of {:.5E}.", i, j, g, req_leak);
+  // if (std::abs(residual) >= 1.E-5) {
+  spdlog::error(
+      "CMFD tile ({:d}, {:d}) in group {:d} has a neutron balance residual of "
+      "{:.5E}.",
+      i, j, g, residual);
+  // spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} requires leakage rate
+  // of {:.5E}.", i, j, g, req_leak);
   //}
-  //debugging for testing
-  //spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a true leakage rate of {:.5E}", i, j, g, leak_rate);
-  //spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a leakage ratio of {:.5E}.", i, j, g, req_leak/leak_rate);
+  // debugging for testing
+  // spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a true leakage rate
+  // of {:.5E}", i, j, g, leak_rate); spdlog::error("CMFD tile ({:d}, {:d}) in
+  // group {:d} has a leakage ratio of {:.5E}.", i, j, g, req_leak/leak_rate);
 }
 
-std::optional<std::array<std::size_t, 2>> CMFD::find_next_cell(
-  std::size_t i, std::size_t j, CMFD::TileSurf surf) const
-{
+std::variant<std::array<std::size_t, 2>, BoundaryCondition>
+CMFD::find_next_cell_or_bc(std::size_t i, std::size_t j, CMFD::TileSurf surf,
+                           const MOCDriver& moc) const {
   switch (surf) {
     case CMFD::TileSurf::XP:
-      if (i + 1 == nx_) return std::nullopt;
-      return std::array<std::size_t, 2>{i+1, j};
+      if (i + 1 == nx_) {
+        const auto bc = moc.x_max_bc();
+        if (bc == BoundaryCondition::Periodic) {
+          return std::array<std::size_t, 2>{0, j};
+        }
+        return bc;
+      }
+      return std::array<std::size_t, 2>{i + 1, j};
+      break;
 
     case CMFD::TileSurf::XN:
-      if (i == 0) return std::nullopt;
-      return std::array<std::size_t, 2>{i-1, j};
+      if (i == 0) {
+        const auto bc = moc.x_min_bc();
+        if (bc == BoundaryCondition::Periodic) {
+          return std::array<std::size_t, 2>{nx_ - 1, j};
+        }
+        return bc;
+      }
+      return std::array<std::size_t, 2>{i - 1, j};
+      break;
 
     case CMFD::TileSurf::YP:
-      if (j + 1 == ny_) return std::nullopt;
-      return std::array<std::size_t, 2>{i, j+1};
+      if (j + 1 == ny_) {
+        const auto bc = moc.y_max_bc();
+        if (bc == BoundaryCondition::Periodic) {
+          return std::array<std::size_t, 2>{i, 0};
+        }
+        return bc;
+      }
+      return std::array<std::size_t, 2>{i, j + 1};
+      break;
 
     case CMFD::TileSurf::YN:
-      if (j == 0) return std::nullopt;
-      return std::array<std::size_t, 2>{i, j-1};
+      if (j == 0) {
+        const auto bc = moc.y_min_bc();
+        if (bc == BoundaryCondition::Periodic) {
+          return std::array<std::size_t, 2>{i, ny_ - 1};
+        }
+        return bc;
+      }
+      return std::array<std::size_t, 2>{i, j - 1};
+      break;
   }
+
+  // NEVER GETS HERE
+  return std::array<std::size_t, 2>{std::numeric_limits<std::size_t>::max(),
+                                    std::numeric_limits<std::size_t>::max()};
 }
 
+double CMFD::get_cmfd_tile_width(std::size_t i, std::size_t j,
+                                 CMFD::TileSurf surf) const {
+  switch (surf) {
+    case CMFD::TileSurf::XP:
+    case CMFD::TileSurf::XN:
+      return dx_[i];
+      break;
+    case CMFD::TileSurf::YP:
+    case CMFD::TileSurf::YN:
+      return dy_[j];
+      break;
+  }
 
-std::pair<double, double> CMFD::calc_surf_diffusion_coefs(std::size_t i, std::size_t j, std::size_t g,
-   CMFD::TileSurf surf,const MOCDriver& moc) const {
-  double flx_ij = flux_(g,i,j);
-  double flx_s;
-  double dx_ij;
-  double dx_s;
+  // NEVER GETS HERE
+  return 0.;
+}
 
-  double D_ij = xs_(i,j) -> D(g);
-  double D_surf;
-  double D_s;
-  std::size_t surf_index;
-  BoundaryCondition bc;
+double CMFD::get_current(std::size_t i, std::size_t j, std::size_t g,
+                         CMFD::TileSurf surf) const {
+  switch (surf) {
+    case CMFD::TileSurf::XP:
+      return surface_currents_(g, get_x_pos_surf(i, j));
+      break;
+    case CMFD::TileSurf::XN:
+      return surface_currents_(g, get_x_neg_surf(i, j));
+      break;
+    case CMFD::TileSurf::YP:
+      return surface_currents_(g, get_y_pos_surf(i, j));
+      break;
+    case CMFD::TileSurf::YN:
+      return surface_currents_(g, get_y_neg_surf(i, j));
+      break;
+  }
 
-  auto next_tile = find_next_cell(i,j,surf);
+  // NEVER GETS HERE
+  return 0.;
+}
 
-  //Interior Surface
-  if (next_tile){
-    auto [ii, jj] = *next_tile;
-    flx_s = flux_(g,ii,jj);
-    D_s = xs_(ii,jj) -> D(g);
-    switch (surf) {
-      case CMFD::TileSurf::XP:
-        dx_s = dx_[ii];
-        dx_ij = dx_[i];
-        surf_index = get_x_pos_surf(i,j);
-        break;
-      case CMFD::TileSurf::XN:
-        dx_s = dx_[ii];
-        dx_ij = dx_[i];
-        surf_index = get_x_neg_surf(i,j);
-        break;
-      case CMFD::TileSurf::YP:
-        dx_s = dy_[jj];
-        dx_ij = dx_[j];
-        surf_index = get_y_pos_surf(i,j);
-        break;
-      case CMFD::TileSurf::YN:
-        dx_s = dy_[jj];
-        dx_ij = dx_[j];
-        surf_index = get_y_neg_surf(i,j);
-        break;
+std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
+    std::size_t i, std::size_t j, std::size_t g, CMFD::TileSurf surf,
+    const MOCDriver& moc) const {
+  // Get flux and diffusion coefficient for current cell
+  const double flx_ij = flux_(g, i, j);
+  const double D_ij = xs_(i, j)->D(g);
+  const double dx_ij = get_cmfd_tile_width(i, j, surf);
+  const double current = get_current(i, j, g, surf);
+
+  // Get the next CMFD tile or BC (only Reflective or Vacuum).
+  // Periodic is treated like an interior cell.
+  const auto next_tile_or_bc = find_next_cell_or_bc(i, j, surf, moc);
+
+  // If we have a BC, handel that here
+  if (std::holds_alternative<BoundaryCondition>(next_tile_or_bc)) {
+    const auto bc = std::get<BoundaryCondition>(next_tile_or_bc);
+
+    if (bc == BoundaryCondition::Reflective) {
+      return {0., 0.};
     }
-    D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij);
+
+    // Vacuum BC
+    const double D_surf = 2. * D_ij / (4. * D_ij + dx_ij);
+    double D_nl = 0.;
+    if (surf == CMFD::TileSurf::XP || surf == CMFD::TileSurf::YP) {
+      D_nl = -(current - D_surf * flx_ij) / flx_ij;
+    } else {
+      D_nl = -(current + D_surf * flx_ij) / flx_ij;
+    }
+    return {D_surf, D_nl};
+  }
+
+  // Get indices to next CMFD tile
+  const auto [ii, jj] = std::get<std::array<std::size_t, 2>>(next_tile_or_bc);
+
+  // Get flux, diffusion coefficient, and length for next tile
+  const double flx_iijj = flux_(g, ii, jj);
+  const double D_iijj = xs_(ii, jj)->D(g);
+  const double dx_iijj = get_cmfd_tile_width(ii, jj, surf);
+
+  // First, compute normal surface diffusion coefficient
+  const double D_surf = (2 * D_ij * D_iijj) / (D_ij * dx_iijj + D_iijj * dx_ij);
+
+  // Compute non-linear diffusion coefficient
+  double D_nl = 0.;
+  if (surf == CMFD::TileSurf::XP || surf == CMFD::TileSurf::YP) {
+    D_nl = (-D_surf * (flx_iijj - flx_ij) - current) / (flx_iijj + flx_ij);
   } else {
-    // get boundary
-    // for now we can set variables as if it is periodic BC 
-    // to avoid checking twice and overwrite later if we need to 
-    switch (surf) {
-      case CMFD::TileSurf::XP:
-        bc = moc.x_max_bc();
-        surf_index = get_x_pos_surf(i,j);
-        flx_s = flux_(g,0,j);
-        dx_s = dx_[0];
-        dx_ij = dx_[i];
-        D_s = xs_(0,j) -> D(g);
-        break;
-      case CMFD::TileSurf::XN:
-        bc = moc.x_min_bc();
-        surf_index = get_x_neg_surf(i,j);
-        flx_s = flux_(g,nx_-1,j);
-        dx_s = dx_[nx_-1];
-        dx_ij = dx_[i];
-        D_s = xs_(nx_-1,j) -> D(g);
-        break;
-      case CMFD::TileSurf::YP:
-        bc = moc.y_max_bc();
-        surf_index = get_y_pos_surf(i,j);
-        flx_s = flux_(g,i,0);
-        dx_s = dy_[0];
-        dx_ij = dy_[j];
-        D_s = xs_(i,0) -> D(g);
-        break;
-      case CMFD::TileSurf::YN:
-        bc = moc.y_min_bc();
-        surf_index = get_y_neg_surf(i,j);
-        flx_s = flux_(g,i,ny_-1);
-        dx_s = dy_[ny_-1];
-        dx_ij = dy_[j];
-        D_s = xs_(i,ny_-1) -> D(g);
-        break;
-    }
-    // handle boundary conditions
-    switch (bc) {
-      case BoundaryCondition::Reflective:
-        return {0.0, 0.0};
-      case BoundaryCondition::Vacuum:
-        D_surf = (2*D_ij)/(4*D_ij + dx_ij);
-        flx_s = 0.0;
-        dx_s = 0.0;
-        break;
-      case BoundaryCondition::Periodic:
-        D_surf = (2*D_ij*D_s)/(D_ij*dx_s + D_s*dx_ij); 
-        break;
-    }
+    D_nl = (D_surf * (flx_iijj - flx_ij) - current) / (flx_iijj + flx_ij);
   }
-  //not sure what current to use for periodic boundary
-  double current = surface_currents_(g, surf_index);
 
-  //current shouldn't be divided if normalize_currents is called 
-  double D_nl = (-D_surf*(flx_s - flx_ij)-current)/(flx_s + flx_ij);
-
-  return std::pair<double, double>(D_surf, D_nl);
+  // Return coefficients
+  return {D_surf, D_nl};
 }
 
-void CMFD::create_loss_matrix(const MOCDriver& moc){
-
-  //have to implement different boundary conditions
-  //Reflective is simple
-  std::size_t tot_cells = nx_ * ny_ ;
-  M_.resize(ng_*tot_cells, ng_*tot_cells);
+void CMFD::create_loss_matrix(const MOCDriver& moc) {
+  // have to implement different boundary conditions
+  // Reflective is simple
+  std::size_t tot_cells = nx_ * ny_;
+  M_.resize(ng_ * tot_cells, ng_ * tot_cells);
   std::vector<Eigen::Triplet<double>> global_triplets;
 
-  //each equation is independent so it can be parallized, might be better to do so over cells rather than groups
+  // each equation is independent so it can be parallized, might be better to do
+  // so over cells rather than groups
 #pragma omp parallel for
-  for (std::size_t g=0; g < ng_; ++g){
+  for (std::size_t g = 0; g < ng_; ++g) {
     std::vector<Eigen::Triplet<double>> groupwise_vals;
     double Dxp;
     double Dyp;
@@ -656,139 +686,158 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
     double Dnl_xn;
     double Dnl_yn;
 
-    for (std::size_t l=0; l < nx_ * ny_; ++l){
+    for (std::size_t l = 0; l < nx_ * ny_; ++l) {
       auto [i, j] = indx_to_tile(l);
-      std::size_t row_indx = g *tot_cells + l;
+      std::size_t row_indx = g * tot_cells + l;
 
       double loss_xp;
       double loss_xn;
       double loss_yp;
       double loss_yn;
 
-      //calculate surface diffusion coefficients
-      std::tie(Dxp, Dnl_xp) = calc_surf_diffusion_coefs(i,j,g,CMFD::TileSurf::XP,moc);
-      std::tie(Dyp, Dnl_yp) = calc_surf_diffusion_coefs(i,j,g,CMFD::TileSurf::YP,moc);
-      std::tie(Dxn, Dnl_xn) = calc_surf_diffusion_coefs(i,j,g,CMFD::TileSurf::XN,moc);
-      std::tie(Dyn, Dnl_yn) = calc_surf_diffusion_coefs(i,j,g,CMFD::TileSurf::YN,moc);
+      // calculate surface diffusion coefficients
+      std::tie(Dxp, Dnl_xp) =
+          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XP, moc);
+      std::tie(Dyp, Dnl_yp) =
+          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YP, moc);
+      std::tie(Dxn, Dnl_xn) =
+          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XN, moc);
+      std::tie(Dyn, Dnl_yn) =
+          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YN, moc);
 
       const double dx = dx_[i];
       const double dy = dy_[j];
 
+      double Er_ij = xs_(i, j)->Er(g);
 
-      double Er_ij = xs_(i,j) -> Er(g);
+      double loss_ij = dy * (Dxn + Dnl_xn + Dxp - Dnl_xp) +
+                       dx * (Dyn + Dnl_yn + Dyp - Dnl_yp) + dx * dy * Er_ij;
+      groupwise_vals.emplace_back(row_indx, row_indx, loss_ij);
 
-      double loss_ij = dy*(Dxn + Dnl_xn + Dxp - Dnl_xp) +
-                dx*(Dyn + Dnl_yn + Dyp - Dnl_yp) +
-                dx*dy*Er_ij;
-      groupwise_vals.emplace_back(row_indx,row_indx,loss_ij);
-
-      //set x current diff for current cell
-      //X pos boundary
-      if (i+1 == nx_ ){
-        if (moc.x_max_bc() == BoundaryCondition::Reflective){
-          loss_xn = dy*(-Dxn + Dnl_xn);
-          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i-1,j), loss_xn);
-          loss_xp = dy*(Dxp + Dnl_xp);
-          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_xp);
+      // set x current diff for current cell
+      // X pos boundary
+      if (i + 1 == nx_) {
+        if (moc.x_max_bc() == BoundaryCondition::Reflective) {
+          loss_xn = dy * (-Dxn + Dnl_xn);
+          groupwise_vals.emplace_back(
+              row_indx, g * tot_cells + tile_to_indx(i - 1, j), loss_xn);
+          loss_xp = dy * (Dxp + Dnl_xp);
+          groupwise_vals.emplace_back(
+              row_indx, g * tot_cells + tile_to_indx(i, j), loss_xp);
         }
-      //X negative boundary
-      } else if (i == 0){
-          if (moc.x_min_bc() == BoundaryCondition::Reflective){
-            loss_xn = dy*(-Dxn + Dnl_xn);
-            groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_xn);
-            loss_xp = dy*(Dxp + Dnl_xp);
-            groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i+1,j), loss_xp);
-          }
-      } else {
-        loss_xn = dy*(-Dxn + Dnl_xn);
-        groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i-1,j), loss_xn);
-        loss_xp = dy*(Dxp + Dnl_xp);
-        groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i+1,j), loss_xp);
-      }
-
-      //set y current diff for current cell
-      if (j + 1 == ny_){
-        if (moc.y_max_bc() == BoundaryCondition::Reflective){
-          loss_yn = dx*(-Dyn + Dnl_yn);
-          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j-1), loss_yn);
-          loss_yp = dx*(Dyp + Dnl_yp);
-          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_yp);
-        }
-      } else if (j == 0){
-        if (moc.y_min_bc() == BoundaryCondition::Reflective){
-          loss_yn = dx*(-Dyn + Dnl_yn);
-          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j), loss_yn);
-          loss_yp = dx*(Dyp + Dnl_yp);
-          groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j+1), loss_yp);
+        // X negative boundary
+      } else if (i == 0) {
+        if (moc.x_min_bc() == BoundaryCondition::Reflective) {
+          loss_xn = dy * (-Dxn + Dnl_xn);
+          groupwise_vals.emplace_back(
+              row_indx, g * tot_cells + tile_to_indx(i, j), loss_xn);
+          loss_xp = dy * (Dxp + Dnl_xp);
+          groupwise_vals.emplace_back(
+              row_indx, g * tot_cells + tile_to_indx(i + 1, j), loss_xp);
         }
       } else {
-        loss_yn = dx*(-Dyn + Dnl_yn);
-        groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j-1), loss_yn);
-        loss_yp = dx*(Dyp + Dnl_yp);
-        groupwise_vals.emplace_back(row_indx,g*tot_cells + tile_to_indx(i,j+1), loss_yp);
+        loss_xn = dy * (-Dxn + Dnl_xn);
+        groupwise_vals.emplace_back(
+            row_indx, g * tot_cells + tile_to_indx(i - 1, j), loss_xn);
+        loss_xp = dy * (Dxp + Dnl_xp);
+        groupwise_vals.emplace_back(
+            row_indx, g * tot_cells + tile_to_indx(i + 1, j), loss_xp);
       }
 
-      for (std::size_t gg = 0; gg < ng_; ++gg){
-        //subtract scattering source Es_(g_in, g_out)
-        double Es = xs_(i,j) -> Es(gg,g);
-        if (gg != g){
-          groupwise_vals.emplace_back(row_indx, gg*tot_cells + l, -dx*dy*Es);
+      // set y current diff for current cell
+      if (j + 1 == ny_) {
+        if (moc.y_max_bc() == BoundaryCondition::Reflective) {
+          loss_yn = dx * (-Dyn + Dnl_yn);
+          groupwise_vals.emplace_back(
+              row_indx, g * tot_cells + tile_to_indx(i, j - 1), loss_yn);
+          loss_yp = dx * (Dyp + Dnl_yp);
+          groupwise_vals.emplace_back(
+              row_indx, g * tot_cells + tile_to_indx(i, j), loss_yp);
+        }
+      } else if (j == 0) {
+        if (moc.y_min_bc() == BoundaryCondition::Reflective) {
+          loss_yn = dx * (-Dyn + Dnl_yn);
+          groupwise_vals.emplace_back(
+              row_indx, g * tot_cells + tile_to_indx(i, j), loss_yn);
+          loss_yp = dx * (Dyp + Dnl_yp);
+          groupwise_vals.emplace_back(
+              row_indx, g * tot_cells + tile_to_indx(i, j + 1), loss_yp);
+        }
+      } else {
+        loss_yn = dx * (-Dyn + Dnl_yn);
+        groupwise_vals.emplace_back(
+            row_indx, g * tot_cells + tile_to_indx(i, j - 1), loss_yn);
+        loss_yp = dx * (Dyp + Dnl_yp);
+        groupwise_vals.emplace_back(
+            row_indx, g * tot_cells + tile_to_indx(i, j + 1), loss_yp);
+      }
+
+      for (std::size_t gg = 0; gg < ng_; ++gg) {
+        // subtract scattering source Es_(g_in, g_out)
+        double Es = xs_(i, j)->Es(gg, g);
+        if (gg != g) {
+          groupwise_vals.emplace_back(row_indx, gg * tot_cells + l,
+                                      -dx * dy * Es);
         }
       }
     }
-    #pragma omp critical
-        {
-            global_triplets.insert(global_triplets.end(), groupwise_vals.begin(), groupwise_vals.end());
-        }
+#pragma omp critical
+    {
+      global_triplets.insert(global_triplets.end(), groupwise_vals.begin(),
+                             groupwise_vals.end());
+    }
   }
   M_.setFromTriplets(global_triplets.begin(), global_triplets.end());
   M_.makeCompressed();
 }
 
-void CMFD::create_source_matrix(){
-
-  const std::size_t tot_cells = nx_ * ny_ ;
-  QM_.resize(ng_*tot_cells, ng_*tot_cells);
+void CMFD::create_source_matrix() {
+  const std::size_t tot_cells = nx_ * ny_;
+  QM_.resize(ng_ * tot_cells, ng_ * tot_cells);
   std::vector<Eigen::Triplet<double>> global_triplets;
 
-  //not entirely sure this order can be used, but the source matrix needs to be ordered the same as the loss matrix
-  //It makes sense from first glance because if we are in group g for cell l, we still want to sum over g' for that group g
+  // not entirely sure this order can be used, but the source matrix needs to be
+  // ordered the same as the loss matrix It makes sense from first glance
+  // because if we are in group g for cell l, we still want to sum over g' for
+  // that group g
 #pragma omp parallel for
-  for (std::size_t g=0; g<ng_; ++g){
+  for (std::size_t g = 0; g < ng_; ++g) {
     std::vector<Eigen::Triplet<double>> groupwise_vals;
 
-    for (std::size_t l=0; l < nx_ * ny_; ++l){
+    for (std::size_t l = 0; l < nx_ * ny_; ++l) {
       auto [i, j] = indx_to_tile(l);
-      std::size_t row_indx = g *tot_cells + l;
+      std::size_t row_indx = g * tot_cells + l;
       const double dx = dx_[i];
       const double dy = dy_[j];
-      double Chi = xs_(i,j) -> chi(g);
-      for (std::size_t gg=0; gg < ng_; ++gg){
-        //Fission source
-        double vEf = xs_(i,j) -> vEf(gg);
-        groupwise_vals.emplace_back(row_indx,gg*tot_cells + l, dx*dy*Chi*vEf);
+      double Chi = xs_(i, j)->chi(g);
+      for (std::size_t gg = 0; gg < ng_; ++gg) {
+        // Fission source
+        double vEf = xs_(i, j)->vEf(gg);
+        groupwise_vals.emplace_back(row_indx, gg * tot_cells + l,
+                                    dx * dy * Chi * vEf);
       }
     }
-    #pragma omp critical
+#pragma omp critical
     {
-        global_triplets.insert(global_triplets.end(), groupwise_vals.begin(), groupwise_vals.end());
+      global_triplets.insert(global_triplets.end(), groupwise_vals.begin(),
+                             groupwise_vals.end());
     }
   }
-  
+
   QM_.setFromTriplets(global_triplets.begin(), global_triplets.end());
   QM_.makeCompressed();
 }
 
 Eigen::VectorXd CMFD::flatten_flux() const {
-  //Turns g, i, j flux to linearly indexed flux
+  // Turns g, i, j flux to linearly indexed flux
   const std::size_t tot_cells = nx_ * ny_;
   Eigen::VectorXd flx_flat(ng_ * tot_cells);
 
   for (std::size_t g = 0; g < ng_; ++g) {
-    //for each cell in row-major order (i fastest, then j)
+    // for each cell in row-major order (i fastest, then j)
     for (std::size_t j = 0; j < ny_; ++j) {
       for (std::size_t i = 0; i < nx_; ++i) {
-        std::size_t cell_idx = tile_to_indx(i,j);
+        std::size_t cell_idx = tile_to_indx(i, j);
         std::size_t linear_idx = g * tot_cells + cell_idx;
         flx_flat[linear_idx] = flux_(g, i, j);
       }
@@ -809,40 +858,42 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   spdlog::info("Starting CMFD solve");
   spdlog::info("Keff passed to CMFD: {}", keff);
 
-  //Debug info
+  // Debug info
   spdlog::info("M_ nonzeros: {}", M_.nonZeros());
   spdlog::info("QM_ nonzeros: {}", QM_.nonZeros());
   spdlog::info("QM_ sum: {}", QM_.sum());
-  
-  //Power Iteration to solve for Keff
-  if (solve_ == 0){
-    std::size_t max_iter = 1000; //just for initial testing, shouldn't use more than this.
+
+  // Power Iteration to solve for Keff
+  if (solve_ == 0) {
+    std::size_t max_iter =
+        1000;  // just for initial testing, shouldn't use more than this.
 
     Eigen::VectorXd flux_moc = flatten_flux();
 
     // Initialize flux and source vectors
-    Eigen::VectorXd flux(ng_*nx_*ny_);
-    Eigen::VectorXd new_flux(ng_*nx_*ny_);
-    Eigen::VectorXd Q(ng_*nx_*ny_);
-    Eigen::VectorXd Q_new(ng_*nx_*ny_);
+    Eigen::VectorXd flux(ng_ * nx_ * ny_);
+    Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
+    Eigen::VectorXd Q(ng_ * nx_ * ny_);
+    Eigen::VectorXd Q_new(ng_ * nx_ * ny_);
 
     // Initialize a vector for computing keff faster
     Eigen::VectorXd VvEf(ng_ * nx_ * ny_);
-    for (std::size_t l = 0; l < nx_*ny_; l++) {
+    for (std::size_t l = 0; l < nx_ * ny_; l++) {
       auto [i, j] = indx_to_tile(l);
       for (std::size_t g = 0; g < ng_; g++) {
-        double vEf = xs_(i,j) -> vEf(g);
-        VvEf(l + g * ny_*nx_) = volumes_[l + g*nx_*ny_]*vEf;
+        double vEf = xs_(i, j)->vEf(g);
+        VvEf(l + g * ny_ * nx_) = volumes_[l + g * nx_ * ny_] * vEf;
       }
     }
 
-    //Use moc homogenized flux as initial guess?
-    //Maybe should just start with 1
-    //flux = flux_moc;
+    // Use moc homogenized flux as initial guess?
+    // Maybe should just start with 1
+    // flux = flux_moc;
     flux.fill(1.);
     flux.normalize();
 
-    Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
+    Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>
+        solver;
     solver.analyzePattern(M_);
     solver.factorize(M_);
 
@@ -867,14 +918,14 @@ void CMFD::solve(MOCDriver& moc, double keff) {
 
       spdlog::info("Sum of source vector: {}", Q.sum());
 
-      // Estiamte keff - not sure about this part, might need to be volume-weighed?  Q.dot(volumes)
+      // Estiamte keff - not sure about this part, might need to be
+      // volume-weighed?  Q.dot(volumes)
       double prev_keff = keff;
-      keff = prev_keff *(VvEf.dot(new_flux) / VvEf.dot(flux));
+      keff = prev_keff * (VvEf.dot(new_flux) / VvEf.dot(flux));
       keff_diff = std::abs(keff - prev_keff) / keff;
 
       spdlog::info("Sum of old flux: {}", flux.sum());
       spdlog::info("Sum of new flux: {}", new_flux.sum());
-
 
       // Normalize our new flux
       new_flux *= prev_keff / keff;
@@ -893,18 +944,17 @@ void CMFD::solve(MOCDriver& moc, double keff) {
       spdlog::info("     keff difference:     {:.5E}", keff_diff);
       spdlog::info("     max flux difference: {:.5E}", flux_diff);
       spdlog::info("     iteration time: {:.5E} s",
-                  iteration_timer.elapsed_time());
-      
-      if (iteration > max_iter){
+                   iteration_timer.elapsed_time());
+
+      if (iteration > max_iter) {
         auto mssg = "Max iterations exceeded, maybe problem can't converge";
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
       }
     }
   }
-  
-  
-  /** 
+
+  /**
   for (std::size_t i = 0; i < nx_; i++) {
     for (std::size_t j = 0; j < ny_; j++) {
       for (std::size_t g = 0; g < ng_; g++) {
