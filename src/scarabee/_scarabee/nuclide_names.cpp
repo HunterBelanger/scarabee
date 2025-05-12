@@ -11,6 +11,12 @@ std::string nuclide_name_to_internal_name(const std::string& name) {
   // Must remove any _ from nuclide name (for TSLs like H1_H2O)
   // Also discards isomer information (Ag110m1 -> Ag110)
 
+  if (name.size() == 0) {
+    const auto mssg = "Nuclide name cannot be an empty string.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   std::string simp_name;
   simp_name.reserve(name.size());
 
@@ -28,6 +34,12 @@ std::string nuclide_name_to_internal_name(const std::string& name) {
 }
 
 std::string nuclide_name_to_simple_name(const std::string& name) {
+  if (name.size() == 0) {
+    const auto mssg = "Nuclide name cannot be an empty string.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Must remove any _ from nuclide name (for TSLs like H1_H2O)
   std::string simp_name = name;
   auto loc_undr_scr = simp_name.find('_');
@@ -38,6 +50,12 @@ std::string nuclide_name_to_simple_name(const std::string& name) {
 }
 
 std::string nuclide_name_to_element_symbol(const std::string& name) {
+  if (name.size() == 0) {
+    const auto mssg = "Nuclide name cannot be an empty string.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   std::string elem_name;
 
   for (std::size_t i = 0; i < 2; i++) {
@@ -52,10 +70,20 @@ std::string nuclide_name_to_element_symbol(const std::string& name) {
 }
 
 std::uint32_t nuclide_name_to_za(const std::string& name) {
-  const char first_letter = name[0];
-  const char second_letter = name[1];
+  if (name.size() == 0) {
+    const auto mssg = "Nuclide name cannot be an empty string.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
 
-  const bool second_is_letter = std::isalpha(second_letter);
+  const char first_letter = name[0];
+
+  char second_letter = '\0';
+  bool second_is_letter = false;
+  if (name.size() > 1) {
+    second_letter = name[1];
+    second_is_letter = std::isalpha(second_letter);
+  }
 
   // First, find the element
   std::uint32_t Z = 1;
