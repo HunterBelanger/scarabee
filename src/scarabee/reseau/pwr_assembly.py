@@ -1,7 +1,7 @@
 from .fuel_pin import FuelPin
 from .guide_tube import GuideTube
 from .critical_leakage import CriticalLeakage
-from ._ensleeve import _ensleeve_quarter, _ensleeve_half, _ensleeve_full
+from ._ensleeve import _ensleeve_quarter, _ensleeve_half_top, _ensleeve_full
 from .._scarabee import (
     borated_water,
     Material,
@@ -863,7 +863,7 @@ class PWRAssembly:
                     pins_geom, self.pitch, gap_width, self._moderator_dancoff_xs
                 )
             elif self.symmetry == Symmetry.Half:
-                self._full_dancoff_geom, _ = _ensleeve_half(
+                self._full_dancoff_geom, _ = _ensleeve_half_top(
                     pins_geom, self.pitch, gap_width, self._moderator_dancoff_xs
                 )
             else:
@@ -1120,7 +1120,7 @@ class PWRAssembly:
                     pins_geom, self.pitch, gap_width, self._moderator_xs
                 )
             elif self.symmetry == Symmetry.Half:
-                self._asmbly_geom, _ = _ensleeve_half(
+                self._asmbly_geom, _ = _ensleeve_half_top(
                     pins_geom, self.pitch, gap_width, self._moderator_xs
                 )
             else:
