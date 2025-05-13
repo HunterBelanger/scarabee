@@ -95,8 +95,5 @@ void init_CMFD(py::module& m) {
       py::overload_cast<const std::size_t, const std::size_t>(
         &CMFD::current),
       "TODO: Fill in docstring",
-      py::arg("G"),py::arg("surface"))
-  .def("get_loss_matrix", &CMFD::get_loss_matrix)
-  .def("get_source_matrix",&CMFD::get_source_matrix)
-  .def("set_solve",&CMFD::set_solve,py::arg("solve"));
+      py::arg("G"),py::arg("surface"));
 }

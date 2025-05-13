@@ -83,17 +83,12 @@ class CMFD {
   void tally_current(double aflx, const Direction& u, std::size_t G,
                      const CMFDSurfaceCrossing& surf);
 
-  void set_solve(int solve) { solve_ = solve; }
-
   void zero_currents() {
     surface_currents_.fill(0.);
     surface_currents_normalized_ = false;
   }
 
   enum class TileSurf : std::uint8_t { XN, XP, YN, YP };
-
-  Eigen::SparseMatrix<double> get_loss_matrix() const { return M_; }
-  Eigen::SparseMatrix<double> get_source_matrix() const { return QM_; }
 
   Eigen::VectorXd flatten_flux() const;
 
@@ -110,7 +105,6 @@ class CMFD {
 
   double keff_tol_ = 1E-5;
   double flux_tol_ = 1E-5;
-  int solve_ = 0;  // 0 to solve, 1 to only setup
 
   // List of flat source region indices for each CMFD cell
   std::vector<std::set<std::size_t>> temp_fsrs_;
@@ -144,6 +138,7 @@ class CMFD {
                      TileSurf surf) const;
   void create_loss_matrix(const MOCDriver& moc);
   void create_source_matrix();
+  void power_iteration(double keff);
   void normalize_currents();
   void compute_homogenized_xs_and_flux(const MOCDriver& moc);
   void check_neutron_balance(const std::size_t i, const std::size_t j,

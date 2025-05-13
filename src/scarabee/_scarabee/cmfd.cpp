@@ -665,16 +665,16 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   return {D_surf, D_nl};
 }
 
-void CMFD::create_loss_matrix(const MOCDriver& moc){
+void CMFD::create_loss_matrix(const MOCDriver& moc) {
   const std::size_t tot_cells = nx_ * ny_;
-  //Resize M_ sparse matrix
+  // Resize M_ sparse matrix
   M_.resize(ng_ * tot_cells, ng_ * tot_cells);
   // Each row should have ~5 entries on average
-  M_.reserve(Eigen::VectorXi::Constant(ng_ * tot_cells,5));
+  M_.reserve(Eigen::VectorXi::Constant(ng_ * tot_cells, 5));
 
-  //Loop over all cells and groups, cell index changes fastest
+  // Loop over all cells and groups, cell index changes fastest
   for (std::size_t g = 0; g < ng_; ++g) {
-    for (std::size_t l = 0; l < nx_ * ny_ ; l++){
+    for (std::size_t l = 0; l < nx_ * ny_; l++) {
       const auto [i, j] = indx_to_tile(l);
       const double dx = dx_[i];
       const double dy = dy_[j];
@@ -682,7 +682,7 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
       const double invs_dx = 1. / dx;
       const double invs_dy = 1. / dy;
 
-      //Get surface diffusion coefficients for Cell i,j 
+      // Get surface diffusion coefficients for Cell i,j
       const auto [Dxp, Dnl_xp] =
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XP, moc);
       const auto [Dyp, Dnl_yp] =
@@ -691,53 +691,72 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XN, moc);
       const auto [Dyn, Dnl_yn] =
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YN, moc);
-      
+
       if (Dnl_xp > Dxp || Dnl_xn > Dxn || Dnl_yp > Dyp || Dnl_yn > Dyn) {
-        auto mssg = "At least one transport corrected diffusion coefficient is greater than its non-corrected counterpart";
+        auto mssg =
+            "At least one transport corrected diffusion coefficient is greater "
+            "than its non-corrected counterpart";
         spdlog::error(mssg);
       }
-      
-      //Streaming to adjacent X cells 
-      if (i != 0) {
-        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i-1,j)) += (Dnl_xn - Dxn) * invs_dx;
-      }
-      if (i != nx_-1) {
-        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i+1,j)) += (-Dxp - Dnl_xp) * invs_dx;
-      }
-      M_.coeffRef(g * tot_cells + l, g * tot_cells + l) += (Dxn + Dxp + Dnl_xn - Dnl_xp) * invs_dx;
-      
-      //Streaming to adjacent Y cells
-      if (j != 0) {
-        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i,j-1)) += (Dnl_yn - Dyn) * invs_dy;
-      }
-      if (j != ny_-1) {
-        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i,j+1)) += (-Dyp - Dnl_yp) * invs_dy;
-      }
-      M_.coeffRef(g * tot_cells + l, g * tot_cells + l) += (Dyn + Dyp + Dnl_yn - Dnl_yp) * invs_dy;
 
-      //Handle periodic BC
-      //X direction
-      if (i == 0 && moc.x_min_bc() == BoundaryCondition::Periodic){
-        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(nx_-1,j)) += (Dnl_xn - Dxn) * invs_dx;
+      // Streaming to adjacent X cells
+      if (i != 0) {
+        M_.coeffRef(g * tot_cells + l,
+                    g * tot_cells + tile_to_indx(i - 1, j)) +=
+            (Dnl_xn - Dxn) * invs_dx;
       }
-      if (i == nx_-1 && moc.x_max_bc() == BoundaryCondition::Periodic){
-        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(0,j)) += (-Dxp - Dnl_xp) * invs_dx;
+      if (i != nx_ - 1) {
+        M_.coeffRef(g * tot_cells + l,
+                    g * tot_cells + tile_to_indx(i + 1, j)) +=
+            (-Dxp - Dnl_xp) * invs_dx;
       }
-      //Y direction
-      if (j == 0 && moc.y_min_bc() == BoundaryCondition::Periodic){
-        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i,ny_-1)) += (Dnl_yn - Dyn) * invs_dy;
+      M_.coeffRef(g * tot_cells + l, g * tot_cells + l) +=
+          (Dxn + Dxp + Dnl_xn - Dnl_xp) * invs_dx;
+
+      // Streaming to adjacent Y cells
+      if (j != 0) {
+        M_.coeffRef(g * tot_cells + l,
+                    g * tot_cells + tile_to_indx(i, j - 1)) +=
+            (Dnl_yn - Dyn) * invs_dy;
       }
-      if (j == nx_-1 && moc.y_max_bc() == BoundaryCondition::Periodic){
-        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i,0)) += (-Dyp - Dnl_yp) * invs_dy;
+      if (j != ny_ - 1) {
+        M_.coeffRef(g * tot_cells + l,
+                    g * tot_cells + tile_to_indx(i, j + 1)) +=
+            (-Dyp - Dnl_yp) * invs_dy;
       }
-    
+      M_.coeffRef(g * tot_cells + l, g * tot_cells + l) +=
+          (Dyn + Dyp + Dnl_yn - Dnl_yp) * invs_dy;
+
+      // Handle periodic BC
+      // X direction
+      if (i == 0 && moc.x_min_bc() == BoundaryCondition::Periodic) {
+        M_.coeffRef(g * tot_cells + l,
+                    g * tot_cells + tile_to_indx(nx_ - 1, j)) +=
+            (Dnl_xn - Dxn) * invs_dx;
+      }
+      if (i == nx_ - 1 && moc.x_max_bc() == BoundaryCondition::Periodic) {
+        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(0, j)) +=
+            (-Dxp - Dnl_xp) * invs_dx;
+      }
+      // Y direction
+      if (j == 0 && moc.y_min_bc() == BoundaryCondition::Periodic) {
+        M_.coeffRef(g * tot_cells + l,
+                    g * tot_cells + tile_to_indx(i, ny_ - 1)) +=
+            (Dnl_yn - Dyn) * invs_dy;
+      }
+      if (j == nx_ - 1 && moc.y_max_bc() == BoundaryCondition::Periodic) {
+        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i, 0)) +=
+            (-Dyp - Dnl_yp) * invs_dy;
+      }
+
       // Add removal xs along diagonal
-      M_.coeffRef( g * tot_cells + l, g * tot_cells + l) += xs_(i, j)->Er(g);
+      M_.coeffRef(g * tot_cells + l, g * tot_cells + l) += xs_(i, j)->Er(g);
 
       // Remove scattering sources
       for (std::size_t gg = 0; gg < ng_; ++gg) {
         if (gg != g) {
-          M_.coeffRef(g * tot_cells + l, gg * tot_cells + l) -= xs_(i, j)->Es(gg, g);
+          M_.coeffRef(g * tot_cells + l, gg * tot_cells + l) -=
+              xs_(i, j)->Es(gg, g);
         }
       }
     }
@@ -748,26 +767,101 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
 void CMFD::create_source_matrix() {
   const std::size_t tot_cells = nx_ * ny_;
   QM_.resize(ng_ * tot_cells, ng_ * tot_cells);
-  //Should be ng entries per row?
-  QM_.reserve(Eigen::VectorXi::Constant(ng_ * tot_cells,ng_));
+  // Should be ng entries per row?
+  QM_.reserve(Eigen::VectorXi::Constant(ng_ * tot_cells, ng_));
 
-  //Loop over all cells and groups, cell index changes fastest
+  // Loop over all cells and groups, cell index changes fastest
   for (std::size_t g = 0; g < ng_; ++g) {
     for (std::size_t l = 0; l < nx_ * ny_; ++l) {
       auto [i, j] = indx_to_tile(l);
       const double chi_g = xs_(i, j)->chi(g);
-      //Loop over all groups again for fission source
+      // Loop over all groups again for fission source
       for (std::size_t gg = 0; gg < ng_; ++gg) {
         const double vEf_gg = xs_(i, j)->vEf(gg);
-        QM_.coeffRef(g * tot_cells + l,  gg * tot_cells + l) = chi_g * vEf_gg;
+        QM_.coeffRef(g * tot_cells + l, gg * tot_cells + l) = chi_g * vEf_gg;
       }
     }
   }
   QM_.makeCompressed();
 }
 
+void CMFD::power_iteration(double keff) {
+  // Power Iteration to solve for Keff
+
+  Eigen::VectorXd flux_moc = flatten_flux();
+
+  // Initialize flux and source vectors
+  Eigen::VectorXd flux(ng_ * nx_ * ny_);
+  Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
+  Eigen::VectorXd Q(ng_ * nx_ * ny_);
+  Eigen::VectorXd Q_new(ng_ * nx_ * ny_);
+
+  // Initialize a vector for computing keff faster
+  Eigen::VectorXd VvEf(ng_ * nx_ * ny_);
+  for (std::size_t l = 0; l < nx_ * ny_; l++) {
+    auto [i, j] = indx_to_tile(l);
+    for (std::size_t g = 0; g < ng_; g++) {
+      double vEf = xs_(i, j)->vEf(g);
+      VvEf(l + g * ny_ * nx_) = volumes_[l + g * nx_ * ny_] * vEf;
+    }
+  }
+
+  flux = flux_moc;
+  // flux.fill(1.);
+  // flux.normalize();
+
+  Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>
+      solver;
+  solver.analyzePattern(M_);
+  solver.factorize(M_);
+
+  // Begin power iteration
+  double keff_diff = 100.;
+  double flux_diff = 100.;
+  std::size_t iteration = 0;
+  Timer iteration_timer;
+  while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
+    iteration_timer.reset();
+    iteration_timer.start();
+    iteration++;
+
+    // Compute source vector
+    Q = (1. / keff) * QM_ * flux;
+
+    new_flux = solver.solve(Q);
+    if (solver.info() != Eigen::Success) {
+      spdlog::error("Solution impossible.");
+      throw ScarabeeException("Solution impossible");
+    }
+
+    // Estimate keff
+    double prev_keff = keff;
+    keff = prev_keff * (VvEf.dot(new_flux) / VvEf.dot(flux));
+    keff_diff = std::abs(keff - prev_keff) / keff;
+
+    // Normalize our new flux
+    new_flux *= prev_keff / keff;
+
+    // Find the max flux error
+    flux_diff = 0.;
+    for (std::size_t i = 0; i < ng_ * nx_ * ny_; i++) {
+      double flux_diff_i = std::abs(new_flux(i) - flux(i)) / new_flux(i);
+      if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
+    }
+    flux = new_flux;
+
+    // Write information
+    spdlog::info("-----------------CMFD-----------------");
+    spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff);
+    spdlog::info("     keff difference:     {:.5E}", keff_diff);
+    spdlog::info("     max flux difference: {:.5E}", flux_diff);
+    spdlog::info("     iteration time: {:.5E} s",
+                 iteration_timer.elapsed_time());
+  }
+}
+
 Eigen::VectorXd CMFD::flatten_flux() const {
-  // Turns g, i, j flux to linearly indexed flux
+  // Turns homogenized MOC flux from g, i, j indexes to linearly indexed
   const std::size_t tot_cells = nx_ * ny_;
   Eigen::VectorXd flx_flat(ng_ * tot_cells);
 
@@ -786,114 +880,11 @@ Eigen::VectorXd CMFD::flatten_flux() const {
 
 void CMFD::solve(MOCDriver& moc, double keff) {
   spdlog::info("Starting CMFD");
-  spdlog::info("Normalizing current");
   this->normalize_currents();
-  spdlog::info("Computing homogenized xs");
   this->compute_homogenized_xs_and_flux(moc);
-  spdlog::info("Creating loss and source matrix");
   this->create_loss_matrix(moc);
   this->create_source_matrix();
-  spdlog::info("Starting CMFD solve");
-  spdlog::info("Keff passed to CMFD: {}", keff);
-
-  // Debug info
-  spdlog::info("M_ nonzeros: {}", M_.nonZeros());
-  spdlog::info("QM_ nonzeros: {}", QM_.nonZeros());
-  spdlog::info("QM_ sum: {}", QM_.sum());
-
-  // Power Iteration to solve for Keff
-  if (solve_ == 0) {
-    std::size_t max_iter =
-        1000;  // just for initial testing, shouldn't use more than this.
-
-    Eigen::VectorXd flux_moc = flatten_flux();
-
-    // Initialize flux and source vectors
-    Eigen::VectorXd flux(ng_ * nx_ * ny_);
-    Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
-    Eigen::VectorXd Q(ng_ * nx_ * ny_);
-    Eigen::VectorXd Q_new(ng_ * nx_ * ny_);
-
-    // Initialize a vector for computing keff faster
-    Eigen::VectorXd VvEf(ng_ * nx_ * ny_);
-    for (std::size_t l = 0; l < nx_ * ny_; l++) {
-      auto [i, j] = indx_to_tile(l);
-      for (std::size_t g = 0; g < ng_; g++) {
-        double vEf = xs_(i, j)->vEf(g);
-        VvEf(l + g * ny_ * nx_) = volumes_[l + g * nx_ * ny_] * vEf;
-      }
-    }
-
-    // Use moc homogenized flux as initial guess?
-    // Maybe should just start with 1
-    // flux = flux_moc;
-    flux.fill(1.);
-    flux.normalize();
-
-    Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>
-        solver;
-    solver.analyzePattern(M_);
-    solver.factorize(M_);
-
-    // Begin power iteration
-    double keff_diff = 100.;
-    double flux_diff = 100.;
-    std::size_t iteration = 0;
-    Timer iteration_timer;
-    while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
-      iteration_timer.reset();
-      iteration_timer.start();
-      iteration++;
-
-      // Compute source vector
-      Q = (1. / keff) * QM_ * flux;
-
-      new_flux = solver.solve(Q);
-      if (solver.info() != Eigen::Success) {
-        spdlog::error("Solution impossible.");
-        throw ScarabeeException("Solution impossible");
-      }
-
-      spdlog::info("Sum of source vector: {}", Q.sum());
-
-      // Estiamte keff - not sure about this part, might need to be
-      // volume-weighed?  Q.dot(volumes)
-      double prev_keff = keff;
-      keff = prev_keff * (VvEf.dot(new_flux) / VvEf.dot(flux));
-      keff_diff = std::abs(keff - prev_keff) / keff;
-
-      spdlog::info("Sum of old flux: {}", flux.sum());
-      spdlog::info("Sum of new flux: {}", new_flux.sum());
-
-      // Normalize our new flux
-      new_flux *= prev_keff / keff;
-
-      // Find the max flux error
-      flux_diff = 0.;
-      for (std::size_t i = 0; i < ng_ * nx_ * ny_; i++) {
-        double flux_diff_i = std::abs(new_flux(i) - flux(i)) / new_flux(i);
-        if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
-      }
-      flux = new_flux;
-
-      // Write information
-      spdlog::info("-----------------CMFD-----------------");
-      spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff);
-      spdlog::info("     keff difference:     {:.5E}", keff_diff);
-      spdlog::info("     max flux difference: {:.5E}", flux_diff);
-      spdlog::info("     iteration time: {:.5E} s",
-                   iteration_timer.elapsed_time());
-
-      if (iteration > max_iter) {
-        auto mssg = "Max iterations exceeded, maybe problem can't converge";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      }
-    }
-  }
-
-  double max_cur = xt::amax(surface_currents_)();
-  spdlog::info("Maximum current for solve {:.10f}",max_cur);
+  this->power_iteration(keff);
 
   /**
   for (std::size_t i = 0; i < nx_; i++) {
