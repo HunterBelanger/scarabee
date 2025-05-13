@@ -666,7 +666,7 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
 }
 
 void CMFD::create_loss_matrix(const MOCDriver& moc){
-  std::size_t tot_cells = nx_ * ny_;
+  const std::size_t tot_cells = nx_ * ny_;
   //Resize M_ sparse matrix
   M_.resize(ng_ * tot_cells, ng_ * tot_cells);
   // Each row should have ~5 entries on average
@@ -675,10 +675,12 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
   //Loop over all cells and groups, cell index changes fastest
   for (std::size_t g = 0; g < ng_; ++g) {
     for (std::size_t l = 0; l < nx_ * ny_ ; l++){
-      auto [i, j] = indx_to_tile(l);
-
+      const auto [i, j] = indx_to_tile(l);
       const double dx = dx_[i];
       const double dy = dy_[j];
+
+      const double invs_dx = 1. / dx;
+      const double invs_dy = 1. / dy;
 
       //Get surface diffusion coefficients for Cell i,j 
       const auto [Dxp, Dnl_xp] =
@@ -694,37 +696,48 @@ void CMFD::create_loss_matrix(const MOCDriver& moc){
         auto mssg = "At least one transport corrected diffusion coefficient is greater than its non-corrected counterpart";
         spdlog::error(mssg);
       }
-        
-      double Er_ij = xs_(i, j)->Er(g);
-
-      M_.coeffRef( g * tot_cells + l, g * tot_cells + l) = dy * (Dxn + Dnl_xn + Dxp - Dnl_xp) +
-                      dx * (Dyn + Dnl_yn + Dyp - Dnl_yp) + dx * dy * Er_ij;
       
       //Streaming to adjacent X cells 
-      //Mistake is for a single cell, there is no i+1 cell
-      if (i==0 && nx_ != 1){
-        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i+1,j)) += dy * (Dnl_xp - Dxp);
-      } else if (i == nx_ - 1 && nx_ != 1){
-        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i-1,j)) += dy * (Dnl_xn - Dxn);
-      } else if (nx_ != 1) {
-        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i+1,j)) += dy * (Dnl_xp - Dxp);
-        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i-1,j)) += dy * (Dnl_xn - Dxn);
+      if (i != 0) {
+        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i-1,j)) += (Dnl_xn - Dxn) * invs_dx;
       }
+      if (i != nx_-1) {
+        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i+1,j)) += (-Dxp - Dnl_xp) * invs_dx;
+      }
+      M_.coeffRef(g * tot_cells + l, g * tot_cells + l) += (Dxn + Dxp + Dnl_xn - Dnl_xp) * invs_dx;
+      
       //Streaming to adjacent Y cells
-      if (j==0 && ny_ != 1){
-        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i,j+1)) += dx * (Dnl_yp - Dyp);
-      } else if (j == ny_ - 1 && ny_ != 1){
-        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i,j-1)) += dx * (Dnl_yn - Dyn);
-      } else if (ny_ != 1) {
-        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i,j+1)) += dx * (Dnl_yp - Dyp);
-        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i,j-1)) += dx * (Dnl_yn - Dyn);
+      if (j != 0) {
+        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i,j-1)) += (Dnl_yn - Dyn) * invs_dy;
       }
+      if (j != ny_-1) {
+        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i,j+1)) += (-Dyp - Dnl_yp) * invs_dy;
+      }
+      M_.coeffRef(g * tot_cells + l, g * tot_cells + l) += (Dyn + Dyp + Dnl_yn - Dnl_yp) * invs_dy;
 
+      //Handle periodic BC
+      //X direction
+      if (i == 0 && moc.x_min_bc() == BoundaryCondition::Periodic){
+        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(nx_-1,j)) += (Dnl_xn - Dxn) * invs_dx;
+      }
+      if (i == nx_-1 && moc.x_max_bc() == BoundaryCondition::Periodic){
+        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(0,j)) += (-Dxp - Dnl_xp) * invs_dx;
+      }
+      //Y direction
+      if (j == 0 && moc.y_min_bc() == BoundaryCondition::Periodic){
+        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i,ny_-1)) += (Dnl_yn - Dyn) * invs_dy;
+      }
+      if (j == nx_-1 && moc.y_max_bc() == BoundaryCondition::Periodic){
+        M_.coeffRef(g * tot_cells + l, g * tot_cells + tile_to_indx(i,0)) += (-Dyp - Dnl_yp) * invs_dy;
+      }
+    
+      // Add removal xs along diagonal
+      M_.coeffRef( g * tot_cells + l, g * tot_cells + l) += xs_(i, j)->Er(g);
+
+      // Remove scattering sources
       for (std::size_t gg = 0; gg < ng_; ++gg) {
-        // subtract scattering source Es_(g_in, g_out)
-        double Es = xs_(i, j)->Es(gg, g);
         if (gg != g) {
-          M_.coeffRef(g * tot_cells + l, gg * tot_cells + l) -= dx * dy * Es;
+          M_.coeffRef(g * tot_cells + l, gg * tot_cells + l) -= xs_(i, j)->Es(gg, g);
         }
       }
     }
@@ -742,13 +755,11 @@ void CMFD::create_source_matrix() {
   for (std::size_t g = 0; g < ng_; ++g) {
     for (std::size_t l = 0; l < nx_ * ny_; ++l) {
       auto [i, j] = indx_to_tile(l);
-      const double dx = dx_[i];
-      const double dy = dy_[j];
-      double Chi = xs_(i, j)->chi(g);
+      const double chi_g = xs_(i, j)->chi(g);
       //Loop over all groups again for fission source
       for (std::size_t gg = 0; gg < ng_; ++gg) {
-        double vEf = xs_(i, j)->vEf(gg);
-        QM_.coeffRef(g * tot_cells + l,  gg * tot_cells + l) = dx * dy * Chi * vEf;
+        const double vEf_gg = xs_(i, j)->vEf(gg);
+        QM_.coeffRef(g * tot_cells + l,  gg * tot_cells + l) = chi_g * vEf_gg;
       }
     }
   }
