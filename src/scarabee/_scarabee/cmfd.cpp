@@ -680,6 +680,7 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
   M_.resize(ng_ * tot_cells, ng_ * tot_cells);
   // Each row should have ~5 entries on average
   M_.reserve(Eigen::VectorXi::Constant(ng_ * tot_cells, 5));
+  xt::xtensor<double, 2> D_transp_corr_new = xt::zeros<double>({ng_, nx_surfs_ + ny_surfs_});
 
   // Loop over all cells and groups, cell index changes fastest
   for (std::size_t g = 0; g < ng_; ++g) {
@@ -713,10 +714,10 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
       Dnl_yn = (1-damping_)*D_transp_corr_(g, ynsurf) + damping_ * Dnl_yn;
 
       //Store the current CMFD iteration's diffusion coefficients
-      D_transp_corr_(g, xpsurf) = Dnl_xp;
-      D_transp_corr_(g, xnsurf) = Dnl_xn;
-      D_transp_corr_(g, ypsurf) = Dnl_yp;
-      D_transp_corr_(g, ynsurf) = Dnl_yn;
+      D_transp_corr_new(g, xpsurf) = Dnl_xp;
+      D_transp_corr_new(g, xnsurf) = Dnl_xn;
+      D_transp_corr_new(g, ypsurf) = Dnl_yp;
+      D_transp_corr_new(g, ynsurf) = Dnl_yn;
 
       if (Dnl_xp > Dxp || Dnl_xn > Dxn || Dnl_yp > Dyp || Dnl_yn > Dyn) {
         auto mssg =
@@ -787,6 +788,7 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
       }
     }
   }
+  D_transp_corr_ = D_transp_corr_new;
   M_.makeCompressed();
 }
 
