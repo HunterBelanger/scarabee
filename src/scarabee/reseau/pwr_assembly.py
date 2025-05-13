@@ -1,6 +1,7 @@
 from .fuel_pin import FuelPin
 from .guide_tube import GuideTube
 from .critical_leakage import CriticalLeakage
+from ._ensleeve import _ensleeve_quarter, _ensleeve_half, _ensleeve_full
 from .._scarabee import (
     borated_water,
     Material,
@@ -91,6 +92,8 @@ class PWRAssembly:
         The spacing between fuel pins.
     symmetry : Symmetry
         Symmetry of the fuel assembly. Default is Symmetry.Full.
+    assembly_pitch : float
+        Spacing between fuel assemblies.
     linear_power : float
         Linear power density of the full assembly in kW/cm.
     initial_heavy_metal_linear_mass : float
@@ -164,6 +167,7 @@ class PWRAssembly:
         moderator_pressure: float = 15.5,
         symmetry: Symmetry = Symmetry.Full,
         linear_power: float = 42.0,
+        assembly_pitch: Optional[float] = None,
     ):
         self._ndl = ndl
         self._chain = chain
@@ -173,10 +177,8 @@ class PWRAssembly:
             raise ValueError("Shape must have 2 entries.")
         if shape[0] <= 0 or shape[1] <= 0:
             raise ValueError("Shape entries must be > 0.")
-        if shape[0] != shape[1] and self.symmetry != Symmetry.Full:
-            raise ValueError(
-                "Can only use full symmetry with rectangular fuel assembly."
-            )
+        if shape[0] != shape[1]:
+            raise ValueError("Fuel assemblies must be square.")
         self._shape = shape
 
         # Compute the number of expected cells along each dimension [y][x]
@@ -199,6 +201,24 @@ class PWRAssembly:
         if pitch <= 0.5:
             raise ValueError("Pitch must be > 0.5.")
         self._pitch = pitch
+
+        # Compute assembly pitch
+        self._assembly_pitch = self.shape[0] * self.pitch
+        if assembly_pitch is not None:
+            try:
+                assembly_pitch = float(assembly_pitch)
+            except:
+                raise TypeError(
+                    "The assembly_pitch argument must be convertible to a float."
+                )
+
+            if assembly_pitch <= 0.0:
+                raise RuntimeError("Assembly pitch must be > 0.")
+            elif assembly_pitch <= self._assembly_pitch:
+                raise RuntimeError(
+                    "Provided assembly pitch is smaller than that indicated by the pitch and shape."
+                )
+            self._assembly_pitch = assembly_pitch
 
         if boron_ppm < 0.0:
             raise ValueError("Boron concentration must be >= 0.")
@@ -319,6 +339,10 @@ class PWRAssembly:
     @property
     def symmetry(self):
         return self._symmetry
+
+    @property
+    def assembly_pitch(self):
+        return self._assembly_pitch
 
     @property
     def linear_power(self):
@@ -829,6 +853,24 @@ class PWRAssembly:
         self._full_dancoff_geom = Cartesian2D(dx, dy)
         self._full_dancoff_geom.set_tiles(self._full_dancoff_cells)
 
+        # Add gap if needed
+        gap_width = 0.5 * (self.assembly_pitch - self.shape[0] * self.pitch)
+        if gap_width > 0.0:
+            pins_geom = self._full_dancoff_geom
+
+            if self.symmetry == Symmetry.Quarter:
+                self._full_dancoff_geom, _ = _ensleeve_quarter(
+                    pins_geom, self.pitch, gap_width, self._moderator_dancoff_xs
+                )
+            elif self.symmetry == Symmetry.Half:
+                self._full_dancoff_geom, _ = _ensleeve_half(
+                    pins_geom, self.pitch, gap_width, self._moderator_dancoff_xs
+                )
+            else:
+                self._full_dancoff_geom, _ = _ensleeve_full(
+                    pins_geom, self.pitch, gap_width, self._moderator_dancoff_xs
+                )
+
         # Construct the MOC
         self._full_dancoff_moc = MOCDriver(self._full_dancoff_geom)
         self._full_dancoff_moc.sim_mode = SimulationMode.FixedSource
@@ -1067,6 +1109,24 @@ class PWRAssembly:
             dx[0] *= 0.5
         self._asmbly_geom = Cartesian2D(dx, dy)
         self._asmbly_geom.set_tiles(self._asmbly_cells)
+
+        # Add gap if needed
+        gap_width = 0.5 * (self.assembly_pitch - self.shape[0] * self.pitch)
+        if gap_width > 0.0:
+            pins_geom = self._asmbly_geom
+
+            if self.symmetry == Symmetry.Quarter:
+                self._asmbly_geom, _ = _ensleeve_quarter(
+                    pins_geom, self.pitch, gap_width, self._moderator_xs
+                )
+            elif self.symmetry == Symmetry.Half:
+                self._asmbly_geom, _ = _ensleeve_half(
+                    pins_geom, self.pitch, gap_width, self._moderator_xs
+                )
+            else:
+                self._asmbly_geom, _ = _ensleeve_full(
+                    pins_geom, self.pitch, gap_width, self._moderator_xs
+                )
 
         # Construct the MOC
         self._asmbly_moc = MOCDriver(self._asmbly_geom)
