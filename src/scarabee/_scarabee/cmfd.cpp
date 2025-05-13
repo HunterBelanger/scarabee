@@ -665,166 +665,93 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   return {D_surf, D_nl};
 }
 
-void CMFD::create_loss_matrix(const MOCDriver& moc) {
-  // have to implement different boundary conditions
-  // Reflective is simple
+void CMFD::create_loss_matrix(const MOCDriver& moc){
   std::size_t tot_cells = nx_ * ny_;
+  //Resize M_ sparse matrix
   M_.resize(ng_ * tot_cells, ng_ * tot_cells);
-  std::vector<Eigen::Triplet<double>> global_triplets;
+  // Each row should have ~5 entries on average
+  M_.reserve(Eigen::VectorXi::Constant(ng_ * tot_cells,5));
 
-  // each equation is independent so it can be parallized, might be better to do
-  // so over cells rather than groups
-#pragma omp parallel for
+  //Loop over all cells and groups, cell index changes fastest
   for (std::size_t g = 0; g < ng_; ++g) {
-    std::vector<Eigen::Triplet<double>> groupwise_vals;
-    double Dxp;
-    double Dyp;
-    double Dxn;
-    double Dyn;
-    double Dnl_xp;
-    double Dnl_yp;
-    double Dnl_xn;
-    double Dnl_yn;
-
-    for (std::size_t l = 0; l < nx_ * ny_; ++l) {
+    for (std::size_t l = 0; l < nx_ * ny_ ; l++){
       auto [i, j] = indx_to_tile(l);
-      std::size_t row_indx = g * tot_cells + l;
-
-      double loss_xp;
-      double loss_xn;
-      double loss_yp;
-      double loss_yn;
-
-      // calculate surface diffusion coefficients
-      std::tie(Dxp, Dnl_xp) =
-          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XP, moc);
-      std::tie(Dyp, Dnl_yp) =
-          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YP, moc);
-      std::tie(Dxn, Dnl_xn) =
-          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XN, moc);
-      std::tie(Dyn, Dnl_yn) =
-          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YN, moc);
 
       const double dx = dx_[i];
       const double dy = dy_[j];
 
+      //Get surface diffusion coefficients for Cell i,j 
+      const auto [Dxp, Dnl_xp] =
+          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XP, moc);
+      const auto [Dyp, Dnl_yp] =
+          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YP, moc);
+      const auto [Dxn, Dnl_xn] =
+          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XN, moc);
+      const auto [Dyn, Dnl_yn] =
+          calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YN, moc);
+      
+      if (Dnl_xp > Dxp || Dnl_xn > Dxn || Dnl_yp > Dyp || Dnl_yn > Dyn) {
+        auto mssg = "At least one transport corrected diffusion coefficient is greater than its non-corrected counterpart";
+        spdlog::error(mssg);
+      }
+        
       double Er_ij = xs_(i, j)->Er(g);
 
-      double loss_ij = dy * (Dxn + Dnl_xn + Dxp - Dnl_xp) +
-                       dx * (Dyn + Dnl_yn + Dyp - Dnl_yp) + dx * dy * Er_ij;
-      groupwise_vals.emplace_back(row_indx, row_indx, loss_ij);
-
-      // set x current diff for current cell
-      // X pos boundary
-      if (i + 1 == nx_) {
-        if (moc.x_max_bc() == BoundaryCondition::Reflective) {
-          loss_xn = dy * (-Dxn + Dnl_xn);
-          groupwise_vals.emplace_back(
-              row_indx, g * tot_cells + tile_to_indx(i - 1, j), loss_xn);
-          loss_xp = dy * (Dxp + Dnl_xp);
-          groupwise_vals.emplace_back(
-              row_indx, g * tot_cells + tile_to_indx(i, j), loss_xp);
-        }
-        // X negative boundary
-      } else if (i == 0) {
-        if (moc.x_min_bc() == BoundaryCondition::Reflective) {
-          loss_xn = dy * (-Dxn + Dnl_xn);
-          groupwise_vals.emplace_back(
-              row_indx, g * tot_cells + tile_to_indx(i, j), loss_xn);
-          loss_xp = dy * (Dxp + Dnl_xp);
-          groupwise_vals.emplace_back(
-              row_indx, g * tot_cells + tile_to_indx(i + 1, j), loss_xp);
-        }
-      } else {
-        loss_xn = dy * (-Dxn + Dnl_xn);
-        groupwise_vals.emplace_back(
-            row_indx, g * tot_cells + tile_to_indx(i - 1, j), loss_xn);
-        loss_xp = dy * (Dxp + Dnl_xp);
-        groupwise_vals.emplace_back(
-            row_indx, g * tot_cells + tile_to_indx(i + 1, j), loss_xp);
+      M_.coeffRef( g * tot_cells + l, g * tot_cells + l) = dy * (Dxn + Dnl_xn + Dxp - Dnl_xp) +
+                      dx * (Dyn + Dnl_yn + Dyp - Dnl_yp) + dx * dy * Er_ij;
+      
+      //Streaming to adjacent X cells 
+      //Mistake is for a single cell, there is no i+1 cell
+      if (i==0 && nx_ != 1){
+        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i+1,j)) += dy * (Dnl_xp - Dxp);
+      } else if (i == nx_ - 1 && nx_ != 1){
+        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i-1,j)) += dy * (Dnl_xn - Dxn);
+      } else if (nx_ != 1) {
+        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i+1,j)) += dy * (Dnl_xp - Dxp);
+        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i-1,j)) += dy * (Dnl_xn - Dxn);
       }
-
-      // set y current diff for current cell
-      if (j + 1 == ny_) {
-        if (moc.y_max_bc() == BoundaryCondition::Reflective) {
-          loss_yn = dx * (-Dyn + Dnl_yn);
-          groupwise_vals.emplace_back(
-              row_indx, g * tot_cells + tile_to_indx(i, j - 1), loss_yn);
-          loss_yp = dx * (Dyp + Dnl_yp);
-          groupwise_vals.emplace_back(
-              row_indx, g * tot_cells + tile_to_indx(i, j), loss_yp);
-        }
-      } else if (j == 0) {
-        if (moc.y_min_bc() == BoundaryCondition::Reflective) {
-          loss_yn = dx * (-Dyn + Dnl_yn);
-          groupwise_vals.emplace_back(
-              row_indx, g * tot_cells + tile_to_indx(i, j), loss_yn);
-          loss_yp = dx * (Dyp + Dnl_yp);
-          groupwise_vals.emplace_back(
-              row_indx, g * tot_cells + tile_to_indx(i, j + 1), loss_yp);
-        }
-      } else {
-        loss_yn = dx * (-Dyn + Dnl_yn);
-        groupwise_vals.emplace_back(
-            row_indx, g * tot_cells + tile_to_indx(i, j - 1), loss_yn);
-        loss_yp = dx * (Dyp + Dnl_yp);
-        groupwise_vals.emplace_back(
-            row_indx, g * tot_cells + tile_to_indx(i, j + 1), loss_yp);
+      //Streaming to adjacent Y cells
+      if (j==0 && ny_ != 1){
+        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i,j+1)) += dx * (Dnl_yp - Dyp);
+      } else if (j == ny_ - 1 && ny_ != 1){
+        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i,j-1)) += dx * (Dnl_yn - Dyn);
+      } else if (ny_ != 1) {
+        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i,j+1)) += dx * (Dnl_yp - Dyp);
+        M_.coeffRef(g * tot_cells + l,g * tot_cells + tile_to_indx(i,j-1)) += dx * (Dnl_yn - Dyn);
       }
 
       for (std::size_t gg = 0; gg < ng_; ++gg) {
         // subtract scattering source Es_(g_in, g_out)
         double Es = xs_(i, j)->Es(gg, g);
         if (gg != g) {
-          groupwise_vals.emplace_back(row_indx, gg * tot_cells + l,
-                                      -dx * dy * Es);
+          M_.coeffRef(g * tot_cells + l, gg * tot_cells + l) -= dx * dy * Es;
         }
       }
     }
-#pragma omp critical
-    {
-      global_triplets.insert(global_triplets.end(), groupwise_vals.begin(),
-                             groupwise_vals.end());
-    }
   }
-  M_.setFromTriplets(global_triplets.begin(), global_triplets.end());
   M_.makeCompressed();
 }
 
 void CMFD::create_source_matrix() {
   const std::size_t tot_cells = nx_ * ny_;
   QM_.resize(ng_ * tot_cells, ng_ * tot_cells);
-  std::vector<Eigen::Triplet<double>> global_triplets;
+  //Should be ng entries per row?
+  QM_.reserve(Eigen::VectorXi::Constant(ng_ * tot_cells,ng_));
 
-  // not entirely sure this order can be used, but the source matrix needs to be
-  // ordered the same as the loss matrix It makes sense from first glance
-  // because if we are in group g for cell l, we still want to sum over g' for
-  // that group g
-#pragma omp parallel for
+  //Loop over all cells and groups, cell index changes fastest
   for (std::size_t g = 0; g < ng_; ++g) {
-    std::vector<Eigen::Triplet<double>> groupwise_vals;
-
     for (std::size_t l = 0; l < nx_ * ny_; ++l) {
       auto [i, j] = indx_to_tile(l);
-      std::size_t row_indx = g * tot_cells + l;
       const double dx = dx_[i];
       const double dy = dy_[j];
       double Chi = xs_(i, j)->chi(g);
+      //Loop over all groups again for fission source
       for (std::size_t gg = 0; gg < ng_; ++gg) {
-        // Fission source
         double vEf = xs_(i, j)->vEf(gg);
-        groupwise_vals.emplace_back(row_indx, gg * tot_cells + l,
-                                    dx * dy * Chi * vEf);
+        QM_.coeffRef(g * tot_cells + l,  gg * tot_cells + l) = dx * dy * Chi * vEf;
       }
     }
-#pragma omp critical
-    {
-      global_triplets.insert(global_triplets.end(), groupwise_vals.begin(),
-                             groupwise_vals.end());
-    }
   }
-
-  QM_.setFromTriplets(global_triplets.begin(), global_triplets.end());
   QM_.makeCompressed();
 }
 
@@ -953,6 +880,9 @@ void CMFD::solve(MOCDriver& moc, double keff) {
       }
     }
   }
+
+  double max_cur = xt::amax(surface_currents_)();
+  spdlog::info("Maximum current for solve {:.10f}",max_cur);
 
   /**
   for (std::size_t i = 0; i < nx_; i++) {
