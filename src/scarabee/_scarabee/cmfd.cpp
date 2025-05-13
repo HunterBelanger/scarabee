@@ -141,7 +141,7 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   // Allocate the flux, Et, and D_transp_corr arrays
   flux_ = xt::zeros<double>({ng_, nx_, ny_});
   Et_ = xt::zeros<double>({ng_, nx_, ny_});
-  D_transp_corr_ = xt::zeros<double>({ng_, nx_, ny_});
+  D_transp_corr_ = xt::zeros<double>({ng_, nx_surfs_ + ny_surfs_});
 }
 
 std::optional<std::array<std::size_t, 2>> CMFD::get_tile(
@@ -518,6 +518,15 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j,
   // group {:d} has a leakage ratio of {:.5E}.", i, j, g, req_leak/leak_rate);
 }
 
+void CMFD::set_damping(double wd){
+  if (wd < 0.0 || wd > 1.0){
+    auto mssg = "Damping factor for CMFD must be between 0.0 and 1.0";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  damping_ = wd;
+}
+
 std::variant<std::array<std::size_t, 2>, BoundaryCondition>
 CMFD::find_next_cell_or_bc(std::size_t i, std::size_t j, CMFD::TileSurf surf,
                            const MOCDriver& moc) const {
@@ -682,15 +691,32 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
       const double invs_dx = 1. / dx;
       const double invs_dy = 1. / dy;
 
+      const auto xpsurf = get_x_pos_surf(i, j);
+      const auto xnsurf = get_x_neg_surf(i, j);
+      const auto ypsurf = get_y_pos_surf(i, j);
+      const auto ynsurf = get_y_neg_surf(i, j);
+
       // Get surface diffusion coefficients for Cell i,j
-      const auto [Dxp, Dnl_xp] =
+      auto [Dxp, Dnl_xp] =
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XP, moc);
-      const auto [Dyp, Dnl_yp] =
+      auto [Dyp, Dnl_yp] =
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YP, moc);
-      const auto [Dxn, Dnl_xn] =
+      auto [Dxn, Dnl_xn] =
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XN, moc);
-      const auto [Dyn, Dnl_yn] =
+      auto [Dyn, Dnl_yn] =
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YN, moc);
+
+      //Calculate from n-1 iteration, 0.0 on iteration 1
+      Dnl_xp = (1-damping_)*D_transp_corr_(g, xpsurf) + damping_ * Dnl_xp;
+      Dnl_xn = (1-damping_)*D_transp_corr_(g, xnsurf) + damping_ * Dnl_xn;
+      Dnl_yp = (1-damping_)*D_transp_corr_(g, ypsurf) + damping_ * Dnl_yp;
+      Dnl_yn = (1-damping_)*D_transp_corr_(g, ynsurf) + damping_ * Dnl_yn;
+
+      //Store the current CMFD iteration's diffusion coefficients
+      D_transp_corr_(g, xpsurf) = Dnl_xp;
+      D_transp_corr_(g, xnsurf) = Dnl_xn;
+      D_transp_corr_(g, ypsurf) = Dnl_yp;
+      D_transp_corr_(g, ynsurf) = Dnl_yn;
 
       if (Dnl_xp > Dxp || Dnl_xn > Dxn || Dnl_yp > Dyp || Dnl_yn > Dyn) {
         auto mssg =

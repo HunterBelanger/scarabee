@@ -95,5 +95,15 @@ void init_CMFD(py::module& m) {
       py::overload_cast<const std::size_t, const std::size_t>(
         &CMFD::current),
       "TODO: Fill in docstring",
-      py::arg("G"),py::arg("surface"));
+      py::arg("G"),py::arg("surface"))
+  .def("set_damping",&CMFD::set_damping,
+      "Sets the CMFD damping factor\n\n"
+      "Parameters\n"
+      "----------\n"
+      "wd: float\n"
+      "      value of the damping factor to set"
+      "Returns\n"
+      "-------\n"
+      "None",
+      py::arg("wd"));
 }

@@ -94,6 +94,8 @@ class CMFD {
 
   void solve(MOCDriver& moc, double keff);
 
+  void set_damping(double wd);
+
  private:
   std::vector<double> dx_, dy_;
   std::vector<Surface> x_bounds_;
@@ -105,6 +107,7 @@ class CMFD {
 
   double keff_tol_ = 1E-5;
   double flux_tol_ = 1E-5;
+  double damping_ = 0.7;
 
   // List of flat source region indices for each CMFD cell
   std::vector<std::set<std::size_t>> temp_fsrs_;
@@ -119,8 +122,8 @@ class CMFD {
 
   xt::xtensor<std::shared_ptr<DiffusionCrossSection>, 2> xs_;
   xt::xtensor<double, 3> Et_;             // g, i, j
-  xt::xtensor<double, 3> D_transp_corr_;  // g, i, j
   xt::xtensor<double, 3> flux_;           // g, x, y
+  xt::xtensor<double, 2> D_transp_corr_;  // g, surf
 
   Eigen::VectorXd volumes_;
 
@@ -139,6 +142,7 @@ class CMFD {
   void create_loss_matrix(const MOCDriver& moc);
   void create_source_matrix();
   void power_iteration(double keff);
+  void update_fsrs();
   void normalize_currents();
   void compute_homogenized_xs_and_flux(const MOCDriver& moc);
   void check_neutron_balance(const std::size_t i, const std::size_t j,
