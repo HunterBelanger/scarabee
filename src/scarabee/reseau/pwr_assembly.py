@@ -83,6 +83,9 @@ class PWRAssembly:
     linear_power : float
         Linear power density of the full assembly in kW/cm. This value should
         not be reduced due to symmetry. Default is 42.
+    assembly_pitch : optional float
+        Spacing between fuel assemblies. If None, assembly pitch is calculated
+        from the shape and pitch. Default value is None.
 
     Attributes
     ----------

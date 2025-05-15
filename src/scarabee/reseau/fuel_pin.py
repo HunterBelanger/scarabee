@@ -1054,6 +1054,11 @@ class FuelPin:
         """
         Computes the average flux spectrum for each fuel ring from the MOC
         simulation. Each ring's flux spectrum is volume averaged.
+
+        Parameters
+        ----------
+        moc : MOCDriver
+            MOC simulation for the full calculations.
         """
         for r in range(self.num_fuel_rings):
             self._fuel_ring_flux_spectra[r] = moc.homogenize_flux_spectrum(
@@ -1175,7 +1180,7 @@ class FuelPin:
             Nuclear data library.
         """
         if dt <= 0:
-            raise ValueError("Predictor time step must be > 0.")
+            raise ValueError("Corrector time step must be > 0.")
 
         # Do the prediction step for each fuel ring
         for r in range(self.num_fuel_rings):
