@@ -138,6 +138,10 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
 
   volumes_.resize(ng_ * nx_ * ny_);
 
+  // Set CMFD fluxes to 1 
+  flux_cmfd_.resize(ng_ * nx_ *ny_);
+  flux_cmfd_.setOnes();
+
   // Allocate the flux, Et, and D_transp_corr arrays
   flux_ = xt::zeros<double>({ng_, nx_, ny_});
   Et_ = xt::zeros<double>({ng_, nx_, ny_});
@@ -816,10 +820,10 @@ void CMFD::create_source_matrix() {
 void CMFD::power_iteration(double keff) {
   // Power Iteration to solve for Keff
 
-  Eigen::VectorXd flux_moc = flatten_flux();
+  // Eigen::VectorXd flux_moc = flatten_flux();
 
   // Initialize flux and source vectors
-  Eigen::VectorXd flux(ng_ * nx_ * ny_);
+  // Eigen::VectorXd flux(ng_ * nx_ * ny_);
   Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
   Eigen::VectorXd Q(ng_ * nx_ * ny_);
   Eigen::VectorXd Q_new(ng_ * nx_ * ny_);
@@ -834,9 +838,10 @@ void CMFD::power_iteration(double keff) {
     }
   }
 
-  flux = flux_moc;
-  // flux.fill(1.);
-  // flux.normalize();
+  flux_cmfd_.normalize();
+  // Store the starting flux 
+  flux_start_.resize(ng_*ny_*ny_);
+  flux_start_= flux_cmfd_;
 
   Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>
       solver;
@@ -854,7 +859,7 @@ void CMFD::power_iteration(double keff) {
     iteration++;
 
     // Compute source vector
-    Q = (1. / keff) * QM_ * flux;
+    Q = (1. / keff) * QM_ * flux_cmfd_;
 
     new_flux = solver.solve(Q);
     if (solver.info() != Eigen::Success) {
@@ -864,7 +869,7 @@ void CMFD::power_iteration(double keff) {
 
     // Estimate keff
     double prev_keff = keff;
-    keff = prev_keff * (VvEf.dot(new_flux) / VvEf.dot(flux));
+    keff = prev_keff * (VvEf.dot(new_flux) / VvEf.dot(flux_cmfd_));
     keff_diff = std::abs(keff - prev_keff) / keff;
 
     // Normalize our new flux
@@ -873,10 +878,11 @@ void CMFD::power_iteration(double keff) {
     // Find the max flux error
     flux_diff = 0.;
     for (std::size_t i = 0; i < ng_ * nx_ * ny_; i++) {
-      double flux_diff_i = std::abs(new_flux(i) - flux(i)) / new_flux(i);
+      double flux_diff_i = std::abs(new_flux(i) - flux_cmfd_(i)) / new_flux(i);
       if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
     }
-    flux = new_flux;
+    flux_cmfd_ = new_flux;
+    //flux.normalize();
 
     // Write information
     spdlog::info("-----------------CMFD-----------------");
@@ -906,6 +912,32 @@ Eigen::VectorXd CMFD::flatten_flux() const {
   return flx_flat;
 }
 
+void CMFD::update_fsrs(MOCDriver& moc){
+  // Update MOC FSR scalar fluxes
+  // Loop over each CMFD cell i,j -> l
+
+  for (std::size_t l = 0; l < nx_*ny_; l++){
+    std::vector<std::size_t> fsrs = fsrs_[l];
+    // Loop over each FSR in CMFD cell i,j
+    for (std::size_t f = 0; f < fsrs.size(); f++){
+      //spdlog::info("FSR {}", fsrs[f]);
+      for (std::size_t g=0; g < moc_to_cmfd_group_map_.size(); g++){
+        std::size_t G = moc_to_cmfd_group_map_[g];
+        std::size_t linear_indx = G*nx_*ny_ + l;
+        double flx_ratio = (flux_cmfd_(linear_indx)/flux_start_(linear_indx));
+        if (flx_ratio > 20.0){
+          spdlog::warn("CMFD flux ratio greater than 20, may not be stable: {:.5f}",flx_ratio);
+        }
+        double new_flx = moc.flux(fsrs[f],g)*flx_ratio;
+        //spdlog::info("Old flux {:.5f}, new flux {:.5f}",flux_start_(linear_indx),flux_cmfd_(linear_indx));
+        //spdlog::info("Old MOC flux {:.5f}",moc.flux(fsrs[f],g,0));
+        //spdlog::info("Updated MOC flux {:.5f}",new_flx);
+        moc.set_flux(fsrs[f],g,new_flx,0);
+      }
+    }
+  }
+}
+
 void CMFD::solve(MOCDriver& moc, double keff) {
   spdlog::info("Starting CMFD");
   this->normalize_currents();
@@ -913,6 +945,7 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   this->create_loss_matrix(moc);
   this->create_source_matrix();
   this->power_iteration(keff);
+  this->update_fsrs(moc);
 
   /**
   for (std::size_t i = 0; i < nx_; i++) {

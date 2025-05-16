@@ -105,8 +105,8 @@ class CMFD {
   std::size_t nx_, ny_, ng_;
   std::size_t nx_surfs_, ny_surfs_;
 
-  double keff_tol_ = 1E-5;
-  double flux_tol_ = 1E-5;
+  double keff_tol_ = 1E-7;
+  double flux_tol_ = 1E-7;
   double damping_ = 0.7;
 
   // List of flat source region indices for each CMFD cell
@@ -125,6 +125,8 @@ class CMFD {
   xt::xtensor<double, 3> flux_;           // g, x, y
   xt::xtensor<double, 2> D_transp_corr_;  // g, surf
 
+  Eigen::VectorXd flux_cmfd_;      // g*nx_*ny_
+  Eigen::VectorXd flux_start_;      // g*nx_*ny_
   Eigen::VectorXd volumes_;
 
   Eigen::SparseMatrix<double> M_;   // Loss Matrix
@@ -142,7 +144,7 @@ class CMFD {
   void create_loss_matrix(const MOCDriver& moc);
   void create_source_matrix();
   void power_iteration(double keff);
-  void update_fsrs();
+  void update_fsrs(MOCDriver& moc);
   void normalize_currents();
   void compute_homogenized_xs_and_flux(const MOCDriver& moc);
   void check_neutron_balance(const std::size_t i, const std::size_t j,

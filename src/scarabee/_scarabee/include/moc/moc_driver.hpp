@@ -82,6 +82,8 @@ class MOCDriver {
               std::size_t lj = 0) const;
   double flux(std::size_t i, std::size_t g, std::size_t lj = 0) const;
 
+  void set_flux(std::size_t i, std::size_t g, double new_flx, std::size_t lj = 0) {flux_(g,i,lj) = new_flx;}
+
   double volume(const Vector& r, const Direction& u) const;
   double volume(std::size_t i) const;
 
