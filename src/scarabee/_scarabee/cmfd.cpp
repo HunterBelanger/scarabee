@@ -915,23 +915,26 @@ Eigen::VectorXd CMFD::flatten_flux() const {
 void CMFD::update_fsrs(MOCDriver& moc){
   // Update MOC FSR scalar fluxes
   // Loop over each CMFD cell i,j -> l
+  Eigen::VectorXd flux_moc = flatten_flux();
+  flux_moc.normalize();
 
   for (std::size_t l = 0; l < nx_*ny_; l++){
-    std::vector<std::size_t> fsrs = fsrs_[l];
+    const auto& fsrs = fsrs_[l];
     // Loop over each FSR in CMFD cell i,j
     for (std::size_t f = 0; f < fsrs.size(); f++){
-      //spdlog::info("FSR {}", fsrs[f]);
+
+      //Loop over MOC groups 
       for (std::size_t g=0; g < moc_to_cmfd_group_map_.size(); g++){
+        //Get CMFD group G from MOC group g
         std::size_t G = moc_to_cmfd_group_map_[g];
+        //spdlog::info("CMFD group {} is updating MOC group {}",G,g);
         std::size_t linear_indx = G*nx_*ny_ + l;
-        double flx_ratio = (flux_cmfd_(linear_indx)/flux_start_(linear_indx));
+        double flx_ratio = (flux_cmfd_(linear_indx)/flux_moc(linear_indx));
+        spdlog::info("Flux ratio {:.5f}, FSR {}, CMFD Group {}, ", flx_ratio, fsrs[f], G);
         if (flx_ratio > 20.0){
           spdlog::warn("CMFD flux ratio greater than 20, may not be stable: {:.5f}",flx_ratio);
         }
         double new_flx = moc.flux(fsrs[f],g)*flx_ratio;
-        //spdlog::info("Old flux {:.5f}, new flux {:.5f}",flux_start_(linear_indx),flux_cmfd_(linear_indx));
-        //spdlog::info("Old MOC flux {:.5f}",moc.flux(fsrs[f],g,0));
-        //spdlog::info("Updated MOC flux {:.5f}",new_flx);
         moc.set_flux(fsrs[f],g,new_flx,0);
       }
     }
