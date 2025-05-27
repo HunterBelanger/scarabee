@@ -105,8 +105,8 @@ class CMFD {
   std::size_t nx_, ny_, ng_;
   std::size_t nx_surfs_, ny_surfs_;
 
-  double keff_tol_ = 1E-7;
-  double flux_tol_ = 1E-7;
+  double keff_tol_ = 1E-9;
+  double flux_tol_ = 1E-9;
   double damping_ = 0.7;
 
   // List of flat source region indices for each CMFD cell

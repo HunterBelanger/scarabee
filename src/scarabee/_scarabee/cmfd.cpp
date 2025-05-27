@@ -823,7 +823,7 @@ void CMFD::power_iteration(double keff) {
   // Eigen::VectorXd flux_moc = flatten_flux();
 
   // Initialize flux and source vectors
-  // Eigen::VectorXd flux(ng_ * nx_ * ny_);
+  Eigen::VectorXd flux(ng_ * nx_ * ny_);
   Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
   Eigen::VectorXd Q(ng_ * nx_ * ny_);
   Eigen::VectorXd Q_new(ng_ * nx_ * ny_);
@@ -838,10 +838,11 @@ void CMFD::power_iteration(double keff) {
     }
   }
 
-  flux_cmfd_.normalize();
+  //flux_cmfd_.normalize();
+  flux_cmfd_ = flatten_flux();
   // Store the starting flux 
-  flux_start_.resize(ng_*ny_*ny_);
-  flux_start_= flux_cmfd_;
+  //flux_start_.resize(ng_*ny_*ny_);
+  //flux_start_= flux_cmfd_;
 
   Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>
       solver;
@@ -916,7 +917,11 @@ void CMFD::update_fsrs(MOCDriver& moc){
   // Update MOC FSR scalar fluxes
   // Loop over each CMFD cell i,j -> l
   Eigen::VectorXd flux_moc = flatten_flux();
-  flux_moc.normalize();
+  //flux_moc.normalize();
+  //flux_cmfd_.normalize();
+
+  //might want to compute and store flx ratio for each cell then use it to update 
+  //fsrs and tracks - TODO improvement
 
   for (std::size_t l = 0; l < nx_*ny_; l++){
     const auto& fsrs = fsrs_[l];
@@ -939,6 +944,30 @@ void CMFD::update_fsrs(MOCDriver& moc){
       }
     }
   }
+
+  auto& moc_tracks = moc.tracks();
+
+  for (auto& tracks : moc_tracks) {
+    for (auto& track : tracks) {
+      //What is this direction?
+      const Direction& dir = track.dir();
+      const Vector& entry = track.entry_pos();
+      const Vector& exit = track.exit_pos();
+      //if this returns an empty optional it will not be happy
+      auto tile_in = get_tile(entry, dir);
+      auto tile_out = get_tile(exit, -dir);
+      std::size_t cell_in = tile_to_indx(*tile_in);
+      std::size_t cell_out = tile_to_indx(*tile_out);
+      for (std::size_t g=0; g < moc_to_cmfd_group_map_.size(); g++){
+        std::size_t G = moc_to_cmfd_group_map_[g];
+        std::size_t linear_in = G*nx_*ny_ + cell_in;
+        std::size_t linear_out = G*nx_*ny_ + cell_out;
+        xt::view(track.entry_flux(), g, xt::all()) *= (flux_cmfd_(linear_in)/flux_moc(linear_in));
+        xt::view(track.exit_flux(), g, xt::all()) *= (flux_cmfd_(linear_out)/flux_moc(linear_out));
+      }
+    }
+  }
+
 }
 
 void CMFD::solve(MOCDriver& moc, double keff) {
