@@ -838,8 +838,8 @@ void CMFD::power_iteration(double keff) {
     }
   }
 
-  //flux_cmfd_.normalize();
-  flux_cmfd_ = flatten_flux();
+  flux_cmfd_.normalize();
+  //flux_cmfd_ = flatten_flux();
   // Store the starting flux 
   //flux_start_.resize(ng_*ny_*ny_);
   //flux_start_= flux_cmfd_;
@@ -917,7 +917,7 @@ void CMFD::update_fsrs(MOCDriver& moc){
   // Update MOC FSR scalar fluxes
   // Loop over each CMFD cell i,j -> l
   Eigen::VectorXd flux_moc = flatten_flux();
-  //flux_moc.normalize();
+  flux_moc.normalize();
   //flux_cmfd_.normalize();
 
   //might want to compute and store flx ratio for each cell then use it to update 
@@ -935,7 +935,7 @@ void CMFD::update_fsrs(MOCDriver& moc){
         //spdlog::info("CMFD group {} is updating MOC group {}",G,g);
         std::size_t linear_indx = G*nx_*ny_ + l;
         double flx_ratio = (flux_cmfd_(linear_indx)/flux_moc(linear_indx));
-        spdlog::info("Flux ratio {:.5f}, FSR {}, CMFD Group {}, ", flx_ratio, fsrs[f], G);
+        //spdlog::info("Flux ratio {:.5f}, FSR {}, CMFD Group {}, ", flx_ratio, fsrs[f], G);
         if (flx_ratio > 20.0){
           spdlog::warn("CMFD flux ratio greater than 20, may not be stable: {:.5f}",flx_ratio);
         }
