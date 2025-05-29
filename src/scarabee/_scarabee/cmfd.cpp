@@ -929,7 +929,7 @@ void CMFD::update_fsrs(MOCDriver& moc){
     for (std::size_t f = 0; f < fsrs.size(); f++){
 
       //Loop over MOC groups 
-      for (std::size_t g=0; g < moc_to_cmfd_group_map_.size(); g++){
+      for (std::size_t g =0; g < moc_to_cmfd_group_map_.size(); g++){
         //Get CMFD group G from MOC group g
         std::size_t G = moc_to_cmfd_group_map_[g];
         //spdlog::info("CMFD group {} is updating MOC group {}",G,g);
@@ -945,29 +945,46 @@ void CMFD::update_fsrs(MOCDriver& moc){
     }
   }
 
+  //Keep track of which entry/exit fluxes have already been updated
+  std::unordered_set<xt::xtensor<double, 2>*> updated_fluxes;
+  
   auto& moc_tracks = moc.tracks();
+  //int count = 0;
 
   for (auto& tracks : moc_tracks) {
     for (auto& track : tracks) {
-      //What is this direction?
+      //Get track endpoints and direction
       const Direction& dir = track.dir();
       const Vector& entry = track.entry_pos();
       const Vector& exit = track.exit_pos();
       //if this returns an empty optional it will not be happy
+      //Get CMFD tiles where the track starts/ends
       auto tile_in = get_tile(entry, dir);
       auto tile_out = get_tile(exit, -dir);
       std::size_t cell_in = tile_to_indx(*tile_in);
       std::size_t cell_out = tile_to_indx(*tile_out);
-      for (std::size_t g=0; g < moc_to_cmfd_group_map_.size(); g++){
+      //Check if the current tracks exit/entry points to something that was already
+      //updated from another track
+      auto* entry_ptr = &track.entry_track_flux();
+      auto* exit_ptr  = &track.exit_track_flux();
+      if (updated_fluxes.insert(entry_ptr).second && updated_fluxes.insert(exit_ptr).second){
+        for (std::size_t g=0; g < moc_to_cmfd_group_map_.size(); g++){
         std::size_t G = moc_to_cmfd_group_map_[g];
         std::size_t linear_in = G*nx_*ny_ + cell_in;
         std::size_t linear_out = G*nx_*ny_ + cell_out;
-        xt::view(track.entry_flux(), g, xt::all()) *= (flux_cmfd_(linear_in)/flux_moc(linear_in));
-        xt::view(track.exit_flux(), g, xt::all()) *= (flux_cmfd_(linear_out)/flux_moc(linear_out));
+
+        //count += 1;
+        xt::view(*entry_ptr, g, xt::all()) *= (flux_cmfd_(linear_in)/flux_moc(linear_in));
+
+        //count += 1;
+        xt::view(*exit_ptr, g, xt::all()) *= (flux_cmfd_(linear_out)/flux_moc(linear_out));
+
+        }
       }
+      
     }
   }
-
+  //spdlog::info("# of angular flux updates: {}",count);
 }
 
 void CMFD::solve(MOCDriver& moc, double keff) {
