@@ -278,6 +278,22 @@ std::size_t CMFD::moc_to_cmfd_group(std::size_t g) const {
   return moc_to_cmfd_group_map_[g];
 }
 
+const double& CMFD::flux(const std::size_t i, const std::size_t j, const std::size_t g) const{
+  if (g > ng_){
+    auto mssg = "Group index out of range.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  } 
+  if (i >= nx_ || j >= ny_){
+    auto mssg = "Indexed cell does not exist.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  const std::size_t cell_index = tile_to_indx(i,j);
+
+  return flux_cmfd_(g*nx_*ny_ + cell_index);
+}
+
 double& CMFD::current(const std::size_t G, const std::size_t surface) {
   if (G >= surface_currents_.shape()[0]) {
     auto mssg = "Group index out of range.";

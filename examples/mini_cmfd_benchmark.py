@@ -1,6 +1,8 @@
 from scarabee import *
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 '''
 This includes a small 3x3 problem surrounded with water to create a fast benchmark for testing changes to the CMFD class
 MOC without CMFD:
@@ -67,6 +69,16 @@ c2d.set_tiles([M8,U2,M8,wc,wc,
                wc,wc,wc,wc,wc,
                wc,wc,wc,wc,wc])
 
+cmfd_groups = [[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]]
+#cmfd_groups = [[0,2],[3,6]]
+#cmfd_groups = [[0,6]]
+moc_to_cmfd_group_map = np.zeros(len(Et),dtype=np.int32)
+for i, pair in enumerate(cmfd_groups):
+    for g in range(pair[0],pair[1]+1,1):
+        moc_to_cmfd_group_map[g] = int(i)
+
+
+
 #Note: The CMFD constructor should be updated to include an error message for if dx and dy do not match the size of the problem domain,
 # right now it is an unhandled error
 moc = MOCDriver(c2d)
@@ -74,10 +86,49 @@ moc.x_min_bc = BoundaryCondition.Reflective
 moc.x_max_bc = BoundaryCondition.Reflective
 moc.y_min_bc = BoundaryCondition.Reflective
 moc.y_max_bc = BoundaryCondition.Reflective
-moc.cmfd = CMFD(dx, dy, [[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]])
+moc.cmfd = CMFD(dx, dy, cmfd_groups)
 #moc.cmfd = CMFD(dx, dy , [[0,6]])
 #moc.cmfd.set_damping(0.7)
 moc.generate_tracks(64, 0.05, YamamotoTabuchi6())
-moc.keff_tolerance = 1.e-5
-moc.flux_tolerance = 1.e-5
+moc.keff_tolerance = 1.e-4
+moc.flux_tolerance = 1.e-4
 moc.solve()
+
+cmfd_flux = np.zeros((len(dx), len(dy), len(cmfd_groups)))
+
+#Get MOC flux
+flux_moc, xm, ym = moc.rasterize_flux(100, 100)
+
+#Get CMFD flux in each cell
+for i in range(len(dx)):
+    for j in range(len(dy)):
+        for g in range(len(cmfd_groups)):
+            cmfd_flux[i, j, g] = moc.cmfd.flux(i, j, g)
+
+for g in range(moc_to_cmfd_group_map.size):
+    flux_moc_g = flux_moc[g, :, :]
+    G = moc_to_cmfd_group_map[g]
+    flux_cmfd_g = cmfd_flux[:, :, G].T 
+
+    #Normalize
+    flux_moc_norm = flux_moc_g / np.max(flux_moc_g)
+    flux_cmfd_norm = flux_cmfd_g / np.max(flux_cmfd_g)
+
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(14, 6))
+
+    #Plot MOC flux
+    im0 = axs[0].pcolormesh(xm, ym, flux_moc_norm, cmap='jet')
+    axs[0].set_title(f"MOC Flux (Group {g+1})")
+    cbar0 = fig.colorbar(ScalarMappable(cmap='jet'), ax=axs[0])
+    cbar0.set_label("MOC Flux (normalized)")
+
+    #Plot CMFD flux
+    im1 = axs[1].imshow(flux_cmfd_norm, origin='lower', cmap='jet')
+    axs[1].set_title(f"CMFD Flux (Group {G+1})")
+    axs[1].set_xlabel('i')
+    axs[1].set_ylabel('j')
+    cbar1 = fig.colorbar(ScalarMappable(cmap='jet'), ax=axs[1])
+    cbar1.set_label("CMFD Flux (normalized)")
+
+    plt.savefig(f"MOC_CMFD_compare_g{g}.png")
+    plt.close()

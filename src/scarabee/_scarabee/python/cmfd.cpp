@@ -105,5 +105,20 @@ void init_CMFD(py::module& m) {
       "Returns\n"
       "-------\n"
       "None",
-      py::arg("wd"));
+      py::arg("wd"))
+   .def("flux",&CMFD::flux,
+      "Gets the CMFD flux at cell i,j in group g \n\n"
+      "Parameters\n"
+      "----------\n"
+      "i: int\n"
+      "      cell x index\n"
+      "j: int\n"
+      "      cell y index\n"
+      "g: int\n"
+      "      cmfd group\n"
+      "Returns\n"
+      "-------\n"
+      "flux: double\n"
+      "      CMFD scalar flux at cell i,j in group g\n",
+      py::arg("i"),py::arg("j"),py::arg("g"));
 }

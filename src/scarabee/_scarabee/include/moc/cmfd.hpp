@@ -96,6 +96,8 @@ class CMFD {
 
   void set_damping(double wd);
 
+  const double& flux(const std::size_t i, const std::size_t j, const std::size_t g) const;
+
  private:
   std::vector<double> dx_, dy_;
   std::vector<Surface> x_bounds_;
