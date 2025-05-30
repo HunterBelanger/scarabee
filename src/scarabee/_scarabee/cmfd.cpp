@@ -819,12 +819,12 @@ void CMFD::create_source_matrix() {
   QM_.reserve(Eigen::VectorXi::Constant(ng_ * tot_cells, ng_));
 
   // Loop over all cells and groups, cell index changes fastest
-  for (std::size_t g = 0; g < ng_; ++g) {
-    for (std::size_t l = 0; l < nx_ * ny_; ++l) {
+  for (std::size_t g = 0; g < ng_; g++) {
+    for (std::size_t l = 0; l < nx_ * ny_; l++) {
       auto [i, j] = indx_to_tile(l);
       const double chi_g = xs_(i, j)->chi(g);
       // Loop over all groups again for fission source
-      for (std::size_t gg = 0; gg < ng_; ++gg) {
+      for (std::size_t gg = 0; gg < ng_; gg++) {
         const double vEf_gg = xs_(i, j)->vEf(gg);
         QM_.coeffRef(g * tot_cells + l, gg * tot_cells + l) = chi_g * vEf_gg;
       }
@@ -839,10 +839,10 @@ void CMFD::power_iteration(double keff) {
   // Eigen::VectorXd flux_moc = flatten_flux();
 
   // Initialize flux and source vectors
-  Eigen::VectorXd flux(ng_ * nx_ * ny_);
+  //Eigen::VectorXd flux(ng_ * nx_ * ny_);
   Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
   Eigen::VectorXd Q(ng_ * nx_ * ny_);
-  Eigen::VectorXd Q_new(ng_ * nx_ * ny_);
+  //Eigen::VectorXd Q_new(ng_ * nx_ * ny_);
 
   // Initialize a vector for computing keff faster
   Eigen::VectorXd VvEf(ng_ * nx_ * ny_);
@@ -854,11 +854,12 @@ void CMFD::power_iteration(double keff) {
     }
   }
 
-  flux_cmfd_.normalize();
+  //flux_cmfd_.normalize();
   //flux_cmfd_ = flatten_flux();
   // Store the starting flux 
   //flux_start_.resize(ng_*ny_*ny_);
   //flux_start_= flux_cmfd_;
+  flux_cmfd_ = flatten_flux();
 
   Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>
       solver;
@@ -934,7 +935,7 @@ void CMFD::update_fsrs(MOCDriver& moc){
   // Loop over each CMFD cell i,j -> l
   Eigen::VectorXd flux_moc = flatten_flux();
   flux_moc.normalize();
-  //flux_cmfd_.normalize();
+  flux_cmfd_.normalize();
 
   //might want to compute and store flx ratio for each cell then use it to update 
   //fsrs and tracks - TODO improvement
@@ -945,17 +946,17 @@ void CMFD::update_fsrs(MOCDriver& moc){
     for (std::size_t f = 0; f < fsrs.size(); f++){
 
       //Loop over MOC groups 
-      for (std::size_t g =0; g < moc_to_cmfd_group_map_.size(); g++){
+      for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++){
         //Get CMFD group G from MOC group g
-        std::size_t G = moc_to_cmfd_group_map_[g];
+        const std::size_t G = moc_to_cmfd_group_map_[g];
         //spdlog::info("CMFD group {} is updating MOC group {}",G,g);
-        std::size_t linear_indx = G*nx_*ny_ + l;
-        double flx_ratio = (flux_cmfd_(linear_indx)/flux_moc(linear_indx));
+        const std::size_t linear_indx = G*nx_*ny_ + l;
+        const double flx_ratio = (flux_cmfd_(linear_indx)/flux_moc(linear_indx));
         //spdlog::info("Flux ratio {:.5f}, FSR {}, CMFD Group {}, ", flx_ratio, fsrs[f], G);
         if (flx_ratio > 20.0){
           spdlog::warn("CMFD flux ratio greater than 20, may not be stable: {:.5f}",flx_ratio);
         }
-        double new_flx = moc.flux(fsrs[f],g)*flx_ratio;
+        const double new_flx = moc.flux(fsrs[f],g)*flx_ratio;
         moc.set_flux(fsrs[f],g,new_flx,0);
       }
     }

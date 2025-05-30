@@ -69,15 +69,16 @@ c2d.set_tiles([M8,U2,M8,wc,wc,
                wc,wc,wc,wc,wc,
                wc,wc,wc,wc,wc])
 
-cmfd_groups = [[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]]
-#cmfd_groups = [[0,2],[3,6]]
-#cmfd_groups = [[0,6]]
+#cmfd_groups = [[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]]
+#cmfd_groups = [[0,0],[1,6]]
+cmfd_groups = [[0,6]]
 moc_to_cmfd_group_map = np.zeros(len(Et),dtype=np.int32)
 for i, pair in enumerate(cmfd_groups):
     for g in range(pair[0],pair[1]+1,1):
         moc_to_cmfd_group_map[g] = int(i)
 
-
+dx_cmfd = [1.26]*5
+dy_cmfd = [1.26]*5
 
 #Note: The CMFD constructor should be updated to include an error message for if dx and dy do not match the size of the problem domain,
 # right now it is an unhandled error
@@ -86,12 +87,12 @@ moc.x_min_bc = BoundaryCondition.Reflective
 moc.x_max_bc = BoundaryCondition.Reflective
 moc.y_min_bc = BoundaryCondition.Reflective
 moc.y_max_bc = BoundaryCondition.Reflective
-moc.cmfd = CMFD(dx, dy, cmfd_groups)
+moc.cmfd = CMFD(dx_cmfd, dy_cmfd, cmfd_groups)
 #moc.cmfd = CMFD(dx, dy , [[0,6]])
 #moc.cmfd.set_damping(0.7)
 moc.generate_tracks(64, 0.05, YamamotoTabuchi6())
-moc.keff_tolerance = 1.e-4
-moc.flux_tolerance = 1.e-4
+moc.keff_tolerance = 1.e-5
+moc.flux_tolerance = 1.e-5
 moc.solve()
 
 cmfd_flux = np.zeros((len(dx), len(dy), len(cmfd_groups)))
