@@ -136,7 +136,7 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   xs_.resize({nx_, ny_});
   xs_.fill(nullptr);
 
-  volumes_.resize(ng_ * nx_ * ny_);
+  volumes_.resize(nx_ * ny_);
 
   // Set CMFD fluxes to 1 
   flux_cmfd_.resize(ng_ * nx_ *ny_);
@@ -477,11 +477,8 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       }
       xt::view(Et_, xt::all(), i, j) /= xt::view(flux_, xt::all(), i, j);
 
-      // assign collapsed diffusion XS, g is CMFD group
-      for (std::size_t g = 0; g < ng_; g++) {
-        std::size_t linear_idx = g * nx_ * ny_ + indx;
-        volumes_[linear_idx] = cell_volume;
-      }
+      //Store CMFD cell volume
+      volumes_[indx] = cell_volume;
     }
   }
 }
@@ -815,8 +812,7 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
 void CMFD::create_source_matrix() {
   const std::size_t tot_cells = nx_ * ny_;
   QM_.resize(ng_ * tot_cells, ng_ * tot_cells);
-  // Should be ng entries per row?
-  QM_.reserve(Eigen::VectorXi::Constant(ng_ * tot_cells, ng_));
+  QM_.reserve(Eigen::VectorX<std::size_t>::Constant(ng_ * tot_cells, ng_));
 
   // Loop over all cells and groups, cell index changes fastest
   for (std::size_t g = 0; g < ng_; g++) {
@@ -850,7 +846,7 @@ void CMFD::power_iteration(double keff) {
     auto [i, j] = indx_to_tile(l);
     for (std::size_t g = 0; g < ng_; g++) {
       double vEf = xs_(i, j)->vEf(g);
-      VvEf(l + g * ny_ * nx_) = volumes_[l + g * nx_ * ny_] * vEf;
+      VvEf(l + g * ny_ * nx_) = volumes_[l] * vEf;
     }
   }
 
@@ -910,6 +906,7 @@ void CMFD::power_iteration(double keff) {
     spdlog::info("     iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
   }
+  keff_ = keff;
 }
 
 Eigen::VectorXd CMFD::flatten_flux() const {
@@ -962,46 +959,29 @@ void CMFD::update_fsrs(MOCDriver& moc){
     }
   }
 
-  //Keep track of which entry/exit fluxes have already been updated
-  std::unordered_set<xt::xtensor<double, 2>*> updated_fluxes;
-  
   auto& moc_tracks = moc.tracks();
-  //int count = 0;
 
   for (auto& tracks : moc_tracks) {
     for (auto& track : tracks) {
-      //Get track endpoints and direction
       const Direction& dir = track.dir();
       const Vector& entry = track.entry_pos();
       const Vector& exit = track.exit_pos();
       //if this returns an empty optional it will not be happy
-      //Get CMFD tiles where the track starts/ends
       auto tile_in = get_tile(entry, dir);
       auto tile_out = get_tile(exit, -dir);
       std::size_t cell_in = tile_to_indx(*tile_in);
       std::size_t cell_out = tile_to_indx(*tile_out);
-      //Check if the current tracks exit/entry points to something that was already
-      //updated from another track
-      auto* entry_ptr = &track.entry_track_flux();
-      auto* exit_ptr  = &track.exit_track_flux();
-      if (updated_fluxes.insert(entry_ptr).second && updated_fluxes.insert(exit_ptr).second){
-        for (std::size_t g=0; g < moc_to_cmfd_group_map_.size(); g++){
-        std::size_t G = moc_to_cmfd_group_map_[g];
-        std::size_t linear_in = G*nx_*ny_ + cell_in;
-        std::size_t linear_out = G*nx_*ny_ + cell_out;
-
-        //count += 1;
-        xt::view(*entry_ptr, g, xt::all()) *= (flux_cmfd_(linear_in)/flux_moc(linear_in));
-
-        //count += 1;
-        xt::view(*exit_ptr, g, xt::all()) *= (flux_cmfd_(linear_out)/flux_moc(linear_out));
-
-        }
+      for (std::size_t g=0; g < moc_to_cmfd_group_map_.size(); g++){
+        const std::size_t G = moc_to_cmfd_group_map_[g];
+        const std::size_t linear_in = G*nx_*ny_ + cell_in;
+        const std::size_t linear_out = G*nx_*ny_ + cell_out;
+        //spdlog::info("Before: {}", track.entry_flux()(0,0));
+        xt::view(track.entry_flux(), g, xt::all()) *= (flux_cmfd_(linear_in)/flux_moc(linear_in));
+        //spdlog::info("After: {}", track.entry_flux()(0,0));
+        xt::view(track.exit_flux(), g, xt::all()) *= (flux_cmfd_(linear_out)/flux_moc(linear_out));
       }
-      
     }
   }
-  //spdlog::info("# of angular flux updates: {}",count);
 }
 
 void CMFD::solve(MOCDriver& moc, double keff) {
@@ -1010,7 +990,7 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   this->compute_homogenized_xs_and_flux(moc);
   this->create_loss_matrix(moc);
   this->create_source_matrix();
-  this->power_iteration(keff);
+  this->power_iteration(keff_);
   this->update_fsrs(moc);
 
   /**

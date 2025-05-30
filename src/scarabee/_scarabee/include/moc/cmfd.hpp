@@ -110,6 +110,7 @@ class CMFD {
   double keff_tol_ = 1E-9;
   double flux_tol_ = 1E-9;
   double damping_ = 0.7;
+  double keff_ = 1.0;
 
   // List of flat source region indices for each CMFD cell
   std::vector<std::set<std::size_t>> temp_fsrs_;
