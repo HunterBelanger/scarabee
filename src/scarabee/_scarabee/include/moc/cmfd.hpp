@@ -95,6 +95,11 @@ class CMFD {
   void solve(MOCDriver& moc, double keff);
 
   void set_damping(double wd);
+  double keff_tolerance() const { return keff_tol_; }
+  void set_keff_tolerance(double ktol);
+  double flux_tolerance() const { return flux_tol_; }
+  void set_flux_tolerance(double ftol);
+
 
   const double& flux(const std::size_t i, const std::size_t j, const std::size_t g) const;
 
@@ -107,8 +112,8 @@ class CMFD {
   std::size_t nx_, ny_, ng_;
   std::size_t nx_surfs_, ny_surfs_;
 
-  double keff_tol_ = 1E-9;
-  double flux_tol_ = 1E-9;
+  double keff_tol_ = 1E-5;
+  double flux_tol_ = 1E-5;
   double damping_ = 0.7;
   double keff_ = 1.0;
 

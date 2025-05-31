@@ -42,6 +42,16 @@ void init_CMFD(py::module& m) {
       "groups : list of 2D tuples of ints.\n"
       "         The scheme for condensing energy groups.\n",
       py::arg("dx"), py::arg("dy"), py::arg("groups"))
+    
+  .def_property(
+          "keff_tolerance", &CMFD::keff_tolerance,
+          &CMFD::set_keff_tolerance,
+          "Maximum relative absolute difference in keff for convergence")
+
+  .def_property(
+          "flux_tolerance", &CMFD::flux_tolerance,
+          &CMFD::set_flux_tolerance,
+          "Maximum relative absolute difference in flux for convergence")
 
   .def("get_surface", &CMFD::get_surface,
       "Assigns the CMFD surface info to a segement end if it exists\n\n"

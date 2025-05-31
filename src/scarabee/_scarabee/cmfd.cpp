@@ -462,7 +462,6 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       else
         xs = fg_dxs->condense(group_condensation_, flux_spec);
 
-      // hopefully this is getting the correct fsr volumes
       double cell_volume = 0.;
       for (auto fsr : fsrs_[indx]) {
         cell_volume += moc.volume(fsr);
@@ -543,6 +542,39 @@ void CMFD::set_damping(double wd){
   }
   damping_ = wd;
 }
+
+void CMFD::set_flux_tolerance(double ftol) {
+  if (ftol <= 0.) {
+    auto mssg = "Tolerance for flux must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (ftol >= 0.1) {
+    auto mssg = "Tolerance for flux must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  flux_tol_ = ftol;
+}
+
+void CMFD::set_keff_tolerance(double ktol) {
+  if (ktol <= 0.) {
+    auto mssg = "Tolerance for keff must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (ktol >= 0.1) {
+    auto mssg = "Tolerance for keff must be in the interval (0., 0.1).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  keff_tol_ = ktol;
+}
+
 
 std::variant<std::array<std::size_t, 2>, BoundaryCondition>
 CMFD::find_next_cell_or_bc(std::size_t i, std::size_t j, CMFD::TileSurf surf,
@@ -850,11 +882,6 @@ void CMFD::power_iteration(double keff) {
     }
   }
 
-  //flux_cmfd_.normalize();
-  //flux_cmfd_ = flatten_flux();
-  // Store the starting flux 
-  //flux_start_.resize(ng_*ny_*ny_);
-  //flux_start_= flux_cmfd_;
   flux_cmfd_ = flatten_flux();
 
   Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>
@@ -896,7 +923,6 @@ void CMFD::power_iteration(double keff) {
       if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
     }
     flux_cmfd_ = new_flux;
-    //flux.normalize();
 
     // Write information
     spdlog::info("-----------------CMFD-----------------");
@@ -946,7 +972,6 @@ void CMFD::update_fsrs(MOCDriver& moc){
       for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++){
         //Get CMFD group G from MOC group g
         const std::size_t G = moc_to_cmfd_group_map_[g];
-        //spdlog::info("CMFD group {} is updating MOC group {}",G,g);
         const std::size_t linear_indx = G*nx_*ny_ + l;
         const double flx_ratio = (flux_cmfd_(linear_indx)/flux_moc(linear_indx));
         //spdlog::info("Flux ratio {:.5f}, FSR {}, CMFD Group {}, ", flx_ratio, fsrs[f], G);
@@ -975,9 +1000,7 @@ void CMFD::update_fsrs(MOCDriver& moc){
         const std::size_t G = moc_to_cmfd_group_map_[g];
         const std::size_t linear_in = G*nx_*ny_ + cell_in;
         const std::size_t linear_out = G*nx_*ny_ + cell_out;
-        //spdlog::info("Before: {}", track.entry_flux()(0,0));
         xt::view(track.entry_flux(), g, xt::all()) *= (flux_cmfd_(linear_in)/flux_moc(linear_in));
-        //spdlog::info("After: {}", track.entry_flux()(0,0));
         xt::view(track.exit_flux(), g, xt::all()) *= (flux_cmfd_(linear_out)/flux_moc(linear_out));
       }
     }
