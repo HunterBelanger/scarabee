@@ -102,6 +102,7 @@ class CMFD {
 
 
   const double& flux(const std::size_t i, const std::size_t j, const std::size_t g) const;
+  double keff() const { return keff_; }
 
  private:
   std::vector<double> dx_, dy_;

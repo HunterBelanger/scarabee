@@ -69,8 +69,8 @@ c2d.set_tiles([M8,U2,M8,wc,wc,
                wc,wc,wc,wc,wc,
                wc,wc,wc,wc,wc])
 
-cmfd_groups = [[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]]
-#cmfd_groups = [[0,0],[1,6]]
+#cmfd_groups = [[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]]
+cmfd_groups = [[0,3],[4,6]]
 #cmfd_groups = [[0,6]]
 moc_to_cmfd_group_map = np.zeros(len(Et),dtype=np.int32)
 for i, pair in enumerate(cmfd_groups):
