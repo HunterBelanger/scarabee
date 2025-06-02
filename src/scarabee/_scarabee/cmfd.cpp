@@ -889,10 +889,17 @@ void CMFD::power_iteration(double keff) {
   //Perform L1 norm on CMFD flux
   flux_cmfd_ /= flux_cmfd_.sum();
 
-  Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>
-      solver;
-  solver.analyzePattern(M_);
-  solver.factorize(M_);
+  // Create a solver for the problem
+  spdlog::info("Initializing iterative solver");
+  Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
+  solver.compute(M_);
+  solver.setTolerance(1.E-8);
+  if (solver.info() != Eigen::Success) {
+    std::stringstream mssg;
+    mssg << "Could not initialize iterative solver";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
 
   // Begin power iteration
   double keff_diff = 100.;
@@ -907,7 +914,8 @@ void CMFD::power_iteration(double keff) {
     // Compute source vector
     Q = (1. / keff) * QM_ * flux_cmfd_;
 
-    new_flux = solver.solve(Q);
+    // Get new flux
+    new_flux = solver.solveWithGuess(Q, flux_cmfd_);
     if (solver.info() != Eigen::Success) {
       spdlog::error("Solution impossible.");
       throw ScarabeeException("Solution impossible");
