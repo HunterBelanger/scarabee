@@ -136,6 +136,7 @@ class CMFD {
 
   Eigen::VectorXd flux_cmfd_;      // g*nx_*ny_
   Eigen::VectorXd flux_start_;      // g*nx_*ny_
+  Eigen::VectorXd update_ratios_;
   Eigen::VectorXd volumes_;
 
   Eigen::SparseMatrix<double> M_;   // Loss Matrix

@@ -993,6 +993,12 @@ void MOCDriver::trace_tracks() {
 
         tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
                                 segments, ai.forward_index, ai.backward_index);
+        
+        if (cmfd_){
+          auto& moc_track = tracks_[i].back();
+          moc_track.set_entry_cmfd_cell(cmfd_->tile_to_indx(*(cmfd_->get_tile(moc_track.entry_pos(),moc_track.dir()))));
+          moc_track.set_exit_cmfd_cell(cmfd_->tile_to_indx(*(cmfd_->get_tile(moc_track.exit_pos(),-moc_track.dir()))));
+        }
 
         if (t < ai.ny) {
           y -= dy;

@@ -38,6 +38,11 @@ class Track {
   const Vector& exit_pos() const { return exit_; }
   const Direction& dir() const { return dir_; }
 
+  std::size_t entry_cmfd_cell() { return cmfd_entry_cell_; }
+  void set_entry_cmfd_cell(const std::size_t cmfd_entry) { cmfd_entry_cell_ = cmfd_entry; }
+  std::size_t exit_cmfd_cell() { return cmfd_exit_cell_; }
+  void set_exit_cmfd_cell(const std::size_t cmfd_exit) { cmfd_exit_cell_ = cmfd_exit; }
+
   BoundaryCondition& entry_bc() { return entry_bc_; }
   const BoundaryCondition& entry_bc() const { return entry_bc_; }
 
@@ -109,6 +114,9 @@ class Track {
   std::size_t forward_phi_index_;  // azimuthal angle index in forward direction
   std::size_t
       backward_phi_index_;  // azimuthal angle index in backaward direction
+  
+  std::size_t cmfd_entry_cell_;
+  std::size_t cmfd_exit_cell_;
 
   friend class cereal::access;
   template <class Archive>
@@ -117,7 +125,8 @@ class Track {
         CEREAL_NVP(entry_), CEREAL_NVP(exit_), CEREAL_NVP(dir_),
         CEREAL_NVP(wgt_), CEREAL_NVP(width_), CEREAL_NVP(phi_),
         CEREAL_NVP(entry_bc_), CEREAL_NVP(exit_bc_),
-        CEREAL_NVP(forward_phi_index_), CEREAL_NVP(backward_phi_index_));
+        CEREAL_NVP(forward_phi_index_), CEREAL_NVP(backward_phi_index_),
+        CEREAL_NVP(cmfd_entry_cell_), CEREAL_NVP(cmfd_exit_cell_));
   }
 };
 

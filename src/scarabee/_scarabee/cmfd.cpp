@@ -142,6 +142,9 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   flux_cmfd_.resize(ng_ * nx_ *ny_);
   flux_cmfd_.setOnes();
 
+  update_ratios_.resize(ng_ * nx_ * ny_);
+  update_ratios_.setZero();
+
   // Allocate the flux, Et, and D_transp_corr arrays
   flux_ = xt::zeros<double>({ng_, nx_, ny_});
   Et_ = xt::zeros<double>({ng_, nx_, ny_});
@@ -967,19 +970,32 @@ void CMFD::update_moc_fluxes(MOCDriver& moc, xt::xtensor<double,3>& flux_moc){
 
   //might want to compute and store flx ratio for each cell then use it to update 
   //fsrs and tracks - TODO improvement
+  std::size_t i = 0;
+  std::size_t j = 0;
+  for (std::size_t l = 0; l < nx_*ny_; l++){
+    for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++){
+      const std::size_t G = moc_to_cmfd_group_map_[g];
+      const std::size_t linear_indx = G*nx_*ny_ + l;
+      const double invs_flx = 1./flux_(G, i, j);
+      update_ratios_(linear_indx) = flux_cmfd_(linear_indx)*invs_flx;
+    }
+    i++;
+    if (i == nx_){
+      i = 0;
+      j++;
+    }
+  }
 
   for (std::size_t l = 0; l < nx_*ny_; l++){
-    const auto [i,j] = indx_to_tile(l);
     const auto& fsrs = fsrs_[l];
     // Loop over each FSR in CMFD cell i,j
     for (std::size_t f = 0; f < fsrs.size(); f++){
-
       //Loop over MOC groups 
       for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++){
         //Get CMFD group G from MOC group g
         const std::size_t G = moc_to_cmfd_group_map_[g];
         const std::size_t linear_indx = G*nx_*ny_ + l;
-        const double flx_ratio = (flux_cmfd_(linear_indx)/flux_(G, i ,j));
+        const double& flx_ratio = update_ratios_(linear_indx);
         if (flx_ratio > 20.0){
           spdlog::warn("CMFD flux ratio greater than 20, may not be stable: {:.5f}",flx_ratio);
         }
@@ -992,20 +1008,14 @@ void CMFD::update_moc_fluxes(MOCDriver& moc, xt::xtensor<double,3>& flux_moc){
 
   for (auto& tracks : moc_tracks) {
     for (auto& track : tracks) {
-      const Direction& dir = track.dir();
-      const Vector& entry = track.entry_pos();
-      const Vector& exit = track.exit_pos();
-      //if this returns an empty optional it will not be happy
-      auto tile_in = get_tile(entry, dir);
-      auto tile_out = get_tile(exit, -dir);
-      std::size_t cell_in = tile_to_indx(*tile_in);
-      std::size_t cell_out = tile_to_indx(*tile_out);
+      std::size_t cell_in = track.entry_cmfd_cell();
+      std::size_t cell_out = track.exit_cmfd_cell();
       for (std::size_t g=0; g < moc_to_cmfd_group_map_.size(); g++){
         const std::size_t G = moc_to_cmfd_group_map_[g];
         const std::size_t linear_in = G*nx_*ny_ + cell_in;
         const std::size_t linear_out = G*nx_*ny_ + cell_out;
-        xt::view(track.entry_flux(), g, xt::all()) *= (flux_cmfd_(linear_in)/flux_(G, (*tile_in)[0], (*tile_in)[1]));
-        xt::view(track.exit_flux(), g, xt::all()) *= (flux_cmfd_(linear_out)/flux_(G, (*tile_out)[0], (*tile_out)[1]));
+        xt::view(track.entry_flux(), g, xt::all()) *= update_ratios_(linear_in);
+        xt::view(track.exit_flux(), g, xt::all()) *= update_ratios_(linear_out);
       }
     }
   }
