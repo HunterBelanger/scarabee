@@ -65,10 +65,14 @@ class MOCDriver {
   std::shared_ptr<CrossSection> homogenize() const;
   std::shared_ptr<CrossSection> homogenize(
       const std::vector<std::size_t>& regions) const;
-
+  std::shared_ptr<CrossSection> homogenize(
+      const std::vector<std::size_t>& regions, const xt::xtensor<double, 3>& flux) const;
+  
   xt::xtensor<double, 1> homogenize_flux_spectrum() const;
   xt::xtensor<double, 1> homogenize_flux_spectrum(
       const std::vector<std::size_t>& regions) const;
+  xt::xtensor<double, 1> homogenize_flux_spectrum(
+      const std::vector<std::size_t>& regions, const xt::xtensor<double, 3>& flux) const;
 
   void apply_criticality_spectrum(const xt::xtensor<double, 1>& flux);
 

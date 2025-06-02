@@ -1578,6 +1578,11 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize() const {
 
 std::shared_ptr<CrossSection> MOCDriver::homogenize(
     const std::vector<std::size_t>& regions) const {
+  return this->homogenize(regions,flux_);
+}
+
+std::shared_ptr<CrossSection> MOCDriver::homogenize(
+    const std::vector<std::size_t>& regions, const xt::xtensor<double, 3>& flux) const {
   // Check all regions are valid
   if (regions.size() > this->nregions()) {
     auto mssg =
@@ -1622,7 +1627,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
     const auto& mat = this->xs(i);
     const double V = this->volume(i);
     for (std::size_t g = 0; g < NG; g++) {
-      fiss_prod[j] += mat->vEf(g) * flux(i, g) * V;
+      fiss_prod[j] += mat->vEf(g) * flux(g, i, 0) * V;
     }
     j++;
   }
@@ -1635,7 +1640,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
     // Get the sum of flux*volume for this group
     double sum_fluxV = 0.;
     for (const auto i : regions) {
-      sum_fluxV += this->flux(i, g) * this->volume(i);
+      sum_fluxV += flux(g, i, 0) * this->volume(i);
     }
     const double invs_sum_fluxV = 1. / sum_fluxV;
 
@@ -1643,7 +1648,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
     for (const auto i : regions) {
       const auto& mat = this->xs(i);
       const double V = volume(i);
-      const double flx = flux(i, g);
+      const double flx = flux(g, i, 0);
       const double coeff = invs_sum_fluxV * flx * V;
       Dtr(g) += coeff * mat->Dtr(g);
       Ea(g) += coeff * mat->Ea(g);
@@ -1680,6 +1685,11 @@ xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum() const {
 
 xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum(
     const std::vector<std::size_t>& regions) const {
+  return this->homogenize_flux_spectrum(regions, flux_);
+}
+
+xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum(
+    const std::vector<std::size_t>& regions, const xt::xtensor<double, 3>& flux) const {
   // Check all regions are valid
   if (regions.size() > this->nfsr()) {
     auto mssg =
@@ -1708,7 +1718,7 @@ xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum(
   xt::xtensor<double, 1> spectrum = xt::zeros<double>({NG});
   for (std::size_t g = 0; g < NG; g++) {
     for (const auto i : regions) {
-      spectrum(g) += invs_sum_V * this->volume(i) * this->flux(i, g);
+      spectrum(g) += invs_sum_V * this->volume(i) * flux(g, i, 0);
     }
   }
 
