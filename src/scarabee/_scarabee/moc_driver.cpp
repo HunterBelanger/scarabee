@@ -313,6 +313,11 @@ void MOCDriver::solve_isotropic() {
       }
     }
 
+    // Apply CMFD
+    if (cmfd_) {
+      cmfd_->solve(*this, prev_keff, next_flux);
+    }
+
     if (mode_ == SimulationMode::Keff) {
       prev_keff = keff_;
       keff_ = calc_keff(next_flux, flux_);
@@ -333,11 +338,6 @@ void MOCDriver::solve_isotropic() {
 
     flux_ = next_flux;
 
-    // Apply CMFD
-    if (cmfd_) {
-      cmfd_->solve(*this, prev_keff);
-      keff_ = cmfd_->keff();
-    }
 
     iteration_timer.stop();
     spdlog::info("-------------------------------------");

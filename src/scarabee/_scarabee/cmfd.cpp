@@ -449,13 +449,13 @@ void CMFD::normalize_currents() {
   surface_currents_normalized_ = true;
 }
 
-void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
+void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc, const xt::xtensor<double,3>& flux) {
   for (std::size_t i = 0; i < nx_; i++) {
     for (std::size_t j = 0; j < ny_; j++) {
       const auto indx = this->tile_to_indx(i, j);
-      const auto fg_xs = moc.homogenize(fsrs_[indx]);
+      const auto fg_xs = moc.homogenize(fsrs_[indx], flux);
       const auto fg_dxs = fg_xs->diffusion_xs();
-      const auto flux_spec = moc.homogenize_flux_spectrum(fsrs_[indx]);
+      const auto flux_spec = moc.homogenize_flux_spectrum(fsrs_[indx], flux);
       auto& xs = xs_(i, j);
       if (xs)
         *xs = *(fg_dxs->condense(group_condensation_, flux_spec));
@@ -882,7 +882,9 @@ void CMFD::power_iteration(double keff) {
     }
   }
 
-  flux_cmfd_ = flatten_flux();
+  //flux_cmfd_ = flatten_flux();
+  //Perform L1 norm on CMFD flux
+  flux_cmfd_ /= flux_cmfd_.sum();
 
   Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>
       solver;
@@ -953,17 +955,21 @@ Eigen::VectorXd CMFD::flatten_flux() const {
   return flx_flat;
 }
 
-void CMFD::update_fsrs(MOCDriver& moc){
+void CMFD::update_moc_fluxes(MOCDriver& moc, xt::xtensor<double,3>& flux_moc){
   // Update MOC FSR scalar fluxes
   // Loop over each CMFD cell i,j -> l
-  Eigen::VectorXd flux_moc = flatten_flux();
-  flux_moc.normalize();
-  flux_cmfd_.normalize();
+  
+  //Normalize homogenized moc flux and cmfd flux
+  double total_flux = xt::sum(flux_)();
+  flux_ /= total_flux;
+  double total_flux_cmfd = flux_cmfd_.sum();
+  flux_cmfd_ /= total_flux_cmfd;
 
   //might want to compute and store flx ratio for each cell then use it to update 
   //fsrs and tracks - TODO improvement
 
   for (std::size_t l = 0; l < nx_*ny_; l++){
+    const auto [i,j] = indx_to_tile(l);
     const auto& fsrs = fsrs_[l];
     // Loop over each FSR in CMFD cell i,j
     for (std::size_t f = 0; f < fsrs.size(); f++){
@@ -973,13 +979,11 @@ void CMFD::update_fsrs(MOCDriver& moc){
         //Get CMFD group G from MOC group g
         const std::size_t G = moc_to_cmfd_group_map_[g];
         const std::size_t linear_indx = G*nx_*ny_ + l;
-        const double flx_ratio = (flux_cmfd_(linear_indx)/flux_moc(linear_indx));
-        //spdlog::info("Flux ratio {:.5f}, FSR {}, CMFD Group {}, ", flx_ratio, fsrs[f], G);
+        const double flx_ratio = (flux_cmfd_(linear_indx)/flux_(G, i ,j));
         if (flx_ratio > 20.0){
           spdlog::warn("CMFD flux ratio greater than 20, may not be stable: {:.5f}",flx_ratio);
         }
-        const double new_flx = moc.flux(fsrs[f],g)*flx_ratio;
-        moc.set_flux(fsrs[f],g,new_flx,0);
+        flux_moc(g, fsrs[f], 0) *= flx_ratio;
       }
     }
   }
@@ -1000,21 +1004,21 @@ void CMFD::update_fsrs(MOCDriver& moc){
         const std::size_t G = moc_to_cmfd_group_map_[g];
         const std::size_t linear_in = G*nx_*ny_ + cell_in;
         const std::size_t linear_out = G*nx_*ny_ + cell_out;
-        xt::view(track.entry_flux(), g, xt::all()) *= (flux_cmfd_(linear_in)/flux_moc(linear_in));
-        xt::view(track.exit_flux(), g, xt::all()) *= (flux_cmfd_(linear_out)/flux_moc(linear_out));
+        xt::view(track.entry_flux(), g, xt::all()) *= (flux_cmfd_(linear_in)/flux_(G, (*tile_in)[0], (*tile_in)[1]));
+        xt::view(track.exit_flux(), g, xt::all()) *= (flux_cmfd_(linear_out)/flux_(G, (*tile_out)[0], (*tile_out)[1]));
       }
     }
   }
 }
 
-void CMFD::solve(MOCDriver& moc, double keff) {
+void CMFD::solve(MOCDriver& moc, double keff, xt::xtensor<double,3>& flux_moc) {
   spdlog::info("Starting CMFD");
   this->normalize_currents();
-  this->compute_homogenized_xs_and_flux(moc);
+  this->compute_homogenized_xs_and_flux(moc, flux_moc);
   this->create_loss_matrix(moc);
   this->create_source_matrix();
   this->power_iteration(keff_);
-  this->update_fsrs(moc);
+  this->update_moc_fluxes(moc, flux_moc);
 
   /**
   for (std::size_t i = 0; i < nx_; i++) {
