@@ -313,15 +313,13 @@ void MOCDriver::solve_isotropic() {
       }
     }
 
-    // Apply CMFD
-    if (cmfd_) {
-      cmfd_->solve(*this, prev_keff, next_flux);
-    }
 
     if (mode_ == SimulationMode::Keff) {
       prev_keff = keff_;
-      keff_ = calc_keff(next_flux, flux_);
-      rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+      if (!cmfd_){
+        keff_ = calc_keff(next_flux, flux_);
+        rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+      }
     }
 
     // Get difference
@@ -337,6 +335,13 @@ void MOCDriver::solve_isotropic() {
     }
 
     flux_ = next_flux;
+
+    // Apply CMFD
+    if (cmfd_) {
+      cmfd_->solve(*this, prev_keff);
+      keff_ = cmfd_->keff();
+      rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+    }
 
 
     iteration_timer.stop();
@@ -1582,13 +1587,9 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize() const {
   return this->homogenize(regions);
 }
 
-std::shared_ptr<CrossSection> MOCDriver::homogenize(
-    const std::vector<std::size_t>& regions) const {
-  return this->homogenize(regions,flux_);
-}
 
 std::shared_ptr<CrossSection> MOCDriver::homogenize(
-    const std::vector<std::size_t>& regions, const xt::xtensor<double, 3>& flux) const {
+    const std::vector<std::size_t>& regions) const {
   // Check all regions are valid
   if (regions.size() > this->nregions()) {
     auto mssg =
@@ -1633,7 +1634,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
     const auto& mat = this->xs(i);
     const double V = this->volume(i);
     for (std::size_t g = 0; g < NG; g++) {
-      fiss_prod[j] += mat->vEf(g) * flux(g, i, 0) * V;
+      fiss_prod[j] += mat->vEf(g) * this->flux(i,g) * V;
     }
     j++;
   }
@@ -1646,7 +1647,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
     // Get the sum of flux*volume for this group
     double sum_fluxV = 0.;
     for (const auto i : regions) {
-      sum_fluxV += flux(g, i, 0) * this->volume(i);
+      sum_fluxV += this->flux(i,g) * this->volume(i);
     }
     const double invs_sum_fluxV = 1. / sum_fluxV;
 
@@ -1654,7 +1655,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
     for (const auto i : regions) {
       const auto& mat = this->xs(i);
       const double V = volume(i);
-      const double flx = flux(g, i, 0);
+      const double flx = flux(i, g);
       const double coeff = invs_sum_fluxV * flx * V;
       Dtr(g) += coeff * mat->Dtr(g);
       Ea(g) += coeff * mat->Ea(g);
@@ -1691,11 +1692,6 @@ xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum() const {
 
 xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum(
     const std::vector<std::size_t>& regions) const {
-  return this->homogenize_flux_spectrum(regions, flux_);
-}
-
-xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum(
-    const std::vector<std::size_t>& regions, const xt::xtensor<double, 3>& flux) const {
   // Check all regions are valid
   if (regions.size() > this->nfsr()) {
     auto mssg =
@@ -1724,7 +1720,7 @@ xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum(
   xt::xtensor<double, 1> spectrum = xt::zeros<double>({NG});
   for (std::size_t g = 0; g < NG; g++) {
     for (const auto i : regions) {
-      spectrum(g) += invs_sum_V * this->volume(i) * flux(g, i, 0);
+      spectrum(g) += invs_sum_V * this->volume(i) * this->flux(i, g);
     }
   }
 

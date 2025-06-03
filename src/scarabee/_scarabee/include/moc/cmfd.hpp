@@ -92,7 +92,7 @@ class CMFD {
 
   Eigen::VectorXd flatten_flux() const;
 
-  void solve(MOCDriver& moc, double keff, xt::xtensor<double,3>& flux_moc);
+  void solve(MOCDriver& moc, double keff);
 
   void set_damping(double wd);
   double keff_tolerance() const { return keff_tol_; }
@@ -154,9 +154,9 @@ class CMFD {
   void create_loss_matrix(const MOCDriver& moc);
   void create_source_matrix();
   void power_iteration(double keff);
-  void update_moc_fluxes(MOCDriver& moc, xt::xtensor<double,3>& flux_moc);
+  void update_moc_fluxes(MOCDriver& moc);
   void normalize_currents();
-  void compute_homogenized_xs_and_flux(const MOCDriver& moc, const xt::xtensor<double,3>& flux_moc);
+  void compute_homogenized_xs_and_flux(const MOCDriver& moc);
   void check_neutron_balance(const std::size_t i, const std::size_t j,
                              std::size_t g, const double keff) const;
 };

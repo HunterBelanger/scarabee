@@ -452,13 +452,13 @@ void CMFD::normalize_currents() {
   surface_currents_normalized_ = true;
 }
 
-void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc, const xt::xtensor<double,3>& flux) {
+void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
   for (std::size_t i = 0; i < nx_; i++) {
     for (std::size_t j = 0; j < ny_; j++) {
       const auto indx = this->tile_to_indx(i, j);
-      const auto fg_xs = moc.homogenize(fsrs_[indx], flux);
+      const auto fg_xs = moc.homogenize(fsrs_[indx]);
       const auto fg_dxs = fg_xs->diffusion_xs();
-      const auto flux_spec = moc.homogenize_flux_spectrum(fsrs_[indx], flux);
+      const auto flux_spec = moc.homogenize_flux_spectrum(fsrs_[indx]);
       auto& xs = xs_(i, j);
       if (xs)
         *xs = *(fg_dxs->condense(group_condensation_, flux_spec));
@@ -966,7 +966,7 @@ Eigen::VectorXd CMFD::flatten_flux() const {
   return flx_flat;
 }
 
-void CMFD::update_moc_fluxes(MOCDriver& moc, xt::xtensor<double,3>& flux_moc){
+void CMFD::update_moc_fluxes(MOCDriver& moc){
   // Update MOC FSR scalar fluxes
   // Loop over each CMFD cell i,j -> l
   
@@ -1007,7 +1007,8 @@ void CMFD::update_moc_fluxes(MOCDriver& moc, xt::xtensor<double,3>& flux_moc){
         if (flx_ratio > 20.0){
           spdlog::warn("CMFD flux ratio greater than 20, may not be stable: {:.5f}",flx_ratio);
         }
-        flux_moc(g, fsrs[f], 0) *= flx_ratio;
+        const double new_flx = moc.flux(fsrs[f],g)*flx_ratio;
+        moc.set_flux(fsrs[f],g,new_flx,0); 
       }
     }
   }
@@ -1029,14 +1030,14 @@ void CMFD::update_moc_fluxes(MOCDriver& moc, xt::xtensor<double,3>& flux_moc){
   }
 }
 
-void CMFD::solve(MOCDriver& moc, double keff, xt::xtensor<double,3>& flux_moc) {
+void CMFD::solve(MOCDriver& moc, double keff) {
   spdlog::info("Starting CMFD");
   this->normalize_currents();
-  this->compute_homogenized_xs_and_flux(moc, flux_moc);
+  this->compute_homogenized_xs_and_flux(moc);
   this->create_loss_matrix(moc);
   this->create_source_matrix();
   this->power_iteration(keff_);
-  this->update_moc_fluxes(moc, flux_moc);
+  this->update_moc_fluxes(moc);
 
   /**
   for (std::size_t i = 0; i < nx_; i++) {
