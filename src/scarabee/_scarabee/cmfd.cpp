@@ -136,12 +136,15 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   xs_.resize({nx_, ny_});
   xs_.fill(nullptr);
 
+  // Allocate cell volume array
   volumes_.resize(nx_ * ny_);
+  volumes_.setZero();
 
-  // Set CMFD fluxes to 1 
-  flux_cmfd_.resize(ng_ * nx_ *ny_);
+  // Set CMFD fluxes to 1
+  flux_cmfd_.resize(ng_ * nx_ * ny_);
   flux_cmfd_.setOnes();
 
+  // Allocate flux update ratio array
   update_ratios_.resize(ng_ * nx_ * ny_);
   update_ratios_.setZero();
 
@@ -183,7 +186,8 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r,
   // First, we try to get a tile
   auto otile = this->get_tile(r, u);
   if (otile.has_value() == false) {
-    const auto mssg = "Could not find a CMFD tile when looking for CMFD surface.";
+    const auto mssg =
+        "Could not find a CMFD tile when looking for CMFD surface.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -282,20 +286,21 @@ std::size_t CMFD::moc_to_cmfd_group(std::size_t g) const {
   return moc_to_cmfd_group_map_[g];
 }
 
-const double& CMFD::flux(const std::size_t i, const std::size_t j, const std::size_t g) const{
-  if (g > ng_){
+const double& CMFD::flux(const std::size_t i, const std::size_t j,
+                         const std::size_t g) const {
+  if (g > ng_) {
     auto mssg = "Group index out of range.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
-  } 
-  if (i >= nx_ || j >= ny_){
+  }
+  if (i >= nx_ || j >= ny_) {
     auto mssg = "Indexed cell does not exist.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
-  const std::size_t cell_index = tile_to_indx(i,j);
+  const std::size_t cell_index = tile_to_indx(i, j);
 
-  return flux_cmfd_(g*nx_*ny_ + cell_index);
+  return flux_cmfd_(g * nx_ * ny_ + cell_index);
 }
 
 double& CMFD::current(const std::size_t G, const std::size_t surface) {
@@ -344,7 +349,6 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
   std::size_t j = tile[1];
 
   // Get surface index(s) from CMFDSurfaceCrossing
-  // need cell indexes
   htl::static_vector<std::size_t, 4> surf_indexes;
   bool is_corner = false;
   if (surf.crossing == CMFDSurfaceCrossing::Type::XN) {
@@ -394,15 +398,6 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
     }
     if (j + 1 < ny_) {
       surf_indexes.push_back(get_x_neg_surf(i, j + 1));
-    }
-  }
-
-  // Check surface indexes are not out of range
-  for (std::size_t k = 0; k < surf_indexes.size(); ++k) {
-    if (surf_indexes[k] >= surface_currents_.shape()[1]) {
-      auto mssg = "Surface index out of range.";
-      spdlog::error(mssg);
-      throw ScarabeeException(mssg);
     }
   }
 
@@ -466,10 +461,12 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       else
         xs = fg_dxs->condense(group_condensation_, flux_spec);
 
+      // Store CMFD cell volume
       double cell_volume = 0.;
       for (auto fsr : fsrs_[indx]) {
         cell_volume += moc.volume(fsr);
       }
+      volumes_[indx] = cell_volume;
 
       // Generate the flux and Et values for the tile
       xt::view(flux_, xt::all(), i, j) = 0.;
@@ -479,9 +476,6 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
         Et_(moc_to_cmfd_group_map_[g], i, j) += fg_xs->Etr(g) * flux_spec(g);
       }
       xt::view(Et_, xt::all(), i, j) /= xt::view(flux_, xt::all(), i, j);
-
-      //Store CMFD cell volume
-      volumes_[indx] = cell_volume;
     }
   }
 }
@@ -522,24 +516,18 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j,
   // Compute the residual of the balance equation
   const double residual =
       leak_rate + tot_reac_rate - (scat_source + fiss_source);
-  // const double req_leak = scat_source + fiss_source - tot_reac_rate;
 
-  // if (std::abs(residual) >= 1.E-5) {
-  spdlog::error(
-      "CMFD tile ({:d}, {:d}) in group {:d} has a neutron balance residual of "
-      "{:.5E}.",
-      i, j, g, residual);
-  // spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} requires leakage rate
-  // of {:.5E}.", i, j, g, req_leak);
-  //}
-  // debugging for testing
-  // spdlog::error("CMFD tile ({:d}, {:d}) in group {:d} has a true leakage rate
-  // of {:.5E}", i, j, g, leak_rate); spdlog::error("CMFD tile ({:d}, {:d}) in
-  // group {:d} has a leakage ratio of {:.5E}.", i, j, g, req_leak/leak_rate);
+  if (std::abs(residual) >= 1.E-5) {
+    spdlog::error(
+        "CMFD tile ({:d}, {:d}) in group {:d} has a neutron balance residual "
+        "of "
+        "{:.5E}.",
+        i, j, g, residual);
+  }
 }
 
-void CMFD::set_damping(double wd){
-  if (wd < 0.0 || wd > 1.0){
+void CMFD::set_damping(double wd) {
+  if (wd < 0.0 || wd > 1.0) {
     auto mssg = "Damping factor for CMFD must be between 0.0 and 1.0";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -578,7 +566,6 @@ void CMFD::set_keff_tolerance(double ktol) {
 
   keff_tol_ = ktol;
 }
-
 
 std::variant<std::array<std::size_t, 2>, BoundaryCondition>
 CMFD::find_next_cell_or_bc(std::size_t i, std::size_t j, CMFD::TileSurf surf,
@@ -685,7 +672,7 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   // Periodic is treated like an interior cell.
   const auto next_tile_or_bc = find_next_cell_or_bc(i, j, surf, moc);
 
-  // If we have a BC, handel that here
+  // If we have a BC, handle that here
   if (std::holds_alternative<BoundaryCondition>(next_tile_or_bc)) {
     const auto bc = std::get<BoundaryCondition>(next_tile_or_bc);
 
@@ -729,11 +716,11 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
 
 void CMFD::create_loss_matrix(const MOCDriver& moc) {
   const std::size_t tot_cells = nx_ * ny_;
-  // Resize M_ sparse matrix
   M_.resize(ng_ * tot_cells, ng_ * tot_cells);
-  // Each row should have ~5 entries on average
   M_.reserve(Eigen::VectorXi::Constant(ng_ * tot_cells, 5));
-  xt::xtensor<double, 2> D_transp_corr_new = xt::zeros<double>({ng_, nx_surfs_ + ny_surfs_});
+  // Initialize array to store n+1 diffusion coefficients
+  xt::xtensor<double, 2> D_transp_corr_new =
+      xt::zeros<double>({ng_, nx_surfs_ + ny_surfs_});
 
   // Loop over all cells and groups, cell index changes fastest
   for (std::size_t g = 0; g < ng_; ++g) {
@@ -760,13 +747,13 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
       auto [Dyn, Dnl_yn] =
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YN, moc);
 
-      //Calculate from n-1 iteration, 0.0 on iteration 1
-      Dnl_xp = (1-damping_)*D_transp_corr_(g, xpsurf) + damping_ * Dnl_xp;
-      Dnl_xn = (1-damping_)*D_transp_corr_(g, xnsurf) + damping_ * Dnl_xn;
-      Dnl_yp = (1-damping_)*D_transp_corr_(g, ypsurf) + damping_ * Dnl_yp;
-      Dnl_yn = (1-damping_)*D_transp_corr_(g, ynsurf) + damping_ * Dnl_yn;
+      // Calculate n+1 diffusion coefficients from n-1 and n+1/2
+      Dnl_xp = (1 - damping_) * D_transp_corr_(g, xpsurf) + damping_ * Dnl_xp;
+      Dnl_xn = (1 - damping_) * D_transp_corr_(g, xnsurf) + damping_ * Dnl_xn;
+      Dnl_yp = (1 - damping_) * D_transp_corr_(g, ypsurf) + damping_ * Dnl_yp;
+      Dnl_yn = (1 - damping_) * D_transp_corr_(g, ynsurf) + damping_ * Dnl_yn;
 
-      //Store the current CMFD iteration's diffusion coefficients
+      // Store the current CMFD iteration's diffusion coefficients
       D_transp_corr_new(g, xpsurf) = Dnl_xp;
       D_transp_corr_new(g, xnsurf) = Dnl_xn;
       D_transp_corr_new(g, ypsurf) = Dnl_yp;
@@ -867,14 +854,9 @@ void CMFD::create_source_matrix() {
 
 void CMFD::power_iteration(double keff) {
   // Power Iteration to solve for Keff
-
-  // Eigen::VectorXd flux_moc = flatten_flux();
-
   // Initialize flux and source vectors
-  //Eigen::VectorXd flux(ng_ * nx_ * ny_);
   Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
   Eigen::VectorXd Q(ng_ * nx_ * ny_);
-  //Eigen::VectorXd Q_new(ng_ * nx_ * ny_);
 
   // Initialize a vector for computing keff faster
   Eigen::VectorXd VvEf(ng_ * nx_ * ny_);
@@ -886,18 +868,13 @@ void CMFD::power_iteration(double keff) {
     }
   }
 
-  //flux_cmfd_ = flatten_flux();
-  //Perform L1 norm on CMFD flux
-  flux_cmfd_ /= flux_cmfd_.sum();
-
   // Create a solver for the problem
-  spdlog::info("Initializing iterative solver");
   Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
   solver.compute(M_);
   solver.setTolerance(1.E-8);
   if (solver.info() != Eigen::Success) {
     std::stringstream mssg;
-    mssg << "Could not initialize iterative solver";
+    mssg << "Could not initialize CMFD iterative solver";
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
@@ -949,83 +926,66 @@ void CMFD::power_iteration(double keff) {
   keff_ = keff;
 }
 
-Eigen::VectorXd CMFD::flatten_flux() const {
-  // Turns homogenized MOC flux from g, i, j indexes to linearly indexed
-  const std::size_t tot_cells = nx_ * ny_;
-  Eigen::VectorXd flx_flat(ng_ * tot_cells);
-
-  for (std::size_t g = 0; g < ng_; ++g) {
-    // for each cell in row-major order (i fastest, then j)
-    for (std::size_t j = 0; j < ny_; ++j) {
-      for (std::size_t i = 0; i < nx_; ++i) {
-        std::size_t cell_idx = tile_to_indx(i, j);
-        std::size_t linear_idx = g * tot_cells + cell_idx;
-        flx_flat[linear_idx] = flux_(g, i, j);
-      }
-    }
-  }
-  return flx_flat;
-}
-
-void CMFD::update_moc_fluxes(MOCDriver& moc){
+void CMFD::update_moc_fluxes(MOCDriver& moc) {
   // Update MOC FSR scalar fluxes
-  // Loop over each CMFD cell i,j -> l
-  
-  //Normalize homogenized moc flux and cmfd flux
-  double total_flux = xt::sum(flux_)();
-  flux_ /= total_flux;
-  double total_flux_cmfd = flux_cmfd_.sum();
-  flux_cmfd_ /= total_flux_cmfd;
+  const std::size_t tot_cells = ny_ * nx_;
 
-  //might want to compute and store flx ratio for each cell then use it to update 
-  //fsrs and tracks - TODO improvement
+  // Normalize homogenized moc flux and cmfd flux
+  flux_ /= xt::sum(flux_)();
+  flux_cmfd_ /= flux_cmfd_.sum();
+
+  // Precompute update ratio in each CMFD cell
   std::size_t i = 0;
   std::size_t j = 0;
-  for (std::size_t l = 0; l < nx_*ny_; l++){
-    for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++){
+  for (std::size_t l = 0; l < tot_cells; l++) {
+    for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
       const std::size_t G = moc_to_cmfd_group_map_[g];
-      const std::size_t linear_indx = G*nx_*ny_ + l;
-      const double invs_flx = 1./flux_(G, i, j);
-      update_ratios_(linear_indx) = flux_cmfd_(linear_indx)*invs_flx;
+      const std::size_t linear_indx = G * tot_cells + l;
+      const double invs_flx = 1. / flux_(G, i, j);
+      update_ratios_(linear_indx) = flux_cmfd_(linear_indx) * invs_flx;
     }
     i++;
-    if (i == nx_){
+    if (i == nx_) {
       i = 0;
       j++;
     }
   }
 
-  for (std::size_t l = 0; l < nx_*ny_; l++){
+  // Update scalar flux in each MOC FSR
+  for (std::size_t l = 0; l < tot_cells; l++) {
     const auto& fsrs = fsrs_[l];
     // Loop over each FSR in CMFD cell i,j
-    for (std::size_t f = 0; f < fsrs.size(); f++){
-      //Loop over MOC groups 
-      for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++){
-        //Get CMFD group G from MOC group g
+    for (std::size_t f = 0; f < fsrs.size(); f++) {
+      // Loop over MOC groups
+      for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
+        // Get CMFD group G from MOC group g
         const std::size_t G = moc_to_cmfd_group_map_[g];
-        const std::size_t linear_indx = G*nx_*ny_ + l;
+        const std::size_t linear_indx = G * tot_cells + l;
         const double& flx_ratio = update_ratios_(linear_indx);
-        if (flx_ratio > 20.0){
-          spdlog::warn("CMFD flux ratio greater than 20, may not be stable: {:.5f}",flx_ratio);
+        if (flx_ratio > 20.0) {
+          spdlog::warn(
+              "CMFD flux ratio greater than 20, may not be stable: {:.5f}",
+              flx_ratio);
         }
-        const double new_flx = moc.flux(fsrs[f],g)*flx_ratio;
-        moc.set_flux(fsrs[f],g,new_flx,0); 
+        const double new_flx = moc.flux(fsrs[f], g) * flx_ratio;
+        moc.set_flux(fsrs[f], g, new_flx, 0);
       }
     }
   }
 
+  // Update MOC angular flux at boundaries
   auto& moc_tracks = moc.tracks();
-
   for (auto& tracks : moc_tracks) {
     for (auto& track : tracks) {
-      std::size_t cell_in = track.entry_cmfd_cell();
-      std::size_t cell_out = track.exit_cmfd_cell();
-      for (std::size_t g=0; g < moc_to_cmfd_group_map_.size(); g++){
+      std::size_t entry_cell = track.entry_cmfd_cell();
+      std::size_t exit_cell = track.exit_cmfd_cell();
+      for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
         const std::size_t G = moc_to_cmfd_group_map_[g];
-        const std::size_t linear_in = G*nx_*ny_ + cell_in;
-        const std::size_t linear_out = G*nx_*ny_ + cell_out;
-        xt::view(track.entry_flux(), g, xt::all()) *= update_ratios_(linear_in);
-        xt::view(track.exit_flux(), g, xt::all()) *= update_ratios_(linear_out);
+        const std::size_t g_indx = G * tot_cells;
+        xt::view(track.entry_flux(), g, xt::all()) *=
+            update_ratios_(g_indx + entry_cell);
+        xt::view(track.exit_flux(), g, xt::all()) *=
+            update_ratios_(g_indx + exit_cell);
       }
     }
   }

@@ -38,10 +38,8 @@ class Track {
   const Vector& exit_pos() const { return exit_; }
   const Direction& dir() const { return dir_; }
 
-  std::size_t entry_cmfd_cell() { return cmfd_entry_cell_; }
-  void set_entry_cmfd_cell(const std::size_t cmfd_entry) { cmfd_entry_cell_ = cmfd_entry; }
-  std::size_t exit_cmfd_cell() { return cmfd_exit_cell_; }
-  void set_exit_cmfd_cell(const std::size_t cmfd_exit) { cmfd_exit_cell_ = cmfd_exit; }
+  std::size_t& entry_cmfd_cell() { return cmfd_entry_cell_; }
+  std::size_t& exit_cmfd_cell() { return cmfd_exit_cell_; }
 
   BoundaryCondition& entry_bc() { return entry_bc_; }
   const BoundaryCondition& entry_bc() const { return entry_bc_; }

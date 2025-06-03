@@ -134,10 +134,9 @@ class CMFD {
   xt::xtensor<double, 3> flux_;           // g, x, y
   xt::xtensor<double, 2> D_transp_corr_;  // g, surf
 
-  Eigen::VectorXd flux_cmfd_;      // g*nx_*ny_
-  Eigen::VectorXd flux_start_;      // g*nx_*ny_
-  Eigen::VectorXd update_ratios_;
-  Eigen::VectorXd volumes_;
+  Eigen::VectorXd flux_cmfd_;       // g*nx_*ny_
+  Eigen::VectorXd update_ratios_;   // g*nx_*ny_
+  Eigen::VectorXd volumes_;         // nx_*ny_
 
   Eigen::SparseMatrix<double> M_;   // Loss Matrix
   Eigen::SparseMatrix<double> QM_;  // Source Matrix
