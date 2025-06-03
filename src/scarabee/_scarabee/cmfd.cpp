@@ -183,8 +183,9 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r,
   // First, we try to get a tile
   auto otile = this->get_tile(r, u);
   if (otile.has_value() == false) {
-    surface.is_valid = false;
-    return surface;
+    const auto mssg = "Could not find a CMFD tile when looking for CMFD surface.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   const std::size_t i = (*otile)[0];

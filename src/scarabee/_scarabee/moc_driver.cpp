@@ -313,13 +313,10 @@ void MOCDriver::solve_isotropic() {
       }
     }
 
-
-    if (mode_ == SimulationMode::Keff) {
+    if (mode_ == SimulationMode::Keff and !cmfd_) {
       prev_keff = keff_;
-      if (!cmfd_){
-        keff_ = calc_keff(next_flux, flux_);
-        rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
-      }
+      keff_ = calc_keff(next_flux, flux_);
+      rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
     }
 
     // Get difference
@@ -339,6 +336,7 @@ void MOCDriver::solve_isotropic() {
     // Apply CMFD
     if (cmfd_) {
       cmfd_->solve(*this, prev_keff);
+      prev_keff = keff_;
       keff_ = cmfd_->keff();
       rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
     }
@@ -963,33 +961,15 @@ void MOCDriver::trace_tracks() {
                                 this->get_fsr_indx(fsr_r.first));
 
           if (cmfd_) {
-            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
-
-            const auto tile = cmfd_->get_tile(r_end, u);
-            if (tile) {
-              const auto fsr_indx = segments.back().fsr_indx();
-              thread_cmfd_tile_fsrs[cmfd_->tile_to_indx(*tile)].insert(fsr_indx);
-            } else {
-              auto mssg = "Tile for segment position was nullopt.";
-              spdlog::error(mssg);
-              throw ScarabeeException(mssg);
-            }
+            auto& seg = segments.back();
+            seg.entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+            thread_cmfd_tile_fsrs[seg.entry_cmfd_surface().cell_index].insert(seg.fsr_indx());
           }
 
           r_end = r_end + d * u;
 
           if (cmfd_) {
             segments.back().exit_cmfd_surface() = cmfd_->get_surface(r_end, -u);
-
-            const auto tile = cmfd_->get_tile(r_end, -u);
-            if (tile) {
-              const auto fsr_indx = segments.back().fsr_indx();
-              thread_cmfd_tile_fsrs[cmfd_->tile_to_indx(*tile)].insert(fsr_indx);
-            } else {
-              auto mssg = "Tile for segment position was nullopt.";
-              spdlog::error(mssg);
-              throw ScarabeeException(mssg);
-            }
           }
 
           ti = geometry_->get_tile_index(r_end, u);
@@ -1032,35 +1012,17 @@ void MOCDriver::trace_tracks() {
           const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
           segments.emplace_back(fsr_r.first.fsr, d,
                                 this->get_fsr_indx(fsr_r.first));
-
+          
           if (cmfd_) {
-            segments.back().entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
-
-            const auto tile = cmfd_->get_tile(r_end, u);
-            if (tile) {
-              const auto fsr_indx = segments.back().fsr_indx();
-              thread_cmfd_tile_fsrs[cmfd_->tile_to_indx(*tile)].insert(fsr_indx);
-            } else {
-              auto mssg = "Tile for segment position was nullopt.";
-              spdlog::error(mssg);
-              throw ScarabeeException(mssg);
-            }
+            auto& seg = segments.back();
+            seg.entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+            thread_cmfd_tile_fsrs[seg.entry_cmfd_surface().cell_index].insert(seg.fsr_indx());
           }
 
           r_end = r_end + d * u;
 
           if (cmfd_) {
             segments.back().exit_cmfd_surface() = cmfd_->get_surface(r_end, -u);
-
-            const auto tile = cmfd_->get_tile(r_end, -u);
-            if (tile) {
-              const auto fsr_indx = segments.back().fsr_indx();
-              thread_cmfd_tile_fsrs[cmfd_->tile_to_indx(*tile)].insert(fsr_indx);
-            } else {
-              auto mssg = "Tile for segment position was nullopt.";
-              spdlog::error(mssg);
-              throw ScarabeeException(mssg);
-            }
           }
 
           ti = geometry_->get_tile_index(r_end, u);
