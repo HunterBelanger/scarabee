@@ -4,9 +4,11 @@
 #include <utils/timer.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
+#include <utils/openmp_mutex.hpp>
 
 #include <cmath>
 #include <limits>
+#include <mutex>
 
 namespace scarabee {
 
@@ -131,6 +133,8 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   // Allocate surfaces array
   surface_currents_ =
       xt::zeros<double>({group_condensation_.size(), nx_surfs_ + ny_surfs_});
+  
+  surface_currents_locks_ = xt::xtensor<OpenMPMutex, 2>({group_condensation_.size(), nx_surfs_ + ny_surfs_});
 
   // Allocate the xs array
   xs_.resize({nx_, ny_});
@@ -408,10 +412,10 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
 
   for (auto si : surf_indexes) {
     if (si < nx_surfs_) {
-#pragma omp atomic
+      std::scoped_lock lock(surface_currents_locks_(G,si));
       surface_currents_(G, si) += std::copysign(aflx, u.x());
     } else {
-#pragma omp atomic
+      std::scoped_lock lock(surface_currents_locks_(G,si));
       surface_currents_(G, si) += std::copysign(aflx, u.y());
     }
   }
