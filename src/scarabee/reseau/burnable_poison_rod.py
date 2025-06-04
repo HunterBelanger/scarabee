@@ -1,4 +1,13 @@
-from .._scarabee import NDLibrary, DepletionChain, Material, CrossSection, MOCDriver
+from .._scarabee import (
+    NDLibrary,
+    DepletionChain,
+    MaterialComposition,
+    Material,
+    CrossSection,
+    MOCDriver,
+    DepletionChain,
+    build_depletion_matrix,
+)
 import numpy as np
 from typing import Optional, List, Tuple
 import copy
@@ -132,6 +141,29 @@ class BurnablePoisonRod:
             "BPR Poison",
         )
 
+        # Center IDs and indices are only populated if the center material is
+        # not None, which indicates that the center should be moderator. If the
+        # center is moderator, then those IDs and indices are kept by the
+        # parent GuideTube object.
+
+        self._center_isolated_dancoff_fsr_ids = []
+        self._center_isolated_dancoff_fsr_inds = []
+        self._clad_isolated_dancoff_fsr_ids = []
+        self._clad_isolated_dancoff_fsr_inds = []
+        self._gap_isolated_dancoff_fsr_ids = []
+        self._gap_isolated_dancoff_fsr_inds = []
+        self._poison_isolated_dancoff_fsr_ids = []
+        self._poison_isolated_dancoff_fsr_inds = []
+
+        self._center_full_dancoff_fsr_ids = []
+        self._center_full_dancoff_fsr_inds = []
+        self._clad_full_dancoff_fsr_ids = []
+        self._clad_full_dancoff_fsr_inds = []
+        self._gap_full_dancoff_fsr_ids = []
+        self._gap_full_dancoff_fsr_inds = []
+        self._poison_full_dancoff_fsr_ids = []
+        self._poison_full_dancoff_fsr_inds = []
+
         # ======================================================================
         # TRANSPORT CALCULATION DATA
         # ----------------------------------------------------------------------
@@ -140,15 +172,15 @@ class BurnablePoisonRod:
         self._gap_xs: Optional[CrossSection] = None
         self._poison_xs: Optional[CrossSection] = None
 
-        # FSR IDs and indices
-        self._center_fsr_id: List[int] = []
-        self._center_fsr_ind: List[int] = []
-        self._clad_fsr_id: List[int] = []
-        self._clad_fsr_ind: List[int] = []
-        self._gap_fsr_id: List[int] = []
-        self._gap_fsr_ind: List[int] = []
-        self._poison_fsr_id: List[int] = []
-        self._poison_fsr_ind: List[int] = []
+        # FSR IDs and indices. Same rule for center as before.
+        self._center_fsr_ids: List[int] = []
+        self._center_fsr_inds: List[int] = []
+        self._clad_fsr_ids: List[int] = []
+        self._clad_fsr_inds: List[int] = []
+        self._gap_fsr_ids: List[int] = []
+        self._gap_fsr_inds: List[int] = []
+        self._poison_fsr_ids: List[int] = []
+        self._poison_fsr_inds: List[int] = []
 
         # Flux spectrum of poison needed for depletion
         self._poison_flux_spectrum: np.ndarray = np.array([])
@@ -206,7 +238,7 @@ class BurnablePoisonRod:
             self.center.load_nuclides(ndl)
         self.clad.load_nuclides(ndl)
         self.gap.load_nuclides(ndl)
-        self.poison.load_nuclides(ndl)
+        self.poison_materials[-1].load_nuclides(ndl)
 
     # ==========================================================================
     # Dancoff Correction Related Methods
@@ -219,12 +251,90 @@ class BurnablePoisonRod:
         """
         pass
 
+    def populate_dancoff_fsr_indexes(
+        self, isomoc: MOCDriver, fullmoc: MOCDriver
+    ) -> None:
+        """
+        Obtains the flat source region indexes for all of the flat source
+        regions used in the Dancoff correction calculations.
+
+        Parameters
+        ----------
+        isomoc : MOCDriver
+            MOC simulation for the isolated pin.
+        fullmoc : MOCDriver
+            MOC simulation for the full geometry.
+        """
+        self._center_isolated_dancoff_fsr_inds = []
+        self._clad_isolated_dancoff_fsr_inds = []
+        self._gap_isolated_dancoff_fsr_inds = []
+        self._poison_isolated_dancoff_fsr_inds = []
+
+        self._center_full_dancoff_fsr_inds = []
+        self._clad_full_dancoff_fsr_inds = []
+        self._gap_full_dancoff_fsr_inds = []
+        self._poison_full_dancoff_fsr_inds = []
+
+        for id in self._center_isolated_dancoff_fsr_ids:
+            self._center_isolated_dancoff_fsr_inds.append(isomoc.get_fsr_indx(id, 0))
+        for id in self._clad_isolated_dancoff_fsr_ids:
+            self._clad_isolated_dancoff_fsr_inds.append(isomoc.get_fsr_indx(id, 0))
+        for id in self._gap_isolated_dancoff_fsr_ids:
+            self._gap_isolated_dancoff_fsr_inds.append(isomoc.get_fsr_indx(id, 0))
+        for id in self._poison_isolated_dancoff_fsr_ids:
+            self._poison_isolated_dancoff_fsr_inds.append(isomoc.get_fsr_indx(id, 0))
+
+        for id in self._center_full_dancoff_fsr_ids:
+            self._center_full_dancoff_fsr_inds.append(fullmoc.get_fsr_indx(id, 0))
+        for id in self._clad_full_dancoff_fsr_ids:
+            self._clad_full_dancoff_fsr_inds.append(fullmoc.get_fsr_indx(id, 0))
+        for id in self._gap_full_dancoff_fsr_ids:
+            self._gap_full_dancoff_fsr_inds.append(fullmoc.get_fsr_indx(id, 0))
+        for id in self._poison_full_dancoff_fsr_ids:
+            self._poison_full_dancoff_fsr_inds.append(fullmoc.get_fsr_indx(id, 0))
+
     def set_xs_for_dancoff_calculation(self) -> None:
         """
         Sets the cross sections for the Dancoff calculations based on the most
         recent poison composition.
         """
-        pass
+        if self._center_dancoff_xs is not None and self.center is not None:
+            self._center_dancoff_xs.set(
+                CrossSection(
+                    np.array([self.center.potential_xs]),
+                    np.array([self.center.potential_xs]),
+                    np.array([[0.0]]),
+                    "BPR Clad",
+                )
+            )
+
+        self._clad_dancoff_xs.set(
+            CrossSection(
+                np.array([self.clad.potential_xs]),
+                np.array([self.clad.potential_xs]),
+                np.array([[0.0]]),
+                "BPR Clad",
+            )
+        )
+
+        self._gap_dancoff_xs.set(
+            CrossSection(
+                np.array([self.gap.potential_xs]),
+                np.array([self.gap.potential_xs]),
+                np.array([[0.0]]),
+                "BPR Gap",
+            )
+        )
+
+        # Make initial poison Dancoff xs with initial material
+        self._poison_dancoff_xs.set(
+            CrossSection(
+                np.array([self.poison_materials[-1].potential_xs]),
+                np.array([self.poison_materials[-1].potential_xs]),
+                np.array([[0.0]]),
+                "BPR Poison",
+            )
+        )
 
     def set_isolated_dancoff_fuel_sources(
         self, isomoc: MOCDriver, moderator: Material
@@ -242,7 +352,26 @@ class BurnablePoisonRod:
             Material definition for the moderator, used to obtain the potential
             scattering cross section.
         """
-        pass
+        # We only set sources for the center if it isn't moderator ! Otherwise,
+        # the GuideTube class is responsible for taking care of this. This case
+        # is indicated by the center material being None. For this case, the
+        # list of FSR indices should be empty.
+        if self.center is not None:
+            pot_xs = self.center.potential_xs
+            for ind in self._center_isolated_dancoff_fsr_inds:
+                isomoc.set_extern_src(ind, 0, pot_xs)
+
+        pot_xs = self.clad.potential_xs
+        for ind in self._clad_isolated_dancoff_fsr_inds:
+            isomoc.set_extern_src(ind, 0, pot_xs)
+
+        pot_xs = self.gap.potential_xs
+        for ind in self._gap_isolated_dancoff_fsr_inds:
+            isomoc.set_extern_src(ind, 0, pot_xs)
+
+        pot_xs = self.poison_materials[-1].potential_xs
+        for ind in self._poison_isolated_dancoff_fsr_inds:
+            isomoc.set_extern_src(ind, 0, pot_xs)
 
     def set_isolated_dancoff_clad_sources(
         self, isomoc: MOCDriver, moderator: Material, ndl: NDLibrary
@@ -251,6 +380,9 @@ class BurnablePoisonRod:
         Initializes the fixed sources for the isolated MOC calculation required
         in computing Dancoff corrections. Sources are set for a clad Dancoff
         correction calculation.
+
+        The cladding of a burnable poison pin is no self-shielded. Therefore,
+        this method is an alias to set_isolated_dancoff_fuel_sources.
 
         Parameters
         ----------
@@ -263,7 +395,7 @@ class BurnablePoisonRod:
             Nuclear data library for obtaining potential scattering cross
             sections.
         """
-        pass
+        self.set_isolated_dancoff_fuel_sources(isomoc, moderator)
 
     def set_full_dancoff_fuel_sources(
         self, fullmoc: MOCDriver, moderator: Material
@@ -281,7 +413,26 @@ class BurnablePoisonRod:
             Material definition for the moderator, used to obtain the potential
             scattering cross section.
         """
-        pass
+        # We only set sources for the center if it isn't moderator ! Otherwise,
+        # the GuideTube class is responsible for taking care of this. This case
+        # is indicated by the center material being None. For this case, the
+        # list of FSR indices should be empty.
+        if self.center is not None:
+            pot_xs = self.center.potential_xs
+            for ind in self._center_full_dancoff_fsr_inds:
+                fullmoc.set_extern_src(ind, 0, pot_xs)
+
+        pot_xs = self.clad.potential_xs
+        for ind in self._clad_full_dancoff_fsr_inds:
+            fullmoc.set_extern_src(ind, 0, pot_xs)
+
+        pot_xs = self.gap.potential_xs
+        for ind in self._gap_full_dancoff_fsr_inds:
+            fullmoc.set_extern_src(ind, 0, pot_xs)
+
+        pot_xs = self.poison_materials[-1].potential_xs
+        for ind in self._poison_full_dancoff_fsr_inds:
+            fullmoc.set_extern_src(ind, 0, pot_xs)
 
     def set_full_dancoff_clad_sources(
         self, fullmoc: MOCDriver, moderator: Material, ndl: NDLibrary
@@ -290,6 +441,9 @@ class BurnablePoisonRod:
         Initializes the fixed sources for the full MOC calculation required
         in computing Dancoff corrections. Sources are set for a clad Dancoff
         correction calculation.
+
+        The cladding of a burnable poison pin is no self-shielded. Therefore,
+        this method is an alias to set_isolated_dancoff_fuel_sources.
 
         Parameters
         ----------
@@ -302,10 +456,31 @@ class BurnablePoisonRod:
             Nuclear data library for obtaining potential scattering cross
             sections.
         """
-        pass
+        self.set_full_dancoff_fuel_sources(fullmoc, moderator)
 
     # ==========================================================================
     # Transport Calculation Related Methods
+
+    def set_center_xs(self, ndl: NDLibrary) -> None:
+        """
+        Constructs the CrossSection object for the material at the center of
+        the poison rod, so long as that material is not moderator.
+
+        Parameters
+        ----------
+        ndl : NDLibrary
+            Nuclear data library to use for cross sections.
+        """
+        if self.center is None:
+            return
+
+        if self._center_xs is None:
+            self._center_xs = self.center.dilution_xs([1.0e10] * self.gap.size, ndl)
+        else:
+            self._center_xs.set(self.center.dilution_xs([1.0e10] * self.gap.size, ndl))
+
+        if self._center_xs.name == "":
+            self._center_xs.name = "BPR Center"
 
     def set_gap_xs(self, ndl: NDLibrary) -> None:
         """
@@ -317,18 +492,32 @@ class BurnablePoisonRod:
         ndl : NDLibrary
             Nuclear data library to use for cross sections.
         """
-        pass
+        if self._gap_xs is None:
+            self._gap_xs = self.gap.dilution_xs([1.0e10] * self.gap.size, ndl)
+        else:
+            self._gap_xs.set(self.gap.dilution_xs([1.0e10] * self.gap.size, ndl))
+
+        if self._gap_xs.name == "":
+            self._gap_xs.name = "BPR Gap"
 
     def set_clad_xs(self, ndl: NDLibrary) -> None:
         """
         Constructs the CrossSection object for the cladding of the poison rod.
+
+        The cladding of a poison rod uses infinitely dilute cross sections.
 
         Parameters
         ----------
         ndl : NDLibrary
             Nuclear data library to use for cross sections.
         """
-        pass
+        if self._clad_xs is None:
+            self._clad_xs = self.clad.dilution_xs([1.0e10] * self.clad.size, ndl)
+        else:
+            self._clad_xs.set(self.clad.dilution_xs([1.0e10] * self.clad.size, ndl))
+
+        if self._clad_xs.name == "":
+            self._clad_xs.name = "BPR Clad"
 
     def set_poison_xs_for_depletion_step(self, t: int, ndl: NDLibrary) -> None:
         """
@@ -342,7 +531,19 @@ class BurnablePoisonRod:
         ndl : NDLibrary
             Nuclear data library to use for cross sections.
         """
-        pass
+        if self._poison_xs is None:
+            self._poison_xs = self.poison_materials[t].dilution_xs(
+                [1.0e10] * self.poison_materials[t].size, ndl
+            )
+        else:
+            self._poison_xs.set(
+                self.poison_materials[t].dilution_xs(
+                    [1.0e10] * self.poison_materials[t].size, ndl
+                )
+            )
+
+        if self._poison_xs.name == "":
+            self._poison_xs.name = "BPR Poison"
 
     def _make_moc_cell(
         self, moderator_xs: CrossSection
@@ -362,7 +563,19 @@ class BurnablePoisonRod:
         moc : MOCDriver
             MOC simulation for the full calculations.
         """
-        pass
+        self._center_fsr_inds = []
+        self._clad_fsr_inds = []
+        self._gap_fsr_inds = []
+        self._poison_fsr_inds = []
+
+        for id in self._center_fsr_ids:
+            self._center_fsr_inds.append(moc.get_fsr_indx(id, 0))
+        for id in self._clad_fsr_ids:
+            self._clad_fsr_inds.append(moc.get_fsr_indx(id, 0))
+        for id in self._gap_fsr_ids:
+            self._gap_fsr_inds.append(moc.get_fsr_indx(id, 0))
+        for id in self._poison_fsr_ids:
+            self._poison_fsr_inds.append(moc.get_fsr_indx(id, 0))
 
     def obtain_poison_flux_spectrum(self, moc: MOCDriver) -> None:
         """
@@ -373,7 +586,22 @@ class BurnablePoisonRod:
         moc : MOCDriver
             MOC simulation for the full calculations.
         """
-        pass
+        self._poison_flux_spectrum = moc.homogenize_flux_spectrum(self._poison_fsr_inds)
+
+    def normalize_flux_spectrum(self, f) -> None:
+        """
+        Applies a multiplicative factor to the flux spectra for the poison.
+        This permits normalizing the flux to a known assembly power.
+
+        Parameters
+        ----------
+        f : float
+            Normalization factor.
+        """
+        if f <= 0.0:
+            raise ValueError("Normalization factor must be > 0.")
+
+        self._poison_flux_spectrum *= f
 
     def predict_depletion(
         self, dt: float, chain: DepletionChain, ndl: NDLibrary
@@ -395,7 +623,37 @@ class BurnablePoisonRod:
         """
         if dt <= 0:
             raise ValueError("Predictor time step must be > 0.")
-        pass
+
+        # Get the flux and initial material
+        flux = self._poison_flux_spectrum
+        mat = self._poison_materials[-1]  # Use last available mat !
+
+        # Build depletion matrix and multiply by time step
+        dep_matrix = build_depletion_matrix(chain, mat, flux, ndl)
+        dep_matrix *= dt
+
+        # At this point, we can clear the xs data from the last material as
+        # depletion matrix is now built.
+        mat.clear_all_micro_xs_data()
+
+        # Initialize an array with the initial target number densities
+        N = np.zeros(dep_matrix.size)
+        nuclides = dep_matrix.nuclides
+        for i, nuclide in enumerate(nuclides):
+            N[i] = mat.atom_density(nuclide)
+
+        # Do the matrix exponential
+        dep_matrix.exponential_product(N)
+
+        # Now we can build a new material composition
+        new_mat_comp = MaterialComposition()
+        for i, nuclide in enumerate(nuclides):
+            if N[i] > 0.0:
+                new_mat_comp.add_nuclide(nuclide, N[i])
+
+        # Make the new material
+        new_mat = Material(new_mat_comp, mat.temperature, ndl)
+        self._poison_materials.append(new_mat)
 
     def correct_depletion(
         self, dt: float, chain: DepletionChain, ndl: NDLibrary
@@ -417,4 +675,31 @@ class BurnablePoisonRod:
         """
         if dt <= 0:
             raise ValueError("Corrector time step must be > 0.")
-        pass
+
+        # Get the flux and initial material
+        flux = self._poison_flux_spectrum
+        mat_pred = self._poison_materials[-1]  # Use last available mat !
+
+        # Build depletion matrix and multiply by time step
+        dep_matrix = build_depletion_matrix(chain, mat_pred, flux, ndl)
+        dep_matrix *= dt
+
+        # Initialize an array with the initial target number densities
+        mat_old = self._poison_materials[-2]  # Go 2 steps back !!
+        N = np.zeros(dep_matrix.size)
+        nuclides = dep_matrix.nuclides
+        for i, nuclide in enumerate(nuclides):
+            N[i] = mat_old.atom_density(nuclide)
+
+        # Do the matrix exponential
+        dep_matrix.exponential_product(N)
+
+        # Now we can build a new material composition
+        new_mat_comp = MaterialComposition()
+        for i, nuclide in enumerate(nuclides):
+            if N[i] > 0.0:
+                new_mat_comp.add_nuclide(nuclide, N[i])
+
+        # Make the new material
+        new_mat = Material(new_mat_comp, mat_pred.temperature, ndl)
+        self._poison_materials[-1] = new_mat
