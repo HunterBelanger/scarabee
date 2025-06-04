@@ -133,8 +133,9 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   // Allocate surfaces array
   surface_currents_ =
       xt::zeros<double>({group_condensation_.size(), nx_surfs_ + ny_surfs_});
-  
-  surface_currents_locks_ = xt::xtensor<OpenMPMutex, 2>({group_condensation_.size(), nx_surfs_ + ny_surfs_});
+
+  surface_currents_locks_ = xt::xtensor<OpenMPMutex, 2>(
+      {group_condensation_.size(), nx_surfs_ + ny_surfs_});
 
   // Allocate the xs array
   xs_.resize({nx_, ny_});
@@ -412,10 +413,10 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
 
   for (auto si : surf_indexes) {
     if (si < nx_surfs_) {
-      std::scoped_lock lock(surface_currents_locks_(G,si));
+      std::scoped_lock lock(surface_currents_locks_(G, si));
       surface_currents_(G, si) += std::copysign(aflx, u.x());
     } else {
-      std::scoped_lock lock(surface_currents_locks_(G,si));
+      std::scoped_lock lock(surface_currents_locks_(G, si));
       surface_currents_(G, si) += std::copysign(aflx, u.y());
     }
   }
@@ -985,7 +986,6 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   Timer cmfd_timer;
   cmfd_timer.reset();
   cmfd_timer.start();
-  spdlog::info("Starting CMFD");
   this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
   this->create_loss_matrix(moc);

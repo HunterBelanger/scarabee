@@ -107,13 +107,16 @@ void MOCDriver::set_keff_tolerance(double ktol) {
 }
 
 void MOCDriver::set_cmfd(std::shared_ptr<CMFD> cmfd) {
-  if ((this->drawn())){
+  if ((this->drawn())) {
     angle_info_.clear();
     tracks_.clear();
-    spdlog::warn("CMFD was set after track tracing, tracks need to be redrawn");
-  } else {
-    cmfd_ = cmfd;
-  }
+    spdlog::warn(
+        "CMFD was set after track tracing. Must call generate_tracks again !");
+  } 
+
+  // TODO Add check that MOCDriver width is same as CMFD width (to floating point tolerance)
+
+  cmfd_ = cmfd;
 }
 
 void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
@@ -362,8 +365,8 @@ void MOCDriver::solve_isotropic() {
     spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
     spdlog::info("     iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
-    if (cmfd_){
-      spdlog::info("CMFD solve time: {:.5E} s",cmfd_->solve_time());
+    if (cmfd_) {
+      spdlog::info("CMFD solve time: {:.5E} s", cmfd_->solve_time());
     }
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
@@ -522,33 +525,34 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
         // Accumulate entry angular flux into CMFD current
         if (cmfd_ && track.begin()->entry_cmfd_surface()) {
           const auto surf_indx = track.begin()->entry_cmfd_surface();
+          double cmfd_flx = 0.;
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
-            cmfd_->tally_current(flx, u_forw, G, surf_indx);
+            cmfd_flx = tw * polar_quad_.wsin()[p] * angflux[p];
           }
+          cmfd_->tally_current(cmfd_flx, u_forw, G, surf_indx);
         }
 
         // Follow track in forward direction
         for (auto& seg : track) {
           const auto cmfd_surf = seg.exit_cmfd_surface();
-          const std::size_t i = seg.fsr_indx();
+          const std::size_t i = seg.fsr_indx(); 
           const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
           const double lEt = l * Et;
           const double Q = src(g, i);
           double delta_sum = 0.;
+          double cmfd_flx = 0.;
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             double exp_m1 = mexp(lEt * polar_quad_.invs_sin()[p]);
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
 
-            if (cmfd_surf) {
-              const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
-              cmfd_->tally_current(flx, u_forw, G, cmfd_surf);
-            }
-
+            if (cmfd_surf) cmfd_flx += tw * polar_quad_.wsin()[p] * angflux[p];
           }  // For all polar angles
+
+          if (cmfd_surf) cmfd_->tally_current(cmfd_flx, u_forw, G, cmfd_surf);
+          
           sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
 
@@ -568,13 +572,13 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
 
         // Accumulate entry angular flux into CMFD current for backwards
         // direction
-
         if (cmfd_ && track.rbegin()->exit_cmfd_surface()) {
           auto surf_indx = track.rbegin()->exit_cmfd_surface();
+          double cmfd_flx = 0.;
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
-            const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
-            cmfd_->tally_current(flx, u_back, G, surf_indx);
+            cmfd_flx += tw * polar_quad_.wsin()[p] * angflux[p];
           }
+          cmfd_->tally_current(cmfd_flx, u_back, G, surf_indx);
         }
 
         // Iterate over segments in backwards direction
@@ -587,18 +591,18 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
           const double lEt = l * Et;
           const double Q = src(g, i);
           double delta_sum = 0.;
+          double cmfd_flx = 0.;
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             double exp_m1 = mexp(lEt * polar_quad_.invs_sin()[p]);
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
 
-            if (cmfd_surf) {
-              const double flx = tw * polar_quad_.wsin()[p] * angflux[p];
-              cmfd_->tally_current(flx, u_back, G, cmfd_surf);
-            }
-
+            if (cmfd_surf) cmfd_flx += tw * polar_quad_.wsin()[p] * angflux[p];
           }  // For all polar angles
+
+          if (cmfd_surf) cmfd_->tally_current(cmfd_flx, u_back, G, cmfd_surf);
+          
           sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
 
@@ -611,7 +615,7 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
           }
         }
       }  // For all tracks
-    }  // For all azimuthal angles
+    }    // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
@@ -673,7 +677,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
                                     Y_ljs[it_lj] * 0.5;
             }
           }  // For all polar angles
-        }  // For all segments along forward direction of track
+        }    // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.exit_bc() == BoundaryCondition::Vacuum) {
@@ -724,7 +728,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
                                     Y_ljs[it_lj] * 0.5;
             }
           }  // For all polar angles
-        }  // For all segments along forward direction of track
+        }    // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.entry_bc() == BoundaryCondition::Vacuum) {
@@ -735,7 +739,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
           }
         }
       }  // For all tracks
-    }  // For all azimuthal angles
+    }    // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
@@ -844,9 +848,9 @@ void MOCDriver::fill_source_anisotropic(
           it_lj++;
 
         }  // -l to l
-      }  // all scattering moments L
-    }  // all flat souce regions
-  }  // all groups
+      }    // all scattering moments L
+    }      // all flat souce regions
+  }        // all groups
 }
 
 void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
