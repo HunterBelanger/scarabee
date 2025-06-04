@@ -1,8 +1,6 @@
 from .._scarabee import (
     NDLibrary,
     MaterialComposition,
-    Fraction,
-    DensityUnits,
     Material,
     CrossSection,
     PinCellType,
@@ -1170,8 +1168,8 @@ class FuelPin:
         step. The corrected material compositions replace the ones where were
         appended in the corrector step.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         dt : float
             Time step for the predictor in seconds.
         chain : DepletionChain
