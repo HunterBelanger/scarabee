@@ -882,13 +882,7 @@ void CMFD::power_iteration(double keff) {
   // Begin power iteration
   double keff_diff = 100.;
   double flux_diff = 100.;
-  std::size_t iteration = 0;
-  Timer iteration_timer;
   while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
-    iteration_timer.reset();
-    iteration_timer.start();
-    iteration++;
-
     // Compute source vector
     Q = (1. / keff) * QM_ * flux_cmfd_;
 
@@ -914,14 +908,6 @@ void CMFD::power_iteration(double keff) {
       if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
     }
     flux_cmfd_ = new_flux;
-
-    // Write information
-    spdlog::info("-----------------CMFD-----------------");
-    spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff);
-    spdlog::info("     keff difference:     {:.5E}", keff_diff);
-    spdlog::info("     max flux difference: {:.5E}", flux_diff);
-    spdlog::info("     iteration time: {:.5E} s",
-                 iteration_timer.elapsed_time());
   }
   keff_ = keff;
 }
@@ -992,6 +978,9 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
 }
 
 void CMFD::solve(MOCDriver& moc, double keff) {
+  Timer cmfd_timer;
+  cmfd_timer.reset();
+  cmfd_timer.start();
   spdlog::info("Starting CMFD");
   this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
@@ -1009,6 +998,9 @@ void CMFD::solve(MOCDriver& moc, double keff) {
     }
   }
   */
+
+  cmfd_timer.stop();
+  solve_time_ = cmfd_timer.elapsed_time();
 }
 
 }  // namespace scarabee

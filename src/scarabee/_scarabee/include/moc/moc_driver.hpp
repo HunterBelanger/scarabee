@@ -35,7 +35,7 @@ class MOCDriver {
   std::shared_ptr<Cartesian2D> geometry() const { return geometry_; }
 
   const std::shared_ptr<CMFD>& cmfd() const { return cmfd_; }
-  void set_cmfd(std::shared_ptr<CMFD> cmfd) { cmfd_ = cmfd; }
+  void set_cmfd(std::shared_ptr<CMFD> cmfd);
 
   bool drawn() const { return !angle_info_.empty(); }
 

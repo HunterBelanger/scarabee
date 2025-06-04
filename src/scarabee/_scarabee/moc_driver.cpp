@@ -106,6 +106,16 @@ void MOCDriver::set_keff_tolerance(double ktol) {
   keff_tol_ = ktol;
 }
 
+void MOCDriver::set_cmfd(std::shared_ptr<CMFD> cmfd) {
+  if ((this->drawn())){
+    angle_info_.clear();
+    tracks_.clear();
+    spdlog::warn("CMFD was set after track tracing, tracks need to be redrawn");
+  } else {
+    cmfd_ = cmfd;
+  }
+}
+
 void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
                                 PolarQuadrature polar_quad) {
   // Timer for method
@@ -352,7 +362,9 @@ void MOCDriver::solve_isotropic() {
     spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
     spdlog::info("     iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
-
+    if (cmfd_){
+      spdlog::info("CMFD solve time: {:.5E} s",cmfd_->solve_time());
+    }
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
       spdlog::warn("Negative source values set to zero");

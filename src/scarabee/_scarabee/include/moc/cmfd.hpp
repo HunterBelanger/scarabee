@@ -90,8 +90,6 @@ class CMFD {
 
   enum class TileSurf : std::uint8_t { XN, XP, YN, YP };
 
-  Eigen::VectorXd flatten_flux() const;
-
   void solve(MOCDriver& moc, double keff);
 
   void set_damping(double wd);
@@ -103,6 +101,8 @@ class CMFD {
 
   const double& flux(const std::size_t i, const std::size_t j, const std::size_t g) const;
   double keff() const { return keff_; }
+
+  const double& solve_time() const { return solve_time_; }
 
  private:
   std::vector<double> dx_, dy_;
@@ -117,6 +117,7 @@ class CMFD {
   double flux_tol_ = 1E-5;
   double damping_ = 0.7;
   double keff_ = 1.0;
+  double solve_time_;
 
   // List of flat source region indices for each CMFD cell
   std::vector<std::set<std::size_t>> temp_fsrs_;
