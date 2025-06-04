@@ -1260,8 +1260,8 @@ void MOCDriver::set_bcs() {
 void MOCDriver::allocate_track_fluxes() {
   for (auto& tracks : tracks_) {
     for (auto& track : tracks) {
-      track.entry_flux().resize({ngroups_, n_pol_angles_});
-      track.exit_flux().resize({ngroups_, n_pol_angles_});
+      track.entry_flux() = xt::zeros<double>({ngroups_, n_pol_angles_});
+      track.exit_flux() = xt::zeros<double>({ngroups_, n_pol_angles_});
     }
   }
 }
