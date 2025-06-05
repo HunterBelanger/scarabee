@@ -6,7 +6,9 @@
 #include <moc/direction.hpp>
 #include <moc/boundary_condition.hpp>
 #include <data/diffusion_cross_section.hpp>
+#include <utils/simulation_mode.hpp>
 #include <utils/openmp_mutex.hpp>
+
 
 #include <xtensor/xtensor.hpp>
 #include <Eigen/Sparse>
@@ -99,7 +101,6 @@ class CMFD {
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
 
-
   const double& flux(const std::size_t i, const std::size_t j, const std::size_t g) const;
   double keff() const { return keff_; }
 
@@ -119,6 +120,7 @@ class CMFD {
   double damping_ = 0.7;
   double keff_ = 1.0;
   double solve_time_;
+  SimulationMode mode_{SimulationMode::Keff};
 
   // List of flat source region indices for each CMFD cell
   std::vector<std::set<std::size_t>> temp_fsrs_;
@@ -145,6 +147,8 @@ class CMFD {
   Eigen::SparseMatrix<double> M_;   // Loss Matrix
   Eigen::SparseMatrix<double> QM_;  // Source Matrix
 
+  Eigen::VectorXd extern_src_; // g*nx_*ny_
+
   std::pair<double, double> calc_surf_diffusion_coeffs(
       std::size_t i, std::size_t j, std::size_t g, TileSurf surf,
       const MOCDriver& moc) const;
@@ -157,6 +161,7 @@ class CMFD {
   void create_loss_matrix(const MOCDriver& moc);
   void create_source_matrix();
   void power_iteration(double keff);
+  void fixed_source_iteration();
   void update_moc_fluxes(MOCDriver& moc);
   void normalize_currents();
   void compute_homogenized_xs_and_flux(const MOCDriver& moc);

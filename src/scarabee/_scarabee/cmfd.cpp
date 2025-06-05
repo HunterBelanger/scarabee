@@ -1,10 +1,12 @@
 #include <moc/cmfd.hpp>
 #include <moc/moc_driver.hpp>
-#include <utils/logging.hpp>
-#include <utils/timer.hpp>
-#include <utils/scarabee_exception.hpp>
 #include <utils/constants.hpp>
+#include <utils/logging.hpp>
 #include <utils/openmp_mutex.hpp>
+#include <utils/scarabee_exception.hpp>
+#include <utils/simulation_mode.hpp>
+#include <utils/timer.hpp>
+
 
 #include <cmath>
 #include <limits>
@@ -472,6 +474,7 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
         cell_volume += moc.volume(fsr);
       }
       volumes_[indx] = cell_volume;
+      const double invs_V = 1. / cell_volume;
 
       // Generate the flux and Et values for the tile
       xt::view(flux_, xt::all(), i, j) = 0.;
@@ -479,8 +482,17 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
         flux_(moc_to_cmfd_group_map_[g], i, j) += flux_spec(g);
         Et_(moc_to_cmfd_group_map_[g], i, j) += fg_xs->Etr(g) * flux_spec(g);
+
+        //Homogenize external source 
+        if (mode_ == SimulationMode::FixedSource){
+          for (auto fsr : fsrs_[indx]) {
+            extern_src_[moc_to_cmfd_group_map_[g] * nx_ * ny_ + indx] += invs_V * moc.volume(fsr) * moc.extern_src(fsr,g);
+          }
+        }  
       }
       xt::view(Et_, xt::all(), i, j) /= xt::view(flux_, xt::all(), i, j);
+
+      
     }
   }
 }
@@ -769,6 +781,10 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
             "At least one transport corrected diffusion coefficient is greater "
             "than its non-corrected counterpart";
         spdlog::error(mssg);
+        Dnl_xp = Dxp;
+        Dnl_xn = Dxn;
+        Dnl_yp = Dyp;
+        Dnl_yn = Dyn;
       }
 
       // Streaming to adjacent X cells
@@ -917,6 +933,55 @@ void CMFD::power_iteration(double keff) {
   keff_ = keff;
 }
 
+void CMFD::fixed_source_iteration(){
+  // Solve fixed source problem
+  // Subtract fission source from loss matrix
+  Eigen::SparseMatrix<double> L = M_ - QM_ ;
+  // Initialize flux
+  Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
+
+  // normalize source
+  extern_src_ /= extern_src_.sum();
+
+  // Create a solver for the problem
+  Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
+  solver.compute(L);
+  solver.setTolerance(1.E-8);
+
+  if (solver.info() != Eigen::Success) {
+    std::stringstream mssg;
+    mssg << "Could not initialize CMFD iterative solver";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  std::size_t iteration = 0;
+  double flux_diff = 100.;
+  while (flux_diff > flux_tol_) {
+    iteration++;
+    // Get new flux
+    new_flux = solver.solveWithGuess(extern_src_, flux_cmfd_);
+    if (solver.info() != Eigen::Success) {
+      spdlog::error("Solution impossible.");
+      throw ScarabeeException("Solution impossible");
+    }
+
+    // Find the max flux error
+    flux_diff = 0.;
+    for (std::size_t i = 0; i < ng_ * nx_ * ny_; i++) {
+      double flux_diff_i = std::abs(new_flux(i) - flux_cmfd_(i)) / new_flux(i);
+      if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
+    }
+
+    // Write information
+    spdlog::info("-------------------------------------");
+    spdlog::info("Iteration {:>4d}", iteration);
+    spdlog::info("     max flux difference: {:.5E}", flux_diff);
+
+    flux_cmfd_ = new_flux;
+  }
+}
+
 void CMFD::update_moc_fluxes(MOCDriver& moc) {
   // Update MOC FSR scalar fluxes
   const std::size_t tot_cells = ny_ * nx_;
@@ -986,11 +1051,22 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   Timer cmfd_timer;
   cmfd_timer.reset();
   cmfd_timer.start();
+  if (moc.sim_mode() == SimulationMode::Keff){
+    mode_ = SimulationMode::Keff;
+  } else if (moc.sim_mode() == SimulationMode::FixedSource) {
+    mode_ = SimulationMode::FixedSource;
+    extern_src_.resize(ng_ * nx_ * ny_);
+    extern_src_.setZero();
+  }
   this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
   this->create_loss_matrix(moc);
   this->create_source_matrix();
-  this->power_iteration(keff_);
+  if (mode_ == SimulationMode::Keff){
+    this->power_iteration(keff_);
+  }else if (mode_ == SimulationMode::FixedSource) {
+    this->fixed_source_iteration();
+  }
   this->update_moc_fluxes(moc);
 
   /**
