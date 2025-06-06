@@ -7,7 +7,7 @@
 #include <utils/simulation_mode.hpp>
 #include <utils/timer.hpp>
 
-
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <mutex>
@@ -698,13 +698,16 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
     }
 
     // Vacuum BC
-    const double D_surf = 2. * D_ij / (4. * D_ij + dx_ij);
+    double D_surf = 2. * D_ij / (4. * D_ij + dx_ij);
     double D_nl = 0.;
     if (surf == CMFD::TileSurf::XP || surf == CMFD::TileSurf::YP) {
       D_nl = -(current - D_surf * flx_ij) / flx_ij;
     } else {
       D_nl = -(current + D_surf * flx_ij) / flx_ij;
     }
+
+    //Make sure D_surf is larger
+    D_surf = std::max(D_surf,std::abs(D_nl));
     return {D_surf, D_nl};
   }
 
@@ -717,7 +720,7 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   const double dx_iijj = get_cmfd_tile_width(ii, jj, surf);
 
   // First, compute normal surface diffusion coefficient
-  const double D_surf = (2 * D_ij * D_iijj) / (D_ij * dx_iijj + D_iijj * dx_ij);
+  double D_surf = (2 * D_ij * D_iijj) / (D_ij * dx_iijj + D_iijj * dx_ij);
 
   // Compute non-linear diffusion coefficient
   double D_nl = 0.;
@@ -726,6 +729,21 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   } else {
     D_nl = (D_surf * (flx_iijj - flx_ij) - current) / (flx_iijj + flx_ij);
   }
+
+  //Flux limiting condition
+  if (std::abs(D_nl/D_surf > 1.0)){
+
+    if (current > 0.0){
+      D_surf = std::abs(current / (2.0 * flx_ij));
+    } else {
+      D_surf = std::abs(current / (2.0 * flx_iijj));
+    }
+    D_nl = -(D_surf * (flx_iijj - flx_ij) + current) / (flx_iijj + flx_ij);
+    
+  }
+
+  //Make sure D_surf is larger
+  D_surf = std::max(D_surf,std::abs(D_nl));
 
   // Return coefficients
   return {D_surf, D_nl};
@@ -781,10 +799,6 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
             "At least one transport corrected diffusion coefficient is greater "
             "than its non-corrected counterpart";
         spdlog::error(mssg);
-        Dnl_xp = Dxp;
-        Dnl_xn = Dxn;
-        Dnl_yp = Dyp;
-        Dnl_yn = Dyn;
       }
 
       // Streaming to adjacent X cells
@@ -933,15 +947,17 @@ void CMFD::power_iteration(double keff) {
   keff_ = keff;
 }
 
-void CMFD::fixed_source_iteration(){
+void CMFD::fixed_source_solve(){
   // Solve fixed source problem
   // Subtract fission source from loss matrix
-  Eigen::SparseMatrix<double> L = M_ - QM_ ;
+  Eigen::SparseMatrix<double> L = M_ - QM_;
   // Initialize flux
   Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
 
   // normalize source
-  extern_src_ /= extern_src_.sum();
+  //spdlog::info("Sum of extern src: {}", extern_src_.sum());
+  //extern_src_ /= extern_src_.sum();
+  //flux_cmfd_ /= flux_cmfd_.sum();
 
   // Create a solver for the problem
   Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
@@ -955,31 +971,14 @@ void CMFD::fixed_source_iteration(){
     throw ScarabeeException(mssg.str());
   }
 
-  std::size_t iteration = 0;
-  double flux_diff = 100.;
-  while (flux_diff > flux_tol_) {
-    iteration++;
-    // Get new flux
-    new_flux = solver.solveWithGuess(extern_src_, flux_cmfd_);
-    if (solver.info() != Eigen::Success) {
-      spdlog::error("Solution impossible.");
-      throw ScarabeeException("Solution impossible");
-    }
-
-    // Find the max flux error
-    flux_diff = 0.;
-    for (std::size_t i = 0; i < ng_ * nx_ * ny_; i++) {
-      double flux_diff_i = std::abs(new_flux(i) - flux_cmfd_(i)) / new_flux(i);
-      if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
-    }
-
-    // Write information
-    spdlog::info("-------------------------------------");
-    spdlog::info("Iteration {:>4d}", iteration);
-    spdlog::info("     max flux difference: {:.5E}", flux_diff);
-
-    flux_cmfd_ = new_flux;
+  // Get new flux
+  new_flux = solver.solveWithGuess(extern_src_, flux_cmfd_);
+  if (solver.info() != Eigen::Success) {
+    spdlog::error("Solution impossible.");
+    throw ScarabeeException("Solution impossible");
   }
+
+  flux_cmfd_ = new_flux;
 }
 
 void CMFD::update_moc_fluxes(MOCDriver& moc) {
@@ -990,6 +989,7 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
   flux_ /= xt::sum(flux_)();
   flux_cmfd_ /= flux_cmfd_.sum();
 
+
   // Precompute update ratio in each CMFD cell
   std::size_t i = 0;
   std::size_t j = 0;
@@ -998,7 +998,8 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       const std::size_t G = moc_to_cmfd_group_map_[g];
       const std::size_t linear_indx = G * tot_cells + l;
       const double invs_flx = 1. / flux_(G, i, j);
-      update_ratios_(linear_indx) = flux_cmfd_(linear_indx) * invs_flx;
+      double ratio = flux_cmfd_(linear_indx) * invs_flx;
+      update_ratios_(linear_indx) = ratio;
     }
     i++;
     if (i == nx_) {
@@ -1057,6 +1058,7 @@ void CMFD::solve(MOCDriver& moc, double keff) {
     mode_ = SimulationMode::FixedSource;
     extern_src_.resize(ng_ * nx_ * ny_);
     extern_src_.setZero();
+    flux_cmfd_.setZero();
   }
   this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
@@ -1065,7 +1067,7 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   if (mode_ == SimulationMode::Keff){
     this->power_iteration(keff_);
   }else if (mode_ == SimulationMode::FixedSource) {
-    this->fixed_source_iteration();
+    this->fixed_source_solve();
   }
   this->update_moc_fluxes(moc);
 

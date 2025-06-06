@@ -161,7 +161,7 @@ class CMFD {
   void create_loss_matrix(const MOCDriver& moc);
   void create_source_matrix();
   void power_iteration(double keff);
-  void fixed_source_iteration();
+  void fixed_source_solve();
   void update_moc_fluxes(MOCDriver& moc);
   void normalize_currents();
   void compute_homogenized_xs_and_flux(const MOCDriver& moc);
