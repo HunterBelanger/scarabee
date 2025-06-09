@@ -145,7 +145,14 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
 
   // Allocate cell volume array
   volumes_.resize(nx_ * ny_);
-  volumes_.setZero();
+  for (std::size_t i = 0; i < nx_; i++){
+    for (std::size_t j = 0; j < ny_; j++){
+      // Store CMFD cell volume
+      const auto indx = tile_to_indx(i, j);
+      volumes_[indx] = dx_[i] * dy_[j];
+    }
+  }
+
 
   // Set CMFD fluxes to 1
   flux_cmfd_.resize(ng_ * nx_ * ny_);
@@ -468,32 +475,32 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
       else
         xs = fg_dxs->condense(group_condensation_, flux_spec);
 
-      // Store CMFD cell volume
-      double cell_volume = 0.;
-      for (auto fsr : fsrs_[indx]) {
-        cell_volume += moc.volume(fsr);
-      }
-      volumes_[indx] = cell_volume;
-      const double invs_V = 1. / cell_volume;
-
       // Generate the flux and Et values for the tile
       xt::view(flux_, xt::all(), i, j) = 0.;
       xt::view(Et_, xt::all(), i, j) = 0.;
       for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
         flux_(moc_to_cmfd_group_map_[g], i, j) += flux_spec(g);
         Et_(moc_to_cmfd_group_map_[g], i, j) += fg_xs->Etr(g) * flux_spec(g);
-
-        //Homogenize external source 
-        if (mode_ == SimulationMode::FixedSource){
-          for (auto fsr : fsrs_[indx]) {
-            extern_src_[moc_to_cmfd_group_map_[g] * nx_ * ny_ + indx] += invs_V * moc.volume(fsr) * moc.extern_src(fsr,g);
-          }
-        }  
       }
       xt::view(Et_, xt::all(), i, j) /= xt::view(flux_, xt::all(), i, j);
 
       
     }
+  }
+}
+
+void CMFD::homogenize_ext_src(const MOCDriver& moc){
+  const std::size_t tot_cells = nx_ * ny_;
+  // Loop over all cells
+  for (std::size_t l = 0; l < tot_cells; l++){
+    const double invs_V = 1. / volumes_[l];
+    // Loop over MOC groups 
+    for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
+      // Loop over FSRs in cell l 
+        for (auto fsr : fsrs_[l]) {
+          extern_src_[moc_to_cmfd_group_map_[g] * tot_cells + l] += invs_V * moc.volume(fsr) * moc.extern_src(fsr,g);
+        }
+      }
   }
 }
 
@@ -706,8 +713,6 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
       D_nl = -(current + D_surf * flx_ij) / flx_ij;
     }
 
-    //Make sure D_surf is larger
-    D_surf = std::max(D_surf,std::abs(D_nl));
     return {D_surf, D_nl};
   }
 
@@ -729,21 +734,6 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   } else {
     D_nl = (D_surf * (flx_iijj - flx_ij) - current) / (flx_iijj + flx_ij);
   }
-
-  //Flux limiting condition
-  if (std::abs(D_nl/D_surf > 1.0)){
-
-    if (current > 0.0){
-      D_surf = std::abs(current / (2.0 * flx_ij));
-    } else {
-      D_surf = std::abs(current / (2.0 * flx_iijj));
-    }
-    D_nl = -(D_surf * (flx_iijj - flx_ij) + current) / (flx_iijj + flx_ij);
-    
-  }
-
-  //Make sure D_surf is larger
-  D_surf = std::max(D_surf,std::abs(D_nl));
 
   // Return coefficients
   return {D_surf, D_nl};
@@ -798,7 +788,7 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
         auto mssg =
             "At least one transport corrected diffusion coefficient is greater "
             "than its non-corrected counterpart";
-        spdlog::error(mssg);
+        spdlog::warn(mssg);
       }
 
       // Streaming to adjacent X cells
@@ -954,11 +944,6 @@ void CMFD::fixed_source_solve(){
   // Initialize flux
   Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
 
-  // normalize source
-  //spdlog::info("Sum of extern src: {}", extern_src_.sum());
-  //extern_src_ /= extern_src_.sum();
-  //flux_cmfd_ /= flux_cmfd_.sum();
-
   // Create a solver for the problem
   Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
   solver.compute(L);
@@ -1052,21 +1037,27 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   Timer cmfd_timer;
   cmfd_timer.reset();
   cmfd_timer.start();
-  if (moc.sim_mode() == SimulationMode::Keff){
-    mode_ = SimulationMode::Keff;
-  } else if (moc.sim_mode() == SimulationMode::FixedSource) {
-    mode_ = SimulationMode::FixedSource;
-    extern_src_.resize(ng_ * nx_ * ny_);
-    extern_src_.setZero();
-    flux_cmfd_.setZero();
-  }
+  
   this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
+  // First time setup, needs to be called here
+  // to ensure MOC has been fully setup first
+  // Check can't go in constructor because 
+  // CMFD has to be set before generate_tracks
+  if (cmfd_solves_ == 0){
+    if (moc.sim_mode() == SimulationMode::Keff){
+        mode_ = SimulationMode::Keff;
+    } else if (moc.sim_mode() == SimulationMode::FixedSource) {
+      mode_ = SimulationMode::FixedSource;
+      extern_src_.resize(ng_ * nx_ * ny_);
+      this->homogenize_ext_src(moc);
+      }
+  }
   this->create_loss_matrix(moc);
   this->create_source_matrix();
   if (mode_ == SimulationMode::Keff){
     this->power_iteration(keff_);
-  }else if (mode_ == SimulationMode::FixedSource) {
+  } else if (mode_ == SimulationMode::FixedSource) {
     this->fixed_source_solve();
   }
   this->update_moc_fluxes(moc);
@@ -1081,6 +1072,7 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   }
   */
 
+  cmfd_solves_++;
   cmfd_timer.stop();
   solve_time_ = cmfd_timer.elapsed_time();
 }
