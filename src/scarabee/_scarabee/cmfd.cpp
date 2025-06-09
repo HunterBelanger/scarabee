@@ -692,6 +692,18 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   const double dx_ij = get_cmfd_tile_width(i, j, surf);
   const double current = get_current(i, j, g, surf);
 
+  const auto flux_limiting = [current, surf, flx_ij](double& D_surf, double& D_nl, const double flx_next){
+    // Flux limiting condition 
+    if (std::abs(D_nl) > std::abs(D_surf)){
+      if (surf == CMFD::TileSurf::XP || surf == CMFD::TileSurf::YP) {
+        D_surf = current / (-2. * flx_next);
+      } else {
+        D_surf = current / (-2. * flx_ij);
+      }
+      D_nl = D_surf;
+    }
+  };
+
   // Get the next CMFD tile or BC (only Reflective or Vacuum).
   // Periodic is treated like an interior cell.
   const auto next_tile_or_bc = find_next_cell_or_bc(i, j, surf, moc);
@@ -711,6 +723,10 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
       D_nl = -(current - D_surf * flx_ij) / flx_ij;
     } else {
       D_nl = -(current + D_surf * flx_ij) / flx_ij;
+    }
+    
+    if (surf == CMFD::TileSurf::XN || surf == CMFD::TileSurf::YN){
+      flux_limiting(D_surf, D_nl, 0.);
     }
 
     return {D_surf, D_nl};
@@ -734,6 +750,8 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   } else {
     D_nl = (D_surf * (flx_iijj - flx_ij) - current) / (flx_iijj + flx_ij);
   }
+
+  flux_limiting(D_surf, D_nl, flx_iijj);
 
   // Return coefficients
   return {D_surf, D_nl};
@@ -771,6 +789,13 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XN, moc);
       auto [Dyn, Dnl_yn] =
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YN, moc);
+      
+      if (Dnl_xp > Dxp || Dnl_xn > Dxn || Dnl_yp > Dyp || Dnl_yn > Dyn) {
+        auto mssg =
+            "At least one transport corrected diffusion coefficient is greater "
+            "than its non-corrected counterpart";
+        spdlog::debug(mssg);
+      }
 
       // Calculate n+1 diffusion coefficients from n-1 and n+1/2
       Dnl_xp = (1 - damping_) * D_transp_corr_(g, xpsurf) + damping_ * Dnl_xp;
@@ -783,13 +808,6 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
       D_transp_corr_new(g, xnsurf) = Dnl_xn;
       D_transp_corr_new(g, ypsurf) = Dnl_yp;
       D_transp_corr_new(g, ynsurf) = Dnl_yn;
-
-      if (Dnl_xp > Dxp || Dnl_xn > Dxn || Dnl_yp > Dyp || Dnl_yn > Dyn) {
-        auto mssg =
-            "At least one transport corrected diffusion coefficient is greater "
-            "than its non-corrected counterpart";
-        spdlog::warn(mssg);
-      }
 
       // Streaming to adjacent X cells
       if (i != 0) {
