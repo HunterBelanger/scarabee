@@ -1178,6 +1178,8 @@ class PWRAssembly:
         self.recompute_all_gap_xs()
         self.recompute_all_clad_xs()
 
+        self.recompute_all_guide_tube_fill_xs()
+
         self.set_moderator_xs()
 
     def recompute_all_self_shielded_xs(self) -> None:
@@ -1220,6 +1222,17 @@ class PWRAssembly:
                 if isinstance(cell, FuelPin):
                     cell.set_gap_xs(self._ndl)
 
+    def recompute_all_guide_tube_fill_xs(self) -> None:
+        """
+        Computes and applies all cross sections for the fill objects of guide
+        tubes. These could be for burnable poison rods or control rods.
+        """
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+                if isinstance(cell, GuideTube):
+                    cell.set_fill_xs_for_depletion_step(-1, self._ndl)
+
     def apply_leakage_model(self) -> None:
         """
         Applied the critical leakage model to the assembly, modifying the flux
@@ -1261,17 +1274,15 @@ class PWRAssembly:
         if self._infinite_flux_spectrum is not None and self._asmbly_moc is not None:
             self._asmbly_moc.apply_criticality_spectrum(self._infinite_flux_spectrum)
 
-    def obtain_fuel_flux_spectra(self) -> None:
+    def obtain_flux_spectra(self) -> None:
         """
-        Computes the average flux spectrum for each fuel ring from the MOC
-        simulation, and saves it in the FuelPin instance.
+        Computes the average flux spectrum for material regions whcih are
+        depleted. This includes each fuel ring in fuel pins and the poison in
+        burnable poison rods.
         """
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
-                cell = self.cells[j][i]
-
-                if isinstance(cell, FuelPin):
-                    cell.obtain_fuel_flux_spectra(self._asmbly_moc)
+                self.cells[j][i].obtain_flux_spectra(self._asmbly_moc)
 
     def normalize_flux_to_power(self) -> None:
         """
@@ -1326,9 +1337,7 @@ class PWRAssembly:
         # Normalize flux spectra
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
-                cell = self.cells[j][i]
-                if isinstance(cell, FuelPin):
-                    cell.normalize_flux_spectrum(f)
+                cell = self.cells[j][i].normalize_flux_spectrum(f)
 
     def _compute_few_group_flux(self, r: Vector, u: Direction) -> List[float]:
         """
@@ -1684,7 +1693,7 @@ class PWRAssembly:
         scarabee_log(LogLevel.Info, "Kinf: {:.5f}".format(self._asmbly_moc.keff))
 
         self.apply_leakage_model()
-        self.obtain_fuel_flux_spectra()
+        self.obtain_flux_spectra()
         self.normalize_flux_to_power()
         self.apply_infinite_spectrum()
 

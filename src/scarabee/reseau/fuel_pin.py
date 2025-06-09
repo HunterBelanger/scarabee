@@ -1048,7 +1048,7 @@ class FuelPin:
         for id in self._mod_fsr_ids:
             self._mod_fsr_inds.append(moc.get_fsr_indx(id, 0))
 
-    def obtain_fuel_flux_spectra(self, moc: MOCDriver) -> None:
+    def obtain_flux_spectra(self, moc: MOCDriver) -> None:
         """
         Computes the average flux spectrum for each fuel ring from the MOC
         simulation. Each ring's flux spectrum is volume averaged.

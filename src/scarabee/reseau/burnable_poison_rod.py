@@ -249,7 +249,27 @@ class BurnablePoisonRod:
         """
         Returns the list of radii and list of cross sections for the poison pin.
         """
-        pass
+        radii: List[float] = [
+            self.center_radius,
+            self.inner_clad_radius,
+            self.inner_gap_radius,
+            self.poison_radius,
+            self.outer_gap_radius,
+            self.outer_clad_radius,
+        ]
+        xs: List[CrossSection] = [
+            moderator_xs,
+            self._clad_dancoff_xs,
+            self._gap_dancoff_xs,
+            self._poison_dancoff_xs,
+            self._gap_dancoff_xs,
+            self._clad_dancoff_xs,
+        ]
+
+        if self._center_dancoff_xs is not None:
+            xs[0] = self._center_dancoff_xs
+
+        return radii, xs
 
     def populate_dancoff_fsr_indexes(
         self, isomoc: MOCDriver, fullmoc: MOCDriver
@@ -475,9 +495,11 @@ class BurnablePoisonRod:
             return
 
         if self._center_xs is None:
-            self._center_xs = self.center.dilution_xs([1.0e10] * self.gap.size, ndl)
+            self._center_xs = self.center.dilution_xs([1.0e10] * self.center.size, ndl)
         else:
-            self._center_xs.set(self.center.dilution_xs([1.0e10] * self.gap.size, ndl))
+            self._center_xs.set(
+                self.center.dilution_xs([1.0e10] * self.center.size, ndl)
+            )
 
         if self._center_xs.name == "":
             self._center_xs.name = "BPR Center"
@@ -551,7 +573,30 @@ class BurnablePoisonRod:
         """
         Returns the list of radii and list of cross sections for the poison pin.
         """
-        pass
+        """
+        Returns the list of radii and list of cross sections for the poison pin.
+        """
+        radii: List[float] = [
+            self.center_radius,
+            self.inner_clad_radius,
+            self.inner_gap_radius,
+            self.poison_radius,
+            self.outer_gap_radius,
+            self.outer_clad_radius,
+        ]
+        xs: List[CrossSection] = [
+            moderator_xs,
+            self._clad_xs,
+            self._gap_xs,
+            self._poison_xs,
+            self._gap_xs,
+            self._clad_xs,
+        ]
+
+        if self._center_xs is not None:
+            xs[0] = self._center_xs
+
+        return radii, xs
 
     def populate_fsr_indexes(self, moc: MOCDriver) -> None:
         """
@@ -577,7 +622,7 @@ class BurnablePoisonRod:
         for id in self._poison_fsr_ids:
             self._poison_fsr_inds.append(moc.get_fsr_indx(id, 0))
 
-    def obtain_poison_flux_spectrum(self, moc: MOCDriver) -> None:
+    def obtain_flux_spectra(self, moc: MOCDriver) -> None:
         """
         Computes average flux spectrum in the poison from the MOC simulation.
 
