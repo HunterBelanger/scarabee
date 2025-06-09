@@ -41,16 +41,14 @@ class TestCMFDSurfaces:
         """
         Tests get_surface() for a point, direction pair that goes 
         from the left of a cell to an exterior boundary
-        Should return a non valid surface crossing
+        Should throw an error
         """
         cmfd = make_cmfd
         tol = 1e-12
         r = Vector(-1.0+tol,-0.5)
         u = Direction(-1.0,0.0)
-
-        surface = cmfd.get_surface(r,u)
-
-        check.equal(surface.is_valid, False)
+        with pytest.raises(RuntimeError):
+            surface = cmfd.get_surface(r,u)
 
     def test_YP_to_YN(self, make_cmfd):
         """
@@ -75,16 +73,15 @@ class TestCMFDSurfaces:
         """
         Tests get_surface() for a point, direction pair that goes 
         from the bottom of a cell to an exterior boundary
-        Should return a non valid surface crossing
+        Should throw an error
         """
         cmfd = make_cmfd
         tol = 1e-12
         r = Vector(-0.5,-1.0+tol)
         u = Direction(0,-1)
 
-        surface = cmfd.get_surface(r,u)
-
-        check.equal(surface.is_valid, False)
+        with pytest.raises(RuntimeError):
+            surface = cmfd.get_surface(r,u)
 
 
     def test_TR_to_BL(self, make_cmfd):
