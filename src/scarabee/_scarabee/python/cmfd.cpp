@@ -53,6 +53,12 @@ void init_CMFD(py::module& m) {
           &CMFD::set_flux_tolerance,
           "Maximum relative absolute difference in flux for convergence")
 
+  .def_property(
+          "flux_limiting", &CMFD::get_flux_limiting,
+          &CMFD::set_flux_limiting,
+          "Whether or not to use the flux-limiting condition when calculating"
+          "the surface and non-linear diffusion coefficients")
+
   .def("get_surface", &CMFD::get_surface,
       "Assigns the CMFD surface info to a segement end if it exists\n\n"
       "Parameters\n"

@@ -101,6 +101,11 @@ class CMFD {
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
 
+  bool get_flux_limiting() const { return flux_limiting_ ; }
+  void set_flux_limiting(bool user_pref) { flux_limiting_ = user_pref; }
+
+  void homogenize_ext_src(const MOCDriver& moc);
+
   const double& flux(const std::size_t i, const std::size_t j, const std::size_t g) const;
   double keff() const { return keff_; }
 
@@ -115,12 +120,12 @@ class CMFD {
   std::size_t nx_, ny_, ng_;
   std::size_t nx_surfs_, ny_surfs_;
 
+  bool flux_limiting_ = true;
   double keff_tol_ = 1E-5;
   double flux_tol_ = 1E-5;
   double damping_ = 0.7;
   double keff_ = 1.0;
   double solve_time_ = 0.0;
-  std::size_t cmfd_solves_ = 0; // keep track of how many times CMFD::solve is called 
   SimulationMode mode_{SimulationMode::Keff};
 
   // List of flat source region indices for each CMFD cell
@@ -166,7 +171,6 @@ class CMFD {
   void update_moc_fluxes(MOCDriver& moc);
   void normalize_currents();
   void compute_homogenized_xs_and_flux(const MOCDriver& moc);
-  void homogenize_ext_src(const MOCDriver& moc);
   void check_neutron_balance(const std::size_t i, const std::size_t j,
                              std::size_t g, const double keff) const;
 };

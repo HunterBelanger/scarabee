@@ -40,6 +40,7 @@ moc.cmfd = CMFD(dxc,dxc,[[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]])
 # Works with several damping factors, but may become unstable
 # with larger values
 moc.cmfd.set_damping(0.2)
+moc.cmfd.flux_limiting = True
 moc.generate_tracks(32, 0.05, YamamotoTabuchi6())
 moc.set_extern_src(Vector(0.,0.), Direction(0.,1.), 0, 1.)
 moc.flux_tolerance = 1.E-5

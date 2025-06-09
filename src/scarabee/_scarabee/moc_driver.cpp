@@ -229,6 +229,11 @@ void MOCDriver::solve() {
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
     }
+    
+    //Homogenize external source for CMFD
+    if (cmfd_) {
+      cmfd_->homogenize_ext_src(*this);
+    }
   }
 
   if (anisotropic_ == false) {

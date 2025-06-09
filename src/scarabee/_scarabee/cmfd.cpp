@@ -162,6 +162,10 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   update_ratios_.resize(ng_ * nx_ * ny_);
   update_ratios_.setZero();
 
+  // Allocate external source array
+  extern_src_.resize(ng_ * nx_ * ny_);
+  extern_src_.setZero();
+
   // Allocate the flux, Et, and D_transp_corr arrays
   flux_ = xt::zeros<double>({ng_, nx_, ny_});
   Et_ = xt::zeros<double>({ng_, nx_, ny_});
@@ -725,9 +729,12 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
       D_nl = -(current + D_surf * flx_ij) / flx_ij;
     }
     
-    if (surf == CMFD::TileSurf::XN || surf == CMFD::TileSurf::YN){
+    if (flux_limiting_){
+      if (surf == CMFD::TileSurf::XN || surf == CMFD::TileSurf::YN){
       flux_limiting(D_surf, D_nl, 0.);
+      }
     }
+    
 
     return {D_surf, D_nl};
   }
@@ -751,7 +758,10 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
     D_nl = (D_surf * (flx_iijj - flx_ij) - current) / (flx_iijj + flx_ij);
   }
 
-  flux_limiting(D_surf, D_nl, flx_iijj);
+  if (flux_limiting_){
+    flux_limiting(D_surf, D_nl, flx_iijj);
+  }
+  
 
   // Return coefficients
   return {D_surf, D_nl};
@@ -1055,22 +1065,14 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   Timer cmfd_timer;
   cmfd_timer.reset();
   cmfd_timer.start();
+  if (moc.sim_mode() == SimulationMode::Keff){
+    mode_ = SimulationMode::Keff;
+  } else if (moc.sim_mode() == SimulationMode::FixedSource) {
+    mode_ = SimulationMode::FixedSource;
+  }
   
   this->normalize_currents();
   this->compute_homogenized_xs_and_flux(moc);
-  // First time setup, needs to be called here
-  // to ensure MOC has been fully setup first
-  // Check can't go in constructor because 
-  // CMFD has to be set before generate_tracks
-  if (cmfd_solves_ == 0){
-    if (moc.sim_mode() == SimulationMode::Keff){
-        mode_ = SimulationMode::Keff;
-    } else if (moc.sim_mode() == SimulationMode::FixedSource) {
-      mode_ = SimulationMode::FixedSource;
-      extern_src_.resize(ng_ * nx_ * ny_);
-      this->homogenize_ext_src(moc);
-      }
-  }
   this->create_loss_matrix(moc);
   this->create_source_matrix();
   if (mode_ == SimulationMode::Keff){
@@ -1090,7 +1092,6 @@ void CMFD::solve(MOCDriver& moc, double keff) {
   }
   */
 
-  cmfd_solves_++;
   cmfd_timer.stop();
   solve_time_ = cmfd_timer.elapsed_time();
 }
