@@ -1,7 +1,12 @@
 from .fuel_pin import FuelPin
 from .guide_tube import GuideTube
 from .critical_leakage import CriticalLeakage
-from ._ensleeve import _ensleeve_quarter, _ensleeve_half_top, _ensleeve_full
+from ._ensleeve import (
+    _ensleeve_quarter,
+    _ensleeve_half_top,
+    _ensleeve_half_right,
+    _ensleeve_full,
+)
 from .._scarabee import (
     borated_water,
     Material,
@@ -86,6 +91,15 @@ class PWRAssembly:
     assembly_pitch : optional float
         Spacing between fuel assemblies. If None, assembly pitch is calculated
         from the shape and pitch. Default value is None.
+    spacer_grid_width : optional float
+        Width of the spacer grid material between pin cells.
+        Default value is None.
+    spacer_grid : optional Material
+        Material defining the spacer grid between pin cells.
+    grid_sleeve_width : optional float
+        Width of the grid sleeve around the assembly. Default value is None.
+    grid_sleeve : optional Material
+        Material defining the grid sleeve around the assembly.
 
     Attributes
     ----------
@@ -94,7 +108,7 @@ class PWRAssembly:
     pitch : float
         The spacing between fuel pins.
     symmetry : Symmetry
-        Symmetry of the fuel assembly. Default is Symmetry.Full.
+        Symmetry of the fuel assembly.
     assembly_pitch : float
         Spacing between fuel assemblies.
     linear_power : float
@@ -110,6 +124,14 @@ class PWRAssembly:
         Moderator pressure in MPa.
     moderator : Material
         Material representing the assembly moderator.
+    spacer_grid_width : optional float
+        Width of the spacer grid material between pin cells.
+    spacer_grid : optional Material
+        Material defining the spacer grid between pin cells.
+    grid_sleeve_width : optional float
+        Width of the grid sleeve around the assembly.
+    grid_sleeve : optional Material
+        Material defining the grid sleeve around the assembly.
     dancoff_moc_track_spacing : float
         Spacing between tracks in the MOC calculations for determining Dancoff
         corrections. Default value is 0.05 cm.
@@ -171,6 +193,10 @@ class PWRAssembly:
         symmetry: Symmetry = Symmetry.Full,
         linear_power: float = 42.0,
         assembly_pitch: Optional[float] = None,
+        spacer_grid_width: Optional[float] = None,
+        spacer_grid: Optional[Material] = None,
+        grid_sleeve_width: Optional[float] = None,
+        grid_sleeve: Optional[Material] = None,
     ):
         self._ndl = ndl
         self._chain = chain
@@ -223,6 +249,45 @@ class PWRAssembly:
                 )
             self._assembly_pitch = assembly_pitch
 
+        # Check the spacer grid parameters
+        self._spacer_grid_width: Optional[float] = None
+        self._spacer_grid: Optional[Material] = None
+        if spacer_grid is None and spacer_grid_width is not None:
+            raise RuntimeError("Spacer grid width is provided but material is not.")
+        elif spacer_grid is not None and spacer_grid_width is None:
+            raise RuntimeError("Spacer grid material is provided but width is not.")
+        else:
+            self._spacer_grid_width = spacer_grid_width
+            self._spacer_grid = spacer_grid
+
+            if self.spacer_grid_width is not None:
+                if self._spacer_grid_width <= 0.0:
+                    raise ValueError("Spacer grid width must be > 0.")
+                elif self._spacer_grid_width >= self._pitch:
+                    raise ValueError("Spacer grid width must be < pitch.")
+
+        # Check the grid sleeve parameters
+        self._grid_sleeve_width: Optional[float] = None
+        self._grid_sleeve: Optional[Material] = None
+        if grid_sleeve is None and grid_sleeve_width is not None:
+            raise RuntimeError("Grid sleeve width is provided but material is not.")
+        elif grid_sleeve is not None and grid_sleeve_width is None:
+            raise RuntimeError("Grid sleeve material is provided but width is not.")
+        else:
+            self._grid_sleeve_width = grid_sleeve_width
+            self._grid_sleeve = grid_sleeve
+
+            if self.grid_sleeve_width is not None:
+                if self._grid_sleeve_width <= 0.0:
+                    raise ValueError("Grid sleeve width must be > 0.")
+                elif self._grid_sleeve_width >= 0.5 * (
+                    self._assembly_pitch - self.shape[0] * self.pitch
+                ):
+                    raise ValueError(
+                        "Grid sleeve width must be < the assembly gap width."
+                    )
+
+        # Get moderator parameters
         if boron_ppm < 0.0:
             raise ValueError("Boron concentration must be >= 0.")
         self._boron_ppm = boron_ppm
@@ -271,6 +336,24 @@ class PWRAssembly:
             "Moderator",
         )
 
+        # Spacer grid and grid sleeve dancoff cross sections
+        self._spacer_grid_dancoff_xs: Optional[CrossSection] = None
+        self._grid_sleeve_dancoff_xs: Optional[CrossSection] = None
+        if self.spacer_grid is not None:
+            self._spacer_grid_dancoff_xs: CrossSection = CrossSection(
+                np.array([self.spacer_grid.potential_xs]),
+                np.array([self.spacer_grid.potential_xs]),
+                np.array([[0.0]]),
+                "Spacer Grid",
+            )
+        if self.grid_sleeve is not None:
+            self._grid_sleeve_dancoff_xs: CrossSection = CrossSection(
+                np.array([self.grid_sleeve.potential_xs]),
+                np.array([self.grid_sleeve.potential_xs]),
+                np.array([[0.0]]),
+                "Grid Sleeve",
+            )
+
         # Isolated cell geometry for Dancoff correction calculations
         self._isolated_dancoff_cells = []
         self._isolated_dancoff_mocs = []
@@ -301,6 +384,18 @@ class PWRAssembly:
         self._moderator_xs: CrossSection = self.moderator.dilution_xs(
             self.moderator.size * [1.0e10], self._ndl
         )
+
+        # Spacer grid and grid sleeve cross sections
+        self._spacer_grid_xs: Optional[CrossSection] = None
+        self._grid_sleeve_xs: Optional[CrossSection] = None
+        if self.spacer_grid is not None:
+            self._spacer_grid_xs: CrossSection = self.spacer_grid.dilution_xs(
+                self.spacer_grid.size * [1.0e10], self._ndl
+            )
+        if self.grid_sleeve is not None:
+            self._grid_sleeve_xs: CrossSection = self.grid_sleeve.dilution_xs(
+                self.grid_sleeve.size * [1.0e10], self._ndl
+            )
 
         self._moc_track_spacing = 0.05
         self._moc_num_angles = 64
@@ -346,6 +441,22 @@ class PWRAssembly:
     @property
     def assembly_pitch(self):
         return self._assembly_pitch
+
+    @property
+    def spacer_grid_width(self):
+        return self._spacer_grid_width
+
+    @property
+    def spacer_grid(self):
+        return self._spacer_grid
+
+    @property
+    def grid_sleeve_width(self):
+        return self._grid_sleeve_width
+
+    @property
+    def grid_sleeve(self):
+        return self._grid_sleeve
 
     @property
     def linear_power(self):
@@ -786,6 +897,10 @@ class PWRAssembly:
                 self._isolated_dancoff_mocs[-1].append(moc)
 
     def _init_full_dancoff_components(self):
+        pitch = self.pitch
+        if self.spacer_grid_width is not None:
+            pitch -= 2.0 * self.spacer_grid_width
+
         # Get all the cells
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
@@ -802,11 +917,18 @@ class PWRAssembly:
                 ):
                     cell = self.cells[j][i].make_dancoff_moc_cell(
                         self._moderator_dancoff_xs,
-                        0.5 * self.pitch,
-                        0.5 * self.pitch,
+                        0.5 * pitch,
+                        0.5 * pitch,
                         PinCellType.I,
                         False,
                     )
+                    if self.spacer_grid_width is not None:
+                        cell, _ = _ensleeve_quarter(
+                            cell,
+                            pitch,
+                            self.spacer_grid_width,
+                            self._spacer_grid_dancoff_xs,
+                        )
                 # Next, check for being on the side with a half pin in quarter symmetry
                 elif (
                     self.symmetry == Symmetry.Quarter
@@ -815,11 +937,18 @@ class PWRAssembly:
                 ):
                     cell = self.cells[j][i].make_dancoff_moc_cell(
                         self._moderator_dancoff_xs,
-                        0.5 * self.pitch,
-                        self.pitch,
+                        0.5 * pitch,
+                        pitch,
                         PinCellType.XP,
                         False,
                     )
+                    if self.spacer_grid_width is not None:
+                        cell, _ = _ensleeve_half_right(
+                            cell,
+                            pitch,
+                            self.spacer_grid_width,
+                            self._spacer_grid_dancoff_xs,
+                        )
                 # Next, check for being on the bottom row with a half pin
                 elif (
                     self.symmetry != Symmetry.Full
@@ -828,20 +957,34 @@ class PWRAssembly:
                 ):
                     cell = self.cells[j][i].make_dancoff_moc_cell(
                         self._moderator_dancoff_xs,
-                        self.pitch,
-                        0.5 * self.pitch,
+                        pitch,
+                        0.5 * pitch,
                         PinCellType.YP,
                         False,
                     )
+                    if self.spacer_grid_width is not None:
+                        cell, _ = _ensleeve_half_top(
+                            cell,
+                            pitch,
+                            self.spacer_grid_width,
+                            self._spacer_grid_dancoff_xs,
+                        )
                 # Otherwise, we just make the full cell
                 else:
                     cell = self.cells[j][i].make_dancoff_moc_cell(
                         self._moderator_dancoff_xs,
-                        self.pitch,
-                        self.pitch,
+                        pitch,
+                        pitch,
                         PinCellType.Full,
                         False,
                     )
+                    if self.spacer_grid_width is not None:
+                        cell, _ = _ensleeve_full(
+                            cell,
+                            pitch,
+                            self.spacer_grid_width,
+                            self._spacer_grid_dancoff_xs,
+                        )
 
                 # Save to cells
                 self._full_dancoff_cells.append(cell)
@@ -858,18 +1001,41 @@ class PWRAssembly:
 
         # Add gap if needed
         gap_width = 0.5 * (self.assembly_pitch - self.shape[0] * self.pitch)
+        if self.grid_sleeve_width is not None:
+            gap_width -= self.grid_sleeve_width
         if gap_width > 0.0:
             pins_geom = self._full_dancoff_geom
 
             if self.symmetry == Symmetry.Quarter:
+                if self.grid_sleeve_width is not None:
+                    pins_geom, _ = _ensleeve_quarter(
+                        pins_geom,
+                        self.pitch,
+                        self._grid_sleeve_width,
+                        self._grid_sleeve_dancoff_xs,
+                    )
                 self._full_dancoff_geom, _ = _ensleeve_quarter(
                     pins_geom, self.pitch, gap_width, self._moderator_dancoff_xs
                 )
             elif self.symmetry == Symmetry.Half:
+                if self.grid_sleeve_width is not None:
+                    pins_geom, _ = _ensleeve_half_top(
+                        pins_geom,
+                        self.pitch,
+                        self._grid_sleeve_width,
+                        self._grid_sleeve_dancoff_xs,
+                    )
                 self._full_dancoff_geom, _ = _ensleeve_half_top(
                     pins_geom, self.pitch, gap_width, self._moderator_dancoff_xs
                 )
             else:
+                if self.grid_sleeve_width is not None:
+                    pins_geom, _ = _ensleeve_full(
+                        pins_geom,
+                        self.pitch,
+                        self._grid_sleeve_width,
+                        self._grid_sleeve_dancoff_xs,
+                    )
                 self._full_dancoff_geom, _ = _ensleeve_full(
                     pins_geom, self.pitch, gap_width, self._moderator_dancoff_xs
                 )
@@ -911,6 +1077,30 @@ class PWRAssembly:
                 "Moderator",
             )
         )
+
+    def set_dancoff_spacer_grid_sleeve_xs(self) -> None:
+        """
+        Updates the spacer grid and grid sleeve cross sections for all Dancoff
+        correction calculations.
+        """
+        if self.spacer_grid is not None:
+            self._spacer_grid_dancoff_xs.set(
+                CrossSection(
+                    np.array([self.spacer_grid.potential_xs]),
+                    np.array([self.spacer_grid.potential_xs]),
+                    np.array([[0.0]]),
+                    "Spacer Grid",
+                )
+            )
+        if self.grid_sleeve is not None:
+            self._grid_sleeve_dancoff_xs.set(
+                CrossSection(
+                    np.array([self.grid_sleeve.potential_xs]),
+                    np.array([self.grid_sleeve.potential_xs]),
+                    np.array([[0.0]]),
+                    "Grid Sleeve",
+                )
+            )
 
     def compute_fuel_dancoff_corrections(self):
         """
@@ -1048,6 +1238,11 @@ class PWRAssembly:
         if not self._dancoff_components_initialized():
             self._init_dancoff_components()
 
+        # Update the Dancoff cross sections held by the assembly
+        self.set_dancoff_moderator_xs()
+        self.set_dancoff_spacer_grid_sleeve_xs()
+
+        # Compute Dancoff corrections
         self.compute_fuel_dancoff_corrections()
         self.compute_clad_dancoff_corrections()
         self.apply_dancoff_corrections()
@@ -1056,6 +1251,10 @@ class PWRAssembly:
     # Transport Calculation Related Methods
 
     def _init_moc(self):
+        pitch = self.pitch
+        if self.spacer_grid_width is not None:
+            pitch -= 2.0 * self.spacer_grid_width
+
         # Get all the cells
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
@@ -1072,10 +1271,14 @@ class PWRAssembly:
                 ):
                     cell = self.cells[j][i].make_moc_cell(
                         self._moderator_xs,
-                        0.5 * self.pitch,
-                        0.5 * self.pitch,
+                        0.5 * pitch,
+                        0.5 * pitch,
                         PinCellType.I,
                     )
+                    if self.spacer_grid_width is not None:
+                        cell, _ = _ensleeve_quarter(
+                            cell, pitch, self.spacer_grid_width, self._spacer_grid_xs
+                        )
                 # Next, check for being on the side with a half pin in quarter symmetry
                 elif (
                     self.symmetry == Symmetry.Quarter
@@ -1083,8 +1286,12 @@ class PWRAssembly:
                     and i == 0
                 ):
                     cell = self.cells[j][i].make_moc_cell(
-                        self._moderator_xs, 0.5 * self.pitch, self.pitch, PinCellType.XP
+                        self._moderator_xs, 0.5 * pitch, pitch, PinCellType.XP
                     )
+                    if self.spacer_grid_width is not None:
+                        cell, _ = _ensleeve_half_right(
+                            cell, pitch, self.spacer_grid_width, self._spacer_grid_xs
+                        )
                 # Next, check for being on the bottom row with a half pin
                 elif (
                     self.symmetry != Symmetry.Full
@@ -1092,13 +1299,21 @@ class PWRAssembly:
                     and j == self._simulated_shape[1] - 1
                 ):
                     cell = self.cells[j][i].make_moc_cell(
-                        self._moderator_xs, self.pitch, 0.5 * self.pitch, PinCellType.YP
+                        self._moderator_xs, pitch, 0.5 * pitch, PinCellType.YP
                     )
+                    if self.spacer_grid_width is not None:
+                        cell, _ = _ensleeve_half_top(
+                            cell, pitch, self.spacer_grid_width, self._spacer_grid_xs
+                        )
                 # Otherwise, we just make the full cell
                 else:
                     cell = self.cells[j][i].make_moc_cell(
-                        self._moderator_xs, self.pitch, self.pitch, PinCellType.Full
+                        self._moderator_xs, pitch, pitch, PinCellType.Full
                     )
+                    if self.spacer_grid_width is not None:
+                        cell, _ = _ensleeve_full(
+                            cell, pitch, self.spacer_grid_width, self._spacer_grid_xs
+                        )
 
                 # Save to cells
                 self._asmbly_cells.append(cell)
@@ -1115,18 +1330,41 @@ class PWRAssembly:
 
         # Add gap if needed
         gap_width = 0.5 * (self.assembly_pitch - self.shape[0] * self.pitch)
+        if self.grid_sleeve_width is not None:
+            gap_width -= self.grid_sleeve_width
         if gap_width > 0.0:
             pins_geom = self._asmbly_geom
 
             if self.symmetry == Symmetry.Quarter:
+                if self.grid_sleeve_width is not None:
+                    pins_geom, _ = _ensleeve_quarter(
+                        pins_geom,
+                        self.pitch,
+                        self._grid_sleeve_width,
+                        self._grid_sleeve_xs,
+                    )
                 self._asmbly_geom, _ = _ensleeve_quarter(
                     pins_geom, self.pitch, gap_width, self._moderator_xs
                 )
             elif self.symmetry == Symmetry.Half:
+                if self.grid_sleeve_width is not None:
+                    pins_geom, _ = _ensleeve_half_top(
+                        pins_geom,
+                        self.pitch,
+                        self._grid_sleeve_width,
+                        self._grid_sleeve_xs,
+                    )
                 self._asmbly_geom, _ = _ensleeve_half_top(
                     pins_geom, self.pitch, gap_width, self._moderator_xs
                 )
             else:
+                if self.grid_sleeve_width is not None:
+                    pins_geom, _ = _ensleeve_full(
+                        pins_geom,
+                        self.pitch,
+                        self._grid_sleeve_width,
+                        self._grid_sleeve_xs,
+                    )
                 self._asmbly_geom, _ = _ensleeve_full(
                     pins_geom, self.pitch, gap_width, self._moderator_xs
                 )
@@ -1169,6 +1407,24 @@ class PWRAssembly:
             self.moderator.dilution_xs(self.moderator.size * [1.0e10], self._ndl)
         )
 
+    def set_spacer_grid_sleeve_xs(self) -> None:
+        """
+        Updates the spacer grid and grid sleeve cross sections for transport
+        calculations.
+        """
+        if self.spacer_grid is not None:
+            self._spacer_grid_xs.set(
+                self.spacer_grid.dilution_xs(
+                    self.spacer_grid.size * [1.0e10], self._ndl
+                )
+            )
+        if self.grid_sleeve is not None:
+            self._grid_sleeve_xs.set(
+                self.grid_sleeve.dilution_xs(
+                    self.grid_sleeve.size * [1.0e10], self._ndl
+                )
+            )
+
     def recompute_all_xs(self) -> None:
         """
         Computes and applies all cross sections using the most recent material
@@ -1181,6 +1437,7 @@ class PWRAssembly:
         self.recompute_all_guide_tube_fill_xs()
 
         self.set_moderator_xs()
+        self.set_spacer_grid_sleeve_xs()
 
     def recompute_all_self_shielded_xs(self) -> None:
         """
