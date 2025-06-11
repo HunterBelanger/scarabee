@@ -155,6 +155,7 @@ class CMFD {
 
   Eigen::VectorXd extern_src_; // g*nx_*ny_
 
+  void larsen_correction(double& D, const double dx, const MOCDriver& moc) const;
   std::pair<double, double> calc_surf_diffusion_coeffs(
       std::size_t i, std::size_t j, std::size_t g, TileSurf surf,
       const MOCDriver& moc) const;

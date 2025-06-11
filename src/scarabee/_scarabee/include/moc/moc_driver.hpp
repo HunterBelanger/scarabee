@@ -32,6 +32,23 @@ class MOCDriver {
             BoundaryCondition ymax = BoundaryCondition::Reflective,
             bool anisotropic = false);
 
+  struct AngleInfo {
+    double phi;                  // Azimuthal angle for track
+    double d;                    // Spacing for trackings of this angle
+    double wgt;                  // Weight for tracks with this angle
+    std::uint32_t nx;            // Number of tracks starting on the -y boundary
+    std::uint32_t ny;            // Number of tracks starting on the -x boundary
+    std::size_t forward_index;   // azimuthal angle index in forward
+    std::size_t backward_index;  // azimuthal angle index in backward
+
+    template <class Archive>
+    void serialize(Archive& arc) {
+      arc(CEREAL_NVP(phi), CEREAL_NVP(d), CEREAL_NVP(wgt), CEREAL_NVP(nx),
+          CEREAL_NVP(ny), CEREAL_NVP(forward_index),
+          CEREAL_NVP(backward_index));
+    }
+  };
+
   std::shared_ptr<Cartesian2D> geometry() const { return geometry_; }
 
   const std::shared_ptr<CMFD>& cmfd() const { return cmfd_; }
@@ -86,6 +103,8 @@ class MOCDriver {
 
   std::vector<std::vector<Track>>& tracks() {return tracks_;}
 
+  const std::vector<AngleInfo>& azimuthal_quadrature() const { return angle_info_; }
+
   double volume(const Vector& r, const Direction& u) const;
   double volume(std::size_t i) const;
 
@@ -131,22 +150,6 @@ class MOCDriver {
   static std::shared_ptr<MOCDriver> load_bin(const std::string& fname);
 
  private:
-  struct AngleInfo {
-    double phi;                  // Azimuthal angle for track
-    double d;                    // Spacing for trackings of this angle
-    double wgt;                  // Weight for tracks with this angle
-    std::uint32_t nx;            // Number of tracks starting on the -y boundary
-    std::uint32_t ny;            // Number of tracks starting on the -x boundary
-    std::size_t forward_index;   // azimuthal angle index in forward
-    std::size_t backward_index;  // azimuthal angle index in backward
-
-    template <class Archive>
-    void serialize(Archive& arc) {
-      arc(CEREAL_NVP(phi), CEREAL_NVP(d), CEREAL_NVP(wgt), CEREAL_NVP(nx),
-          CEREAL_NVP(ny), CEREAL_NVP(forward_index),
-          CEREAL_NVP(backward_index));
-    }
-  };
 
   std::vector<AngleInfo> angle_info_;       // Information for all angles
   std::vector<std::vector<Track>> tracks_;  // All tracks, indexed by angle

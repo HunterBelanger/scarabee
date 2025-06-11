@@ -352,7 +352,7 @@ void MOCDriver::solve_isotropic() {
     flux_ = next_flux;
 
     // Apply CMFD
-    if (cmfd_) {
+    if (cmfd_ && iteration > 1) {
       cmfd_->solve(*this, prev_keff);
       prev_keff = keff_;
       keff_ = cmfd_->keff();

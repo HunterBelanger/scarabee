@@ -687,14 +687,43 @@ double CMFD::get_current(std::size_t i, std::size_t j, std::size_t g,
   return 0.;
 }
 
+void CMFD::larsen_correction(double& D, const double dx, const MOCDriver& moc) const {
+  // Correct Diffusion Coefficient to agree with infinite medium solution
+  const PolarQuadrature& moc_polq = moc.polar_quadrature();
+  const auto& moc_azmq = moc.azimuthal_quadrature();
+  const std::size_t n_pol_angles = moc_polq.sin().size();
+  const auto& pol_wgts = moc_polq.wgt();
+  const double invs_sum_wp = 1. / std::accumulate(pol_wgts.begin(), pol_wgts.end(), 0.);
+  const auto& polar_angles = moc_polq.polar_angle();
+
+  double rho_num = 0.;
+  for (std::size_t a = 0; a < moc_azmq.size(); a++){
+    const double& wa = moc_azmq[a].wgt;
+    // Loop over polar angles
+    for (std::size_t p = 0; p < n_pol_angles ; p++){
+      const double f = dx / (3. * D * std::cos(polar_angles[p]));
+      const double alpha = ( (1. + std::exp(-f) ) / (1. - std::exp(-f) ) ) - ( 2. / ( f ) );
+      rho_num += 2.0 * std::cos(polar_angles[p]) * pol_wgts[p] * wa * alpha;
+    }
+  }
+  //const double rho = rho_num * 0.5;
+  const double rho = rho_num;
+  const double D_eff = D * (1. + ( ( dx * rho ) / ( 2. * D ) ) );
+
+  D = D_eff;
+}
+
 std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
     std::size_t i, std::size_t j, std::size_t g, CMFD::TileSurf surf,
     const MOCDriver& moc) const {
   // Get flux and diffusion coefficient for current cell
   const double flx_ij = flux_(g, i, j);
-  const double D_ij = xs_(i, j)->D(g);
+  double D_ij = xs_(i, j)->D(g);
   const double dx_ij = get_cmfd_tile_width(i, j, surf);
   const double current = get_current(i, j, g, surf);
+
+  // Modify material diffusion coefficient for cell i,j by Larsen's correction
+  this->larsen_correction(D_ij, dx_ij, moc);
 
   const auto flux_limiting = [current, surf, flx_ij](double& D_surf, double& D_nl, const double flx_next){
     // Flux limiting condition 
@@ -744,8 +773,11 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
 
   // Get flux, diffusion coefficient, and length for next tile
   const double flx_iijj = flux_(g, ii, jj);
-  const double D_iijj = xs_(ii, jj)->D(g);
+  double D_iijj = xs_(ii, jj)->D(g);
   const double dx_iijj = get_cmfd_tile_width(ii, jj, surf);
+
+  // Modify material diffusion coefficient for cell ii, jj by Larsen's correction
+  this->larsen_correction(D_iijj, dx_iijj, moc);
 
   // First, compute normal surface diffusion coefficient
   double D_surf = (2 * D_ij * D_iijj) / (D_ij * dx_iijj + D_iijj * dx_ij);
