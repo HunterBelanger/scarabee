@@ -95,14 +95,14 @@ class CMFD {
 
   void solve(MOCDriver& moc, double keff);
 
-  void set_damping(double wd);
   double keff_tolerance() const { return keff_tol_; }
   void set_keff_tolerance(double ktol);
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
 
-  bool get_flux_limiting() const { return flux_limiting_ ; }
+  void set_damping(double wd);
   void set_flux_limiting(bool user_pref) { flux_limiting_ = user_pref; }
+  void set_larsen_correction(bool user_pref) { larsen_correction_ = user_pref; }
 
   void homogenize_ext_src(const MOCDriver& moc);
 
@@ -121,6 +121,7 @@ class CMFD {
   std::size_t nx_surfs_, ny_surfs_;
 
   bool flux_limiting_ = true;
+  bool larsen_correction_ = false;
   double keff_tol_ = 1E-5;
   double flux_tol_ = 1E-5;
   double damping_ = 0.7;

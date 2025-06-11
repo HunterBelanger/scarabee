@@ -54,10 +54,22 @@ void init_CMFD(py::module& m) {
           "Maximum relative absolute difference in flux for convergence")
 
   .def_property(
-          "flux_limiting", &CMFD::get_flux_limiting,
+          "flux_limiting", nullptr,
           &CMFD::set_flux_limiting,
           "Whether or not to use the flux-limiting condition when calculating"
           "the surface and non-linear diffusion coefficients")
+
+  .def_property(
+          "larsen_correction", nullptr,
+          &CMFD::set_larsen_correction,
+          "Whether or not to use Larsen's corrected diffusion coefficient"
+          "for optically thick meshes. May reduce performance if not needed")
+
+  .def_property(
+          "damping", nullptr,
+          &CMFD::set_damping,
+          "set CMFD damping factor for under-relaxing the nonlinear diffusion coefficient"
+          "between iterations.")
 
   .def("get_surface", &CMFD::get_surface,
       "Assigns the CMFD surface info to a segement end if it exists\n\n"
@@ -112,16 +124,6 @@ void init_CMFD(py::module& m) {
         &CMFD::current),
       "TODO: Fill in docstring",
       py::arg("G"),py::arg("surface"))
-  .def("set_damping",&CMFD::set_damping,
-      "Sets the CMFD damping factor\n\n"
-      "Parameters\n"
-      "----------\n"
-      "wd: float\n"
-      "      value of the damping factor to set"
-      "Returns\n"
-      "-------\n"
-      "None",
-      py::arg("wd"))
    .def("flux",&CMFD::flux,
       "Gets the CMFD flux at cell i,j in group g \n\n"
       "Parameters\n"

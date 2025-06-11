@@ -29,7 +29,8 @@ WAS.set_tiles([WT]*17*17)
 
 # YOU MUST CREATE A COARSE MESH THAT FITS PROPERLY WITH FSR BOUNDARIES
 # OTHERWISE BAD THINGS HAPPEN
-dxc = [pitch/2]*17*2
+# To use pincell level cells for this problem larsen correction must be enabled
+dxc = [pitch]*17
 
 moc = MOCDriver(WAS)
 moc.x_min_bc = BoundaryCondition.Vacuum
@@ -39,18 +40,11 @@ moc.y_max_bc = BoundaryCondition.Vacuum
 moc.cmfd = CMFD(dxc,dxc,[[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]])
 # Works with several damping factors, but may become unstable
 # with larger values
-moc.cmfd.set_damping(0.2)
+moc.cmfd.damping = 0.5
+moc.cmfd.larsen_correction = True
 moc.cmfd.flux_limiting = True
 moc.generate_tracks(32, 0.05, YamamotoTabuchi6())
 moc.set_extern_src(Vector(0.,0.), Direction(0.,1.), 0, 1.)
 moc.flux_tolerance = 1.E-5
 moc.sim_mode = SimulationMode.FixedSource
 moc.solve()
-
-flux, x, y = moc.rasterize_flux(1000, 1000)
-
-for g in range(moc.ngroups):
-  plt.title("Flux in group {}".format(g+1))
-  plt.pcolormesh(x, y, flux[g,:,:], cmap='jet')
-  plt.show()
-

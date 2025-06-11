@@ -191,7 +191,7 @@ class TestCMFDC5G7:
         moc.y_min_bc = BoundaryCondition.Vacuum
         # Use 7->3 group condensation 
         moc.cmfd = CMFD(dx_cmfd, dx_cmfd, [[0,1],[2,4],[5,6]])
-        moc.cmfd.set_damping(0.7)
+        moc.cmfd.damping = 0.7
         moc.generate_tracks(64, 0.05, YamamotoTabuchi6())
 
         moc.keff_tolerance = 1.E-5
