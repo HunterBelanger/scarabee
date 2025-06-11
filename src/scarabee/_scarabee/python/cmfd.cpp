@@ -70,6 +70,10 @@ void init_CMFD(py::module& m) {
           &CMFD::set_damping,
           "set CMFD damping factor for under-relaxing the nonlinear diffusion coefficient"
           "between iterations.")
+  .def_property(
+          "skip_moc_iterations", nullptr,
+          &CMFD::set_skip_moc_iterations,
+          "Set # of MOC iterations to skip before using CMFD")
 
   .def("get_surface", &CMFD::get_surface,
       "Assigns the CMFD surface info to a segement end if it exists\n\n"

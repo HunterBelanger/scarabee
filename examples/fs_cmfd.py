@@ -43,6 +43,7 @@ moc.cmfd = CMFD(dxc,dxc,[[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]])
 moc.cmfd.damping = 0.5
 moc.cmfd.larsen_correction = True
 moc.cmfd.flux_limiting = True
+moc.cmfd.skip_moc_iterations = 14
 moc.generate_tracks(32, 0.05, YamamotoTabuchi6())
 moc.set_extern_src(Vector(0.,0.), Direction(0.,1.), 0, 1.)
 moc.flux_tolerance = 1.E-5

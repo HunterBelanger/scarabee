@@ -337,6 +337,14 @@ void MOCDriver::solve_isotropic() {
       rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
     }
 
+    // If MOC iterations are skipped compute Keff
+    // the normal way 
+    if (mode_ == SimulationMode::Keff && cmfd_ && !cmfd_->solved()){
+      prev_keff = keff_;
+      keff_ = calc_keff(next_flux, flux_);
+      rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+    }
+
     // Get difference
     max_flx_diff = xt::amax(xt::abs(next_flux - flux_) / next_flux)();
 
@@ -352,11 +360,13 @@ void MOCDriver::solve_isotropic() {
     flux_ = next_flux;
 
     // Apply CMFD
-    if (cmfd_ && iteration > 1) {
-      cmfd_->solve(*this, prev_keff);
-      prev_keff = keff_;
-      keff_ = cmfd_->keff();
-      rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+    if (cmfd_) {
+      cmfd_->solve(*this, prev_keff, iteration);
+      if (cmfd_->solved()){
+        prev_keff = keff_;
+        keff_ = cmfd_->keff();
+        rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+      }
     }
 
     iteration_timer.stop();

@@ -765,7 +765,10 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
       flux_limiting(D_surf, D_nl, 0.);
       }
     }
-    
+
+    if (moc_iteration_ == 0){
+      D_nl = 0.0;
+    }
 
     return {D_surf, D_nl};
   }
@@ -797,7 +800,11 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   if (flux_limiting_){
     flux_limiting(D_surf, D_nl, flx_iijj);
   }
-  
+
+
+  if (moc_iteration_ == 0){
+    D_nl = 0.0;
+  }
 
   // Return coefficients
   return {D_surf, D_nl};
@@ -1097,36 +1104,43 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
   }
 }
 
-void CMFD::solve(MOCDriver& moc, double keff) {
+void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
   Timer cmfd_timer;
+  solved_ = false;
   cmfd_timer.reset();
   cmfd_timer.start();
+  moc_iteration_ = moc_iteration;
   if (moc.sim_mode() == SimulationMode::Keff){
     mode_ = SimulationMode::Keff;
   } else if (moc.sim_mode() == SimulationMode::FixedSource) {
     mode_ = SimulationMode::FixedSource;
   }
-  
-  this->normalize_currents();
-  this->compute_homogenized_xs_and_flux(moc);
-  this->create_loss_matrix(moc);
-  this->create_source_matrix();
-  if (mode_ == SimulationMode::Keff){
-    this->power_iteration(keff_);
-  } else if (mode_ == SimulationMode::FixedSource) {
-    this->fixed_source_solve();
-  }
-  this->update_moc_fluxes(moc);
 
-  /**
-  for (std::size_t i = 0; i < nx_; i++) {
-    for (std::size_t j = 0; j < ny_; j++) {
-      for (std::size_t g = 0; g < ng_; g++) {
-        this->check_neutron_balance(i, j, g, keff);
+  // Skip user-defined # of MOC iterations 
+  if (moc_iteration > skip_moc_iterations_){
+  
+    this->normalize_currents();
+    this->compute_homogenized_xs_and_flux(moc);
+    this->create_loss_matrix(moc);
+    this->create_source_matrix();
+    if (mode_ == SimulationMode::Keff){
+      this->power_iteration(keff_);
+    } else if (mode_ == SimulationMode::FixedSource) {
+      this->fixed_source_solve();
+    }
+    solved_ = true;
+    this->update_moc_fluxes(moc);
+
+    /**
+    for (std::size_t i = 0; i < nx_; i++) {
+      for (std::size_t j = 0; j < ny_; j++) {
+        for (std::size_t g = 0; g < ng_; g++) {
+          this->check_neutron_balance(i, j, g, keff);
+        }
       }
     }
+    */
   }
-  */
 
   cmfd_timer.stop();
   solve_time_ = cmfd_timer.elapsed_time();

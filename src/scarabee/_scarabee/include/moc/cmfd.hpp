@@ -93,7 +93,7 @@ class CMFD {
 
   enum class TileSurf : std::uint8_t { XN, XP, YN, YP };
 
-  void solve(MOCDriver& moc, double keff);
+  void solve(MOCDriver& moc, double keff, std::size_t moc_iteration);
 
   double keff_tolerance() const { return keff_tol_; }
   void set_keff_tolerance(double ktol);
@@ -103,6 +103,7 @@ class CMFD {
   void set_damping(double wd);
   void set_flux_limiting(bool user_pref) { flux_limiting_ = user_pref; }
   void set_larsen_correction(bool user_pref) { larsen_correction_ = user_pref; }
+  void set_skip_moc_iterations(int num_iter) { skip_moc_iterations_ = num_iter; }
 
   void homogenize_ext_src(const MOCDriver& moc);
 
@@ -110,6 +111,7 @@ class CMFD {
   double keff() const { return keff_; }
 
   const double& solve_time() const { return solve_time_; }
+  bool solved() const { return solved_; }
 
  private:
   std::vector<double> dx_, dy_;
@@ -125,8 +127,11 @@ class CMFD {
   double keff_tol_ = 1E-5;
   double flux_tol_ = 1E-5;
   double damping_ = 0.7;
+  std::size_t skip_moc_iterations_ = 0;
+  std::size_t moc_iteration_;
   double keff_ = 1.0;
   double solve_time_ = 0.0;
+  bool solved_ = false;
   SimulationMode mode_{SimulationMode::Keff};
 
   // List of flat source region indices for each CMFD cell
