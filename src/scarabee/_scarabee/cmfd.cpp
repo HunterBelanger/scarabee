@@ -978,7 +978,9 @@ void CMFD::power_iteration(double keff) {
   // Begin power iteration
   double keff_diff = 100.;
   double flux_diff = 100.;
+  std::size_t iteration = 0;
   while (keff_diff > keff_tol_ || flux_diff > flux_tol_) {
+    iteration++;
     // Compute source vector
     Q = (1. / keff) * QM_ * flux_cmfd_;
 
@@ -1004,6 +1006,12 @@ void CMFD::power_iteration(double keff) {
       if (flux_diff_i > flux_diff) flux_diff = flux_diff_i;
     }
     flux_cmfd_ = new_flux;
+
+    // Write information
+    spdlog::info("-----------------CMFD-----------------");
+    spdlog::info("Iteration {:>4d}          keff: {:.5f}", iteration, keff);
+    spdlog::info("     keff difference:     {:.5E}", keff_diff);
+    spdlog::info("     max flux difference: {:.5E}", flux_diff);
   }
   keff_ = keff;
 }
@@ -1063,6 +1071,7 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       j++;
     }
   }
+  // Maybe looping over groups -> fsrs would have better memory performance 
 
   // Update scalar flux in each MOC FSR
   for (std::size_t l = 0; l < tot_cells; l++) {
@@ -1080,8 +1089,17 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
               "CMFD flux ratio greater than 20, may not be stable: {:.5f}",
               flx_ratio);
         }
-        const double new_flx = moc.flux(fsrs[f], g) * flx_ratio;
-        moc.set_flux(fsrs[f], g, new_flx, 0);
+        
+        if (!moc.anisotropic()){
+          const double new_flx = moc.flux(fsrs[f], g) * flx_ratio;
+          moc.set_flux(fsrs[f], g, new_flx, 0);
+        } else if (moc.anisotropic()){
+          // Update spherical harmonic moments for anisotropic scattering
+          for (std::size_t lj = 0; lj < moc.num_spherical_harmonics(); lj++){
+            double new_flx = moc.flux(fsrs[f], g, lj) * flx_ratio;
+            moc.set_flux(fsrs[f], g , new_flx, lj);
+          }
+        }
       }
     }
   }
@@ -1129,7 +1147,7 @@ void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
       this->fixed_source_solve();
     }
     solved_ = true;
-    this->update_moc_fluxes(moc);
+    //this->update_moc_fluxes(moc);
 
     /**
     for (std::size_t i = 0; i < nx_; i++) {
