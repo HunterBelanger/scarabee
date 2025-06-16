@@ -698,7 +698,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
             }
             cmfd_flx += polar_quad_.wsin()[p] * angflux[pp];
           }
-          cmfd_->tally_current((std::sqrt(1./(4*PI))) * tw * 0.5 * cmfd_flx, u_forw, G, surf_indx);
+          cmfd_->tally_current(INVS_4SQRTPI * tw * cmfd_flx, u_forw, G, surf_indx);
         }
 
         // Follow track in forward direction
@@ -741,7 +741,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
 
           }  // For all polar angles
           
-          if (cmfd_surf) cmfd_->tally_current((std::sqrt(1./(4*PI))) * tw * 0.5 * cmfd_flx, u_forw, G, cmfd_surf);
+          if (cmfd_surf) cmfd_->tally_current(INVS_4SQRTPI * tw * cmfd_flx, u_forw, G, cmfd_surf);
         }    // For all segments along forward direction of track
 
         // Set incoming flux for next track
@@ -772,7 +772,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
             }
             cmfd_flx += polar_quad_.wsin()[p] * angflux[pp];
           }
-          cmfd_->tally_current((std::sqrt(1./(4*PI))) * tw * 0.5 * cmfd_flx, u_back, G, surf_indx);
+          cmfd_->tally_current(INVS_4SQRTPI * tw * cmfd_flx, u_back, G, surf_indx);
         }
 
         for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
@@ -815,7 +815,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
             if (cmfd_surf) cmfd_flx += polar_quad_.wsin()[p] * angflux[pp];
 
           }  // For all polar angles
-          if (cmfd_surf) cmfd_->tally_current((std::sqrt(1./(4*PI))) * tw * 0.5 * cmfd_flx, u_back, G, cmfd_surf);
+          if (cmfd_surf) cmfd_->tally_current(INVS_4SQRTPI * tw * cmfd_flx, u_back, G, cmfd_surf);
         }    // For all segments along forward direction of track
 
         // Set incoming flux for next track
