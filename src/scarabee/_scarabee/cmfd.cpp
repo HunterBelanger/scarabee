@@ -1014,7 +1014,7 @@ void CMFD::fixed_source_solve(){
   // Solve fixed source problem
   // Subtract fission source from loss matrix
   Eigen::SparseMatrix<double> L = M_ - QM_;
-  // Initialize flux
+  
   Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
 
   // Create a solver for the problem
@@ -1042,6 +1042,7 @@ void CMFD::fixed_source_solve(){
 void CMFD::update_moc_fluxes(MOCDriver& moc) {
   // Update MOC FSR scalar fluxes
   const std::size_t tot_cells = ny_ * nx_;
+  bool flux_update_warning = false;
 
   // Normalize homogenized moc flux and cmfd flux
   flux_ /= xt::sum(flux_)();
@@ -1058,6 +1059,10 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       const double invs_flx = 1. / flux_(G, i, j);
       double ratio = flux_cmfd_(linear_indx) * invs_flx;
       update_ratios_(linear_indx) = ratio;
+      // Don't warn on first moc iteration
+      if (ratio > 20.0 && moc_iteration_ > 1) {
+        flux_update_warning = true;
+      }
     }
     i++;
     if (i == nx_) {
@@ -1076,12 +1081,6 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       const auto& fsrs = fsrs_[l];
       const std::size_t linear_indx = G * tot_cells + l;
       const double& flx_ratio = update_ratios_(linear_indx);
-
-      if (flx_ratio > 20.0) {
-        spdlog::warn(
-            "CMFD flux ratio greater than 20, may not be stable: {:.5f}",
-            flx_ratio);
-      }
 
       // Update scalar flux in each MOC FSR
       for (const auto f : fsrs) {
@@ -1109,6 +1108,14 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       }
     }
   }
+  
+  if (flux_update_warning){
+    const double max_update = update_ratios_.maxCoeff();
+    spdlog::warn(
+            "At least one CMFD flux ratio greater than 20, max update ratio is: {:.5f}",
+            max_update);
+  }
+  
 }
 
 void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
