@@ -9,17 +9,15 @@ a3_00_  = DiffusionData.load("F31_0.bin")
 a2_12_  = DiffusionData.load("F24_12.bin")
 a2_16_  = DiffusionData.load("F24_16.bin")
 
-a3_06U  = DiffusionData.load("F31_6U.bin")
+a3_06U  = DiffusionData.load("F31_6R.bin")
+a3_06U.rotate_counterclockwise()
 
-a3_06R  = DiffusionData.load("F31_6U.bin")
-a3_06R.rotate_clockwise()
+a3_06R  = DiffusionData.load("F31_6R.bin")
 
-a3_06D  = DiffusionData.load("F31_6U.bin")
+a3_06D  = DiffusionData.load("F31_6R.bin")
 a3_06D.rotate_clockwise()
-a3_06D.rotate_clockwise()
 
-a3_06L  = DiffusionData.load("F31_6U.bin")
-a3_06L.rotate_clockwise()
+a3_06L  = DiffusionData.load("F31_6R.bin")
 a3_06L.rotate_clockwise()
 a3_06L.rotate_clockwise()
 

@@ -286,7 +286,7 @@ class Reflector:
         #    plt.show()
 
         # Compute the ADFs
-        self.adf = np.zeros((len(self.few_group_condensation_scheme), 4))
+        self.adf = np.zeros((len(self.few_group_condensation_scheme), 6))
         for G in range(len(self.few_group_condensation_scheme)):
             heter_flx_fuel = few_group_flux[G, NF - 1]
             homog_flx_fuel = fuel_node.pos_surf_flux(G)

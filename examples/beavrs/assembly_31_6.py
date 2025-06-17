@@ -1,38 +1,38 @@
-from scarabee import *
+from scarabee import (
+    NDLibrary,
+    DepletionChain,
+    MaterialComposition,
+    Material,
+    Fraction,
+    DensityUnits,
+    set_output_file,
+)
+from scarabee.reseau import FuelPin, GuideTube, BurnablePoisonRod, PWRAssembly, Symmetry
 
-name = "F31_6U"
+name = "F31_6R"
 
-set_output_file(name+"_out.txt")
+set_output_file(name + "_out.txt")
 
-ndl = NDLibrary()
+ndl = NDLibrary("/home/hunter/Documents/nuclear_data/scarabee/endf8_shem281.h5")
+chain = chain = DepletionChain.load("chain.bin")
 
 # Define all Materials
-Fuel31Comp = MaterialComposition(name="Fuel 3.1%")
-Fuel31Comp.add_nuclide("O16",  4.5853e-02)
-Fuel31Comp.add_nuclide("O17",  1.7420e-05)
-Fuel31Comp.add_nuclide("O18",  9.1942e-05)
-Fuel31Comp.add_nuclide("U234", 5.7987e-06)
-Fuel31Comp.add_nuclide("U235", 7.2175e-04)
-Fuel31Comp.add_nuclide("U238", 2.2253e-02)
-Fuel31 = Material(Fuel31Comp, 575., ndl)
+Fuel31Comp = MaterialComposition(Fraction.Atoms, name="Fuel 3.1%")
+Fuel31Comp.add_leu(3.1, 1.)
+Fuel31Comp.add_element("O", 2.)
+Fuel31 = Material(Fuel31Comp, 575.0, 10.30166, DensityUnits.g_cm3, ndl)
 
 CladComp = MaterialComposition(Fraction.Weight, name="Zircaloy 4")
-CladComp.add_element('O', 0.00125)
-CladComp.add_element('Cr', 0.0010)
-CladComp.add_element('Fe', 0.0021)
-CladComp.add_element('Zr', 0.98115)
-CladComp.add_element('Sn', 0.0145)
-Clad = Material(CladComp, 575., 6.55, DensityUnits.g_cm3 , ndl)
+CladComp.add_element("O", 0.00125)
+CladComp.add_element("Cr", 0.0010)
+CladComp.add_element("Fe", 0.0021)
+CladComp.add_element("Zr", 0.98115)
+CladComp.add_element("Sn", 0.0145)
+Clad = Material(CladComp, 575.0, 6.55, DensityUnits.g_cm3, ndl)
 
 HeComp = MaterialComposition(Fraction.Atoms, name="He Gas")
-HeComp.add_element("He", 1.)
-He = Material(HeComp, 575., 0.0015981, DensityUnits.g_cm3, ndl) 
-
-WaterComp = MaterialComposition(Fraction.Atoms, name="Water")
-WaterComp.add_nuclide("H1_H2O",  4.9456e-02 + 7.7035e-06)
-WaterComp.add_element("B", 7.9714e-06 + 3.2247e-05)
-WaterComp.add_element("O", 2.4673e-02 + 9.3734e-06 + 4.9474e-05)
-Water = Material(WaterComp, 575., ndl)
+HeComp.add_element("He", 1.0)
+He = Material(HeComp, 575.0, 0.0015981, DensityUnits.g_cm3, ndl)
 
 SS304Comp = MaterialComposition(Fraction.Weight, name="SS304")
 SS304Comp.add_element('Si', 0.0060)
@@ -60,31 +60,43 @@ Air = Material(AirComp, 575., 0.000616, DensityUnits.g_cm3, ndl)
 # Define a guide tube
 gt = GuideTube(inner_radius=0.56134, outer_radius=0.60198, clad=Clad)
 
-# Define fuel pin
-fp = FuelPin(fuel=Fuel31, fuel_radius=0.39218, gap=He, gap_radius=0.40005, clad=Clad, clad_radius=0.45720)
+# Define guide tube with a burnable poison rod
+bpr = BurnablePoisonRod(center=Air, clad=SS304, gap=He, poison=BSiGlass, center_radius=0.214, inner_clad_radius=0.23051, inner_gap_radius=0.24130, poison_radius=0.42672, outer_gap_radius=0.43688, outer_clad_radius=0.48387)
 
-# Define a poison pin
-bp = BurnablePoisonPin(center=Air, center_radius=0.214, poison_clad=SS304, inner_poison_clad_radius=0.23051, gap=He, inner_gap_radius=0.24130, outer_gap_radius=0.43688, poison=BSiGlass, poison_radius=0.42672, outer_poison_clad_radius=0.48387, guide_tube_clad=Clad, inner_moderator_radius=0.56134, guide_tube_radius=0.60198)
+bp = GuideTube(inner_radius=0.56134, outer_radius=0.60198, clad=Clad, fill=bpr)
+
+# Define fuel pin
+fp = FuelPin(fuel=Fuel31, fuel_radius=0.39218, gap=He, gap_radius=0.40005,
+             clad=Clad, clad_radius=0.45720)
+
+cells = [
+    [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp],
+    [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp],
+    [fp, fp, fp, fp, fp, gt, fp, fp, gt, fp, fp, bp, fp, fp, fp, fp, fp],
+    [fp, fp, fp, gt, fp, fp, fp, fp, fp, fp, fp, fp, fp, bp, fp, fp, fp],
+    [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp],
+    [fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, bp, fp, fp],
+    [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp],
+    [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp],
+    [fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp],
+]
 
 # Define assembly
-asmbly = PWRAssembly(pitch=1.25984, moderator=Water, shape=(17, 17), ndl=ndl)
-asmbly.boundary_conditions = BoundaryCondition.Periodic
-asmbly.pins = [fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
-               fp, fp, fp, fp, fp, bp, fp, fp, gt, fp, fp, bp, fp, fp, fp, fp, fp,
-               fp, fp, fp, bp, fp, fp, fp, fp, fp, fp, fp, fp, fp, bp, fp, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
-               fp, fp, bp, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, bp, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
-               fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
-               fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
-               fp, fp, fp, gt, fp, fp, fp, fp, fp, fp, fp, fp, fp, gt, fp, fp, fp,
-               fp, fp, fp, fp, fp, gt, fp, fp, gt, fp, fp, gt, fp, fp, fp, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp,
-               fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp, fp]
+asmbly = PWRAssembly(
+    pitch=1.25984,
+    assembly_pitch=21.50364,
+    shape=(17, 17),
+    symmetry=Symmetry.Half,
+    moderator_pressure=15.5132,
+    moderator_temp=575.0,
+    boron_ppm=975.0,
+    cells=cells,
+    ndl=ndl,
+    chain=chain,
+)
+
 asmbly.solve()
-asmbly.save_diffusion_data(name+".bin")
+
+asmbly._condensation_scheme = [[0, 246], [247, 280]]
+diffusion_data = asmbly._compute_diffusion_data()
+diffusion_data.save(name+".bin")

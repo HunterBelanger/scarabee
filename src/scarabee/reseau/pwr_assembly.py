@@ -83,6 +83,9 @@ class PWRAssembly:
         Moderator temperature in Kelvin. Default is 570.
     moderator_pressure : float
         Moderator pressure in MPa. Default is 15.5.
+    moderator_legendre_order : int
+        Maximum Legendre order to load for the moderator's anisotropic
+        scattering data. Default is 1.
     symmetry : Symmetry
         Symmetry of the fuel assembly. Default is Symmetry.Full.
     linear_power : float
@@ -122,6 +125,9 @@ class PWRAssembly:
         Moderator temperature in Kelvin.
     moderator_pressure : float
         Moderator pressure in MPa.
+    moderator_legendre_order : int
+        Maximum Legendre order to load for the moderator's anisotropic
+        scattering data.
     moderator : Material
         Material representing the assembly moderator.
     spacer_grid_width : optional float
@@ -190,6 +196,7 @@ class PWRAssembly:
         boron_ppm: float = 800.0,
         moderator_temp: float = 570.0,
         moderator_pressure: float = 15.5,
+        moderator_legendre_order: int = 1,
         symmetry: Symmetry = Symmetry.Full,
         linear_power: float = 42.0,
         assembly_pitch: Optional[float] = None,
@@ -300,6 +307,10 @@ class PWRAssembly:
             raise ValueError("Moderator pressure must be > 0.")
         self._moderator_pressure = moderator_pressure
 
+        if moderator_legendre_order < 1:
+            raise ValueError("Moderator Legendre order must be >= 1.")
+        self._moderator_legendre_order = moderator_legendre_order
+
         if linear_power <= 0.0:
             raise ValueError("Linear power must be > 0.")
         self._linear_power = linear_power
@@ -309,6 +320,7 @@ class PWRAssembly:
             self.boron_ppm, self.moderator_temp, self.moderator_pressure, self._ndl
         )
         self._moderator.name = f"Moderator ({self.boron_ppm} ppm boron)"
+        self._moderator.max_legendre_order = self._moderator_legendre_order
 
         # Set initial boundary conditions
         self._x_min_bc = BoundaryCondition.Periodic
@@ -477,6 +489,10 @@ class PWRAssembly:
     @property
     def moderator_pressure(self):
         return self._moderator_pressure
+
+    @property
+    def moderator_legendre_order(self):
+        return self._moderator_legendre_order
 
     @property
     def moderator(self):
