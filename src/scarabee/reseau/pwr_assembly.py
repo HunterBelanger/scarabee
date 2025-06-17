@@ -1712,7 +1712,7 @@ class PWRAssembly:
             homog_flux[G] /= total_volume
 
         # Create empty arrays for ADFs and CDFs
-        adf = np.zeros((NG, 4))
+        adf = np.ones((NG, 6))
         cdf = np.zeros((NG, 4))
 
         if self.symmetry == Symmetry.Full:
@@ -1753,6 +1753,7 @@ class PWRAssembly:
                 adf[G, ADF.XP] = xp_flx[G] / homog_flux[G]
                 adf[G, ADF.YN] = yn_flx[G] / homog_flux[G]
                 adf[G, ADF.YP] = yp_flx[G] / homog_flux[G]
+                # The ADFs on the +/- Z sides will be left at unity
 
                 cdf[G, CDF.I] = I_flx[G] / homog_flux[G]
                 cdf[G, CDF.II] = II_flx[G] / homog_flux[G]
@@ -1787,6 +1788,7 @@ class PWRAssembly:
                 adf[G, ADF.XP] = xp_flx[G] / homog_flux[G]
                 adf[G, ADF.YP] = yp_flx[G] / homog_flux[G]
                 adf[G, ADF.YN] = adf[G, ADF.YP]
+                # The ADFs on the +/- Z sides will be left at unity
 
                 cdf[G, CDF.I] = I_flx[G] / homog_flux[G]
                 cdf[G, CDF.II] = II_flx[G] / homog_flux[G]
@@ -1814,6 +1816,7 @@ class PWRAssembly:
                 adf[G, ADF.XN] = adf[G, ADF.XP]
                 adf[G, ADF.YP] = yp_flx[G] / homog_flux[G]
                 adf[G, ADF.YN] = adf[G, ADF.YP]
+                # The ADFs on the +/- Z sides will be left at unity
 
                 cdf[G, CDF.I] = I_flx[G] / homog_flux[G]
                 cdf[G, CDF.II] = cdf[G, CDF.I]

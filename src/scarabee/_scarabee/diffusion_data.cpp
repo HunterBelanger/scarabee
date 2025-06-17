@@ -68,15 +68,15 @@ void DiffusionData::set_adf(const xt::xtensor<double, 2>& adf) {
     throw ScarabeeException(mssg);
   }
 
-  if (adf.shape()[1] != static_cast<std::size_t>(4)) {
-    auto mssg = "The ADF array must have four columns.";
+  if (adf.shape()[1] != static_cast<std::size_t>(6)) {
+    auto mssg = "The ADF array must have six columns.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
 
   for (std::size_t i = 0; i < adf.size(); i++) {
-    if (adf.flat(i) < 0.) {
-      auto mssg = "ADF values must be positive.";
+    if (adf.flat(i) <= 0.) {
+      auto mssg = "ADF values must be greater than zero.";
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
     }
@@ -101,8 +101,8 @@ void DiffusionData::set_cdf(const xt::xtensor<double, 2>& cdf) {
   }
 
   for (std::size_t i = 0; i < cdf.size(); i++) {
-    if (cdf.flat(i) < 0.) {
-      auto mssg = "CDF values must be positive.";
+    if (cdf.flat(i) <= 0.) {
+      auto mssg = "CDF values must be greater than zero.";
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
     }

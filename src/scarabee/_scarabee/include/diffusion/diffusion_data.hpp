@@ -17,7 +17,14 @@ namespace scarabee {
 
 class DiffusionData {
  public:
-  enum class ADF : std::size_t { YP = 0, XP = 1, YN = 2, XN = 3 };
+  enum class ADF : std::size_t {
+    XN = 0,
+    XP = 1,
+    YN = 2,
+    YP = 3,
+    ZN = 4,
+    ZP = 5
+  };
   enum class CDF : std::size_t { I = 0, II = 1, III = 2, IV = 3 };
 
   DiffusionData(std::shared_ptr<DiffusionCrossSection> xs);
@@ -68,6 +75,14 @@ class DiffusionData {
 
   double adf_yn(std::size_t g) const {
     return adf_.size() > 0 ? adf_(g, ADF::YN) : 1.;
+  }
+
+  double adf_zp(std::size_t g) const {
+    return adf_.size() > 0 ? adf_(g, ADF::ZP) : 1.;
+  }
+
+  double adf_zn(std::size_t g) const {
+    return adf_.size() > 0 ? adf_(g, ADF::ZN) : 1.;
   }
 
   double cdf_I(std::size_t g) const {

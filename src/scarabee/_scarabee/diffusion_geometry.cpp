@@ -915,6 +915,64 @@ double DiffusionGeometry::adf_yn(std::size_t m, std::size_t g) const {
   return mat(m)->adf_yn(g);
 }
 
+double DiffusionGeometry::adf_zp(std::size_t m, std::size_t g) const {
+  // Get geometry index for m
+  const auto geo_indx_m = geom_indx(m);
+  if (geo_indx_m[2] == nz() - 1) {
+    return mat(m)->adf_zp(g);
+  }
+
+  auto geo_indx_n = geo_indx_m;
+  geo_indx_n[2]++;
+  const auto n = geom_to_mat_indx(geo_indx_n);
+
+  if (n.has_value() == false) {
+    // There is no neighbor on that side in the geometry.
+    // Use the current tile ADF.
+    return mat(m)->adf_zp(g);
+  }
+
+  // The the z-index of the tile for the current m and the neighbor mat.
+  const std::size_t tile_indx_m = geom_z_indx_to_tile_z_indx(geo_indx_m[2]);
+  const std::size_t tile_indx_n = geom_z_indx_to_tile_z_indx(geo_indx_n[2]);
+
+  // If the current m and neighbor n are in the same tile, we don't have a
+  // discontinuity, so the ADF is 1.
+  if (tile_indx_m == tile_indx_n) return 1.;
+
+  // We are at the boarder of a tile, so we return the mat ADF.
+  return mat(m)->adf_zp(g);
+}
+
+double DiffusionGeometry::adf_zn(std::size_t m, std::size_t g) const {
+  // Get geometry index for m
+  const auto geo_indx_m = geom_indx(m);
+  if (geo_indx_m[2] == 0) {
+    return mat(m)->adf_zn(g);
+  }
+
+  auto geo_indx_n = geo_indx_m;
+  geo_indx_n[2]--;
+  const auto n = geom_to_mat_indx(geo_indx_n);
+
+  if (n.has_value() == false) {
+    // There is no neighbor on that side in the geometry.
+    // Use the current tile ADF.
+    return mat(m)->adf_zn(g);
+  }
+
+  // The the z-index of the tile for the current m and the neighbor mat.
+  const std::size_t tile_indx_m = geom_z_indx_to_tile_z_indx(geo_indx_m[2]);
+  const std::size_t tile_indx_n = geom_z_indx_to_tile_z_indx(geo_indx_n[2]);
+
+  // If the current m and neighbor n are in the same tile, we don't have a
+  // discontinuity, so the ADF is 1.
+  if (tile_indx_m == tile_indx_n) return 1.;
+
+  // We are at the boarder of a tile, so we return the mat ADF.
+  return mat(m)->adf_zn(g);
+}
+
 double DiffusionGeometry::cdf_I(std::size_t m, std::size_t g) const {
   // Get geometry index for m
   const auto geo_indx_m = geom_indx(m);
