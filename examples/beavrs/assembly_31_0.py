@@ -99,6 +99,6 @@ refl = Reflector(
     baffle=SS304,
     ndl=ndl,
 )
-refl.few_group_condensation_scheme = [[0, 246], [247, 280]]
+refl.condensation_scheme = [[0, 246], [247, 280]]
 refl.solve()
 refl.save_diffusion_data("reflector.bin")
