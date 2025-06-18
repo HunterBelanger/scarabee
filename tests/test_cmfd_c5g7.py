@@ -197,3 +197,5 @@ class TestCMFDC5G7:
         moc.keff_tolerance = 1.E-5
         moc.flux_tolerance = 1.E-5
         moc.solve()
+
+        assert moc.keff == pytest.approx(1.18672, 0.00001)
