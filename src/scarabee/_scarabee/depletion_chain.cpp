@@ -828,7 +828,7 @@ DepletionChain DepletionChain::from_hdf5_group(const H5::Group& grp) {
   const auto obj_names = grp.listObjectNames();
 
   for (const auto& name : obj_names) {
-    if (grp.getObjectType(name) != H5::ObjectType::Dataset) {
+    if (grp.getObjectType(name) != H5::ObjectType::Group) {
       std::stringstream mssg;
       mssg << "HDF5 object of name " << name << " is not a group.";
       throw ScarabeeException(mssg.str());
