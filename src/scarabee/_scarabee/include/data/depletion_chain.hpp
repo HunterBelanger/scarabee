@@ -19,6 +19,9 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
 
+#include <highfive/highfive.hpp>
+namespace H5 = HighFive;
+
 #include <utils/serialization.hpp>
 
 namespace scarabee {
@@ -26,6 +29,9 @@ namespace scarabee {
 class NoTarget {
  public:
   NoTarget() = default;
+
+  void initialize_hdf5_group(H5::Group& grp) const;
+  static NoTarget from_hdf5_group(const H5::Group& grp);
 
  private:
   friend class cereal::access;
@@ -41,6 +47,9 @@ class SingleTarget {
   SingleTarget() = default;
 
   const std::string& target() const { return target_; }
+
+  void initialize_hdf5_group(H5::Group& grp) const;
+  static SingleTarget from_hdf5_group(const H5::Group& grp);
 
  private:
   std::string target_;
@@ -101,10 +110,15 @@ class BranchingTargets {
       }
     }
 
-    for (const auto& branch : targets.branches()) {
-      branches_.push_back({branch.target, sum_ratios * branch.branch_ratio});
+    if (sum_ratios > 0.) {
+      for (const auto& branch : targets.branches()) {
+        branches_.push_back({branch.target, sum_ratios * branch.branch_ratio});
+      }
     }
   }
+
+  void initialize_hdf5_group(H5::Group& grp) const;
+  static BranchingTargets from_hdf5_group(const H5::Group& grp);
 
  private:
   std::vector<Branch> branches_;
@@ -140,6 +154,9 @@ class FissionYields {
                        const std::string& new_nuclide);
   void replace_nuclide(const std::string& nuclide,
                        const BranchingTargets& targets);
+
+  void initialize_hdf5_group(H5::Group& grp) const;
+  static FissionYields from_hdf5_group(const H5::Group& grp);
 
  private:
   std::vector<std::string> targets_;
@@ -193,6 +210,9 @@ class ChainEntry {
   const std::optional<FissionYields>& n_fission() const { return n_fission_; }
 
   void remove_nuclide(const std::string& nuclide, const Target& new_target);
+
+  void initialize_hdf5_group(H5::Group& grp) const;
+  static ChainEntry from_hdf5_group(const H5::Group& grp);
 
  private:
   // Radioactive Decay
@@ -263,6 +283,9 @@ class DepletionChain {
   void save(const std::string& fname) const;
   static std::shared_ptr<DepletionChain> load(const std::string& fname);
 
+  void initialize_hdf5_group(H5::Group& grp) const;
+  static DepletionChain from_hdf5_group(const H5::Group& grp);
+
  private:
   std::map<std::string, ChainEntry> data_;
 
@@ -273,6 +296,10 @@ class DepletionChain {
     arc(CEREAL_NVP(data_));
   }
 };
+
+// Functions to save / load a depletion chain to / from an HDF5 file
+
+Target target_from_hdf5_group(const H5::Group& grp);
 
 }  // namespace scarabee
 

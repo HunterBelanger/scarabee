@@ -13,6 +13,57 @@
 
 namespace scarabee {
 
+void NoTarget::initialize_hdf5_group(H5::Group& grp) const {
+  grp.createAttribute("type", std::string("no-target"));
+}
+
+NoTarget NoTarget::from_hdf5_group(const H5::Group& grp) {
+  if (grp.hasAttribute("type") == false) {
+    throw ScarabeeException("HDF5 Group has no attribute named \"type\".");
+  }
+
+  std::string type = grp.getAttribute("type").read<std::string>();
+
+  if (type != "no-target") {
+    std::stringstream mssg;
+    mssg << "Cannot load NoTarget object from HDF5 group of type \"" << type
+         << "\".";
+    throw ScarabeeException(mssg.str());
+  }
+
+  return NoTarget();
+}
+
+void SingleTarget::initialize_hdf5_group(H5::Group& grp) const {
+  grp.createAttribute("type", std::string("single-target"));
+  grp.createAttribute("name", target_);
+}
+
+SingleTarget SingleTarget::from_hdf5_group(const H5::Group& grp) {
+  if (grp.hasAttribute("type") == false) {
+    throw ScarabeeException("HDF5 Group has no attribute named \"type\".");
+  }
+
+  std::string type = grp.getAttribute("type").read<std::string>();
+
+  if (type != "single-target") {
+    std::stringstream mssg;
+    mssg << "Cannot load SingleTarget object from HDF5 group of type \"" << type
+         << "\".";
+    throw ScarabeeException(mssg.str());
+  }
+
+  if (grp.hasAttribute("name") == false) {
+    std::stringstream mssg;
+    throw ScarabeeException(
+        "Cannot load SingleTarget object due to missing name attribute.");
+  }
+
+  std::string name = grp.getAttribute("name").read<std::string>();
+
+  return SingleTarget(name);
+}
+
 BranchingTargets::BranchingTargets(const std::vector<Branch>& branches)
     : branches_(branches) {
   if (branches_.size() < 2) {
@@ -47,6 +98,73 @@ BranchingTargets::BranchingTargets(const std::vector<Branch>& branches)
   // don't have a decay target, we then the ratios wouldn't sum to unity
   // anymore ! Normalizing after would artificially increase production of the
   // other possible targets in the branch which we don't want either.
+}
+
+void BranchingTargets::initialize_hdf5_group(H5::Group& grp) const {
+  if (branches_.size() == 0) {
+    throw ScarabeeException("List of branches is empty.");
+  }
+
+  grp.createAttribute("type", std::string("branching-targets"));
+
+  std::vector<std::string> targets;
+  std::vector<double> ratios;
+  targets.reserve(branches_.size());
+  ratios.reserve(branches_.size());
+
+  for (const auto& branch : branches_) {
+    targets.push_back(branch.target);
+    ratios.push_back(branch.branch_ratio);
+  }
+
+  grp.createAttribute("targets", targets);
+  grp.createAttribute("ratios", ratios);
+}
+
+BranchingTargets BranchingTargets::from_hdf5_group(const H5::Group& grp) {
+  if (grp.hasAttribute("type") == false) {
+    throw ScarabeeException("HDF5 Group has no attribute named \"type\".");
+  }
+
+  std::string type = grp.getAttribute("type").read<std::string>();
+
+  if (type != "branching-targets") {
+    std::stringstream mssg;
+    mssg << "Cannot load BranchingTargets object from HDF5 group of type \""
+         << type << "\".";
+    throw ScarabeeException(mssg.str());
+  }
+
+  if (grp.hasAttribute("targets") == false) {
+    throw ScarabeeException(
+        "Cannot load BranchingTargets object due to missing targets "
+        "attribute.");
+  }
+  std::vector<std::string> targets =
+      grp.getAttribute("targets").read<std::vector<std::string>>();
+
+  if (grp.hasAttribute("ratios") == false) {
+    throw ScarabeeException(
+        "Cannot load BranchingTargets object due to missing ratios attribute.");
+  }
+  std::vector<double> ratios =
+      grp.getAttribute("ratios").read<std::vector<double>>();
+
+  if (targets.size() != ratios.size()) {
+    throw ScarabeeException("Targets and ratios have different lengths.");
+  }
+
+  if (targets.size() == 0) {
+    throw ScarabeeException("Targets and ratios arrays are empty.");
+  }
+
+  std::vector<Branch> branches;
+  branches.reserve(targets.size());
+  for (std::size_t i = 0; i < targets.size(); i++) {
+    branches.emplace_back(targets[i], ratios[i]);
+  }
+
+  return BranchingTargets(branches);
 }
 
 FissionYields::FissionYields(const std::vector<std::string>& targets,
@@ -216,6 +334,86 @@ void FissionYields::replace_nuclide(const std::string& nuclide,
   }
 }
 
+void FissionYields::initialize_hdf5_group(H5::Group& grp) const {
+  grp.createAttribute("type", std::string("fission-yields"));
+
+  grp.createAttribute("targets", targets_);
+  grp.createAttribute("incident_energies", incident_energies_);
+
+  std::vector<std::size_t> yields_dims{yields_.shape()[0], yields_.shape()[1]};
+  H5::DataSet yields_dset =
+      grp.createDataSet<double>("yields", H5::DataSpace(yields_dims));
+  yields_dset.write_raw(yields_.data());
+}
+
+FissionYields FissionYields::from_hdf5_group(const H5::Group& grp) {
+  if (grp.hasAttribute("type") == false) {
+    throw ScarabeeException("HDF5 Group has no attribute named \"type\".");
+  }
+
+  std::string type = grp.getAttribute("type").read<std::string>();
+
+  if (type != "fission-yields") {
+    std::stringstream mssg;
+    mssg << "Cannot load FissionYields object from HDF5 group of type \""
+         << type << "\".";
+    throw ScarabeeException(mssg.str());
+  }
+
+  if (grp.hasAttribute("targets") == false) {
+    throw ScarabeeException(
+        "Cannot load FissionYields object due to missing targets attribute.");
+  }
+  std::vector<std::string> targets =
+      grp.getAttribute("targets").read<std::vector<std::string>>();
+
+  if (targets.size() == 0) {
+    throw ScarabeeException("FissionYields targets list is empty.");
+  }
+
+  if (grp.hasAttribute("incident_energies") == false) {
+    throw ScarabeeException(
+        "Cannot load FissionYields object due to missing incident_energies "
+        "attribute.");
+  }
+  std::vector<double> incident_energies =
+      grp.getAttribute("incident_energies").read<std::vector<double>>();
+
+  if (incident_energies.size() == 0) {
+    throw ScarabeeException("FissionYields incident_energies list is empty.");
+  }
+
+  if (grp.exist("yields") == false) {
+    throw ScarabeeException(
+        "Cannot load FissionYields object due to missing yields data set.");
+  }
+
+  if (grp.getObjectType("yields") != H5::ObjectType::Dataset) {
+    throw ScarabeeException("yields member is not a data set.");
+  }
+
+  H5::DataSet yields_dset = grp.getDataSet("yields");
+  auto yields_dims = yields_dset.getDimensions();
+
+  if (yields_dims[0] != incident_energies.size()) {
+    throw ScarabeeException(
+        "First dimension of yields array does not agree with length of "
+        "incident_energies.");
+  }
+
+  if (yields_dims[1] != targets.size()) {
+    throw ScarabeeException(
+        "Second dimension of yields array does not agree with length of "
+        "targets.");
+  }
+
+  xt::xtensor<double, 2> yields =
+      xt::zeros<double>({yields_dims[0], yields_dims[1]});
+  yields_dset.read_raw<double>(yields.data());
+
+  return FissionYields(targets, incident_energies, yields);
+}
+
 void ChainEntry::remove_nuclide(const std::string& nuclide,
                                 const Target& new_target) {
   auto target_eliminator = [this, &nuclide](const auto& t) {
@@ -312,6 +510,87 @@ void ChainEntry::remove_nuclide(const std::string& nuclide,
       target = NoTarget();
     }
   }
+}
+
+void ChainEntry::initialize_hdf5_group(H5::Group& grp) const {
+  if (half_life_) {
+    grp.createAttribute("half-life", half_life_.value());
+  }
+
+  if (decay_targets_) {
+    auto tgrp = grp.createGroup("decay_targets");
+    std::visit([&tgrp](const auto& T) { T.initialize_hdf5_group(tgrp); },
+               decay_targets_.value());
+  }
+
+  if (n_gamma_) {
+    auto tgrp = grp.createGroup("(n,gamma)");
+    std::visit([&tgrp](const auto& T) { T.initialize_hdf5_group(tgrp); },
+               n_gamma_.value());
+  }
+
+  if (n_2n_) {
+    auto tgrp = grp.createGroup("(n,2n)");
+    std::visit([&tgrp](const auto& T) { T.initialize_hdf5_group(tgrp); },
+               n_2n_.value());
+  }
+
+  if (n_3n_) {
+    auto tgrp = grp.createGroup("(n,3n)");
+    std::visit([&tgrp](const auto& T) { T.initialize_hdf5_group(tgrp); },
+               n_3n_.value());
+  }
+
+  if (n_p_) {
+    auto tgrp = grp.createGroup("(n,p)");
+    std::visit([&tgrp](const auto& T) { T.initialize_hdf5_group(tgrp); },
+               n_p_.value());
+  }
+
+  if (n_alpha_) {
+    auto tgrp = grp.createGroup("(n,alpha)");
+    std::visit([&tgrp](const auto& T) { T.initialize_hdf5_group(tgrp); },
+               n_alpha_.value());
+  }
+
+  if (n_fission_) {
+    auto tgrp = grp.createGroup("(n,fission)");
+    n_fission_.value().initialize_hdf5_group(tgrp);
+  }
+}
+
+ChainEntry ChainEntry::from_hdf5_group(const H5::Group& grp) {
+  ChainEntry c;
+
+  if (grp.hasAttribute("half-life")) {
+    c.half_life_ = grp.getAttribute("half-life").read<double>();
+  }
+
+  if (grp.exist("(n,gamma)")) {
+    c.n_gamma_ = target_from_hdf5_group(grp.getGroup("(n,gamma)"));
+  }
+
+  if (grp.exist("(n,2n)")) {
+    c.n_2n_ = target_from_hdf5_group(grp.getGroup("(n,2n)"));
+  }
+
+  if (grp.exist("(n,3n)")) {
+    c.n_3n_ = target_from_hdf5_group(grp.getGroup("(n,3n)"));
+  }
+
+  if (grp.exist("(n,p)")) {
+    c.n_p_ = target_from_hdf5_group(grp.getGroup("(n,p)"));
+  }
+
+  if (grp.exist("(n,alpha)")) {
+    c.n_alpha_ = target_from_hdf5_group(grp.getGroup("(n,alpha)"));
+  }
+
+  if (grp.exist("(n,fission)")) {
+    c.n_fission_ = FissionYields::from_hdf5_group(grp.getGroup("(n,fission)"));
+  }
+
+  return c;
 }
 
 bool DepletionChain::holds_nuclide_data(const std::string& nuclide) const {
@@ -501,11 +780,11 @@ void DepletionChain::save(const std::string& fname) const {
     std::filesystem::remove(fname);
   }
 
-  std::ofstream file(fname, std::ios_base::binary);
+  H5::File h5(fname, H5::File::Create);
 
-  cereal::PortableBinaryOutputArchive arc(file);
+  auto dc_grp = h5.createGroup("depletion-chain");
 
-  arc(*this);
+  this->initialize_hdf5_group(dc_grp);
 }
 
 std::shared_ptr<DepletionChain> DepletionChain::load(const std::string& fname) {
@@ -516,15 +795,75 @@ std::shared_ptr<DepletionChain> DepletionChain::load(const std::string& fname) {
     throw ScarabeeException(mssg.str());
   }
 
-  std::shared_ptr<DepletionChain> out = std::make_shared<DepletionChain>();
+  H5::File h5(fname, H5::File::ReadOnly);
 
-  std::ifstream file(fname, std::ios_base::binary);
+  if (h5.exist("depletion-chain") == false) {
+    throw ScarabeeException(
+        "HDF5 file does not contain a depletion-chain entry.");
+  }
 
-  cereal::PortableBinaryInputArchive arc(file);
+  if (h5.getObjectType("depletion-chain") != H5::ObjectType::Group) {
+    throw ScarabeeException("The depletion-chain entry is not a group.");
+  }
 
-  arc(*out);
+  auto dc_grp = h5.getGroup("depletion-chain");
 
-  return out;
+  std::shared_ptr<DepletionChain> dc = std::make_shared<DepletionChain>();
+
+  *dc = DepletionChain::from_hdf5_group(dc_grp);
+
+  return dc;
+}
+
+void DepletionChain::initialize_hdf5_group(H5::Group& grp) const {
+  for (const auto& entry : data_) {
+    auto entry_group = grp.createGroup(entry.first);
+    entry.second.initialize_hdf5_group(entry_group);
+  }
+}
+
+DepletionChain DepletionChain::from_hdf5_group(const H5::Group& grp) {
+  DepletionChain dc;
+
+  const auto obj_names = grp.listObjectNames();
+
+  for (const auto& name : obj_names) {
+    if (grp.getObjectType(name) != H5::ObjectType::Dataset) {
+      std::stringstream mssg;
+      mssg << "HDF5 object of name " << name << " is not a group.";
+      throw ScarabeeException(mssg.str());
+    }
+
+    auto entry_group = grp.getGroup(name);
+    auto entry = ChainEntry::from_hdf5_group(entry_group);
+
+    dc.insert_entry(name, entry);
+  }
+
+  return dc;
+}
+
+Target target_from_hdf5_group(const H5::Group& grp) {
+  if (grp.hasAttribute("type") == false) {
+    throw ScarabeeException("HDF5 Group has no attribute named \"type\".");
+  }
+
+  std::string type = grp.getAttribute("type").read<std::string>();
+
+  if (type == "no-target") {
+    return NoTarget::from_hdf5_group(grp);
+  } else if (type == "single-target") {
+    return SingleTarget::from_hdf5_group(grp);
+  } else if (type == "branching-targets") {
+    return BranchingTargets::from_hdf5_group(grp);
+  } else {
+    std::stringstream mssg;
+    mssg << "Unknown depletion target type \"" << type << "\".";
+    throw ScarabeeException(mssg.str());
+  }
+
+  // NEVER GETS HERE
+  return NoTarget();
 }
 
 }  // namespace scarabee

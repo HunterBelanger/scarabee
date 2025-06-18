@@ -230,7 +230,7 @@ def main():
             print("Removing {:} from chain".format(nuc_name))
             dc.remove_nuclide(nuc_name)
 
-    dc.save("chain.bin")
+    dc.save("chain.h5")
 
 if __name__ == "__main__":
     main()
