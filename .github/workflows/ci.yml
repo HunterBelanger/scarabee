@@ -48,4 +48,4 @@ jobs:
       # Pytest command needs to be run seperately for each file
       # or it will segfault
       - name: Run Python tests with pytest
-        run: tests/run_tests.sh
+        run: run_tests.sh
