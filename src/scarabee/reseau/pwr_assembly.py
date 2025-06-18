@@ -191,7 +191,6 @@ class PWRAssembly:
         shape: Tuple[int, int],
         pitch: float,
         ndl: NDLibrary,
-        chain: DepletionChain,
         cells: List[List[Union[FuelPin, GuideTube]]],
         boron_ppm: float = 800.0,
         moderator_temp: float = 570.0,
@@ -205,9 +204,9 @@ class PWRAssembly:
         grid_sleeve_width: Optional[float] = None,
         grid_sleeve: Optional[Material] = None,
     ):
-        self._ndl = ndl
-        self._chain = chain
-        self._symmetry = symmetry
+        self._ndl: NDLibrary = ndl
+        self._chain: DepletionChain = self._ndl.depletion_chain
+        self._symmetry: Symmetry = symmetry
 
         if len(shape) != 2:
             raise ValueError("Shape must have 2 entries.")
