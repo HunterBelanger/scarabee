@@ -1,6 +1,5 @@
 from scarabee import (
     NDLibrary,
-    DepletionChain,
     MaterialComposition,
     Material,
     Fraction,
@@ -13,13 +12,12 @@ name = "F24_0"
 
 set_output_file(name + "_out.txt")
 
-ndl = NDLibrary("/home/hunter/Documents/nuclear_data/scarabee/endf8_shem281.h5")
-chain = chain = DepletionChain.load("chain.bin")
+ndl = NDLibrary()
 
 # Define all Materials
 Fuel24Comp = MaterialComposition(Fraction.Atoms, name="Fuel 2.4%")
-Fuel24Comp.add_leu(2.4, 1.)
-Fuel24Comp.add_element("O", 2.)
+Fuel24Comp.add_leu(2.4, 1.0)
+Fuel24Comp.add_element("O", 2.0)
 Fuel24 = Material(Fuel24Comp, 575.0, 10.29748, DensityUnits.g_cm3, ndl)
 
 CladComp = MaterialComposition(Fraction.Weight, name="Zircaloy 4")
@@ -38,8 +36,14 @@ He = Material(HeComp, 575.0, 0.0015981, DensityUnits.g_cm3, ndl)
 gt = GuideTube(inner_radius=0.56134, outer_radius=0.60198, clad=Clad)
 
 # Define fuel pin
-fp = FuelPin(fuel=Fuel24, fuel_radius=0.39218, gap=He, gap_radius=0.40005,
-             clad=Clad, clad_radius=0.45720)
+fp = FuelPin(
+    fuel=Fuel24,
+    fuel_radius=0.39218,
+    gap=He,
+    gap_radius=0.40005,
+    clad=Clad,
+    clad_radius=0.45720,
+)
 
 cells = [
     [fp, fp, fp, fp, fp, fp, fp, fp, fp],
@@ -64,11 +68,10 @@ asmbly = PWRAssembly(
     boron_ppm=975.0,
     cells=cells,
     ndl=ndl,
-    chain=chain,
 )
 
 asmbly.solve()
 
 asmbly._condensation_scheme = [[0, 246], [247, 280]]
 diffusion_data = asmbly._compute_diffusion_data()
-diffusion_data.save(name+".bin")
+diffusion_data.save(name + ".bin")
