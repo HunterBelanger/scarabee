@@ -19,7 +19,9 @@ void NoTarget::initialize_hdf5_group(H5::Group& grp) const {
 
 NoTarget NoTarget::from_hdf5_group(const H5::Group& grp) {
   if (grp.hasAttribute("type") == false) {
-    throw ScarabeeException("HDF5 Group has no attribute named \"type\".");
+    const auto mssg = "HDF5 Group has no attribute named \"type\".";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   std::string type = grp.getAttribute("type").read<std::string>();
@@ -28,6 +30,7 @@ NoTarget NoTarget::from_hdf5_group(const H5::Group& grp) {
     std::stringstream mssg;
     mssg << "Cannot load NoTarget object from HDF5 group of type \"" << type
          << "\".";
+    spdlog::error(mssg);
     throw ScarabeeException(mssg.str());
   }
 
@@ -41,7 +44,9 @@ void SingleTarget::initialize_hdf5_group(H5::Group& grp) const {
 
 SingleTarget SingleTarget::from_hdf5_group(const H5::Group& grp) {
   if (grp.hasAttribute("type") == false) {
-    throw ScarabeeException("HDF5 Group has no attribute named \"type\".");
+    const auto mssg = "HDF5 Group has no attribute named \"type\".";
+    spdlog::error(mssg);
+    throw ScarabeeException();
   }
 
   std::string type = grp.getAttribute("type").read<std::string>();
@@ -50,13 +55,15 @@ SingleTarget SingleTarget::from_hdf5_group(const H5::Group& grp) {
     std::stringstream mssg;
     mssg << "Cannot load SingleTarget object from HDF5 group of type \"" << type
          << "\".";
+    spdlog::error(mssg);
     throw ScarabeeException(mssg.str());
   }
 
   if (grp.hasAttribute("name") == false) {
-    std::stringstream mssg;
-    throw ScarabeeException(
-        "Cannot load SingleTarget object due to missing name attribute.");
+    const auto mssg =
+        "Cannot load SingleTarget object due to missing name attribute.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   std::string name = grp.getAttribute("name").read<std::string>();
@@ -102,7 +109,9 @@ BranchingTargets::BranchingTargets(const std::vector<Branch>& branches)
 
 void BranchingTargets::initialize_hdf5_group(H5::Group& grp) const {
   if (branches_.size() == 0) {
-    throw ScarabeeException("List of branches is empty.");
+    const auto mssg = "List of branches is empty.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   grp.createAttribute("type", std::string("branching-targets"));
@@ -123,7 +132,9 @@ void BranchingTargets::initialize_hdf5_group(H5::Group& grp) const {
 
 BranchingTargets BranchingTargets::from_hdf5_group(const H5::Group& grp) {
   if (grp.hasAttribute("type") == false) {
-    throw ScarabeeException("HDF5 Group has no attribute named \"type\".");
+    const auto mssg = "HDF5 Group has no attribute named \"type\".";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   std::string type = grp.getAttribute("type").read<std::string>();
@@ -132,36 +143,44 @@ BranchingTargets BranchingTargets::from_hdf5_group(const H5::Group& grp) {
     std::stringstream mssg;
     mssg << "Cannot load BranchingTargets object from HDF5 group of type \""
          << type << "\".";
+    spdlog::error(mssg);
     throw ScarabeeException(mssg.str());
   }
 
   if (grp.hasAttribute("targets") == false) {
-    throw ScarabeeException(
-        "Cannot load BranchingTargets object due to missing targets "
-        "attribute.");
+    const auto mssg =
+        "Cannot load BranchingTargets object due to missing targets attribute.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
   std::vector<std::string> targets =
       grp.getAttribute("targets").read<std::vector<std::string>>();
 
   if (grp.hasAttribute("ratios") == false) {
-    throw ScarabeeException(
-        "Cannot load BranchingTargets object due to missing ratios attribute.");
+    const auto mssg =
+        "Cannot load BranchingTargets object due to missing ratios attribute.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
   std::vector<double> ratios =
       grp.getAttribute("ratios").read<std::vector<double>>();
 
   if (targets.size() != ratios.size()) {
-    throw ScarabeeException("Targets and ratios have different lengths.");
+    const auto mssg = "Targets and ratios have different lengths.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (targets.size() == 0) {
-    throw ScarabeeException("Targets and ratios arrays are empty.");
+    const auto mssg = "Targets and ratios arrays are empty.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   std::vector<Branch> branches;
   branches.reserve(targets.size());
   for (std::size_t i = 0; i < targets.size(); i++) {
-    branches.emplace_back(targets[i], ratios[i]);
+    branches.push_back({targets[i], ratios[i]});
   }
 
   return BranchingTargets(branches);
@@ -348,7 +367,9 @@ void FissionYields::initialize_hdf5_group(H5::Group& grp) const {
 
 FissionYields FissionYields::from_hdf5_group(const H5::Group& grp) {
   if (grp.hasAttribute("type") == false) {
-    throw ScarabeeException("HDF5 Group has no attribute named \"type\".");
+    const auto mssg = "HDF5 Group has no attribute named \"type\".";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   std::string type = grp.getAttribute("type").read<std::string>();
@@ -357,54 +378,71 @@ FissionYields FissionYields::from_hdf5_group(const H5::Group& grp) {
     std::stringstream mssg;
     mssg << "Cannot load FissionYields object from HDF5 group of type \""
          << type << "\".";
+    spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
   if (grp.hasAttribute("targets") == false) {
-    throw ScarabeeException(
-        "Cannot load FissionYields object due to missing targets attribute.");
+    const auto mssg =
+        "Cannot load FissionYields object due to missing targets attribute.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
   std::vector<std::string> targets =
       grp.getAttribute("targets").read<std::vector<std::string>>();
 
   if (targets.size() == 0) {
-    throw ScarabeeException("FissionYields targets list is empty.");
+    const auto mssg = "FissionYields targets list is empty.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (grp.hasAttribute("incident_energies") == false) {
-    throw ScarabeeException(
+    const auto mssg =
         "Cannot load FissionYields object due to missing incident_energies "
-        "attribute.");
+        "attribute.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
   std::vector<double> incident_energies =
       grp.getAttribute("incident_energies").read<std::vector<double>>();
 
   if (incident_energies.size() == 0) {
-    throw ScarabeeException("FissionYields incident_energies list is empty.");
+    const auto mssg = "FissionYields incident_energies list is empty.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (grp.exist("yields") == false) {
-    throw ScarabeeException(
-        "Cannot load FissionYields object due to missing yields data set.");
+    const auto mssg =
+        "Cannot load FissionYields object due to missing yields data set.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (grp.getObjectType("yields") != H5::ObjectType::Dataset) {
-    throw ScarabeeException("yields member is not a data set.");
+    const auto mssg = "yields member is not a data set.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   H5::DataSet yields_dset = grp.getDataSet("yields");
   auto yields_dims = yields_dset.getDimensions();
 
   if (yields_dims[0] != incident_energies.size()) {
-    throw ScarabeeException(
+    const auto mssg =
         "First dimension of yields array does not agree with length of "
-        "incident_energies.");
+        "incident_energies.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (yields_dims[1] != targets.size()) {
-    throw ScarabeeException(
+    const auto mssg =
         "Second dimension of yields array does not agree with length of "
-        "targets.");
+        "targets.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   xt::xtensor<double, 2> yields =
@@ -564,6 +602,10 @@ ChainEntry ChainEntry::from_hdf5_group(const H5::Group& grp) {
 
   if (grp.hasAttribute("half-life")) {
     c.half_life_ = grp.getAttribute("half-life").read<double>();
+  }
+
+  if (grp.exist("decay_targets")) {
+    c.decay_targets_ = target_from_hdf5_group(grp.getGroup("decay_targets"));
   }
 
   if (grp.exist("(n,gamma)")) {
@@ -798,12 +840,15 @@ std::shared_ptr<DepletionChain> DepletionChain::load(const std::string& fname) {
   H5::File h5(fname, H5::File::ReadOnly);
 
   if (h5.exist("depletion-chain") == false) {
-    throw ScarabeeException(
-        "HDF5 file does not contain a depletion-chain entry.");
+    const auto mssg = "HDF5 file does not contain a depletion-chain entry.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   if (h5.getObjectType("depletion-chain") != H5::ObjectType::Group) {
-    throw ScarabeeException("The depletion-chain entry is not a group.");
+    const auto mssg = "The depletion-chain entry is not a group.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   auto dc_grp = h5.getGroup("depletion-chain");
@@ -831,6 +876,7 @@ DepletionChain DepletionChain::from_hdf5_group(const H5::Group& grp) {
     if (grp.getObjectType(name) != H5::ObjectType::Group) {
       std::stringstream mssg;
       mssg << "HDF5 object of name " << name << " is not a group.";
+      spdlog::error(mssg.str());
       throw ScarabeeException(mssg.str());
     }
 
@@ -845,7 +891,9 @@ DepletionChain DepletionChain::from_hdf5_group(const H5::Group& grp) {
 
 Target target_from_hdf5_group(const H5::Group& grp) {
   if (grp.hasAttribute("type") == false) {
-    throw ScarabeeException("HDF5 Group has no attribute named \"type\".");
+    const auto mssg = "HDF5 Group has no attribute named \"type\".";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
 
   std::string type = grp.getAttribute("type").read<std::string>();
@@ -859,6 +907,7 @@ Target target_from_hdf5_group(const H5::Group& grp) {
   } else {
     std::stringstream mssg;
     mssg << "Unknown depletion target type \"" << type << "\".";
+    spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
