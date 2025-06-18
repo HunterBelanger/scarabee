@@ -4,6 +4,7 @@
 #include <data/material.hpp>
 #include <data/cross_section.hpp>
 #include <data/micro_cross_sections.hpp>
+#include <data/depletion_chain.hpp>
 
 #include <xtensor/containers/xtensor.hpp>
 
@@ -92,6 +93,10 @@ class NDLibrary {
 
   const std::vector<double>& group_bounds() const { return group_bounds_; }
 
+  const std::shared_ptr<DepletionChain>& depletion_chain() const {
+    return depletion_chain_;
+  }
+
   const std::optional<std::vector<std::pair<std::size_t, std::size_t>>>&
   macro_group_condensation_scheme() const {
     return macro_group_condensation_scheme_;
@@ -149,6 +154,7 @@ class NDLibrary {
   std::size_t first_resonant_group_;
   std::size_t last_resonant_group_;
   std::shared_ptr<H5::File> h5_;
+  std::shared_ptr<DepletionChain> depletion_chain_;
 
   NDLibrary(const NDLibrary&) = delete;
   NDLibrary& operator=(const NDLibrary&) = delete;

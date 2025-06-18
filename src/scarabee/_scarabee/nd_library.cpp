@@ -240,7 +240,8 @@ NDLibrary::NDLibrary()
       library_(),
       group_structure_(),
       ngroups_(0),
-      h5_(nullptr) {
+      h5_(nullptr),
+      depletion_chain_(nullptr) {
   // Get the environment variable
   const char* ndl_env = std::getenv(NDL_ENV_VAR);
   if (ndl_env == nullptr) {
@@ -274,7 +275,8 @@ NDLibrary::NDLibrary(const std::string& fname)
       library_(),
       group_structure_(),
       ngroups_(0),
-      h5_(nullptr) {
+      h5_(nullptr),
+      depletion_chain_(nullptr) {
   // Make sure HDF5 file exists
   if (std::filesystem::exists(fname) == false) {
     std::stringstream mssg;
@@ -365,6 +367,9 @@ void NDLibrary::init() {
   // Read all nuclide handles
   auto nuc_names = h5_->listObjectNames();
   for (const auto& nuc : nuc_names) {
+    // Make sure we don't try to read the depletion chain like a nuclide !
+    if (nuc == "depletion-chain") continue;
+
     auto grp = h5_->getGroup(nuc);
 
     nuclide_handles_.emplace(std::make_pair(nuc, NuclideHandle()));
@@ -398,12 +403,39 @@ void NDLibrary::init() {
     handle.dilutions =
         grp.getAttribute("dilutions").read<std::vector<double>>();
   }
+
+  // Read the depletion chain, if present
+  if (h5_->exist("depletion-chain")) {
+    if (h5_->getObjectType("depletion-chain") != H5::ObjectType::Group) {
+      const auto mssg =
+          "The file member \"depletion-chain\" is present, but is not a group.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    depletion_chain_ = std::make_shared<DepletionChain>();
+    *depletion_chain_ =
+        DepletionChain::from_hdf5_group(h5_->getGroup("depletion-chain"));
+  }
 }
 
 const NuclideHandle& NDLibrary::get_nuclide(const std::string& name) const {
-  if (nuclide_handles_.find(name) == nuclide_handles_.end()) {
+  if (name == "depletion-chain" ||
+      nuclide_handles_.find(name) == nuclide_handles_.end()) {
     std::stringstream mssg;
-    mssg << "Could not find nuclde by name of \"" << name << "\".";
+    mssg << "Could not find nuclide by name of \"" << name << "\".";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  return nuclide_handles_.at(name);
+}
+
+NuclideHandle& NDLibrary::get_nuclide(const std::string& name) {
+  if (name == "depletion-chain" ||
+      nuclide_handles_.find(name) == nuclide_handles_.end()) {
+    std::stringstream mssg;
+    mssg << "Could not find nuclide by name of \"" << name << "\".";
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
@@ -415,17 +447,6 @@ void NDLibrary::unload() {
   for (auto& nuc_handle : nuclide_handles_) {
     nuc_handle.second.unload();
   }
-}
-
-NuclideHandle& NDLibrary::get_nuclide(const std::string& name) {
-  if (nuclide_handles_.find(name) == nuclide_handles_.end()) {
-    std::stringstream mssg;
-    mssg << "Could not find nuclde by name of \"" << name << "\".";
-    spdlog::error(mssg.str());
-    throw ScarabeeException(mssg.str());
-  }
-
-  return nuclide_handles_.at(name);
 }
 
 std::pair<MicroNuclideXS, MicroDepletionXS> NDLibrary::infinite_dilution_xs(

@@ -30,7 +30,7 @@ NoTarget NoTarget::from_hdf5_group(const H5::Group& grp) {
     std::stringstream mssg;
     mssg << "Cannot load NoTarget object from HDF5 group of type \"" << type
          << "\".";
-    spdlog::error(mssg);
+    spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
@@ -55,7 +55,7 @@ SingleTarget SingleTarget::from_hdf5_group(const H5::Group& grp) {
     std::stringstream mssg;
     mssg << "Cannot load SingleTarget object from HDF5 group of type \"" << type
          << "\".";
-    spdlog::error(mssg);
+    spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
@@ -143,7 +143,7 @@ BranchingTargets BranchingTargets::from_hdf5_group(const H5::Group& grp) {
     std::stringstream mssg;
     mssg << "Cannot load BranchingTargets object from HDF5 group of type \""
          << type << "\".";
-    spdlog::error(mssg);
+    spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
