@@ -150,7 +150,7 @@ class Reflector:
         self.assembly_width = assembly_width
         self.gap_width = gap_width
         self.baffle_width = baffle_width
-        self.condensation_scheme = ndl.reflector_few_group_condensation_scheme
+        self.condensation_scheme = ndl.condensation_scheme
         self.anisotropic = False
 
         # No Dancoff correction, as looking at 1D isolated slab for baffle

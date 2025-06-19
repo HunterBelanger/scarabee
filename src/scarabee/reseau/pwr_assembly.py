@@ -435,7 +435,9 @@ class PWRAssembly:
         self._keff: Union[float, List[float]] = 1.0
 
         # Condensation scheme to make few-group cross sections
-        self._condensation_scheme: Optional[List[List[int]]] = None
+        self._condensation_scheme: Optional[List[List[int]]] = (
+            self._ndl.condensation_scheme
+        )
 
     @property
     def shape(self):

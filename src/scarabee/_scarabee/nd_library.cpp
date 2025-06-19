@@ -235,8 +235,7 @@ void NuclideHandle::unload() {
 NDLibrary::NDLibrary()
     : nuclide_handles_(),
       group_bounds_(),
-      macro_group_condensation_scheme_(std::nullopt),
-      few_group_condensation_scheme_(std::nullopt),
+      condensation_scheme_(std::nullopt),
       library_(),
       group_structure_(),
       ngroups_(0),
@@ -270,8 +269,7 @@ NDLibrary::NDLibrary()
 NDLibrary::NDLibrary(const std::string& fname)
     : nuclide_handles_(),
       group_bounds_(),
-      macro_group_condensation_scheme_(std::nullopt),
-      few_group_condensation_scheme_(std::nullopt),
+      condensation_scheme_(std::nullopt),
       library_(),
       group_structure_(),
       ngroups_(0),
@@ -323,46 +321,29 @@ void NDLibrary::init() {
     throw ScarabeeException(mssg);
   }
 
-  // Check if default condensation schemes are provided
-  auto get_cond_scheme =
-      [this](const std::string& key,
-             std::optional<std::vector<std::pair<std::size_t, std::size_t>>>&
-                 scheme,
-             const std::string& mssg) {
-        if (h5_->hasAttribute(key)) {
-          const auto attr = h5_->getAttribute(key);
-          const auto dims = attr.getMemSpace().getDimensions();
+  // If a default condensation scheme is provided, load it in now
+  if (h5_->hasAttribute("condensation-scheme")) {
+    const auto attr = h5_->getAttribute("condensation-scheme");
+    const auto dims = attr.getMemSpace().getDimensions();
 
-          if (dims.size() != 2 || dims[1] != 2) {
-            spdlog::error(mssg);
-            throw ScarabeeException(mssg);
-          }
-
-          xt::xtensor<double, 2> cond_scheme =
-              xt::zeros<double>({dims[0], dims[1]});
-          attr.read_raw<double>(cond_scheme.data());
-
-          scheme =
-              std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
-          for (std::size_t G = 0; G < dims[0]; G++) {
-            (*scheme)[G].first = static_cast<std::size_t>(cond_scheme(G, 0));
-            (*scheme)[G].second = static_cast<std::size_t>(cond_scheme(G, 1));
-          }
-        }
-      };
-
-  get_cond_scheme("macro-group-condensation-scheme",
-                  macro_group_condensation_scheme_,
-                  "Nuclear data library provided macro-group condensation "
-                  "scheme has an invalide shape.");
-  get_cond_scheme("few-group-condensation-scheme",
-                  few_group_condensation_scheme_,
-                  "Nuclear data library provided few-group condensation scheme "
-                  "has an invalide shape.");
-  get_cond_scheme("reflector-few-group-condensation-scheme",
-                  reflector_few_group_condensation_scheme_,
-                  "Nuclear data library provided reflector few-group "
-                  "condensation scheme has an invalide shape.");
+    // Make sure the dimensions of the array are correct
+    if (dims.size() != 2 || dims[1] != 2) {
+      const auto mssg = "Nuclear data library provided macro-group condensation scheme has an invalid shape.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+    
+    // Read in the condensation scheme array
+    xt::xtensor<double, 2> cond_scheme = xt::zeros<double>({dims[0], dims[1]});
+    attr.read_raw<double>(cond_scheme.data());
+    
+    // Reconstruct vector of pairs from the array
+    condensation_scheme_ = std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
+    for (std::size_t G = 0; G < dims[0]; G++) {
+      (*condensation_scheme_)[G].first = static_cast<std::size_t>(cond_scheme(G, 0));
+      (*condensation_scheme_)[G].second = static_cast<std::size_t>(cond_scheme(G, 1));
+    }
+  }
 
   // Read all nuclide handles
   auto nuc_names = h5_->listObjectNames();

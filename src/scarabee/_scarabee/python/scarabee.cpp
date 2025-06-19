@@ -13,6 +13,7 @@ extern void init_XS2D(py::module&);
 extern void init_CrossSection(py::module&);
 extern void init_DiffusionCrossSection(py::module&);
 extern void init_MicroCrossSectionStructs(py::module&);
+extern void init_DepletionChain(py::module&);
 extern void init_NuclideHandle(py::module&);
 extern void init_NDLibrary(py::module&);
 extern void init_Nuclide(py::module&);
@@ -44,7 +45,6 @@ extern void init_FDDiffusionDriver(py::module&);
 extern void init_NEMDiffusionDriver(py::module&);
 extern void init_ReflectorSN(py::module&);
 extern void init_WaterFuncs(py::module&);
-extern void init_DepletionChain(py::module&);
 extern void init_DepletionMatrix(py::module&);
 
 PYBIND11_MODULE(_scarabee, m) {
@@ -59,6 +59,7 @@ PYBIND11_MODULE(_scarabee, m) {
   init_CrossSection(m);
   init_DiffusionCrossSection(m);
   init_MicroCrossSectionStructs(m);
+  init_DepletionChain(m);
   init_NuclideHandle(m);
   init_NDLibrary(m);
   init_Nuclide(m);
@@ -87,7 +88,6 @@ PYBIND11_MODULE(_scarabee, m) {
   init_NEMDiffusionDriver(m);
   init_ReflectorSN(m);
   init_WaterFuncs(m);
-  init_DepletionChain(m);
   init_DepletionMatrix(m);
 
   m.attr("__author__") = "Hunter Belanger";
