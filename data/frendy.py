@@ -6,17 +6,35 @@ from scarabee import *
 from typing import Optional
 
 class GroupStructure:
-  def __init__(self, name: str, id: Optional[str], first_res_grp, last_res_grp, bounds):
+  def __init__(self, name: str, id: Optional[str], first_res_grp, last_res_grp, condensation_scheme, bounds):
     self.name = name
     self.id = id
     self.bounds = bounds
+    self.condensation_scheme = condensation_scheme
     self.first_res_grp = first_res_grp
     self.last_res_grp = last_res_grp
 
     # Make sure things are coherent
     assert isinstance(self.bounds, np.ndarray), "bounds must be a NumPy array"
+    assert isinstance(self.condensation_scheme, np.ndarray), "condensation_scheme must be a NumPy array"
     assert self.bounds.ndim == 1, "bounds must be a 1D NumPy array"
     assert self.bounds.size > 10, "Must have at least 10 energy groups"
+
+    # Make sure condensation scheme is okay
+    for G in range(len(self.condensation_scheme)):
+        if len(self.condensation_scheme[G]) != 2:
+            raise ValueError(f"Macrogroup index {G} does not have two microgroup indices.")
+
+        if self.condensation_scheme[G][0] > self.condensation_scheme[G][1]:
+            raise ValueError(f"The microgroups in macrogroup index {G} are not ordered")
+
+        if G < len(self.condensation_scheme)-1:
+            # Ensure the macrogroups are ordered
+            if self.condensation_scheme[G][1] != self.condensation_scheme[G+1][0]-1:
+                raise ValueError(f"The macrogroups {G} and {G+1} are not continuous.")
+
+    if self.condensation_scheme[-1][-1] != len(self.bounds)-2:
+        raise ValueError("The condensation scheme does not include all microgroups.")
   
   @property
   def ngroups(self):
@@ -24,23 +42,23 @@ class GroupStructure:
 
 _GROUP_STRUCTURES = {
   # Lower resonant group bound from upper limit of URR in U238. Higher resonant group based on table in Stamm'ler and Abbate
-  "WIMS-69": GroupStructure("WIMS-69", "epri-69", 8, 26,
+  "WIMS-69": GroupStructure("WIMS-69", "epri-69", 8, 26, np.array([[0, 44], [45, 68]]),
                           np.array([1.00000E+01, 6.06550E+00, 3.67900E+00, 2.23100E+00, 1.35300E+00,
-	                                  8.21000E-01, 5.00000E-01, 3.02500E-01, 1.83000E-01, 1.11000E-01,
-	                                  6.73400E-02, 4.08500E-02, 2.47800E-02, 1.50300E-02, 9.11800E-03,
-	                                  5.53000E-03, 3.51910E-03, 2.23945E-03, 1.42510E-03, 9.06899E-04,
-	                                  3.67263E-04, 1.48729E-04, 7.55014E-05, 4.80520E-05, 2.77000E-05,
-	                                  1.59680E-05, 9.87700E-06, 4.00000E-06, 3.30000E-06, 2.60000E-06,
-	                                  2.10000E-06, 1.50000E-06, 1.30000E-06, 1.15000E-06, 1.12300E-06,
-	                                  1.09700E-06, 1.07100E-06, 1.04500E-06, 1.02000E-06, 9.96000E-07,
-	                                  9.72000E-07, 9.50000E-07, 9.10000E-07, 8.50000E-07, 7.80000E-07,
-	                                  6.25000E-07, 5.00000E-07, 4.00000E-07, 3.50000E-07, 3.20000E-07,
-	                                  3.00000E-07, 2.80000E-07, 2.50000E-07, 2.20000E-07, 1.80000E-07,
-	                                  1.40000E-07, 1.00000E-07, 8.00000E-08, 6.70000E-08, 5.80000E-08,
-	                                  5.00000E-08, 4.20000E-08, 3.50000E-08, 3.00000E-08, 2.50000E-08,
-	                                  2.00000E-08, 1.50000E-08, 1.00000E-08, 5.00000E-09, 1.00000E-11]) * 1.E6),
+	                                8.21000E-01, 5.00000E-01, 3.02500E-01, 1.83000E-01, 1.11000E-01,
+	                                6.73400E-02, 4.08500E-02, 2.47800E-02, 1.50300E-02, 9.11800E-03,
+	                                5.53000E-03, 3.51910E-03, 2.23945E-03, 1.42510E-03, 9.06899E-04,
+	                                3.67263E-04, 1.48729E-04, 7.55014E-05, 4.80520E-05, 2.77000E-05,
+	                                1.59680E-05, 9.87700E-06, 4.00000E-06, 3.30000E-06, 2.60000E-06,
+	                                2.10000E-06, 1.50000E-06, 1.30000E-06, 1.15000E-06, 1.12300E-06,
+	                                1.09700E-06, 1.07100E-06, 1.04500E-06, 1.02000E-06, 9.96000E-07,
+	                                9.72000E-07, 9.50000E-07, 9.10000E-07, 8.50000E-07, 7.80000E-07,
+	                                6.25000E-07, 5.00000E-07, 4.00000E-07, 3.50000E-07, 3.20000E-07,
+	                                3.00000E-07, 2.80000E-07, 2.50000E-07, 2.20000E-07, 1.80000E-07,
+	                                1.40000E-07, 1.00000E-07, 8.00000E-08, 6.70000E-08, 5.80000E-08,
+	                                5.00000E-08, 4.20000E-08, 3.50000E-08, 3.00000E-08, 2.50000E-08,
+	                                2.00000E-08, 1.50000E-08, 1.00000E-08, 5.00000E-09, 1.00000E-11]) * 1.E6),
 
-  "SCARABEE-125": GroupStructure("SCARABEE-125", None, 21, 82,
+  "SCARABEE-125": GroupStructure("SCARABEE-125", None, 21, 82, np.array([[0, 100], [101, 124]]),
                         np.array([1.00000E+01, 6.06550E+00, 4.06600E+00, 3.32900E+00, 2.72500E+00, 2.23100E+00,
                                   1.90100E+00, 1.63700E+00, 1.40600E+00, 1.35300E+00, 1.28700E+00, 1.16200E+00,
                                   1.05100E+00, 9.51100E-01, 8.60000E-01, 7.06500E-01, 5.00000E-01, 4.56000E-01,
@@ -63,7 +81,7 @@ _GROUP_STRUCTURES = {
                                   6.70000E-08, 5.80000E-08, 5.00000E-08, 4.20000E-08, 3.50000E-08, 3.00000E-08,
                                   2.50000E-08, 2.00000E-08, 1.50000E-08, 1.00000E-08, 5.00000E-09, 1.00000E-11]) * 1.E6),
 
-  "SCARABEE-213": GroupStructure("SCARABEE-213", None, 23, 39,
+  "SCARABEE-213": GroupStructure("SCARABEE-213", None, 23, 39, np.array([[0, 188], [189, 212]]),
                             np.array([1.000000E+07, 6.065500E+06, 3.679000E+06, 3.328707E+06, 2.725314E+06,
                                       2.231299E+06, 1.901387E+06, 1.636539E+06, 1.405768E+06, 1.336941E+06,
                                       1.286961E+06, 1.162048E+06, 1.051149E+06, 9.511189E+05, 8.600058E+05,
@@ -109,7 +127,7 @@ _GROUP_STRUCTURES = {
                                       1.500000E-02, 1.000000E-02, 5.000000E-03, 1.000000E-05])),
 
   # Lower resonant group bound from upper limit of URR in U238. Higher resonant group bound from IR-lambda tool on U238
-  "APOLLO-99": GroupStructure("APOLLO-99", None, 16, 48,
+  "APOLLO-99": GroupStructure("APOLLO-99", None, 16, 48, np.array([[0, 74], [75, 98]]),
                               np.array([1.00000000E+07, 8.18730800E+06, 6.70320100E+06, 5.48811700E+06, 4.49329000E+06,
                                         3.67879400E+06, 3.01194300E+06, 2.46597100E+06, 2.01896600E+06, 1.65299000E+06,
                                         1.35335300E+06, 1.10803200E+06, 9.07179875E+05, 6.08101125E+05, 4.07622094E+05,
@@ -132,7 +150,7 @@ _GROUP_STRUCTURES = {
                                         1.49999997E-02, 9.99999978E-03, 5.49999997E-03, 3.00000003E-03, 1.10000001E-04])),
   
   # Lower resonant group bound from upper limit of URR in U238. Higher resonant group bound from IR-lambda tool on U238 and Pu240
-  "XMAS-172": GroupStructure("XMAS-172", "xmas-nea-lanl-172", 32, 90, 
+  "XMAS-172": GroupStructure("XMAS-172", "xmas-nea-lanl-172", 32, 90, np.array([[0, 134], [135, 171]]),
                              np.array([1.96403E+01, 1.73325E+01, 1.49182E+01, 1.38403E+01, 1.16183E+01,
 	                                     1.00000E+01, 8.18731E+00, 6.70320E+00, 6.06531E+00, 5.48812E+00,
 	                                     4.49329E+00, 3.67879E+00, 3.01194E+00, 2.46597E+00, 2.23130E+00,
@@ -170,7 +188,7 @@ _GROUP_STRUCTURES = {
 	                                     5.00000E-09, 3.00000E-09, 1.00001E-11]) * 1.E6),
   
   # Resonant groups based on upper limit of URR in U238 and 22.5 eV cuttoff for SHEM
-  "SHEM-281": GroupStructure("SHEM-281", "shem-cea-281", 34, 92, 
+  "SHEM-281": GroupStructure("SHEM-281", "shem-cea-281", 34, 92, np.array([[0, 246], [247, 280]]),
                              np.array([1.964030E+07, 1.491823E+07, 1.384029E+07, 1.161833E+07, 9.999987E+06,
                                        9.048363E+06, 8.187297E+06, 7.408173E+06, 6.703192E+06, 6.065299E+06,
                                        4.965847E+06, 4.065691E+06, 3.328707E+06, 2.725314E+06, 2.231299E+06,
@@ -230,7 +248,7 @@ _GROUP_STRUCTURES = {
                                        2.499897E-03, 1.100027E-04])),
   
   # Resonant groups based on upper limit of URR in U238 and 22.5 eV cuttoff for SHEM
-  "SHEM-361": GroupStructure("SHEM-361", "shem-cea-epm-361", 34, 172,
+  "SHEM-361": GroupStructure("SHEM-361", "shem-cea-epm-361", 34, 172, np.array([[0, 326], [327, 360]]),
                              np.array([1.964030e+07, 1.491823e+07, 1.384029e+07, 1.161833e+07, 9.999987e+06,
                                        9.048363e+06, 8.187297e+06, 7.408173e+06, 6.703192e+06, 6.065299e+06,
                                        4.965847e+06, 4.065691e+06, 3.328707e+06, 2.725314e+06, 2.231299e+06,
@@ -306,8 +324,8 @@ _GROUP_STRUCTURES = {
                                        2.499897e-03, 1.100027e-04]))
 }
 
-_DEFAULT_GROUP_STRUCTURE = "XMAS-172"
-_DEFAULT_MAX_LEGENDRE_MOMENT = 1
+_DEFAULT_GROUP_STRUCTURE = "SCARABEE-125"
+_DEFAULT_MAX_LEGENDRE_MOMENT = 3
 
 def set_default_group_structure(name):
   global _DEFAULT_GROUP_STRUCTURE
