@@ -439,6 +439,13 @@ std::shared_ptr<CrossSection> CylindricalFluxSolver::homogenize(
     throw ScarabeeException(mssg);
   }
 
+  // Make sure we were actually provided with regions
+  if (regions.empty()) {
+    const auto mssg = "No regions were provided for homogenization.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Check all regions are valid
   if (regions.size() > this->nregions()) {
     auto mssg =
@@ -565,6 +572,14 @@ xt::xtensor<double, 1> CylindricalFluxSolver::homogenize_flux_spectrum(
     auto mssg =
         "Cannot perform spectrum homogenization when problem has not been "
         "solved.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Make sure we were actually provided with regions
+  if (regions.empty()) {
+    const auto mssg =
+        "No regions were provided for homogenization of flux spectrum.";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }

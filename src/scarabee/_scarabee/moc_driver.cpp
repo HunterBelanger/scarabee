@@ -13,6 +13,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include "spdlog/spdlog.h"
 
 namespace scarabee {
 
@@ -579,7 +580,7 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
           }
         }
       }  // For all tracks
-    }    // For all azimuthal angles
+    }  // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
@@ -641,7 +642,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
                                     Y_ljs[it_lj] * 0.5;
             }
           }  // For all polar angles
-        }    // For all segments along forward direction of track
+        }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.exit_bc() == BoundaryCondition::Vacuum) {
@@ -692,7 +693,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
                                     Y_ljs[it_lj] * 0.5;
             }
           }  // For all polar angles
-        }    // For all segments along forward direction of track
+        }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
         if (track.entry_bc() == BoundaryCondition::Vacuum) {
@@ -703,7 +704,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
           }
         }
       }  // For all tracks
-    }    // For all azimuthal angles
+    }  // For all azimuthal angles
 
     for (std::size_t i = 0; i < nfsrs_; i++) {
       const auto& mat = *fsrs_[i]->xs();
@@ -812,9 +813,9 @@ void MOCDriver::fill_source_anisotropic(
           it_lj++;
 
         }  // -l to l
-      }    // all scattering moments L
-    }      // all flat souce regions
-  }        // all groups
+      }  // all scattering moments L
+    }  // all flat souce regions
+  }  // all groups
 }
 
 void MOCDriver::generate_azimuthal_quadrature(std::uint32_t n_angles,
@@ -1390,7 +1391,8 @@ std::size_t MOCDriver::get_fsr_indx(const UniqueFSR& fsr) const {
   return this->get_fsr_indx(fsr.fsr->id(), fsr.instance);
 }
 
-std::size_t MOCDriver::get_fsr_indx(std::size_t fsr_id, std::size_t instance) const {
+std::size_t MOCDriver::get_fsr_indx(std::size_t fsr_id,
+                                    std::size_t instance) const {
   const std::size_t i = fsr_offsets_.at(fsr_id) + instance;
   if (i >= nfsrs_) {
     auto mssg = "FSR index out of range.";
@@ -1506,6 +1508,13 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize() const {
 
 std::shared_ptr<CrossSection> MOCDriver::homogenize(
     const std::vector<std::size_t>& regions) const {
+  // Make sure we were actually provided with regions
+  if (regions.empty()) {
+    const auto mssg = "No regions were provided for homogenization.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Check all regions are valid
   if (regions.size() > this->nregions()) {
     auto mssg =
@@ -1608,6 +1617,14 @@ xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum() const {
 
 xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum(
     const std::vector<std::size_t>& regions) const {
+  // Make sure we were actually provided with regions
+  if (regions.empty()) {
+    const auto mssg =
+        "No regions were provided for homogenization of flux spectrum.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Check all regions are valid
   if (regions.size() > this->nfsr()) {
     auto mssg =
