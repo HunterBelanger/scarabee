@@ -1063,6 +1063,12 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       if (ratio > 20.0 && moc_iteration_ > 1) {
         flux_update_warning = true;
       }
+      // Error on negative update ratio
+      if (ratio < 0.0) {
+        auto mssg = "Negative CMFD flux update ratio. Try using Larsen correction";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
     }
     i++;
     if (i == nx_) {
