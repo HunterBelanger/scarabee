@@ -517,9 +517,9 @@ void CrossSection::check_xs() {
       throw ScarabeeException(mssg.str());
     }
 
-    for (std::size_t gout = 0; gout < ngroups(); gout++) {
-      for (std::size_t l = 0; l <= max_legendre_order(); l++) {
-        if (std::isnan(Es_(gin, gout))) {
+    for (std::size_t l = 0; l <= max_legendre_order(); l++) {
+      for (std::size_t gout = 0; gout < ngroups(); gout++) {
+        if (std::isnan(Es_(l, gin, gout))) {
           std::stringstream mssg;
           mssg << "Es_ has NaN value in l = " << l << ", " << gin << " -> "
                << gout << ".";
