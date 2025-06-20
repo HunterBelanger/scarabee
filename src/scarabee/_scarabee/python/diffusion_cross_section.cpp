@@ -150,7 +150,8 @@ void init_DiffusionCrossSection(py::module& m) {
       .def("condense", &DiffusionCrossSection::condense,
            "Condenses the cross sections to a new energy group structure. The "
            "condensation group structure is provided as a list of pairs "
-           "(2D tuples), indicating the lower and upper bounds (inclusive) of "
+           "(2D tuples), indicating the lower and upper group indices "
+           "(inclusive) of "
            "a macro energy group. \n\n"
            "Parameters\n"
            "----------\n"

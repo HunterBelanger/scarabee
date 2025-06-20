@@ -349,7 +349,8 @@ void init_CrossSection(py::module& m) {
       .def("condense", &CrossSection::condense,
            "Condenses the cross sections to a new energy group structure. The "
            "condensation group structure is provided as a list of pairs "
-           "(2D tuples), indicating the lower and upper bounds (inclusive) of "
+           "(2D tuples), indicating the lower and upper group indices "
+           "(inclusive) of "
            "a macro energy group. \n\n"
            "Parameters\n"
            "----------\n"
@@ -398,5 +399,6 @@ void init_CrossSection(py::module& m) {
       .def("__imul__", &CrossSection::operator*=)
       .def("__iadd__", &CrossSection::operator+=)
 
-      .def("__deepcopy__", [](const CrossSection& xs, py::dict) { return CrossSection(xs); });
+      .def("__deepcopy__",
+           [](const CrossSection& xs, py::dict) { return CrossSection(xs); });
 }
