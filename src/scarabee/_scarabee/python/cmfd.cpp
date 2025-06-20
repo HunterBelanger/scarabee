@@ -54,24 +54,24 @@ void init_CMFD(py::module& m) {
           "Maximum relative absolute difference in flux for convergence")
 
   .def_property(
-          "flux_limiting", nullptr,
+          "flux_limiting", &CMFD::get_flux_limiting,
           &CMFD::set_flux_limiting,
           "Whether or not to use the flux-limiting condition when calculating"
           "the surface and non-linear diffusion coefficients")
 
   .def_property(
-          "larsen_correction", nullptr,
+          "larsen_correction", &CMFD::get_larsen_correction,
           &CMFD::set_larsen_correction,
           "Whether or not to use Larsen's corrected diffusion coefficient"
           "for optically thick meshes. May reduce performance if not needed")
 
   .def_property(
-          "damping", nullptr,
+          "damping", &CMFD::get_damping,
           &CMFD::set_damping,
           "set CMFD damping factor for under-relaxing the nonlinear diffusion coefficient"
           "between iterations.")
   .def_property(
-          "skip_moc_iterations", nullptr,
+          "skip_moc_iterations", &CMFD::skip_moc_iterations,
           &CMFD::set_skip_moc_iterations,
           "Set # of MOC iterations to skip before using CMFD")
 

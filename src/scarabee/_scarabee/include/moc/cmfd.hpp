@@ -101,13 +101,19 @@ class CMFD {
   void set_flux_tolerance(double ftol);
 
   void set_damping(double wd);
-  void set_flux_limiting(bool user_pref) { flux_limiting_ = user_pref; }
-  void set_larsen_correction(bool user_pref) { larsen_correction_ = user_pref; }
-  void set_skip_moc_iterations(int num_iter) { skip_moc_iterations_ = num_iter; }
+  double get_damping() const { return damping_; }
 
-  std::size_t moc_iteration() const { return moc_iteration_; }
+  void set_flux_limiting(bool user_pref) { flux_limiting_ = user_pref; }
+  bool get_flux_limiting() const { return flux_limiting_; }
+
+  void set_larsen_correction(bool user_pref) { larsen_correction_ = user_pref; }
+  bool get_larsen_correction() const { return larsen_correction_; }
+
+  void set_skip_moc_iterations(int num_iter) { skip_moc_iterations_ = num_iter; }
   std::size_t skip_moc_iterations() const { return skip_moc_iterations_; }
 
+  std::size_t moc_iteration() const { return moc_iteration_; }
+  
   void homogenize_ext_src(const MOCDriver& moc);
 
   const double& flux(const std::size_t i, const std::size_t j, const std::size_t g) const;
