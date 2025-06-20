@@ -1,5 +1,16 @@
-from .._scarabee import *
+from .._scarabee import (
+    NDLibrary,
+    Material,
+    CrossSection,
+    DiffusionCrossSection,
+    DiffusionData,
+    ReflectorSN,
+    set_logging_level,
+    scarabee_log,
+    LogLevel,
+)
 import numpy as np
+
 # import matplotlib.pyplot as plt
 
 
@@ -21,7 +32,7 @@ class NodeFlux:
         self.a = a
         self.ngroups = a.shape[0]
 
-    def __call__(self, x: float, g: int):
+    def __call__(self, x: float, g: int) -> float:
         if g < 0:
             raise RuntimeError("Group index g must be >= 0.")
 
@@ -54,7 +65,7 @@ class NodeFlux:
 
         return flx
 
-    def pos_surf_flux(self, g: int):
+    def pos_surf_flux(self, g: int) -> float:
         if g < 0:
             raise RuntimeError("Group index g must be >= 0.")
 
@@ -63,7 +74,7 @@ class NodeFlux:
 
         return self.a[g, 0] + 0.5 * self.a[g, 1] + 0.5 * self.a[g, 2]
 
-    def neg_surf_flux(self, g: int):
+    def neg_surf_flux(self, g: int) -> float:
         if g < 0:
             raise RuntimeError("Group index g must be >= 0.")
 
@@ -128,9 +139,11 @@ class Reflector:
     flux_tolerance : float
         Convergence criteria for the flux. Default is 1.E-5.
     diffusion_xs : DiffusionCrossSection
-        The few-group diffsuion group constants for the reflector region.
+        The few-group diffusion group constants for the reflector.
     adf : ndarray
         The assembly discontinuity factors.
+    diffusion_data : DiffusionData
+        The few-group diffusion cross sections and ADFs for the reflector.
     """
 
     def __init__(
@@ -152,6 +165,9 @@ class Reflector:
         self.baffle_width = baffle_width
         self.condensation_scheme = ndl.condensation_scheme
         self.anisotropic = False
+        self.adf = None
+        self.diffusion_xs = None
+        self.diffusion_data = None
 
         # No Dancoff correction, as looking at 1D isolated slab for baffle
         Ee = 1.0 / (2.0 * self.baffle_width)
@@ -166,11 +182,13 @@ class Reflector:
                 "The assembly width is smaller than the sum of the gap and baffle widths."
             )
 
-    def solve(self):
+    def solve(self) -> None:
         """
         Runs a 1D annular problem to generate few group cross sections for the
         reflector, with the core baffle.
         """
+        scarabee_log(LogLevel.Info, "Starting reflector calculation.")
+
         if self.condensation_scheme is None:
             raise RuntimeError(
                 "Cannot perform reflector calculation without condensation scheme."
@@ -206,11 +224,15 @@ class Reflector:
         mats += [self.moderator] * NR
 
         ref_sn = ReflectorSN(mats, dx, self.anisotropic)
+        set_logging_level(LogLevel.Warning)
         ref_sn.solve()
+        set_logging_level(LogLevel.Info)
+        scarabee_log(LogLevel.Info, "")
+        scarabee_log(LogLevel.Info, "Kinf: {:.5f}".format(ref_sn.keff))
+        scarabee_log(LogLevel.Info, "")
+        scarabee_log(LogLevel.Info, "Generating diffusion data.")
 
-        few_group_flux = np.zeros(
-            (len(self.condensation_scheme), NF + NG + NB + NR)
-        )
+        few_group_flux = np.zeros((len(self.condensation_scheme), NF + NG + NB + NR))
         for i in range(NF + 1 + NB + NR):
             for G in range(len(self.condensation_scheme)):
                 g_min = self.condensation_scheme[G][0]
@@ -302,8 +324,9 @@ class Reflector:
 
             self.adf[G, :] = f_ref
 
-        # Write data to terminal/output file
-        self._write_data()
+        # Create the diffusion data
+        self.diffusion_data = DiffusionData(self.diffusion_xs)
+        self.diffusion_data.adf = self.adf
 
     def _nodal_calc(
         self,
@@ -313,7 +336,7 @@ class Reflector:
         avg_flx: np.ndarray,
         j_neg: np.ndarray,
         j_pos: np.ndarray,
-    ):
+    ) -> np.ndarray:
         """
         Performs the nodal diffusion calculation with reference currents to
         return the reference nodal flux.
@@ -415,64 +438,6 @@ class Reflector:
             a[g, 1:] = a_tmp[g * 4 : g * 4 + 4]
 
         return a
-
-    def _write_data(self):
-        NG = self.diffusion_xs.ngroups
-        D = []
-        Ea = []
-        Ef = []
-        vEf = []
-        chi = []
-        for g in range(NG):
-            D.append(self.diffusion_xs.D(g))
-            Ea.append(self.diffusion_xs.Ea(g))
-            Ef.append(self.diffusion_xs.Ef(g))
-            vEf.append(self.diffusion_xs.vEf(g))
-            chi.append(self.diffusion_xs.chi(g))
-
-        D_str = "  D: "
-        Ea_str = " Ea: "
-        Ef_str = " Ef: "
-        vEf_str = "vEf: "
-        chi_str = "chi: "
-        Es_strs = []
-        for g in range(NG):
-            D_str += "{:.4E}  ".format(D[g])
-            Ea_str += "{:.4E}  ".format(Ea[g])
-
-            if self.diffusion_xs.fissile:
-                Ef_str += "{:.4E}  ".format(Ef[g])
-                vEf_str += "{:.4E}  ".format(vEf[g])
-                chi_str += "{:.4E}  ".format(chi[g])
-
-            Es_strs.append("{:} -> g: ".format(g + 1))
-
-            for gg in range(NG):
-                Es_strs[-1] += "{:.4E}  ".format(self.diffusion_xs.Es(g, gg))
-
-        scarabee_log(LogLevel.Info, D_str)
-        scarabee_log(LogLevel.Info, Ea_str)
-        if self.diffusion_xs.fissile:
-            scarabee_log(LogLevel.Info, Ef_str)
-            scarabee_log(LogLevel.Info, vEf_str)
-            scarabee_log(LogLevel.Info, chi_str)
-        scarabee_log(LogLevel.Info, "Es:  outgoing group ->")
-        for g in range(NG):
-            scarabee_log(LogLevel.Info, Es_strs[g])
-        scarabee_log(LogLevel.Info, "ADF: {:}".format(self.adf[0, :]))
-        for g in range(1, NG):
-            scarabee_log(LogLevel.Info, "     {:}".format(self.adf[g, :]))
-
-    def save_diffusion_data(self, fname):
-        if self.diffusion_xs is None:
-            raise RuntimeError("No diffusion cross sections.")
-
-        if self.adf is None:
-            raise RuntimeError("No ADFs")
-
-        self.diffusion_data = DiffusionData(self.diffusion_xs)
-        self.diffusion_data.adf = self.adf
-        self.diffusion_data.save(fname)
 
 
 # REFERENCES

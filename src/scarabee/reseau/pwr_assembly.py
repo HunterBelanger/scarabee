@@ -159,6 +159,12 @@ class PWRAssembly:
     keff_tolerance : float
         Keff convergence tolerance for assembly calculations. Must be in range
         (0., 1.E-2). Default value is 1.E-5.
+    anisotropic : bool
+        If False, isotropic scattering with the transport correction is used in
+        the assembly calculation. Otherwise, explicit anisotropic scattering is
+        modeled. Default value is False. **If you wish to turn anisotropic
+        scattering on, you must set this attribute before calling the solve
+        method for the first time.**
     condensation_scheme : list of list of int
         Energy condensation scheme to condense from the group structure of the
         library to the few-groups used in the core solver.
@@ -184,6 +190,13 @@ class PWRAssembly:
         the infinite assembly. If depletion was performed, this is a 1D Numpy
         array for the values of keff at the tabulated burn-up exposures/times.
         Default value is 1 before solve has been called.
+    depletion_data : optional DiffusionData or list of DiffusionData
+        If a single assembly calculation is being performed without depletion,
+        this attribute will the resulting DiffusionData instance based on the
+        few-group condensation_scheme attribute. If a depletion calculation is
+        performed, this attribute will be a list of DiffusionData instances,
+        with one for each burn-up point. Before solve has been called, this
+        attribute is None.
     """
 
     def __init__(
@@ -238,7 +251,7 @@ class PWRAssembly:
         self._pitch = pitch
 
         # Compute assembly pitch
-        self._assembly_pitch = self.shape[0] * self.pitch
+        self._assembly_pitch: float = self.shape[0] * self.pitch
         if assembly_pitch is not None:
             try:
                 assembly_pitch = float(assembly_pitch)
@@ -408,10 +421,11 @@ class PWRAssembly:
                 self.grid_sleeve.size * [1.0e10], self._ndl
             )
 
-        self._moc_track_spacing = 0.05
-        self._moc_num_angles = 64
-        self._flux_tolerance = 1.0e-5
-        self._keff_tolerance = 1.0e-5
+        self._moc_track_spacing: float = 0.05
+        self._moc_num_angles: int = 64
+        self._flux_tolerance: float = 1.0e-5
+        self._keff_tolerance: float = 1.0e-5
+        self._anisotropic: bool = False
 
         self._asmbly_cells = []
         self._asmbly_geom: Optional[Cartesian2D] = None
@@ -428,8 +442,8 @@ class PWRAssembly:
         self._depletion_time_steps: Optional[np.ndarray] = None
 
         # Arrays for the depletion exposures (MWd/kg) and times (days)
-        self._exposures = np.array([])
-        self._times = np.array([])
+        self._exposures: np.ndarray = np.array([])
+        self._times: np.ndarray = np.array([])
 
         # Either a single value or list of values (for each depletion step)
         self._keff: Union[float, List[float]] = 1.0
@@ -439,82 +453,88 @@ class PWRAssembly:
             self._ndl.condensation_scheme
         )
 
+        # If a single assembly calculation is performed, this attribute will
+        # contain a single DiffusionData instance. If a depletion calculation
+        # is performed, a DiffusionData instance will be generated for each
+        # burn-up step.
+        self._diffusion_data: Optional[Union[DiffusionData, List[DiffusionData]]] = None
+
     @property
-    def shape(self):
+    def shape(self) -> Tuple[int, int]:
         return self._shape
 
     @property
-    def pitch(self):
+    def pitch(self) -> float:
         return self._pitch
 
     @property
-    def symmetry(self):
+    def symmetry(self) -> Symmetry:
         return self._symmetry
 
     @property
-    def assembly_pitch(self):
+    def assembly_pitch(self) -> float:
         return self._assembly_pitch
 
     @property
-    def spacer_grid_width(self):
+    def spacer_grid_width(self) -> Optional[float]:
         return self._spacer_grid_width
 
     @property
-    def spacer_grid(self):
+    def spacer_grid(self) -> Optional[Material]:
         return self._spacer_grid
 
     @property
-    def grid_sleeve_width(self):
+    def grid_sleeve_width(self) -> Optional[float]:
         return self._grid_sleeve_width
 
     @property
-    def grid_sleeve(self):
+    def grid_sleeve(self) -> Optional[Material]:
         return self._grid_sleeve
 
     @property
-    def linear_power(self):
+    def linear_power(self) -> float:
         return self._linear_power
 
     @property
-    def initial_heavy_metal_linear_mass(self):
+    def initial_heavy_metal_linear_mass(self) -> float:
         return self._initial_heavy_metal_linear_mass
 
     @property
-    def boron_ppm(self):
+    def boron_ppm(self) -> float:
         return self._boron_ppm
 
     @property
-    def moderator_temp(self):
+    def moderator_temp(self) -> float:
         return self._moderator_temp
 
     @property
-    def moderator_pressure(self):
+    def moderator_pressure(self) -> float:
         return self._moderator_pressure
 
     @property
-    def moderator_legendre_order(self):
+    def moderator_legendre_order(self) -> int:
         return self._moderator_legendre_order
 
     @property
-    def moderator(self):
+    def moderator(self) -> Material:
         return self._moderator
 
     @property
-    def dancoff_moc_track_spacing(self):
+    def dancoff_moc_track_spacing(self) -> float:
         return self._dancoff_moc_track_spacing
 
     @dancoff_moc_track_spacing.setter
-    def dancoff_moc_track_spacing(self, dts: float):
+    def dancoff_moc_track_spacing(self, dts: float) -> None:
         if dts <= 0.0 or dts > 0.1:
             raise ValueError("Dancoff track spacing must be in range (0, 0.1].")
         self._dancoff_moc_track_spacing = dts
 
     @property
-    def dancoff_moc_num_angles(self):
+    def dancoff_moc_num_angles(self) -> int:
         return self._dancoff_moc_num_angles
 
     @dancoff_moc_num_angles.setter
-    def dancoff_moc_num_angles(self, dna: int):
+    def dancoff_moc_num_angles(self, dna: int) -> None:
         if dna % 4 != 0:
             raise ValueError(
                 "Number of angles for Dancoff correction calculation must be a multiple of 4."
@@ -544,21 +564,21 @@ class PWRAssembly:
         self._dancoff_flux_tolerance = tol
 
     @property
-    def moc_track_spacing(self):
+    def moc_track_spacing(self) -> float:
         return self._moc_track_spacing
 
     @moc_track_spacing.setter
-    def moc_track_spacing(self, dts: float):
+    def moc_track_spacing(self, dts: float) -> None:
         if dts <= 0.0 or dts > 0.1:
             raise ValueError("Track spacing must be in range (0, 0.1].")
         self._moc_track_spacing = dts
 
     @property
-    def moc_num_angles(self):
+    def moc_num_angles(self) -> int:
         return self._moc_num_angles
 
     @moc_num_angles.setter
-    def moc_num_angles(self, dna: int):
+    def moc_num_angles(self, dna: int) -> None:
         if dna % 4 != 0:
             raise ValueError(
                 "Number of angles for MOC calculation must be a multiple of 4."
@@ -604,15 +624,23 @@ class PWRAssembly:
         self._keff_tolerance = tol
 
     @property
-    def cells(self):
+    def anisotropic(self) -> bool:
+        return self._anisotropic
+
+    @anisotropic.setter
+    def anisotropic(self, aniso: bool) -> None:
+        self._anisotropic = aniso
+
+    @property
+    def cells(self) -> List[List[Union[FuelPin, GuideTube]]]:
         return self._cells
 
     @property
-    def leakage_model(self):
+    def leakage_model(self) -> CriticalLeakage:
         return self._leakage_model
 
     @leakage_model.setter
-    def leakage_model(self, clm: CriticalLeakage):
+    def leakage_model(self, clm: CriticalLeakage) -> None:
         self._leakage_model = clm
 
     @property
@@ -678,23 +706,23 @@ class PWRAssembly:
         )
 
     @property
-    def exposures(self):
+    def exposures(self) -> np.ndarray:
         return self._exposures
 
     @property
-    def times(self):
+    def times(self) -> np.ndarray:
         return self._times
 
     @property
-    def keff(self):
+    def keff(self) -> Union[float, List[float]]:
         return self._keff
 
     @property
-    def condensation_scheme(self):
+    def condensation_scheme(self) -> Optional[List[List[int]]]:
         return self._condensation_scheme
 
     @condensation_scheme.setter
-    def condensation_scheme(self, cs: List[List[int]]):
+    def condensation_scheme(self, cs: List[List[int]]) -> None:
         if not isinstance(cs, list):
             raise TypeError("Condensation scheme must be a list of lists of ints.")
 
@@ -739,7 +767,11 @@ class PWRAssembly:
 
         self._condensation_scheme = copy.deepcopy(cs)
 
-    def _set_cells(self, cells: List[List[Union[FuelPin, GuideTube]]]):
+    @property
+    def diffusion_data(self) -> Optional[Union[DiffusionData, List[DiffusionData]]]:
+        return self._diffusion_data
+
+    def _set_cells(self, cells: List[List[Union[FuelPin, GuideTube]]]) -> None:
         if len(cells) != self._simulated_shape[1]:
             raise ValueError(
                 "Shape along y of cells list does not agree with assembly shape and symmetry."
@@ -913,7 +945,7 @@ class PWRAssembly:
                 # Save the MOC
                 self._isolated_dancoff_mocs[-1].append(moc)
 
-    def _init_full_dancoff_components(self):
+    def _init_full_dancoff_components(self) -> None:
         pitch = self.pitch
         if self.spacer_grid_width is not None:
             pitch -= 2.0 * self.spacer_grid_width
@@ -1070,7 +1102,7 @@ class PWRAssembly:
             YamamotoTabuchi6(),
         )
 
-    def _save_dancoff_fsr_indexes(self):
+    def _save_dancoff_fsr_indexes(self) -> None:
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
                 cell = self.cells[j][i]
@@ -1119,7 +1151,7 @@ class PWRAssembly:
                 )
             )
 
-    def compute_fuel_dancoff_corrections(self):
+    def compute_fuel_dancoff_corrections(self) -> None:
         """
         Recomputes all Dancoff corrections for the fuel regions in the problem,
         using the most recent material definitions. All fuel is shelf-shielded
@@ -1177,7 +1209,7 @@ class PWRAssembly:
                     self._fuel_dancoff_corrections[j, i] = C
         set_logging_level(LogLevel.Info)
 
-    def compute_clad_dancoff_corrections(self):
+    def compute_clad_dancoff_corrections(self) -> None:
         """
         Recomputes all Dancoff corrections for the fuel pin cladding regions
         in the problem, using the most recent material definitions. All
@@ -1232,7 +1264,7 @@ class PWRAssembly:
                 self._clad_dancoff_corrections[j, i] = C
         set_logging_level(LogLevel.Info)
 
-    def apply_dancoff_corrections(self):
+    def apply_dancoff_corrections(self) -> None:
         """
         Appends all fuel and cladding Dancoff corrections to the appropriate cell.
         """
@@ -1247,7 +1279,7 @@ class PWRAssembly:
                     self._clad_dancoff_corrections[j, i]
                 )
 
-    def self_shield_and_xs_update(self):
+    def self_shield_and_xs_update(self) -> None:
         """
         Computes a new set of Dancoff corrections for the fuel and the
         cladding.  After, these are applied to all the cells in the problem.
@@ -1267,7 +1299,7 @@ class PWRAssembly:
     # ==========================================================================
     # Transport Calculation Related Methods
 
-    def _init_moc(self):
+    def _init_moc(self) -> None:
         pitch = self.pitch
         if self.spacer_grid_width is not None:
             pitch -= 2.0 * self.spacer_grid_width
@@ -1387,7 +1419,7 @@ class PWRAssembly:
                 )
 
         # Construct the MOC
-        self._asmbly_moc = MOCDriver(self._asmbly_geom)
+        self._asmbly_moc = MOCDriver(self._asmbly_geom, anisotropic=self._anisotropic)
         self._asmbly_moc.x_min_bc = self._x_min_bc
         self._asmbly_moc.x_max_bc = self._x_max_bc
         self._asmbly_moc.y_min_bc = self._y_min_bc
@@ -1400,7 +1432,7 @@ class PWRAssembly:
 
         self._save_fsr_indexes()
 
-    def _save_fsr_indexes(self):
+    def _save_fsr_indexes(self) -> None:
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
                 cell = self.cells[j][i]
@@ -2013,6 +2045,7 @@ class PWRAssembly:
         self._keff = np.zeros(self.depletion_exposure_steps.size + 1)
         self._exposures = np.zeros(self.depletion_exposure_steps.size + 1)
         self._times = np.zeros(self.depletion_exposure_steps.size + 1)
+        self._diffusion_data = []
 
         for t, dt in enumerate(self.depletion_time_steps):
             if t > 0:
@@ -2037,6 +2070,7 @@ class PWRAssembly:
             self._run_assembly_calculation(True)
             scarabee_log(LogLevel.Info, "")
             self._keff[t] = self._asmbly_moc.keff
+            self._diffusion_data.append(self._compute_diffusion_data())
 
             # Predic isotopes at midpoint of step
             self._predict_depletion(0.5 * dt_sec)
@@ -2061,6 +2095,7 @@ class PWRAssembly:
         scarabee_log(LogLevel.Info, "")
         self._run_assembly_calculation(True)
         self._keff[-1] = self._asmbly_moc.keff
+        self._diffusion_data.append(self._compute_diffusion_data())
         scarabee_log(LogLevel.Info, "")
 
     def solve(self) -> None:
@@ -2068,6 +2103,7 @@ class PWRAssembly:
             # Single one-off calulcation
             self._run_assembly_calculation(True)
             self._keff = self._asmbly_moc.keff
+            self._diffusion_data = self._compute_diffusion_data()
         else:
             # Run depletion steps
             self._run_depletion_steps()
