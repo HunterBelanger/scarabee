@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-export SCARABEE_ND_LIBRARY="/home/hunter/Documents/nuclear_data/scarabee/endf8_scarabee125.h5"
+export SCARABEE_ND_LIBRARY="/mnt/c/Users/BELANH2/Documents/nuclear_data/endf8_shem281.h5"
 
 python assembly_16_0.py
 wait

@@ -71,6 +71,4 @@ asmbly = PWRAssembly(
 )
 
 asmbly.solve()
-
-diffusion_data = asmbly._compute_diffusion_data()
-diffusion_data.save(name + ".bin")
+asmbly.diffusion_data.save(name + ".bin")

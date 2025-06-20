@@ -1,16 +1,16 @@
-[2025-06-17 16:33:51.686] [info] Initializing Dancoff correction calculation components.
-[2025-06-17 16:33:51.783] [info] Computing Dancoff corrections for the fuel.
-[2025-06-17 16:33:51.833] [info] Computing Dancoff corrections for the cladding.
-[2025-06-17 16:33:53.177] [info] Creating quadrature
-[2025-06-17 16:33:53.177] [info] Number of azimuthal angles: 64
-[2025-06-17 16:33:53.177] [info] Maximum track spacing: 0.05 cm
-[2025-06-17 16:33:53.177] [info] Tracing tracks
-[2025-06-17 16:33:53.220] [info] Renormalizing segment lengths
-[2025-06-17 16:33:53.223] [info] Determining track connections
-[2025-06-17 16:33:53.240] [info] Time spent dawing tracks: 0.06309 s.
-[2025-06-17 16:34:50.572] [info] 
-[2025-06-17 16:34:50.572] [info] Kinf: 0.97596
-[2025-06-17 16:34:50.572] [info] 
-[2025-06-17 16:34:51.111] [info] Performing P1 criticality spectrum calculation
-[2025-06-17 16:34:51.144] [info] Kinf    : 0.97600
-[2025-06-17 16:34:51.144] [info] Buckling: -0.00042
+[2025-06-20 14:07:42.886] [info] Initializing Dancoff correction calculation components.
+[2025-06-20 14:07:43.590] [info] Computing Dancoff corrections for the fuel.
+[2025-06-20 14:07:43.720] [info] Computing Dancoff corrections for the cladding.
+[2025-06-20 14:07:45.572] [info] Creating quadrature
+[2025-06-20 14:07:45.572] [info] Number of azimuthal angles: 64
+[2025-06-20 14:07:45.572] [info] Maximum track spacing: 0.05 cm
+[2025-06-20 14:07:45.572] [info] Tracing tracks
+[2025-06-20 14:07:45.610] [info] Renormalizing segment lengths
+[2025-06-20 14:07:45.612] [info] Determining track connections
+[2025-06-20 14:07:45.632] [info] Time spent dawing tracks: 0.060007 s.
+[2025-06-20 14:08:33.792] [info] 
+[2025-06-20 14:08:33.793] [info] Kinf: 0.97596
+[2025-06-20 14:08:33.793] [info] 
+[2025-06-20 14:08:34.378] [info] Performing P1 criticality spectrum calculation
+[2025-06-20 14:08:34.426] [info] Kinf    : 0.97600
+[2025-06-20 14:08:34.426] [info] Buckling: -0.00042

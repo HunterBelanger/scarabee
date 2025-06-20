@@ -71,9 +71,7 @@ asmbly = PWRAssembly(
 )
 
 asmbly.solve()
-
-diffusion_data = asmbly._compute_diffusion_data()
-diffusion_data.save(name + ".bin")
+asmbly.diffusion_data.save(name + ".bin")
 
 # Homogenize the assembly
 avg_fuel_asmbly = asmbly._asmbly_moc.homogenize()
@@ -99,4 +97,4 @@ refl = Reflector(
     ndl=ndl,
 )
 refl.solve()
-refl.save_diffusion_data("reflector.bin")
+refl.diffusion_data.save("reflector.bin")
