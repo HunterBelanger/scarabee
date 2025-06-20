@@ -72,7 +72,6 @@ asmbly = PWRAssembly(
 
 asmbly.solve()
 
-asmbly._condensation_scheme = [[0, 246], [247, 280]]
 diffusion_data = asmbly._compute_diffusion_data()
 diffusion_data.save(name + ".bin")
 
@@ -99,6 +98,5 @@ refl = Reflector(
     baffle=SS304,
     ndl=ndl,
 )
-refl.condensation_scheme = [[0, 246], [247, 280]]
 refl.solve()
 refl.save_diffusion_data("reflector.bin")

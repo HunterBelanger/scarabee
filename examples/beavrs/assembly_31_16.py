@@ -111,6 +111,5 @@ asmbly = PWRAssembly(
 
 asmbly.solve()
 
-asmbly._condensation_scheme = [[0, 246], [247, 280]]
 diffusion_data = asmbly._compute_diffusion_data()
 diffusion_data.save(name + ".bin")
