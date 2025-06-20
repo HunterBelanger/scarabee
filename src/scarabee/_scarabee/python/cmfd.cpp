@@ -121,12 +121,32 @@ void init_CMFD(py::module& m) {
   .def("current",
       py::overload_cast<const std::size_t, const std::size_t>(
       &CMFD::current, py::const_),
-      "TODO: Fill in docstring",
+      "Returns the current on a CMFD cell boundary\n\n"
+      "Parameters\n"
+      "----------\n"
+      "G: unsigned int\n"
+      "   Int which gives the # of the flux energy group"
+      "surf: unsigned int\n"
+      "   Int which gives the CMFD surface index\n"
+      "Returns\n"
+      "-------\n"
+      "current: double\n"
+      "    MOC tallied current in group G on surface I",
       py::arg("G"),py::arg("surface"))
   .def("current",
       py::overload_cast<const std::size_t, const std::size_t>(
         &CMFD::current),
-      "TODO: Fill in docstring",
+      "Returns the current on a CMFD cell boundary\n\n"
+      "Parameters\n"
+      "----------\n"
+      "G: unsigned int\n"
+      "   Int which gives the # of the flux energy group"
+      "surf: unsigned int\n"
+      "   Int which gives the CMFD surface index\n"
+      "Returns\n"
+      "-------\n"
+      "current: double\n"
+      "    MOC tallied current in group G on surface I",
       py::arg("G"),py::arg("surface"))
    .def("flux",&CMFD::flux,
       "Gets the CMFD flux at cell i,j in group g \n\n"
