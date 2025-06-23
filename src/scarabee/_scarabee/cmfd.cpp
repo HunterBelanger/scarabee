@@ -713,6 +713,25 @@ void CMFD::larsen_correction(double& D, const double dx, const MOCDriver& moc) c
   D = D_eff;
 }
 
+void CMFD::optimize_diffusion_coef(double& D, const double dx, const std::size_t i, const std::size_t j, const std::size_t g) const {
+  // This method adds a term to the diffusion coefficient which generalizes CMFD and pCMFD to be the same based on
+  // the optimal diffusion coefficient for a given cell's optical thickness. This method is based on the result from [1].
+  const double EtDx = Et_(g, i, j) * dx;
+
+  if (EtDx < 1.){
+    return;
+  } else if (EtDx < 14 && EtDx >= 1) {
+    const double theta = -5.542780E-02                   + 8.740501E-02*EtDx             +
+                         -2.152599E-02*std::pow(EtDx, 2) + 3.145553E-03*std::pow(EtDx,3) +
+                         -2.683648E-04*std::pow(EtDx,4)  + 1.222516E-05*std::pow(EtDx,5) +
+                         -2.284879E-07*std::pow(EtDx,6);
+
+    D += theta * dx;
+  } else {
+    D += 0.127 * dx;
+  }
+}
+
 std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
     std::size_t i, std::size_t j, std::size_t g, CMFD::TileSurf surf,
     const MOCDriver& moc) const {
@@ -722,9 +741,11 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   const double dx_ij = get_cmfd_tile_width(i, j, surf);
   const double current = get_current(i, j, g, surf);
 
-  // Modify material diffusion coefficient for cell i,j by Larsen's correction
+  // Modify material diffusion coefficient for cell i,j by Larsen's correction or odCMFD
   if (larsen_correction_){
     larsen_correction(D_ij, dx_ij, moc);
+  } else if (od_cmfd_){
+    optimize_diffusion_coef(D_ij, dx_ij, i, j, g);
   }
 
   const auto flux_limiting = [current, surf, flx_ij](double& D_surf, double& D_nl, const double flx_next){
@@ -781,9 +802,11 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   double D_iijj = xs_(ii, jj)->D(g);
   const double dx_iijj = get_cmfd_tile_width(ii, jj, surf);
 
-  // Modify material diffusion coefficient for cell ii, jj by Larsen's correction
-  if (larsen_correction_){
+  // Modify material diffusion coefficient for cell ii, jj by Larsen's correction or odCMFD
+  if (larsen_correction_) {
     larsen_correction(D_iijj, dx_iijj, moc);
+  } else if (od_cmfd_) {
+    optimize_diffusion_coef(D_iijj, dx_iijj, ii, jj, g);
   }
 
   // First, compute normal surface diffusion coefficient
@@ -1063,11 +1086,25 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       if (ratio > 20.0 && moc_iteration_ > 1) {
         flux_update_warning = true;
       }
-      // Error on negative update ratio
+      // Check that the update ratio is valid 
       if (ratio < 0.0) {
         auto mssg = "Negative CMFD flux update ratio. Try using Larsen correction";
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
+      }
+      if (std::isinf(ratio)) {
+        auto mssg = "CMFD flux update ratio is inf";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+      if (std::isnan(ratio)) {
+        auto mssg = "CMFD flux update ratio is NaN";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+      // Clamp CMFD flux ratio after a certain # of solves
+      if (cmfd_solves_ > unbounded_cmfd_solves_){
+        std::clamp(ratio, 0.05, 20.0);
       }
     }
     i++;
@@ -1138,6 +1175,13 @@ void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
 
   // Skip user-defined # of MOC iterations 
   if (moc_iteration > skip_moc_iterations_){
+    cmfd_solves_++;
+
+    if (larsen_correction_ && od_cmfd_) {
+      auto mssg = "odCMFD and the Larsen correction are mutally exclusive. Only one can be set to True";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
   
     this->normalize_currents();
     this->compute_homogenized_xs_and_flux(moc);
@@ -1167,3 +1211,8 @@ void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
 }
 
 }  // namespace scarabee
+
+// REFERENCES
+// [1] A. Zhu et al., "An optimally diffusive Coarse Mesh Finite Difference method
+// to accelerate neutron transport calculations," Ann. Nucl. Energy,
+// vol. 95, pp. 116–124, 2016, doi: 10.1016/j.anucene.2016.05.004

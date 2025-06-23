@@ -95,6 +95,10 @@ class CMFD {
 
   void solve(MOCDriver& moc, double keff, std::size_t moc_iteration);
 
+  void homogenize_ext_src(const MOCDriver& moc);
+
+  // Setter/Getter functions 
+
   double keff_tolerance() const { return keff_tol_; }
   void set_keff_tolerance(double ktol);
   double flux_tolerance() const { return flux_tol_; }
@@ -109,12 +113,16 @@ class CMFD {
   void set_larsen_correction(bool user_pref) { larsen_correction_ = user_pref; }
   bool get_larsen_correction() const { return larsen_correction_; }
 
+  void set_od_cmfd(bool user_pref) { od_cmfd_ = user_pref; }
+  bool get_od_cmfd() const { return od_cmfd_; }
+
+  void set_num_unbounded_solves(std::size_t num_solves) { unbounded_cmfd_solves_ = num_solves; }
+  std::size_t get_num_unbounded_solves() const { return unbounded_cmfd_solves_; }
+
   void set_skip_moc_iterations(int num_iter) { skip_moc_iterations_ = num_iter; }
   std::size_t skip_moc_iterations() const { return skip_moc_iterations_; }
 
   std::size_t moc_iteration() const { return moc_iteration_; }
-  
-  void homogenize_ext_src(const MOCDriver& moc);
 
   const double& flux(const std::size_t i, const std::size_t j, const std::size_t g) const;
   double keff() const { return keff_; }
@@ -133,9 +141,12 @@ class CMFD {
 
   bool flux_limiting_ = true;
   bool larsen_correction_ = false;
+  bool od_cmfd_ = false;
   double keff_tol_ = 1E-5;
   double flux_tol_ = 1E-5;
   double damping_ = 0.7;
+  std::size_t unbounded_cmfd_solves_ = 1;
+  std::size_t cmfd_solves_ = 0;
   std::size_t skip_moc_iterations_ = 0;
   std::size_t moc_iteration_;
   double keff_ = 1.0;
@@ -171,6 +182,7 @@ class CMFD {
   Eigen::VectorXd extern_src_; // g*nx_*ny_
 
   void larsen_correction(double& D, const double dx, const MOCDriver& moc) const;
+  void optimize_diffusion_coef(double& D, const double dx, const std::size_t i, const std::size_t j, const std::size_t g) const;
   std::pair<double, double> calc_surf_diffusion_coeffs(
       std::size_t i, std::size_t j, std::size_t g, TileSurf surf,
       const MOCDriver& moc) const;

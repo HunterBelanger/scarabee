@@ -63,17 +63,29 @@ void init_CMFD(py::module& m) {
           "larsen_correction", &CMFD::get_larsen_correction,
           &CMFD::set_larsen_correction,
           "Whether or not to use Larsen's corrected diffusion coefficient"
-          "for optically thick meshes. May reduce performance if not needed")
+          "for optically thick meshes. Mutally exclusive with odCMFD")
+
+  .def_property(
+          "od_cmfd", &CMFD::get_od_cmfd,
+          &CMFD::set_od_cmfd,
+          "Use optimally diffusive CMFD (odCMFD) to modify the diffusion coeffients"
+          "Mutally exclusive with the larsen correction")
 
   .def_property(
           "damping", &CMFD::get_damping,
           &CMFD::set_damping,
           "set CMFD damping factor for under-relaxing the nonlinear diffusion coefficient"
           "between iterations.")
+    
   .def_property(
           "skip_moc_iterations", &CMFD::skip_moc_iterations,
           &CMFD::set_skip_moc_iterations,
           "Set # of MOC iterations to skip before using CMFD")
+
+  .def_property(
+          "unbounded_cmfd_solves", &CMFD::set_num_unbounded_solves,
+          &CMFD::get_num_unbounded_solves,
+          "Set # of CMFD solves before flux update ratios are clamped")
 
   .def("get_surface", &CMFD::get_surface,
       "Assigns the CMFD surface info to a segement end if it exists\n\n"
