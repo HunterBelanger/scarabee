@@ -7,7 +7,6 @@
 #include <moc/boundary_condition.hpp>
 #include <data/diffusion_cross_section.hpp>
 #include <utils/simulation_mode.hpp>
-#include <utils/openmp_mutex.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include <Eigen/Sparse>
@@ -170,8 +169,6 @@ class CMFD {
   // Number of surfaces is then ny_*x_bounds_.size() + nx_*y_bounds_.size().
   xt::xtensor<double, 2> surface_currents_;  // group, surface
   bool surface_currents_normalized_ = false;
-
-  xt::xtensor<OpenMPMutex, 2> surface_currents_locks_;
 
   xt::xtensor<std::shared_ptr<DiffusionCrossSection>, 2> xs_;
   xt::xtensor<double, 3> Et_;             // g, i, j

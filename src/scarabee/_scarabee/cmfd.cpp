@@ -2,7 +2,6 @@
 #include <moc/moc_driver.hpp>
 #include <utils/constants.hpp>
 #include <utils/logging.hpp>
-#include <utils/openmp_mutex.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/simulation_mode.hpp>
 #include <utils/timer.hpp>
@@ -10,7 +9,6 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <mutex>
 
 namespace scarabee {
 
@@ -135,9 +133,6 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
   // Allocate surfaces array
   surface_currents_ =
       xt::zeros<double>({group_condensation_.size(), nx_surfs_ + ny_surfs_});
-
-  surface_currents_locks_ = xt::xtensor<OpenMPMutex, 2>(
-      {group_condensation_.size(), nx_surfs_ + ny_surfs_});
 
   // Allocate the xs array
   xs_.resize({nx_, ny_});
@@ -425,10 +420,10 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
 
   for (auto si : surf_indexes) {
     if (si < nx_surfs_) {
-      std::scoped_lock lock(surface_currents_locks_(G, si));
+#pragma omp atomic
       surface_currents_(G, si) += std::copysign(aflx, u.x());
     } else {
-      std::scoped_lock lock(surface_currents_locks_(G, si));
+#pragma omp atomic
       surface_currents_(G, si) += std::copysign(aflx, u.y());
     }
   }
