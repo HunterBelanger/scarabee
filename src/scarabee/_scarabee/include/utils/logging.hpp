@@ -29,12 +29,17 @@ class PythonSink : public spdlog::sinks::base_sink<Mutex> {
   void sink_it_(const spdlog::details::log_msg& msg) override {
     spdlog::memory_buf_t formatted;
     spdlog::sinks::base_sink<Mutex>::formatter_->format(msg, formatted);
+    
+    // Make sure we acquire the GIL before printing to Python !
+    py::gil_scoped_acquire gil;
 
     py::print(fmt::to_string(formatted), py::arg("end") = "",
               py::arg("flush") = true);
   }
 
   void flush_() override {
+    // Make sure we acquire the GIL before printing to Python !
+    py::gil_scoped_acquire gil;
     py::print("", py::arg("end") = "", py::arg("flush") = true);
   }
 };

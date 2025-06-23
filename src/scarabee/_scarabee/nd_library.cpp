@@ -3,7 +3,7 @@
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cmath>
 #include <cstdlib>
@@ -15,17 +15,22 @@ namespace scarabee {
 void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l) {
   if (this->loaded()) return;
 
+  // Get the HDF5 Group for the nuclide
   auto grp = ndl.h5()->getGroup(this->name);
 
-  // Create and allocate arrays
-  absorption = std::make_shared<xt::xtensor<double, 3>>();
-  absorption->resize({temperatures.size(), dilutions.size(), ndl.ngroups()});
+  // Load in all of the infinite dilution data
+  this->load_inf_data(ndl, grp, max_l);
 
-  transport_correction = std::make_shared<xt::xtensor<double, 3>>();
-  transport_correction->resize(
-      {temperatures.size(), dilutions.size(), ndl.ngroups()});
+  // Load dilution dependent data if necessary
+  if (this->resonant) {
+    this->load_res_data(grp, max_l);
+  }
+}
 
-  // Must read in packing now to know full length of arrays
+void NuclideHandle::load_inf_data(const NDLibrary& ndl, const H5::Group& grp,
+                                  std::size_t max_l) {
+  // First we read in the packing of the scattering matrices. This is needed
+  // to get the length of the scattering arrays
   packing = std::make_shared<xt::xtensor<std::uint32_t, 2>>();
   packing->resize({ndl.ngroups(), static_cast<std::size_t>(3)});
   grp.getDataSet("matrix-compression").read_raw<std::uint32_t>(packing->data());
@@ -33,73 +38,209 @@ void NuclideHandle::load_xs_from_hdf5(const NDLibrary& ndl, std::size_t max_l) {
                                     (*packing)(ndl.ngroups() - 1, 2) + 1 -
                                     (*packing)(ndl.ngroups() - 1, 1);
 
-  scatter = std::make_shared<xt::xtensor<double, 3>>();
-  scatter->resize({temperatures.size(), dilutions.size(), len_scat_data});
+  //==========================================================================
+  // Create and allocate arrays for infinite dilution cross sections
+  inf_absorption = std::make_shared<xt::xtensor<double, 2>>();
+  inf_absorption->resize({temperatures.size(), ndl.ngroups()});
 
-  if (grp.exist("p1-scatter") && max_l >= 1) {
-    p1_scatter = std::make_shared<xt::xtensor<double, 3>>();
-    p1_scatter->resize({temperatures.size(), dilutions.size(), len_scat_data});
+  inf_transport_correction = std::make_shared<xt::xtensor<double, 2>>();
+  inf_transport_correction->resize({temperatures.size(), ndl.ngroups()});
+
+  inf_scatter = std::make_shared<xt::xtensor<double, 2>>();
+  inf_scatter->resize({temperatures.size(), len_scat_data});
+
+  if (grp.exist("inf-p1-scatter") && max_l >= 1) {
+    inf_p1_scatter = std::make_shared<xt::xtensor<double, 2>>();
+    inf_p1_scatter->resize({temperatures.size(), len_scat_data});
   }
-  if (grp.exist("p2-scatter") && max_l >= 2) {
-    p2_scatter = std::make_shared<xt::xtensor<double, 3>>();
-    p2_scatter->resize({temperatures.size(), dilutions.size(), len_scat_data});
+  if (grp.exist("inf-p2-scatter") && max_l >= 2) {
+    inf_p2_scatter = std::make_shared<xt::xtensor<double, 2>>();
+    inf_p2_scatter->resize({temperatures.size(), len_scat_data});
   }
-  if (grp.exist("p3-scatter") && max_l >= 3) {
-    p3_scatter = std::make_shared<xt::xtensor<double, 3>>();
-    p3_scatter->resize({temperatures.size(), dilutions.size(), len_scat_data});
+  if (grp.exist("inf-p3-scatter") && max_l >= 3) {
+    inf_p3_scatter = std::make_shared<xt::xtensor<double, 2>>();
+    inf_p3_scatter->resize({temperatures.size(), len_scat_data});
+  }
+
+  if (grp.exist("inf-(n,gamma)")) {
+    const auto dims = grp.getDataSet("inf-(n,gamma)").getDimensions();
+    inf_n_gamma = std::make_shared<xt::xtensor<double, 2>>();
+    inf_n_gamma->resize({temperatures.size(), dims[1]});
+  }
+
+  if (grp.exist("inf-(n,2n)")) {
+    const auto dims = grp.getDataSet("inf-(n,2n)").getDimensions();
+    inf_n_2n = std::make_shared<xt::xtensor<double, 2>>();
+    inf_n_2n->resize({temperatures.size(), dims[1]});
+  }
+
+  if (grp.exist("inf-(n,3n)")) {
+    const auto dims = grp.getDataSet("inf-(n,3n)").getDimensions();
+    inf_n_3n = std::make_shared<xt::xtensor<double, 2>>();
+    inf_n_3n->resize({temperatures.size(), dims[1]});
+  }
+
+  if (grp.exist("inf-(n,a)")) {
+    const auto dims = grp.getDataSet("inf-(n,a)").getDimensions();
+    inf_n_a = std::make_shared<xt::xtensor<double, 2>>();
+    inf_n_a->resize({temperatures.size(), dims[1]});
+  }
+
+  if (grp.exist("inf-(n,p)")) {
+    const auto dims = grp.getDataSet("inf-(n,p)").getDimensions();
+    inf_n_p = std::make_shared<xt::xtensor<double, 2>>();
+    inf_n_p->resize({temperatures.size(), dims[1]});
   }
 
   if (this->fissile) {
-    fission = std::make_shared<xt::xtensor<double, 3>>();
-    fission->resize({temperatures.size(), dilutions.size(), ndl.ngroups()});
+    inf_fission = std::make_shared<xt::xtensor<double, 2>>();
+    inf_fission->resize({temperatures.size(), ndl.ngroups()});
     nu = std::make_shared<xt::xtensor<double, 1>>();
     nu->resize({ndl.ngroups()});
     chi = std::make_shared<xt::xtensor<double, 1>>();
     chi->resize({ndl.ngroups()});
   }
 
+  //==========================================================================
   // Read in data
-  grp.getDataSet("absorption").read_raw<double>(absorption->data());
-  grp.getDataSet("transport-correction")
-      .read_raw<double>(transport_correction->data());
-  grp.getDataSet("scatter").read_raw<double>(scatter->data());
-  if (grp.exist("p1-scatter") && max_l >= 1) {
-    grp.getDataSet("p1-scatter").read_raw<double>(p1_scatter->data());
+  grp.getDataSet("inf-absorption").read_raw<double>(inf_absorption->data());
+  grp.getDataSet("inf-transport-correction")
+      .read_raw<double>(inf_transport_correction->data());
+  grp.getDataSet("inf-scatter").read_raw<double>(inf_scatter->data());
+  if (grp.exist("inf-p1-scatter") && max_l >= 1) {
+    grp.getDataSet("inf-p1-scatter").read_raw<double>(inf_p1_scatter->data());
   }
-  if (grp.exist("p2-scatter") && max_l >= 2) {
-    grp.getDataSet("p2-scatter").read_raw<double>(p2_scatter->data());
+  if (grp.exist("inf-p2-scatter") && max_l >= 2) {
+    grp.getDataSet("inf-p2-scatter").read_raw<double>(inf_p2_scatter->data());
   }
-  if (grp.exist("p3-scatter") && max_l >= 3) {
-    grp.getDataSet("p3-scatter").read_raw<double>(p3_scatter->data());
+  if (grp.exist("inf-p3-scatter") && max_l >= 3) {
+    grp.getDataSet("inf-p3-scatter").read_raw<double>(inf_p3_scatter->data());
   }
   if (this->fissile) {
-    grp.getDataSet("fission").read_raw<double>(fission->data());
+    grp.getDataSet("inf-fission").read_raw<double>(inf_fission->data());
     grp.getDataSet("nu").read_raw<double>(nu->data());
     grp.getDataSet("chi").read_raw<double>(chi->data());
+  }
+  if (grp.exist("inf-(n,gamma)")) {
+    grp.getDataSet("inf-(n,gamma)").read_raw<double>(inf_n_gamma->data());
+  }
+  if (grp.exist("inf-(n,2n)")) {
+    grp.getDataSet("inf-(n,2n)").read_raw<double>(inf_n_2n->data());
+  }
+  if (grp.exist("inf-(n,3n)")) {
+    grp.getDataSet("inf-(n,3n)").read_raw<double>(inf_n_3n->data());
+  }
+  if (grp.exist("inf-(n,a)")) {
+    grp.getDataSet("inf-(n,a)").read_raw<double>(inf_n_a->data());
+  }
+  if (grp.exist("inf-(n,p)")) {
+    grp.getDataSet("inf-(n,p)").read_raw<double>(inf_n_p->data());
+  }
+}
+
+void NuclideHandle::load_res_data(const H5::Group& grp, std::size_t max_l) {
+  //==========================================================================
+  // Create and allocate arrays
+  // Start by getting the dimensions. dims[0] should be number of temps
+  // dims[1] should be number of dilutions
+  // dims[2] should be number of resonant groups
+  auto dims = grp.getDataSet("res-absorption").getDimensions();
+  res_absorption = std::make_shared<xt::xtensor<double, 3>>();
+  res_absorption->resize({dims[0], dims[1], dims[2]});
+
+  res_transport_correction = std::make_shared<xt::xtensor<double, 3>>();
+  res_transport_correction->resize({dims[0], dims[1], dims[2]});
+
+  if (this->fissile) {
+    res_fission = std::make_shared<xt::xtensor<double, 3>>();
+    res_fission->resize({dims[0], dims[1], dims[2]});
+  }
+
+  res_scatter = std::make_shared<xt::xtensor<double, 3>>();
+  // Get new dimensions as scatter matrices are compressed with odd shape
+  dims = grp.getDataSet("res-scatter").getDimensions();
+  res_scatter->resize({dims[0], dims[1], dims[2]});
+
+  if (grp.exist("res-p1-scatter") && max_l >= 1) {
+    res_p1_scatter = std::make_shared<xt::xtensor<double, 3>>();
+    res_p1_scatter->resize({dims[0], dims[1], dims[2]});
+  }
+  if (grp.exist("res-p2-scatter") && max_l >= 2) {
+    res_p2_scatter = std::make_shared<xt::xtensor<double, 3>>();
+    res_p2_scatter->resize({dims[0], dims[1], dims[2]});
+  }
+  if (grp.exist("res-p3-scatter") && max_l >= 3) {
+    res_p3_scatter = std::make_shared<xt::xtensor<double, 3>>();
+    res_p3_scatter->resize({dims[0], dims[1], dims[2]});
+  }
+
+  if (grp.exist("res-(n,gamma)")) {
+    const auto dims = grp.getDataSet("res-(n,gamma)").getDimensions();
+    res_n_gamma = std::make_shared<xt::xtensor<double, 3>>();
+    res_n_gamma->resize({dims[0], dims[1], dims[2]});
+  }
+
+  //==========================================================================
+  // Read in data
+  grp.getDataSet("res-absorption").read_raw<double>(res_absorption->data());
+  grp.getDataSet("res-transport-correction")
+      .read_raw<double>(res_transport_correction->data());
+  grp.getDataSet("res-scatter").read_raw<double>(res_scatter->data());
+  if (grp.exist("res-p1-scatter") && max_l >= 1) {
+    grp.getDataSet("res-p1-scatter").read_raw<double>(res_p1_scatter->data());
+  }
+  if (grp.exist("res-p2-scatter") && max_l >= 2) {
+    grp.getDataSet("res-p2-scatter").read_raw<double>(res_p2_scatter->data());
+  }
+  if (grp.exist("res-p3-scatter") && max_l >= 3) {
+    grp.getDataSet("res-p3-scatter").read_raw<double>(res_p3_scatter->data());
+  }
+  if (this->fissile) {
+    grp.getDataSet("res-fission").read_raw<double>(res_fission->data());
+  }
+  if (grp.exist("res-(n,gamma)")) {
+    grp.getDataSet("res-(n,gamma)").read_raw<double>(res_n_gamma->data());
   }
 }
 
 void NuclideHandle::unload() {
-  absorption = nullptr;
-  transport_correction = nullptr;
-  scatter = nullptr;
-  p1_scatter = nullptr;
-  p2_scatter = nullptr;
-  p3_scatter = nullptr;
-  fission = nullptr;
+  packing = nullptr;
+
   chi = nullptr;
   nu = nullptr;
+
+  inf_absorption = nullptr;
+  inf_transport_correction = nullptr;
+  inf_scatter = nullptr;
+  inf_p1_scatter = nullptr;
+  inf_p2_scatter = nullptr;
+  inf_p3_scatter = nullptr;
+  inf_fission = nullptr;
+  inf_n_gamma = nullptr;
+  inf_n_2n = nullptr;
+  inf_n_3n = nullptr;
+  inf_n_a = nullptr;
+  inf_n_p = nullptr;
+
+  res_absorption = nullptr;
+  res_transport_correction = nullptr;
+  res_scatter = nullptr;
+  res_p1_scatter = nullptr;
+  res_p2_scatter = nullptr;
+  res_p3_scatter = nullptr;
+  res_fission = nullptr;
+  res_n_gamma = nullptr;
 }
 
 NDLibrary::NDLibrary()
     : nuclide_handles_(),
       group_bounds_(),
-      macro_group_condensation_scheme_(std::nullopt),
-      few_group_condensation_scheme_(std::nullopt),
+      condensation_scheme_(std::nullopt),
       library_(),
       group_structure_(),
       ngroups_(0),
-      h5_(nullptr) {
+      h5_(nullptr),
+      depletion_chain_(nullptr) {
   // Get the environment variable
   const char* ndl_env = std::getenv(NDL_ENV_VAR);
   if (ndl_env == nullptr) {
@@ -128,12 +269,12 @@ NDLibrary::NDLibrary()
 NDLibrary::NDLibrary(const std::string& fname)
     : nuclide_handles_(),
       group_bounds_(),
-      macro_group_condensation_scheme_(std::nullopt),
-      few_group_condensation_scheme_(std::nullopt),
+      condensation_scheme_(std::nullopt),
       library_(),
       group_structure_(),
       ngroups_(0),
-      h5_(nullptr) {
+      h5_(nullptr),
+      depletion_chain_(nullptr) {
   // Make sure HDF5 file exists
   if (std::filesystem::exists(fname) == false) {
     std::stringstream mssg;
@@ -160,50 +301,56 @@ void NDLibrary::init() {
   if (h5_->hasAttribute("ngroups"))
     ngroups_ = h5_->getAttribute("ngroups").read<std::size_t>();
 
-  // Check if default condensation schemes are provided
-  auto get_cond_scheme =
-      [this](const std::string& key,
-             std::optional<std::vector<std::pair<std::size_t, std::size_t>>>&
-                 scheme,
-             const std::string& mssg) {
-        if (h5_->hasAttribute(key)) {
-          const auto attr = h5_->getAttribute(key);
-          const auto dims = attr.getMemSpace().getDimensions();
+  if (h5_->hasAttribute("first-resonance-group")) {
+    first_resonant_group_ =
+        h5_->getAttribute("first-resonance-group").read<std::size_t>();
+  } else {
+    const auto mssg =
+        "No attribute \"first-resonance-group\" in nuclear data library.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
 
-          if (dims.size() != 2 || dims[1] != 2) {
-            spdlog::error(mssg);
-            throw ScarabeeException(mssg);
-          }
+  if (h5_->hasAttribute("last-resonance-group")) {
+    last_resonant_group_ =
+        h5_->getAttribute("last-resonance-group").read<std::size_t>();
+  } else {
+    const auto mssg =
+        "No attribute \"last-resonance-group\" in nuclear data library.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
 
-          xt::xtensor<double, 2> cond_scheme =
-              xt::zeros<double>({dims[0], dims[1]});
-          attr.read_raw<double>(cond_scheme.data());
+  // If a default condensation scheme is provided, load it in now
+  if (h5_->hasAttribute("condensation-scheme")) {
+    const auto attr = h5_->getAttribute("condensation-scheme");
+    const auto dims = attr.getMemSpace().getDimensions();
 
-          scheme =
-              std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
-          for (std::size_t G = 0; G < dims[0]; G++) {
-            (*scheme)[G].first = static_cast<std::size_t>(cond_scheme(G, 0));
-            (*scheme)[G].second = static_cast<std::size_t>(cond_scheme(G, 1));
-          }
-        }
-      };
-
-  get_cond_scheme("macro-group-condensation-scheme",
-                  macro_group_condensation_scheme_,
-                  "Nuclear data library provided macro-group condensation "
-                  "scheme has an invalide shape.");
-  get_cond_scheme("few-group-condensation-scheme",
-                  few_group_condensation_scheme_,
-                  "Nuclear data library provided few-group condensation scheme "
-                  "has an invalide shape.");
-  get_cond_scheme("reflector-few-group-condensation-scheme",
-                  reflector_few_group_condensation_scheme_,
-                  "Nuclear data library provided reflector few-group "
-                  "condensation scheme has an invalide shape.");
+    // Make sure the dimensions of the array are correct
+    if (dims.size() != 2 || dims[1] != 2) {
+      const auto mssg = "Nuclear data library provided macro-group condensation scheme has an invalid shape.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+    
+    // Read in the condensation scheme array
+    xt::xtensor<double, 2> cond_scheme = xt::zeros<double>({dims[0], dims[1]});
+    attr.read_raw<double>(cond_scheme.data());
+    
+    // Reconstruct vector of pairs from the array
+    condensation_scheme_ = std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
+    for (std::size_t G = 0; G < dims[0]; G++) {
+      (*condensation_scheme_)[G].first = static_cast<std::size_t>(cond_scheme(G, 0));
+      (*condensation_scheme_)[G].second = static_cast<std::size_t>(cond_scheme(G, 1));
+    }
+  }
 
   // Read all nuclide handles
   auto nuc_names = h5_->listObjectNames();
   for (const auto& nuc : nuc_names) {
+    // Make sure we don't try to read the depletion chain like a nuclide !
+    if (nuc == "depletion-chain") continue;
+
     auto grp = h5_->getGroup(nuc);
 
     nuclide_handles_.emplace(std::make_pair(nuc, NuclideHandle()));
@@ -217,11 +364,18 @@ void NDLibrary::init() {
     handle.awr = grp.getAttribute("awr").read<double>();
     handle.potential_xs = grp.getAttribute("potential-xs").read<double>();
 
-    // Intermediate resonance parameter
+    // Intermediate resonance parameters
     if (grp.hasAttribute("ir-lambda")) {
-      handle.ir_lambda = grp.getAttribute("ir-lambda").read<double>();
+      handle.ir_lambda =
+          grp.getAttribute("ir-lambda").read<std::vector<double>>();
     } else {
-      handle.ir_lambda = 1.;
+      handle.ir_lambda = std::vector<double>(ngroups_, 1.);
+    }
+
+    if (grp.hasAttribute("fission-energy")) {
+      handle.fission_energy = grp.getAttribute("fission-energy").read<double>();
+    } else {
+      handle.fission_energy = 0.;
     }
 
     handle.ZA = grp.getAttribute("ZA").read<std::uint32_t>();
@@ -230,12 +384,39 @@ void NDLibrary::init() {
     handle.dilutions =
         grp.getAttribute("dilutions").read<std::vector<double>>();
   }
+
+  // Read the depletion chain, if present
+  if (h5_->exist("depletion-chain")) {
+    if (h5_->getObjectType("depletion-chain") != H5::ObjectType::Group) {
+      const auto mssg =
+          "The file member \"depletion-chain\" is present, but is not a group.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    depletion_chain_ = std::make_shared<DepletionChain>();
+    *depletion_chain_ =
+        DepletionChain::from_hdf5_group(h5_->getGroup("depletion-chain"));
+  }
 }
 
 const NuclideHandle& NDLibrary::get_nuclide(const std::string& name) const {
-  if (nuclide_handles_.find(name) == nuclide_handles_.end()) {
+  if (name == "depletion-chain" ||
+      nuclide_handles_.find(name) == nuclide_handles_.end()) {
     std::stringstream mssg;
-    mssg << "Could not find nuclde by name of \"" << name << "\".";
+    mssg << "Could not find nuclide by name of \"" << name << "\".";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  return nuclide_handles_.at(name);
+}
+
+NuclideHandle& NDLibrary::get_nuclide(const std::string& name) {
+  if (name == "depletion-chain" ||
+      nuclide_handles_.find(name) == nuclide_handles_.end()) {
+    std::stringstream mssg;
+    mssg << "Could not find nuclide by name of \"" << name << "\".";
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
@@ -249,22 +430,157 @@ void NDLibrary::unload() {
   }
 }
 
-NuclideHandle& NDLibrary::get_nuclide(const std::string& name) {
-  if (nuclide_handles_.find(name) == nuclide_handles_.end()) {
+std::pair<MicroNuclideXS, MicroDepletionXS> NDLibrary::infinite_dilution_xs(
+    const std::string& name, const double temp, std::size_t max_l) {
+  auto& nuc = this->get_nuclide(name);
+
+  // Get temperature interpolation factors
+  std::size_t it = 0;  // temperature index
+  double f_temp = 0.;  // temperature interpolation factor
+  get_temp_interp_params(temp, nuc, it, f_temp);
+
+  if (nuc.loaded() == false) {
+    nuc.load_xs_from_hdf5(*this, max_l);
+  }
+
+  //--------------------------------------------------------
+  // Do transport correction
+  xt::xtensor<double, 1> Dtr;
+  this->interp_temp(Dtr, *nuc.inf_transport_correction, it, f_temp);
+
+  //--------------------------------------------------------
+  // Do absorption interpolation
+  xt::xtensor<double, 1> Ea;
+  this->interp_temp(Ea, *nuc.inf_absorption, it, f_temp);
+
+  //--------------------------------------------------------
+  // Create the scattering matrices
+  if (max_l == 3 && nuc.inf_p3_scatter == nullptr) max_l--;
+  if (max_l == 2 && nuc.inf_p2_scatter == nullptr) max_l--;
+  if (max_l == 1 && nuc.inf_p1_scatter == nullptr) max_l--;
+  xt::xtensor<double, 2> Es =
+      xt::zeros<double>({max_l + 1, nuc.inf_scatter->shape()[1]});
+
+  //--------------------------------------------------------
+  // Do P0 scattering interpolation
+  xt::xtensor<double, 1> temp_EsPl;
+  this->interp_temp(temp_EsPl, *nuc.inf_scatter, it, f_temp);
+  xt::view(Es, 0, xt::all()) = temp_EsPl;
+
+  //--------------------------------------------------------
+  // Do P1 scattering interpolation
+  if (nuc.inf_p1_scatter) {
+    this->interp_temp(temp_EsPl, *nuc.inf_p1_scatter, it, f_temp);
+    xt::view(Es, 1, xt::all()) = temp_EsPl;
+  }
+
+  //--------------------------------------------------------
+  // Do P2 scattering interpolation
+  if (nuc.inf_p2_scatter && max_l >= 2) {
+    this->interp_temp(temp_EsPl, *nuc.inf_p2_scatter, it, f_temp);
+    xt::view(Es, 2, xt::all()) = temp_EsPl;
+  }
+
+  //--------------------------------------------------------
+  // Do P3 scattering interpolation
+  if (nuc.inf_p3_scatter && max_l >= 3) {
+    this->interp_temp(temp_EsPl, *nuc.inf_p3_scatter, it, f_temp);
+    xt::view(Es, 3, xt::all()) = temp_EsPl;
+  }
+  XS2D Es_xs2d(Es, *nuc.packing);
+
+  //--------------------------------------------------------
+  // Do fission interpolation
+  xt::xtensor<double, 1> Ef = xt::zeros<double>({ngroups_});
+  xt::xtensor<double, 1> nu = xt::zeros<double>({ngroups_});
+  xt::xtensor<double, 1> chi = xt::zeros<double>({ngroups_});
+  if (nuc.fissile) {
+    this->interp_temp(Ef, *nuc.inf_fission, it, f_temp);
+    nu = *nuc.nu;
+    chi = *nuc.chi;
+  }
+
+  // Reconstruct total
+  xt::xtensor<double, 1> Et = xt::zeros<double>({ngroups_});
+  for (std::size_t g = 0; g < ngroups_; g++) {
+    Et(g) = Ea(g) + Es_xs2d(0, g);
+  }
+
+  // Fill the basic XS data for the nuclide
+  MicroNuclideXS nuc_xs;
+  MicroDepletionXS dep_xs;
+  nuc_xs.Et = XS1D(Et);
+  nuc_xs.Dtr = XS1D(Dtr);
+  nuc_xs.Es = Es_xs2d;
+  nuc_xs.Ea = XS1D(Ea);
+  nuc_xs.Ef = XS1D(Ef);
+  nuc_xs.nu = XS1D(nu);
+  nuc_xs.chi = XS1D(chi);
+
+  // Now get supplementary depletion xs data
+  if (nuc.fissile) {
+    dep_xs.n_fission = nuc_xs.Ef;
+  }
+
+  if (nuc.inf_n_gamma) {
+    xt::xtensor<double, 1> n_gamma =
+        xt::zeros<double>({nuc.inf_n_gamma->shape()[1]});
+    this->interp_temp(n_gamma, *nuc.inf_n_gamma, it, f_temp);
+    dep_xs.n_gamma = XS1D(n_gamma);
+  }
+
+  if (nuc.inf_n_2n) {
+    xt::xtensor<double, 1> n_2n = xt::zeros<double>({nuc.inf_n_2n->shape()[1]});
+    this->interp_temp(n_2n, *nuc.inf_n_2n, it, f_temp);
+    dep_xs.n_2n = XS1D(n_2n);
+  }
+
+  if (nuc.inf_n_3n) {
+    xt::xtensor<double, 1> n_3n = xt::zeros<double>({nuc.inf_n_3n->shape()[1]});
+    this->interp_temp(n_3n, *nuc.inf_n_3n, it, f_temp);
+    dep_xs.n_3n = XS1D(n_3n);
+  }
+
+  if (nuc.inf_n_a) {
+    xt::xtensor<double, 1> n_alpha =
+        xt::zeros<double>({nuc.inf_n_a->shape()[1]});
+    this->interp_temp(n_alpha, *nuc.inf_n_a, it, f_temp);
+    dep_xs.n_alpha = XS1D(n_alpha);
+  }
+
+  if (nuc.inf_n_p) {
+    xt::xtensor<double, 1> n_p = xt::zeros<double>({nuc.inf_n_p->shape()[1]});
+    this->interp_temp(n_p, *nuc.inf_n_p, it, f_temp);
+    dep_xs.n_p = XS1D(n_p);
+  }
+
+  return {nuc_xs, dep_xs};
+}
+
+ResonantOneGroupXS NDLibrary::dilution_xs(const std::string& name,
+                                          std::size_t g, const double temp,
+                                          const double dil, std::size_t max_l) {
+  auto& nuc = this->get_nuclide(name);
+
+  // Make sure nuclide is resonant
+  if (nuc.resonant == false) {
     std::stringstream mssg;
-    mssg << "Could not find nuclde by name of \"" << name << "\".";
+    mssg << "Nuclide " << name
+         << " is not resonant. Cannot obtain dilution cross section.";
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
 
-  return nuclide_handles_.at(name);
-}
+  if (g < this->first_resonant_group() || this->last_resonant_group() < g) {
+    std::stringstream mssg;
+    mssg << "Group index " << g
+         << " is not in the resonant region of the library.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
 
-std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
-                                                   const double temp,
-                                                   const double dil,
-                                                   std::size_t max_l) {
-  auto& nuc = this->get_nuclide(name);
+  // Transorm g from global energy index to resonant energy index
+  const std::size_t g_res = g - this->first_resonant_group();
 
   // Get temperature interpolation factors
   std::size_t it = 0;  // temperature index
@@ -280,137 +596,148 @@ std::shared_ptr<CrossSection> NDLibrary::interp_xs(const std::string& name,
     nuc.load_xs_from_hdf5(*this, max_l);
   }
 
-  //--------------------------------------------------------
-  // Do transport correction
-  xt::xtensor<double, 1> Dtr;
-  this->interp_1d(Dtr, *nuc.transport_correction, it, f_temp, id, f_dil);
+  ResonantOneGroupXS out;
 
-  //--------------------------------------------------------
-  // Do absorption interpolation
-  xt::xtensor<double, 1> Ea;
-  this->interp_1d(Ea, *nuc.absorption, it, f_temp, id, f_dil);
+  // Interpolate easy cross sections
+  out.Dtr = this->interp_temp_dil(*nuc.res_transport_correction, g_res, it,
+                                  f_temp, id, f_dil);
+  out.Ea =
+      this->interp_temp_dil(*nuc.res_absorption, g_res, it, f_temp, id, f_dil);
+  out.Ef = 0.;
+  if (nuc.res_fission) {
+    out.Ef =
+        this->interp_temp_dil(*nuc.res_fission, g_res, it, f_temp, id, f_dil);
+  }
+  // out.n_gamma is initially nullopt
+  if (nuc.res_n_gamma) {
+    out.n_gamma =
+        this->interp_temp_dil(*nuc.res_n_gamma, g_res, it, f_temp, id, f_dil);
+  }
 
   //--------------------------------------------------------
   // Create the scattering matrices
-  if (max_l == 3 && nuc.p3_scatter == nullptr) max_l--;
-  if (max_l == 2 && nuc.p2_scatter == nullptr) max_l--;
-  if (max_l == 1 && nuc.p1_scatter == nullptr) max_l--;
-  xt::xtensor<double, 2> Es =
-      xt::zeros<double>({max_l + 1, nuc.scatter->shape()[2]});
+  if (max_l == 3 && nuc.res_p3_scatter == nullptr) max_l--;
+  if (max_l == 2 && nuc.res_p2_scatter == nullptr) max_l--;
+  if (max_l == 1 && nuc.res_p1_scatter == nullptr) max_l--;
+  const std::size_t inf_start = (*nuc.packing)(g, 0);
+  const std::size_t res_start =
+      inf_start - (*nuc.packing)(first_resonant_group_, 0);
+  const std::size_t g_min = (*nuc.packing)(g, 1);
+  const std::size_t g_max = (*nuc.packing)(g, 2);
+  const std::size_t scat_len = 1 + g_max - g_min;
+  out.Es = xt::zeros<double>({max_l + 1, scat_len});
+  out.gout_min = g_min;
 
   //--------------------------------------------------------
   // Do P0 scattering interpolation
-  xt::xtensor<double, 1> temp_EsPl;
-  this->interp_1d(temp_EsPl, *nuc.scatter, it, f_temp, id, f_dil);
-  xt::view(Es, 0, xt::all()) = temp_EsPl;
+  this->interp_temp_dil_views(
+      xt::view(out.Es, 0, xt::all()),
+      xt::view(*nuc.res_scatter, xt::all(), xt::all(),
+               xt::range(res_start, res_start + scat_len)),
+      it, f_temp, id, f_dil);
 
   //--------------------------------------------------------
   // Do P1 scattering interpolation
-  if (nuc.p1_scatter) {
-    this->interp_1d(temp_EsPl, *nuc.p1_scatter, it, f_temp, id, f_dil);
-    xt::view(Es, 1, xt::all()) = temp_EsPl;
+  if (nuc.res_p1_scatter) {
+    this->interp_temp_dil_views(
+        xt::view(out.Es, 1, xt::all()),
+        xt::view(*nuc.res_p1_scatter, xt::all(), xt::all(),
+                 xt::range(res_start, res_start + scat_len)),
+        it, f_temp, id, f_dil);
   }
 
   //--------------------------------------------------------
   // Do P2 scattering interpolation
-  if (nuc.p2_scatter && max_l >= 2) {
-    this->interp_1d(temp_EsPl, *nuc.p2_scatter, it, f_temp, id, f_dil);
-    xt::view(Es, 2, xt::all()) = temp_EsPl;
+  if (nuc.res_p2_scatter && max_l >= 2) {
+    this->interp_temp_dil_views(
+        xt::view(out.Es, 2, xt::all()),
+        xt::view(*nuc.res_p2_scatter, xt::all(), xt::all(),
+                 xt::range(res_start, res_start + scat_len)),
+        it, f_temp, id, f_dil);
   }
 
   //--------------------------------------------------------
   // Do P3 scattering interpolation
-  if (nuc.p3_scatter && max_l >= 3) {
-    this->interp_1d(temp_EsPl, *nuc.p3_scatter, it, f_temp, id, f_dil);
-    xt::view(Es, 3, xt::all()) = temp_EsPl;
-  }
-  XS2D Es_xs2d(Es, *nuc.packing);
-
-  //--------------------------------------------------------
-  // Do fission interpolation
-  xt::xtensor<double, 1> Ef = xt::zeros<double>({ngroups_});
-  xt::xtensor<double, 1> nu = xt::zeros<double>({ngroups_});
-  xt::xtensor<double, 1> chi = xt::zeros<double>({ngroups_});
-  if (nuc.fissile) {
-    this->interp_1d(Ef, *nuc.fission, it, f_temp, id, f_dil);
-    nu = *nuc.nu;
-    chi = *nuc.chi;
+  if (nuc.res_p3_scatter && max_l >= 3) {
+    this->interp_temp_dil_views(
+        xt::view(out.Es, 3, xt::all()),
+        xt::view(*nuc.res_p3_scatter, xt::all(), xt::all(),
+                 xt::range(res_start, res_start + scat_len)),
+        it, f_temp, id, f_dil);
   }
 
-  // Reconstruct total
-  xt::xtensor<double, 1> Et = xt::zeros<double>({ngroups_});
-  for (std::size_t g = 0; g < ngroups_; g++) {
-    Et(g) = Ea(g) + Es_xs2d(0, g);
-  }
-
-  // Make temp CrossSection
-  return std::make_shared<CrossSection>(XS1D(Et), XS1D(Dtr), XS1D(Ea), Es_xs2d,
-                                        XS1D(Ef), XS1D(nu * Ef), XS1D(chi));
+  return out;
 }
 
-std::shared_ptr<CrossSection> NDLibrary::two_term_xs(
-    const std::string& name, const double temp, const double b1,
-    const double b2, const double bg_xs_1, const double bg_xs_2,
-    std::size_t max_l) {
-  // See reference [1] to understand this interpolation scheme, in addition to
-  // the calculation of the flux based on the pot_xs and sig_a.
+ResonantOneGroupXS NDLibrary::two_term_xs(const std::string& name,
+                                          std::size_t g, const double temp,
+                                          const double b1, const double b2,
+                                          const double bg_xs_1,
+                                          const double bg_xs_2,
+                                          std::size_t max_l) {
+  auto& nuc = this->get_nuclide(name);
+
+  // Make sure nuclide is resonant
+  if (nuc.resonant == false) {
+    std::stringstream mssg;
+    mssg << "Nuclide " << name
+         << " is not resonant. Cannot obtain dilution cross section.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  if (g < this->first_resonant_group() || this->last_resonant_group() < g) {
+    std::stringstream mssg;
+    mssg << "Group index " << g
+         << " is not in the resonant region of the library.";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  // See references [1] and [2] to understand this interpolation scheme, in
+  // addition to the calculation of the flux based on the pot_xs and sig_a.
 
   // Get the two cross section sets
-  auto xs_1 = interp_xs(name, temp, bg_xs_1, max_l);
-  auto xs_2 = interp_xs(name, temp, bg_xs_2, max_l);
+  const auto xs_1 = dilution_xs(name, g, temp, bg_xs_1, max_l);
+  const auto xs_2 = dilution_xs(name, g, temp, bg_xs_2, max_l);
+  const double ir_lambda = nuc.ir_lambda[g];
+  const double lmbd_pot_xs = ir_lambda * nuc.potential_xs;
+  const double lmbd_Es1 =
+      ir_lambda * xt::sum(xt::view(xs_1.Es, 0, xt::all()))();
+  const double lmbd_Es2 =
+      ir_lambda * xt::sum(xt::view(xs_2.Es, 0, xt::all()))();
 
-  const auto& nuclide = get_nuclide(name);
-  const double pot_xs = nuclide.ir_lambda * nuclide.potential_xs;
+  // Calculate the two flux values. This formula is different from that given
+  // in [1] or [2]. This is baed on a more standard IR approximation where
+  // \varphi(E) = (1/E)*(\lambda\sigma_p + \sigma_0) /
+  //                    (\sigma_a(E) + \lambda\sigma_s(E) + \sigma_0)
+  // Check Gibson in refs [2, 3] for some details and hints on how to do this
+  // derivation for yourself.
+  const double flux_1_g =
+      (lmbd_pot_xs + bg_xs_1) / (xs_1.Ea + lmbd_Es1 + bg_xs_1);
+  const double flux_2_g =
+      (lmbd_pot_xs + bg_xs_2) / (xs_2.Ea + lmbd_Es2 + bg_xs_2);
 
-  XS1D Et(xt::zeros<double>({ngroups_}));
-  XS1D Dtr(xt::zeros<double>({ngroups_}));
-  XS1D Ea(xt::zeros<double>({ngroups_}));
-  XS2D Es = xs_1->Es_XS2D().zeros_like();
-  XS1D Ef(xt::zeros<double>({ngroups_}));
-  XS1D vEf(xt::zeros<double>({ngroups_}));
-  XS1D chi(xt::zeros<double>({ngroups_}));
+  // Calculate the two weighting factors
+  const double f1_g = b1 * flux_1_g / (b1 * flux_1_g + b2 * flux_2_g);
+  const double f2_g = b2 * flux_2_g / (b1 * flux_1_g + b2 * flux_2_g);
 
-  for (std::size_t g = 0; g < ngroups_; g++) {
-    // Calculate the two flux values
-    const double flux_1_g =
-        (pot_xs + bg_xs_1) / (xs_1->Ea(g) + pot_xs + bg_xs_1);
-    const double flux_2_g =
-        (pot_xs + bg_xs_2) / (xs_2->Ea(g) + pot_xs + bg_xs_2);
-
-    // Calcualte the two weighting factors
-    const double f1_g = b1 * flux_1_g / (b1 * flux_1_g + b2 * flux_2_g);
-    const double f2_g = b2 * flux_2_g / (b1 * flux_1_g + b2 * flux_2_g);
-
-    // Compute the xs values
-    Dtr.set_value(g, f1_g * xs_1->Dtr(g) + f2_g * xs_2->Dtr(g));
-    Ea.set_value(g, f1_g * xs_1->Ea(g) + f2_g * xs_2->Ea(g));
-    Ef.set_value(g, f1_g * xs_1->Ef(g) + f2_g * xs_2->Ef(g));
-
-    // Min and Max outgoing groups
-    const std::size_t gg_min = static_cast<std::size_t>(Es.packing()(g, 1));
-    const std::size_t gg_max = static_cast<std::size_t>(Es.packing()(g, 2));
-    for (std::size_t l = 0; l <= xs_1->max_legendre_order(); l++) {
-      for (std::size_t g_out = gg_min; g_out <= gg_max; g_out++) {
-        Es.set_value(
-            l, g, g_out,
-            f1_g * xs_1->Es(l, g, g_out) + f2_g * xs_2->Es(l, g, g_out));
-      }
-    }
-    Et.set_value(g, Ea(g) + Es(0, g));
-
-    const double vEf1 = f1_g * xs_1->vEf(g);
-    const double vEf2 = f2_g * xs_2->vEf(g);
-    vEf.set_value(g, vEf1 + vEf2);
-
-    // Chi isn't stored on temp or dilution, so just assign value
-    chi.set_value(g, xs_1->chi(g));
+  // Compute the xs values
+  ResonantOneGroupXS out;
+  out.Dtr = f1_g * xs_1.Dtr + f2_g * xs_2.Dtr;
+  out.Ea = f1_g * xs_1.Ea + f2_g * xs_2.Ea;
+  out.Ef = f1_g * xs_1.Ef + f2_g * xs_2.Ef;
+  out.Es = f1_g * xs_1.Es + f2_g * xs_2.Es;
+  out.gout_min = xs_1.gout_min;
+  if (xs_1.n_gamma) {
+    out.n_gamma = f1_g * xs_1.n_gamma.value() + f2_g * xs_2.n_gamma.value();
   }
 
-  return std::make_shared<CrossSection>(Et, Dtr, Ea, Es, Ef, vEf, chi);
+  return out;
 }
 
-std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
-    const std::string& name, const double temp, const double a1,
+ResonantOneGroupXS NDLibrary::ring_two_term_xs(
+    const std::string& name, std::size_t g, const double temp, const double a1,
     const double a2, const double b1, const double b2, const double mat_pot_xs,
     const double N, const double Rfuel, const double Rin, const double Rout,
     std::size_t max_l) {
@@ -427,28 +754,16 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
   }
 
   const auto& nuclide = get_nuclide(name);
-  const double pot_xs = nuclide.ir_lambda * nuclide.potential_xs;
-  const double macro_pot_xs = N * pot_xs;
+  const double ir_lambda = nuclide.ir_lambda[g];
+  const double lmbd_pot_xs = ir_lambda * nuclide.potential_xs;
+  const double macro_lmbd_pot_xs = N * lmbd_pot_xs;
 
-  if (max_l == 3 && nuclide.p3_scatter == nullptr) max_l--;
-  if (max_l == 2 && nuclide.p2_scatter == nullptr) max_l--;
-  if (max_l == 1 && nuclide.p1_scatter == nullptr) max_l--;
+  if (max_l == 3 && nuclide.inf_p3_scatter == nullptr) max_l--;
+  if (max_l == 2 && nuclide.inf_p2_scatter == nullptr) max_l--;
+  if (max_l == 1 && nuclide.inf_p1_scatter == nullptr) max_l--;
 
-  XS1D Et(xt::zeros<double>({ngroups_}));
-  XS1D Dtr(xt::zeros<double>({ngroups_}));
-  XS1D Ea(xt::zeros<double>({ngroups_}));
-  std::optional<XS2D> Es{std::nullopt};
-  XS1D Ef(xt::zeros<double>({ngroups_}));
-  XS1D vEf(xt::zeros<double>({ngroups_}));
-  XS1D chi(xt::zeros<double>({ngroups_}));
-  if (nuclide.chi) {
-    for (std::size_t g = 0; g < ngroups_; g++) {
-      chi.set_value(g, (*nuclide.chi)(g));
-    }
-  }
-
-  // Denominators of the weighting factor for each energy group.
-  xt::xtensor<double, 1> denoms = xt::zeros<double>({ngroups_});
+  ResonantOneGroupXS out;
+  double denom = 0.;
 
   for (std::size_t m = 1; m <= 4; m++) {
     const std::pair<double, double> eta_lm = this->eta_lm(m, Rfuel, Rin, Rout);
@@ -461,68 +776,61 @@ std::shared_ptr<CrossSection> NDLibrary::ring_two_term_xs(
 
     // Calculate the background xs
     const double bg_xs_1 =
-        l_m > 0. ? (mat_pot_xs - macro_pot_xs + a1 / l_m) / N : 1.E10;
+        l_m > 0. ? (mat_pot_xs - macro_lmbd_pot_xs + a1 / l_m) / N : 1.E10;
     const double bg_xs_2 =
-        l_m > 0. ? (mat_pot_xs - macro_pot_xs + a2 / l_m) / N : 1.E10;
+        l_m > 0. ? (mat_pot_xs - macro_lmbd_pot_xs + a2 / l_m) / N : 1.E10;
 
     // Get the two cross section sets
-    auto xs_1 = interp_xs(name, temp, bg_xs_1, max_l);
-    auto xs_2 = interp_xs(name, temp, bg_xs_2, max_l);
+    const auto xs_1 = dilution_xs(name, g, temp, bg_xs_1, max_l);
+    const auto xs_2 = dilution_xs(name, g, temp, bg_xs_2, max_l);
+    const double lmbd_Es1 =
+        ir_lambda * xt::sum(xt::view(xs_1.Es, 0, xt::all()))();
+    const double lmbd_Es2 =
+        ir_lambda * xt::sum(xt::view(xs_2.Es, 0, xt::all()))();
 
-    // Now that we have a xs instance, initialize the scatter matrix
-    if (Es.has_value() == false) Es = xs_1->Es_XS2D().zeros_like();
+    // Calculate the two flux values. This formula is different from that given
+    // in [1] or [2]. This is baed on a more standard IR approximation where
+    // \varphi(E) = (1/E)*(\lambda\sigma_p + \sigma_0) /
+    //                    (\sigma_a(E) + \lambda\sigma_s(E) + \sigma_0)
+    // Check Gibson in refs [2, 3] for some details and hints on how to do this
+    // derivation for yourself.
+    const double flux_1_g =
+        (lmbd_pot_xs + bg_xs_1) / (xs_1.Ea + lmbd_Es1 + bg_xs_1);
+    const double flux_2_g =
+        (lmbd_pot_xs + bg_xs_2) / (xs_2.Ea + lmbd_Es2 + bg_xs_2);
 
-    for (std::size_t g = 0; g < ngroups_; g++) {
-      // Calculate the two flux values
-      const double flux_1_g =
-          (pot_xs + bg_xs_1) / (xs_1->Ea(g) + pot_xs + bg_xs_1);
-      const double flux_2_g =
-          (pot_xs + bg_xs_2) / (xs_2->Ea(g) + pot_xs + bg_xs_2);
+    // Add contributions to the denominator
+    denom += eta_m * (b1 * flux_1_g + b2 * flux_2_g);
 
-      // Add contributions to the denominator
-      denoms(g) += eta_m * (b1 * flux_1_g + b2 * flux_2_g);
-
-      // Add contributions to the xs
-      // Compute the xs values
-      Dtr.set_value(g, Dtr(g) + eta_m * (b1 * flux_1_g * xs_1->Dtr(g) +
-                                         b2 * flux_2_g * xs_2->Dtr(g)));
-      Ea.set_value(g, Ea(g) + eta_m * (b1 * flux_1_g * xs_1->Ea(g) +
-                                       b2 * flux_2_g * xs_2->Ea(g)));
-      Ef.set_value(g, Ef(g) + eta_m * (b1 * flux_1_g * xs_1->Ef(g) +
-                                       b2 * flux_2_g * xs_2->Ef(g)));
-      vEf.set_value(g, vEf(g) + eta_m * (b1 * flux_1_g * xs_1->vEf(g) +
-                                         b2 * flux_2_g * xs_2->vEf(g)));
-      for (std::size_t l = 0; l <= max_l; l++) {
-        for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
-          const double new_val =
-              (*Es)(l, g, g_out) +
-              eta_m * (b1 * flux_1_g * xs_1->Es(l, g, g_out) +
-                       b2 * flux_2_g * xs_2->Es(l, g, g_out));
-          if (new_val != 0.) Es->set_value(l, g, g_out, new_val);
-        }  // For all outgoing groups
-      }
-    }  // For all groups
-  }    // For 4 lumps
-
-  // Now we go through and normalize each group by the denom, and calculate Et
-  for (std::size_t g = 0; g < ngroups_; g++) {
-    const double invs_denom = 1. / denoms(g);
-    Dtr.set_value(g, Dtr(g) * invs_denom);
-    Ea.set_value(g, Ea(g) * invs_denom);
-    Ef.set_value(g, Ef(g) * invs_denom);
-    vEf.set_value(g, vEf(g) * invs_denom);
-
-    for (std::size_t l = 0; l <= max_l; l++) {
-      for (std::size_t g_out = 0; g_out < ngroups_; g_out++) {
-        auto Es_g_gout = (*Es)(l, g, g_out);
-        if (Es_g_gout != 0.) Es->set_value(l, g, g_out, Es_g_gout * invs_denom);
-      }
+    // Before adding contributions, must set the scatter array to zero on m = 1
+    if (m == 1) {
+      out.Es = xt::zeros<double>(xs_1.Es.shape());
     }
 
-    Et.set_value(g, Ea(g) + (*Es)(0, g));
+    // Add contributions to the xs
+    // Compute the xs values
+    out.Dtr += eta_m * (b1 * flux_1_g * xs_1.Dtr + b2 * flux_2_g * xs_2.Dtr);
+    out.Ea += eta_m * (b1 * flux_1_g * xs_1.Ea + b2 * flux_2_g * xs_2.Ea);
+    out.Ef += eta_m * (b1 * flux_1_g * xs_1.Ef + b2 * flux_2_g * xs_2.Ef);
+    out.Es += eta_m * (b1 * flux_1_g * xs_1.Es + b2 * flux_2_g * xs_2.Es);
+    out.gout_min = xs_1.gout_min;
+    if (xs_1.n_gamma && (out.n_gamma.has_value() == false)) out.n_gamma = 0.;
+    if (out.n_gamma) {
+      (*out.n_gamma) += eta_m * (b1 * flux_1_g * xs_1.n_gamma.value() +
+                                 b2 * flux_2_g * xs_2.n_gamma.value());
+    }
   }
 
-  return std::make_shared<CrossSection>(Et, Dtr, Ea, *Es, Ef, vEf, chi);
+  const double invs_denom = 1. / denom;
+  out.Dtr *= invs_denom;
+  out.Ea *= invs_denom;
+  out.Ef *= invs_denom;
+  out.Es *= invs_denom;
+  if (out.n_gamma) {
+    (*out.n_gamma) *= invs_denom;
+  }
+
+  return out;
 }
 
 void NDLibrary::get_temp_interp_params(double temp, const NuclideHandle& nuc,
@@ -580,9 +888,9 @@ void NDLibrary::get_dil_interp_params(double dil, const NuclideHandle& nuc,
     f = 1.;
 }
 
-void NDLibrary::interp_1d(xt::xtensor<double, 1>& E,
-                          const xt::xtensor<double, 2>& nE, std::size_t it,
-                          double f_temp) const {
+void NDLibrary::interp_temp(xt::xtensor<double, 1>& E,
+                            const xt::xtensor<double, 2>& nE, std::size_t it,
+                            double f_temp) const {
   if (f_temp > 0.) {
     E = (1. - f_temp) * xt::view(nE, it, xt::all()) +
         f_temp * xt::view(nE, it + 1, xt::all());
@@ -591,52 +899,28 @@ void NDLibrary::interp_1d(xt::xtensor<double, 1>& E,
   }
 }
 
-void NDLibrary::interp_1d(xt::xtensor<double, 1>& E,
-                          const xt::xtensor<double, 3>& nE, std::size_t it,
-                          double f_temp, std::size_t id, double f_dil) const {
-  if (f_temp > 0.) {
-    if (f_dil > 0.) {
-      E = (1. - f_temp) * ((1. - f_dil) * xt::view(nE, it, id, xt::all()) +
-                           f_dil * xt::view(nE, it, id + 1, xt::all())) +
-          f_temp * ((1. - f_dil) * xt::view(nE, it + 1, id, xt::all()) +
-                    f_dil * xt::view(nE, it + 1, id + 1, xt::all()));
-    } else {
-      E = (1. - f_temp) * xt::view(nE, it, id, xt::all()) +
-          f_temp * xt::view(nE, it + 1, id, xt::all());
-    }
-  } else {
-    if (f_dil > 0.) {
-      E = (1. - f_dil) * xt::view(nE, it, id, xt::all()) +
-          f_dil * xt::view(nE, it, id + 1, xt::all());
-    } else {
-      E = xt::view(nE, it, id, xt::all());
-    }
-  }
-}
-
-void NDLibrary::interp_2d(xt::xtensor<double, 2>& E,
-                          const xt::xtensor<double, 4>& nE, std::size_t it,
-                          double f_temp, std::size_t id, double f_dil) const {
+double NDLibrary::interp_temp_dil(const xt::xtensor<double, 3>& nE,
+                                  std::size_t g, std::size_t it, double f_temp,
+                                  std::size_t id, double f_dil) const {
+  double E = 0.;
   if (f_temp > 0.) {
     if (f_dil > 0.) {
       E = (1. - f_temp) *
-              ((1. - f_dil) * xt::view(nE, it, id, xt::all(), xt::all()) +
-               f_dil * xt::view(nE, it, id + 1, xt::all(), xt::all())) +
-          f_temp *
-              ((1. - f_dil) * xt::view(nE, it + 1, id, xt::all(), xt::all()) +
-               f_dil * xt::view(nE, it + 1, id + 1, xt::all(), xt::all()));
+              ((1. - f_dil) * nE(it, id, g) + f_dil * nE(it, id + 1, g)) +
+          f_temp * ((1. - f_dil) * nE(it + 1, id, g) +
+                    f_dil * nE(it + 1, id + 1, g));
     } else {
-      E = (1. - f_temp) * xt::view(nE, it, id, xt::all(), xt::all()) +
-          f_temp * xt::view(nE, it + 1, id, xt::all(), xt::all());
+      E = (1. - f_temp) * nE(it, id, g) + f_temp * nE(it + 1, id, g);
     }
   } else {
     if (f_dil > 0.) {
-      E = (1. - f_dil) * xt::view(nE, it, id, xt::all(), xt::all()) +
-          f_dil * xt::view(nE, it, id + 1, xt::all(), xt::all());
+      E = (1. - f_dil) * nE(it, id, g) + f_dil * nE(it, id + 1, g);
     } else {
-      E = xt::view(nE, it, id, xt::all(), xt::all());
+      E = nE(it, id, g);
     }
   }
+
+  return E;
 }
 
 std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
@@ -684,3 +968,10 @@ std::pair<double, double> NDLibrary::eta_lm(std::size_t m, double Rfuel,
 //     “Advanced resonance self-shielding method for gray resonance treatment in
 //     lattice physics code GALAXY,” J. Nucl. Sci. Technol., vol. 49, no. 7,
 //     pp. 725–747, 2012, doi: 10.1080/00223131.2012.693885.
+//
+// [2] R. M. Ferrer and J. M. Hykes, “Spatially Dependent Resonance
+//     Self-Shielding in CASMO5,” Nucl Sci Eng, vol. 197, no. 2, pp. 333–350,
+//     2023, doi: 10.1080/00295639.2022.2053491.
+//
+// [3] N. Gibson, “Novel Resonance Self-Shielding Methods for Nuclear Reactor
+//     Analysis,” Massachusetts Institute of Technology, 2016.

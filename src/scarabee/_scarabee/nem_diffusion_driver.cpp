@@ -197,13 +197,15 @@ void NEMDiffusionDriver::fill_mats_adf() {
   }
 
   // Save all node ADFs
-  adf_ = xt::zeros<double>({NM_, NG_, static_cast<std::size_t>(4)});
+  adf_ = xt::zeros<double>({NM_, NG_, static_cast<std::size_t>(6)});
   for (std::size_t m = 0; m < NM_; m++) {
     for (std::size_t g = 0; g < NG_; g++) {
-      adf_(m, g, DiffusionData::ADF::YP) = geom_->adf_yp(m, g);
+      adf_(m, g, DiffusionData::ADF::XN) = geom_->adf_xn(m, g);
       adf_(m, g, DiffusionData::ADF::XP) = geom_->adf_xp(m, g);
       adf_(m, g, DiffusionData::ADF::YN) = geom_->adf_yn(m, g);
-      adf_(m, g, DiffusionData::ADF::XN) = geom_->adf_xn(m, g);
+      adf_(m, g, DiffusionData::ADF::YP) = geom_->adf_yp(m, g);
+      adf_(m, g, DiffusionData::ADF::ZN) = geom_->adf_zn(m, g);
+      adf_(m, g, DiffusionData::ADF::ZP) = geom_->adf_zp(m, g);
     }
   }
 }
@@ -347,8 +349,14 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
 
   // z+ surface
   if (n_zp.second) {
+    const double a =
+        0.5 * (1. - (adf_(n_zp.second.value(), g, DiffusionData::ADF::ZN) /
+                     adf_(m, g, DiffusionData::ADF::ZP)));
+
     j_in_out_(g, n_zp.second.value(), 0)(CurrentIndx::ZM) =
-        j_in_out_(g, m, 1)(CurrentIndx::ZP);
+        (1. / (1. - a)) *
+        (j_in_out_(g, m, 1)(CurrentIndx::ZP) +
+         a * j_in_out_(g, n_zp.second.value(), 1)(CurrentIndx::ZM));
   } else {
     const double albedo = n_zp.first.albedo.value();
     j_in_out_(g, m, 0)(CurrentIndx::ZP) =
@@ -357,8 +365,14 @@ void NEMDiffusionDriver::update_Jin_from_Jout(std::size_t g, std::size_t m) {
 
   // z- surface
   if (n_zm.second) {
+    const double a =
+        0.5 * (1. - (adf_(n_zm.second.value(), g, DiffusionData::ADF::ZP) /
+                     adf_(m, g, DiffusionData::ADF::ZN)));
+
     j_in_out_(g, n_zm.second.value(), 0)(CurrentIndx::ZP) =
-        j_in_out_(g, m, 1)(CurrentIndx::ZM);
+        (1. / (1. - a)) *
+        (j_in_out_(g, m, 1)(CurrentIndx::ZM) +
+         a * j_in_out_(g, n_zm.second.value(), 1)(CurrentIndx::ZP));
   } else {
     const double albedo = n_zm.first.albedo.value();
     j_in_out_(g, m, 0)(CurrentIndx::ZM) =

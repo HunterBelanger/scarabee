@@ -4,31 +4,23 @@ Geometry
 .. currentmodule:: scarabee
 
 .. autoclass:: Vector
-    :members:
-    :special-members: __init__
 
 .. autoclass:: Direction
-    :members:
-    :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: EmptyCell
-    :members:
-    :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: PinCellType
-    :members:
 
 .. autoclass:: SimplePinCell
-    :members:
-    :inherited-members:
-    :special-members: __init__
 
 .. autoclass:: PinCell
+
+.. autoclass:: BWRCornerType
     :members:
-    :inherited-members:
-    :special-members: __init__
+
+.. autoclass:: SimpleBWRCornerPinCell
+
+.. autoclass:: BWRCornerPinCell
 
 .. autoclass:: Tile
     :members:
@@ -39,6 +31,3 @@ Geometry
     :inherited-members:
 
 .. autoclass:: Cartesian2D
-    :members:
-    :inherited-members:
-    :special-members: __init__

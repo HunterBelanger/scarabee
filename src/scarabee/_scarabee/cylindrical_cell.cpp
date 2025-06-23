@@ -5,7 +5,7 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/logging.hpp>
 
-#include <xtensor/xbuilder.hpp>
+#include <xtensor/generators/xbuilder.hpp>
 
 #include <Eigen/Dense>
 

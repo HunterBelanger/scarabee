@@ -5,14 +5,20 @@ import matplotlib.pyplot as plt
 ndl = NDLibrary()
 
 # Get U235 so we can steal the fission spectrum
-U235 = ndl.interp_xs("U235", 293.6, 1.E10)
+U235_comp = MaterialComposition(Fraction.Atoms)
+U235_comp.add_nuclide("U235", 1.)
+U235_mat = Material(U235_comp, 293.6, 1., DensityUnits.a_bcm, ndl)
+U235 = U235_mat.dilution_xs([1.E10], ndl)
 G = U235.ngroups
 chi = np.zeros(G)
 for g in range(G):
   chi[g] = U235.chi(g)
 
 # We now load H1_H2O
-H1 = ndl.interp_xs("H1_H2O", 293.6, 1.E10)
+H1_comp = MaterialComposition(Fraction.Atoms)
+H1_comp.add_nuclide("H1_H2O", 1.)
+H1_mat = Material(H1_comp, 293.6, 1., DensityUnits.a_bcm, ndl)
+H1 = H1_mat.dilution_xs([1.E10], ndl)
 
 # We must create a new nuclide with the fission spectrum
 Et = np.zeros(G)

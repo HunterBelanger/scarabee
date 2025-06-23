@@ -42,8 +42,7 @@ neutron transport equation:
 .. math::
     :label: transport_keff
 
-    \dir\cdot\grad{\varphi(\pos,E,\dir)} +
-	\Et(\pos,E)\varphi(\pos,E,\dir) =
+    \dir\cdot\grad{\varphi(\pos,E,\dir)} + \Et(\pos,E)\varphi(\pos,E,\dir) =
 	\\
 	\int_0^\infty \int_{4\pi} \nu_s(\pos,E)\Es(\pos,E'\to E,\dir'\to\dir)\varphi(\pos,E',\dir')\dd\dir'\dd E' +
 	\\
@@ -92,7 +91,8 @@ contributions from the resonant isotope, :math:`r`, and all other isotopes:
 .. math::
 
     \left(N_r\sigma_{t,r}(E) + \sum_{m\ne r}N_m\sigma_{t,m}(E)\right)\varphi(E) =
-	\frac{1}{1-\alpha_r}\int^{E/\alpha_r}_{E} N_r \sigma_{s,r}(E')\varphi(E')\frac{\dd E'}{E'} + \\
+	\frac{1}{1-\alpha_r}\int^{E/\alpha_r}_{E} N_r \sigma_{s,r}(E')\varphi(E')\frac{\dd E'}{E'} +
+    \\
 	\sum_{m\ne r}\frac{1}{1-\alpha_m}\int^{E/\alpha_m}_{E} N_m \sigma_{s,m}(E')\varphi(E')\frac{\dd E'}{E'}.
 
 The next approximation we shall make is that that the total cross section for
@@ -108,7 +108,8 @@ equation:
 .. math::
 
     \left(N_r\sigma_{t,r}(E) + \sum_{m\ne r}N_m\sigma_{p,m}\right)\varphi(E) =
-	\frac{1}{1-\alpha_r}\int^{E/\alpha_r}_{E} N_r \sigma_{s,r}(E')\varphi(E')\frac{\dd E'}{E'} + \\
+	\frac{1}{1-\alpha_r}\int^{E/\alpha_r}_{E} N_r \sigma_{s,r}(E')\varphi(E')\frac{\dd E'}{E'} +
+    \\
 	\sum_{m\ne r}\frac{1}{1-\alpha_m}\int^{E/\alpha_m}_{E} N_m \sigma_{p,m}\varphi(E')\frac{\dd E'}{E'}.
 
 This equation certainly represents an approximation if there are multiple
@@ -150,6 +151,7 @@ Substituting into the slowing-down equation, we have
 All that remains is now the treatment of the slowing down due to the resonance
 absorber, which can be handled with the narrow resonance approximation.
 
+------------------------------
 Narrow Resonance Approximation
 ------------------------------
 
@@ -220,10 +222,107 @@ flux without absorption. This of course, makes sense, as if we had a single
 depression in the flux, and as more :math:`^{238}U` is added (i.e. the dilution
 goes down), the depression would become larger and larger.
 
+----------------------------
+Wide Resonance Approximation
+----------------------------
+
 An alternative to the narrow resonance approximation is the wide resonance
-approximation. We will not consider this case here, as Scarabée does not employ
-this approximation. The interested reader is encouraged to look at *Lattice
-Physics Computations* by Knott and Yamamoto for more details [Knott]_ .
+approximation. In this case, the average energy loss of a neutron which
+undergoes elastic scattering with isotope :math:`r` is comparable to, or
+smaller than the width of a resonance. In this case, we will instead assume
+that :math:`r` is infinitely large, implying that
+:math:`\alpha_r \rightarrow 1`. If this were the case, a neutron would not lose
+any energy in an elastic collision, and all resonances would be *wide*. Under
+this approximation, we find that
+
+.. math::
+
+    \lim_{\alpha_r \rightarrow 1}\frac{1}{1-\alpha_r}\int^{E/\alpha_r}_{E} N_r \sigma_{s,r}(E')\varphi(E') \frac{\dd E'}{E'} \approx
+    \\\\
+    \lim_{\alpha_r \rightarrow 1} \frac{N_r \sigma_{s,r}(E)\varphi(E)}{1 - \alpha_r} \int^{E/\alpha_r}_{E} \frac{\dd E'}{E'} =
+    \\\\
+    N_r \sigma_{s,r}(E)\varphi(E) \lim_{\alpha_r \rightarrow 1} \frac{\ln(1/\alpha_r)}{1 - \alpha_r} =
+    \\\\
+    N_r \sigma_{s,r}(E)\varphi(E).
+
+Using this approximation, we find that the wide resonance flux spectrum is
+
+.. math::
+    :label: wr
+
+    \varphi_{_{WR}}(E) = \frac{\sigma_0}{E\left(\sigma_{a,r}(E) + \sigma_0\right)}.
+
+.. _wr_nr_fig:
+
+.. figure:: ../../images/wr.svg
+
+    Comparison of the narrow resonance and wide resonance flux for :math:`^{238}U` at a dilution of 10 barns.
+
+:numref:`wr_nr_fig` provides a comparison of the narrow resonance and wide
+resonance approximations. In absorption dominated resonances, they are very
+similar. However, in scattering dominated resonances, such as the one located
+at 1140 eV, the differences can be quite significant. 
+
+------------------------------------
+Intermediate Resonance Approximation
+------------------------------------
+
+Whether the narrow resonance or wide resonance approximation should be applied
+depends on the width of each individual resonance, the mass of resonant nuclide
+:math:`r`, and the mass of the background moderator nuclides. In general, the
+true flux spectrum is likely (but not necessarily) something in between the
+narrow and wide resonance limits. This led to [Goldstein]_ and Cohen proposing
+the intermediate resonance approximation, which can be written as
+
+.. math::
+    :label: ir
+    
+    \varphi_{_{IR}}(E) = \frac{\lambda_r\sigma_{p,r} + \sigma_0}{E\left(\sigma_{a,r}(E) + \lambda_r\sigma_{s,r}(E) + \sigma_0\right)},
+
+where :math:`\lambda_r` is the intermediate resonance (IR) parameter for nuclide
+:math:`r`, sometimes referred to as the Goldstein-Cohen parameter. From this
+formula, one can easily see that when :math:`\lambda_r = 0`, the wide resonance
+approximation is retrieved; conversely, when :math:`\lambda_r = 1`, one obtains
+the narrow resonance approximation. For this reason, some argue it is required
+that :math:`\lambda_r \in [0, 1]`, though others such as [Sanchez]_ have
+pointed out that this is not a necessary restriction of the model.
+
+Many lattice physics codes use the approximation that each nuclide :math:`r`
+has a single IR parameter :math:`\lambda_r`, which is used at all energies
+where cross section self-shielding is required. This is not an ideal
+approximation. At higher energies, resonances generally appear to be narrower
+when compared to the average energy loss of a neutron. At lower energies in
+resolved resonance region, the wide resonance approximation can start to
+become more valid. This implies that each individual resonance should have a
+unique IR parameter. While this would be the most accurate approach, it would
+require performing the resonance integral calculation for each individual
+resonance, which is impractical; if such a level of detail and fidelity is
+required, Monte Carlo methods are likely a better solution strategy than
+deterministic methods. As a compromise, some codes chose to have a unique IR
+parameter for each nuclide in each energy group, therefore replacing
+:math:`\lambda_r` with :math:`\lambda_{r,g}`. This is the approximation that
+is used in Scarabée.
+
+To generate group-wise IR parameters for each nuclide in the nuclear data
+library, Scarabée employs the hydrogen equivalence method similar to that used
+for the DeCART code [Xu]_. Scarabée has a built-in neutron slowing-down flux
+spectrum solver, that can solve the slowing down equation for a single resonant
+isotope with any number of purely scattering background moderator isotopes that
+can have a user specified mass and a constant cross section.
+
+Additionally, when using the IR approximation, we should account for the fact
+that the background nuclides do not contribute to slowing down as much as
+hydrogen. This fact is captured by the IR parameter. In this framework, we
+instead calculate the background dilution as
+
+.. math::
+    :label: ir_dilut
+
+    \sigma_{0,g} = \frac{\displaystyle\sum_{m\ne r}N_m \lambda_{r,g} \sigma_{p,m}}{N_r}.
+
+When using the IR approximation, this equation should replace that given by Eq
+:eq:`dilut`. This slightly complicates the self-shielding process, however, as
+the dilution is now energy dependent.
 
 Heterogeneous Media
 --------------------
@@ -333,10 +432,11 @@ effective dilution of the form
 	\sigma_{0,\text{eff}} = \sigma_{0,f} + \frac{\Sigma_e}{N_r},
 
 with :math:`\sigma_{0,f}` being the standard dilution cross section of the fuel
-according to Eq. :eq:`dilut`. Therefore, we have found an equivalence between an
-infinite homogeneous system and a heterogeneous system. It is for this reason
-that this method of treating self-shielding is referred to as *equivalence
-theory*.
+according to Eq :eq:`dilut` in the narrow resonance approximation, or according
+to Eq :eq:`ir_dilut` in the intermediate resonance approximation. Therefore, we
+have found an equivalence between an infinite homogeneous system and a
+heterogeneous system. It is for this reason that this method of treating
+self-shielding is referred to as *equivalence theory*.
 
 ---------------------------------
 Multi-Term Rational Approximation
@@ -376,18 +476,22 @@ nuclide :math:`r`, reaction :math:`x`, in group :math:`g`, then
 
 .. math::
 
-	\sigma_{x,r,g} = \frac{\displaystyle\sum_n b_n \varphi_n \sigma_{x,r,g,n}}
-                          {\displaystyle\sum_n b_n \varphi_n}
+	\sigma_{x,r,g} = \frac{\displaystyle\sum_n b_n \varphi_{n,g} \sigma_{x,r,g,n}}
+                          {\displaystyle\sum_n b_n \varphi_{n,g}}
 
 with
 
 .. math::
 
-	\varphi_n = \frac{\sigma_{p,r} + \sigma_{0,n}}{\sigma_{p,r} + \sigma_{0,n} + \sigma_{a,r,g,n}}.
+	\varphi_{n,g} = \frac{\lambda_{r,g}\sigma_{p,r} + \sigma_{0,n}}{\sigma_{a,r,g,n} + \lambda_{r,g}\sigma_{s,r,g,n} + \sigma_{0,n}}
 
-In this notation, :math:`\sigma_{x,r,g,n}` is the multi-group cross section for
-reaction :math:`x` with nuclide :math:`r` in group :math:`g`, using the
-effective dilution :math:`\sigma_{0,n}`.
+in the intermediate resonance approximation. In this notation,
+:math:`\sigma_{x,r,g,n}` is the multi-group cross section for reaction
+:math:`x` with nuclide :math:`r` in group :math:`g`, using the effective
+dilution :math:`\sigma_{0,n}`. It is worth reiterating here that
+:math:`\sigma_{0,n}` is also dependent on the energy group in the intermediate
+resonance approximation, according to Eq :eq:`wigner_dilution` and Eq
+:eq:`ir_dilut`.
 
 -----------------------------------------------------
 Carvik's and Roman's Two-Term Rational Approximations
@@ -475,7 +579,7 @@ cross section of Eq. :eq:`wigner_dilution` in the following manner:
 Since :math:`D\in(0,1)`, this can be interpreted as reducing the escape cross
 section of the fuel, which also is equivalent to reducing its surface area. This
 makes sense, as it reflects the reduction in the probability of a neutron flying
-into the moderator in undergoing a collision.
+into the moderator and undergoing a collision.
 
 When used with the multi-term rational approximation, the modifications are not
 so simple, as all the :math:`a_n` and :math:`b_n` terms must be modified. For
@@ -621,7 +725,7 @@ The flux :math:`\varphi_{r,g,nm}` is defined as
 
 .. math::
 
-    \varphi_{r,g,nm} = \frac{\sigma_{p,r} + \sigma_{0,nm}}{\sigma_{a,r,g,nm} + \sigma_{p,r} + \sigma_{0,nm}}.
+    \varphi_{r,g,nm} = \frac{\lambda_{r,g}\sigma_{p,r} + \sigma_{0,nm}}{\sigma_{a,r,g,nm} + \lambda_{r,g}\sigma_{s,r,g,nm} + \sigma_{0,nm}}.
 
 Cladding Self-Shielding
 -----------------------
@@ -649,3 +753,9 @@ treated as the resonance regions instead of the fuel.
 .. [Stoker] \ C. C. Stoker and Z. J. Weiss, *Spatially dependent resonance cross sections in a fuel rod*, Annals of Nuclear Energy, vol. 23, no. 9, pp. 765–778, 1996, doi: 10.1016/0306-4549(95)00074-7.
 
 .. [Choi] \ S. Choi, H. Lee, S. G. Hong, and D. Lee, *Resonance self-shielding methodology of new neutron transport code STREAM*, Journal of Nuclear Science and Technology, vol. 52, no. 9, pp. 1133–1150, 2015, doi: 10.1080/00223131.2014.993738.
+
+.. [Goldstein] \ R. Goldstein and E. R. Cohen, *Theory of Resonance Absorption of Neutrons*, Nuclear Science and Engineering, vol. 13, no. 2, pp. 132–140, 1962, doi: 10.13182/nse62-1.
+
+.. [Sanchez] \ R. Sanchez, *On the Intermediary Resonance method and beyond*, Annals of Nuclear Energy, vol. 213, p. 111085, 2025, doi: 10.1016/j.anucene.2024.111085.
+
+.. [Xu] \ Y. Xu, Z. Gao, and T. Downar, *The Calculation of Resonance Parameters for the DeCART MOC Code*, in M&C + SNA 2007, Monterey, California, 2007.

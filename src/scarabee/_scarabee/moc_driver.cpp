@@ -5,8 +5,8 @@
 #include <utils/timer.hpp>
 #include <utils/math.hpp>
 
-#include <xtensor/xmath.hpp>
-#include <xtensor/xview.hpp>
+#include <xtensor/core/xmath.hpp>
+#include <xtensor/views/xview.hpp>
 
 #include <cereal/archives/portable_binary.hpp>
 
@@ -118,6 +118,22 @@ void MOCDriver::set_cmfd(std::shared_ptr<CMFD> cmfd) {
   // point tolerance)
 
   cmfd_ = cmfd;
+  }
+
+void MOCDriver::set_fsr_area_tolerance(double atol) {
+  if (atol <= 0.) {
+    auto mssg = "Tolerance for FSR areas must be in the interval (0., 0.25).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (atol >= 0.25) {
+    auto mssg = "Tolerance for FSR areas must be in the interval (0., 0.25).";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  fsr_area_tol_ = atol;
 }
 
 void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
@@ -254,8 +270,10 @@ void MOCDriver::solve() {
 
 // solve for the isotropic
 void MOCDriver::solve_isotropic() {
-  flux_.resize({ngroups_, nfsrs_, 1});
-  flux_.fill(0.);
+  if (solved_ == false) {
+    flux_.resize({ngroups_, nfsrs_, 1});
+    flux_.fill(0.);
+  }
   xt::xtensor<double, 2> src;
   src.resize({ngroups_, nfsrs_});
   src.fill(0.);
@@ -275,25 +293,30 @@ void MOCDriver::solve_isotropic() {
   }
 
   // Initialize flux and keff
-  if (mode_ == SimulationMode::Keff) {
-    flux_.fill(1.);
-  } else {
-    flux_.fill(0.);
+  if (solved_ == false) {
+    if (mode_ == SimulationMode::Keff) {
+      flux_.fill(1.);
+    } else {
+      flux_.fill(0.);
+    }
+
+    // Initialize angular flux
+    for (auto& tracks : tracks_) {
+      for (auto& track : tracks) {
+        track.entry_flux().fill(1. / (4. * PI));
+        track.exit_flux().fill(1. / (4. * PI));
+      }
+    }
+
+    keff_ = 1.;
   }
-  keff_ = 1.;
   auto next_flux = flux_;
   double prev_keff = keff_;
 
-  // Initialize angular flux
-  for (auto& tracks : tracks_) {
-    for (auto& track : tracks) {
-      track.entry_flux().fill(1. / (4. * PI));
-      track.exit_flux().fill(1. / (4. * PI));
-    }
-  }
-
   double rel_diff_keff = 100.;
   if (mode_ == SimulationMode::FixedSource) {
+    keff_ = 1.;
+    prev_keff = keff_;
     rel_diff_keff = 0.;
   }
   double max_flx_diff = 100;
@@ -386,20 +409,21 @@ void MOCDriver::solve_isotropic() {
     }
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative source values set to zero");
+      spdlog::info("Negative source values set to zero");
     }
     if (set_neg_flux_to_zero) {
-      spdlog::warn("Negative flux values set to zero");
+      spdlog::info("Negative flux values set to zero");
     }
   }
 }
 
 // solve for anisotropic
 void MOCDriver::solve_anisotropic() {
-  N_lj_ = (max_L_ + 1) * (max_L_ + 1);
-  flux_.resize({ngroups_, nfsrs_, N_lj_});
-  flux_.fill(0.);
-
+  if (solved_ == false) {
+    N_lj_ = (max_L_ + 1) * (max_L_ + 1);
+    flux_.resize({ngroups_, nfsrs_, N_lj_});
+    flux_.fill(0.);
+  }
   xt::xtensor<double, 3> src;
   src.resize({ngroups_, nfsrs_, N_lj_});
   src.fill(0.);
@@ -418,25 +442,31 @@ void MOCDriver::solve_anisotropic() {
   sph_harm_ = SphericalHarmonics(max_L_, azimuthal_angles, polar_angles);
 
   // Initialize flux and keff
-  if (mode_ == SimulationMode::Keff) {
-    flux_.fill(1.);
-  } else {
-    flux_.fill(0.);
+  if (solved_ == false) {
+    if (mode_ == SimulationMode::Keff) {
+      flux_.fill(1.);
+    } else {
+      flux_.fill(0.);
+    }
+
+    // Initialize angular flux
+    for (auto& tracks : tracks_) {
+      for (auto& track : tracks) {
+        track.entry_flux().fill(1. / std::sqrt(4. * PI));
+        track.exit_flux().fill(1. / std::sqrt(4. * PI));
+      }
+    }
+
+    keff_ = 1.;
   }
-  keff_ = 1.;
+
   auto next_flux = flux_;
   double prev_keff = keff_;
 
-  // Initialize angular flux
-  for (auto& tracks : tracks_) {
-    for (auto& track : tracks) {
-      track.entry_flux().fill(1. / std::sqrt(4. * PI));
-      track.exit_flux().fill(1. / std::sqrt(4. * PI));
-    }
-  }
-
   double rel_diff_keff = 100.;
   if (mode_ == SimulationMode::FixedSource) {
+    keff_ = 1.;
+    prev_keff = keff_;
     rel_diff_keff = 0.;
   }
 
@@ -526,10 +556,10 @@ void MOCDriver::solve_anisotropic() {
     }
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative zero-mometn-source values set to zero.");
+      spdlog::info("Negative zero-moment-source values set to zero.");
     }
     if (set_neg_flux_to_zero) {
-      spdlog::warn("Negative zero-moment-flux values set to zero.");
+      spdlog::info("Negative zero-moment-flux values set to zero.");
     }
   }
 }
@@ -836,6 +866,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
             if (cmfd_surf) cmfd_flx += polar_quad_.wsin()[p] * angflux[pp];
 
           }  // For all polar angles
+          
           if (cmfd_surf &&
               cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
             cmfd_->tally_current(INVS_4SQRTPI * tw * cmfd_flx, u_back, G,
@@ -1440,7 +1471,11 @@ void MOCDriver::allocate_fsr_data() {
 }
 
 void MOCDriver::segment_renormalization() {
-  spdlog::info("Renormalizing segment lengths");
+  if (check_fsr_areas_) {
+    spdlog::info("Renormalizing segment lengths with FSR area checks");
+  } else {
+    spdlog::info("Renormalizing segment lengths");
+  }
 
   // We now bias the traced segment lengths, so that we better predict the
   // volume of our flat source regions. We do this for each angle, but it
@@ -1463,6 +1498,24 @@ void MOCDriver::segment_renormalization() {
       for (auto& seg : track) {
         const std::size_t i = seg.fsr_indx();
         approx_vols[i] += seg.length() * d;
+      }
+    }
+
+    if (check_fsr_areas_) {
+      // Here, we do a sanity check, to make sure the approximate FSR volumes
+      // are relatively close to the true volumes. If they are not, this is
+      // could mean that the track spacing is too wide to adequately capture the
+      // FSR, or it could mean that the "true" volume of the FSR is incorrect.
+      // Both are problems.
+      for (std::size_t i = 0; i < approx_vols.size(); i++) {
+        const double rel_diff = std::abs((approx_vols[i] - fsrs_[i]->volume()) /
+                                         fsrs_[i]->volume());
+        if (std::abs(rel_diff) > fsr_area_tol_) {
+          spdlog::warn(
+              "For FSR {:} azimuthal angle {:}, the true and approximate FSR "
+              "areas differ by {:.3f}%.",
+              i, a, rel_diff * 100.);
+        }
       }
     }
 
@@ -1602,7 +1655,12 @@ UniqueFSR MOCDriver::get_fsr(const Vector& r, const Direction& u) const {
 }
 
 std::size_t MOCDriver::get_fsr_indx(const UniqueFSR& fsr) const {
-  const std::size_t i = fsr_offsets_.at(fsr.fsr->id()) + fsr.instance;
+  return this->get_fsr_indx(fsr.fsr->id(), fsr.instance);
+}
+
+std::size_t MOCDriver::get_fsr_indx(std::size_t fsr_id,
+                                    std::size_t instance) const {
+  const std::size_t i = fsr_offsets_.at(fsr_id) + instance;
   if (i >= nfsrs_) {
     auto mssg = "FSR index out of range.";
     spdlog::error(mssg);
@@ -1717,6 +1775,13 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize() const {
 
 std::shared_ptr<CrossSection> MOCDriver::homogenize(
     const std::vector<std::size_t>& regions) const {
+  // Make sure we were actually provided with regions
+  if (regions.empty()) {
+    const auto mssg = "No regions were provided for homogenization.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Check all regions are valid
   if (regions.size() > this->nregions()) {
     auto mssg =
@@ -1819,6 +1884,14 @@ xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum() const {
 
 xt::xtensor<double, 1> MOCDriver::homogenize_flux_spectrum(
     const std::vector<std::size_t>& regions) const {
+  // Make sure we were actually provided with regions
+  if (regions.empty()) {
+    const auto mssg =
+        "No regions were provided for homogenization of flux spectrum.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
   // Check all regions are valid
   if (regions.size() > this->nfsr()) {
     auto mssg =
@@ -1870,13 +1943,25 @@ void MOCDriver::apply_criticality_spectrum(const xt::xtensor<double, 1>& flux) {
     throw ScarabeeException(mssg);
   }
 
+  // Compute unique group normalizations
   xt::xtensor<double, 1> group_mult = this->homogenize_flux_spectrum();
-  group_mult = 1. / group_mult;
-  group_mult *= flux;
+  const double ratio = xt::sum(group_mult)() / xt::sum(flux)();
+  group_mult = (flux / group_mult) * ratio;
 
+  // Apply correction to FSRs
   for (std::size_t g = 0; g < this->ngroups(); g++) {
     for (std::size_t i = 0; i < this->nfsr(); i++) {
       flux_(g, i, 0) *= group_mult(g);
+    }
+  }
+
+  // Apply correciton to boundary angular fluxes
+  for (auto& angle : tracks_) {
+    for (auto& track : angle) {
+      for (std::size_t g = 0; g < this->ngroups(); g++) {
+        xt::view(track.entry_flux(), g, xt::all()) *= group_mult(g);
+        xt::view(track.exit_flux(), g, xt::all()) *= group_mult(g);
+      }
     }
   }
 }

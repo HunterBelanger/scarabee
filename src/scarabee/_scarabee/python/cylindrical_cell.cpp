@@ -34,6 +34,7 @@ void init_CylindricalCell(py::module& m) {
           "True is the system has been solved, False otherwise.")
 
       .def("solve", &CylindricalCell::solve,
+           py::call_guard<py::gil_scoped_release>(),
            "Solves the system for partial flux responses.\n\n"
            "Parameters\n"
            "----------\n"

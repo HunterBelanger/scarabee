@@ -4,7 +4,7 @@
 #include <diffusion/diffusion_data.hpp>
 #include <utils/serialization.hpp>
 
-#include <xtensor/xarray.hpp>
+#include <xtensor/containers/xarray.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/memory.hpp>
@@ -95,6 +95,8 @@ class DiffusionGeometry {
   double adf_xn(std::size_t m, std::size_t g) const;
   double adf_yp(std::size_t m, std::size_t g) const;
   double adf_yn(std::size_t m, std::size_t g) const;
+  double adf_zp(std::size_t m, std::size_t g) const;
+  double adf_zn(std::size_t m, std::size_t g) const;
 
   double cdf_I(std::size_t m, std::size_t g) const;
   double cdf_II(std::size_t m, std::size_t g) const;

@@ -1,0 +1,21 @@
+[2025-06-20 14:08:36.022] [info] Initializing Dancoff correction calculation components.
+[2025-06-20 14:08:36.722] [info] Computing Dancoff corrections for the fuel.
+[2025-06-20 14:08:36.863] [info] Computing Dancoff corrections for the cladding.
+[2025-06-20 14:08:38.600] [info] Creating quadrature
+[2025-06-20 14:08:38.601] [info] Number of azimuthal angles: 64
+[2025-06-20 14:08:38.601] [info] Maximum track spacing: 0.05 cm
+[2025-06-20 14:08:38.601] [info] Tracing tracks
+[2025-06-20 14:08:38.640] [info] Renormalizing segment lengths
+[2025-06-20 14:08:38.643] [info] Determining track connections
+[2025-06-20 14:08:38.662] [info] Time spent dawing tracks: 0.06135 s.
+[2025-06-20 14:09:25.708] [info] 
+[2025-06-20 14:09:25.708] [info] Kinf: 1.21881
+[2025-06-20 14:09:25.708] [info] 
+[2025-06-20 14:09:26.263] [info] Performing P1 criticality spectrum calculation
+[2025-06-20 14:09:26.315] [info] Kinf    : 1.21888
+[2025-06-20 14:09:26.315] [info] Buckling: 0.00368
+[2025-06-20 14:09:27.814] [info] Starting reflector calculation.
+[2025-06-20 14:11:43.865] [info] 
+[2025-06-20 14:11:43.865] [info] Kinf: 1.15581
+[2025-06-20 14:11:43.865] [info] 
+[2025-06-20 14:11:43.865] [info] Generating diffusion data.

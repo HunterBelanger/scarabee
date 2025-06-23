@@ -4,7 +4,7 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/timer.hpp>
 
-#include <xtensor/xio.hpp>
+#include <xtensor/io/xio.hpp>
 
 #include <sstream>
 
@@ -208,10 +208,10 @@ void ReflectorSN::solve_iso() {
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative source values set to zero");
+      spdlog::info("Negative source values set to zero");
     }
     if (set_neg_flux_to_zero) {
-      spdlog::warn("Negative flux values set to zero");
+      spdlog::info("Negative flux values set to zero");
     }
   }
 
@@ -428,10 +428,10 @@ void ReflectorSN::solve_aniso() {
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative source values set to zero");
+      spdlog::info("Negative source values set to zero");
     }
     if (set_neg_flux_to_zero) {
-      spdlog::warn("Negative flux values set to zero");
+      spdlog::info("Negative flux values set to zero");
     }
   }
 

@@ -34,14 +34,19 @@ void init_NuclideHandle(py::module& m) {
       .def_readonly("potential_xs", &NuclideHandle::potential_xs,
                     "Potential scattering cross section of the nuclide.")
 
-      .def_readonly("ir_lambda", &NuclideHandle::ir_lambda,
-                    "Intermediate resonance parameters of the nuclide.")
+      .def_readonly(
+          "ir_lambda", &NuclideHandle::ir_lambda,
+          "List of intermediate resonance parameters for the nuclide.")
 
       .def_readonly("ZA", &NuclideHandle::ZA,
                     "The ZA number of the nuclide, constructed as Z*1000 + A.")
 
       .def_readonly("fissile", &NuclideHandle::fissile,
                     "True if the nuclide is fissile, False otherwise.")
+
+      .def_readonly(
+          "fission_energy", &NuclideHandle::fission_energy,
+          "Average energy release per fission of the nuclide, in MeV.")
 
       .def_readonly("resonant", &NuclideHandle::resonant,
                     "True if the nuclide is resonant, False otherwise.");
@@ -72,14 +77,35 @@ void init_NDLibrary(py::module& m) {
            "       Name of the desired nuclide.",
            py::arg("name"))
 
-      .def("interp_xs", &NDLibrary::interp_xs,
-           "Interpolates the cross section of the prescribed nuclide to the "
-           "desired temperature and dilution.\n\n"
+      .def("infinite_dilution_xs", &NDLibrary::infinite_dilution_xs,
+           "Calculates the infinite dilution cross sections for the nuclide at "
+           "the desired temperatures.\n\n"
            "Parameters\n"
            "----------\n"
            "name : str\n"
            "       Name of the desired nuclide.\n"
-           "temp : str\n"
+           "temp : float\n"
+           "       Desired temperature in kelvin.\n"
+           "max_l : int\n"
+           "        Maximum legendre moment (default is 1).\n\n"
+           "Returns\n"
+           "-------\n"
+           "MicroNuclideXS, MicroDepletionXS\n"
+           "  Interpolated infinite dilution cross sections at desired "
+           "temperature.")
+
+      .def("dilution_xs", &NDLibrary::dilution_xs,
+           "Interpolates the cross section of the prescribed nuclide at the "
+           "prescribed energy group to the desired temperature and dilution. "
+           "If the nuclide is not resonant or the desired group g is not "
+           "resonant, an exception is raised.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "name : str\n"
+           "       Name of the desired nuclide.\n"
+           "g    : int\n"
+           "       Energy group index.\n"
+           "temp : float\n"
            "       Desired temperature in kelvin.\n"
            "dil : str\n"
            "      Desired dilution in barns.\n"
@@ -87,9 +113,9 @@ void init_NDLibrary(py::module& m) {
            "        Maximum legendre moment (default is 1).\n\n"
            "Returns\n"
            "-------\n"
-           "CrossSection\n"
-           "  Interpolated cross sections.",
-           py::arg("name"), py::arg("temp"), py::arg("dil"),
+           "ResonantOneGroupXS\n"
+           "  Interpolated cross sections in group g.",
+           py::arg("name"), py::arg("g"), py::arg("temp"), py::arg("dil"),
            py::arg("max_l") = 1)
 
       .def(
@@ -111,11 +137,15 @@ void init_NDLibrary(py::module& m) {
           "where :math:`\\Sigma_p` is the macroscopic potential scattering "
           "cross section of the material, :math:`\\lambda_r` is the "
           "intermediate resonance parameter for isotope :math:`r`, and "
-          ":math:`\\Sigma_e` is the escape cross section.\n\n"
+          ":math:`\\Sigma_e` is the escape cross section. If the nuclide is "
+          "not resonant or the desired group g is not resonant, an exception "
+          "is raised.\n\n"
           "Parameters\n"
           "----------\n"
           "name : str\n"
           "       Name of the nuclide to be treated.\n"
+          "g    : int\n"
+          "       Energy group index.\n"
           "temp : float\n"
           "       Temperature of the material (in kelvin).\n"
           "b1 : float\n"
@@ -131,19 +161,22 @@ void init_NDLibrary(py::module& m) {
           "        Maximum legendre moment (default is 1).\n\n"
           "Returns\n"
           "-------\n"
-          "CrossSection\n"
-          "  Self-shielded cross sections.",
-          py::arg("name"), py::arg("temp"), py::arg("b1"), py::arg("b2"),
-          py::arg("xs1"), py::arg("xs2"), py::arg("max_l") = 1)
+          "ResonantOneGroupXS\n"
+          "  Interpolated cross sections in group g.\n",
+          py::arg("name"), py::arg("g"), py::arg("temp"), py::arg("b1"),
+          py::arg("b2"), py::arg("xs1"), py::arg("xs2"), py::arg("max_l") = 1)
 
       .def("ring_two_term_xs", &NDLibrary::ring_two_term_xs,
            "Uses the two-term rational approximation and the Stoker-Weiss "
            "method to produce the self-shielded cross sections for a single "
-           "nuclide in a ring of fuel.\n\n"
+           "nuclide in a ring of fuel. If the nuclide is not resonant or the "
+           "desired group g is not resonant, an exception is raised.\n\n"
            "Parameters\n"
            "----------\n"
            "name : str\n"
            "       Name of the nuclide to be treated.\n"
+           "g    : int\n"
+           "       Energy group index.\n"
            "temp : float\n"
            "       Temperature of the material (in kelvin).\n"
            "a1 : float\n"
@@ -168,11 +201,11 @@ void init_NDLibrary(py::module& m) {
            "        Maximum legendre moment (default is 1).\n\n"
            "Returns\n"
            "-------\n"
-           "CrossSection\n"
-           "  Self-shielded cross sections.",
-           py::arg("name"), py::arg("temp"), py::arg("a1"), py::arg("a2"),
-           py::arg("b1"), py::arg("b2"), py::arg("mat_pot_xs"), py::arg("N"),
-           py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"),
+           "ResonantOneGroupXS\n"
+           "  Interpolated cross sections in group g.\n",
+           py::arg("name"), py::arg("g"), py::arg("temp"), py::arg("a1"),
+           py::arg("a2"), py::arg("b1"), py::arg("b2"), py::arg("mat_pot_xs"),
+           py::arg("N"), py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"),
            py::arg("max_l") = 1)
 
       .def("unload", &NDLibrary::unload,
@@ -184,6 +217,14 @@ void init_NDLibrary(py::module& m) {
       .def_property_readonly("ngroups", &NDLibrary::ngroups,
                              "Number of energy groups in the library.")
 
+      .def_property_readonly(
+          "first_resonant_group", &NDLibrary::first_resonant_group,
+          "Index of the first resonant group in the library.")
+
+      .def_property_readonly("last_resonant_group",
+                             &NDLibrary::last_resonant_group,
+                             "Index of the last resonant group in the library.")
+
       .def_property_readonly("group_bounds", &NDLibrary::group_bounds,
                              "The boundaries of the energy groups for the "
                              "group structure (in decreasing order).")
@@ -191,19 +232,12 @@ void init_NDLibrary(py::module& m) {
       .def_property_readonly("group_structure", &NDLibrary::group_structure,
                              "The name of the group structure (if provided).")
 
-      .def_property_readonly("macro_group_condensation_scheme",
-                             &NDLibrary::macro_group_condensation_scheme,
-                             "The condensation scheme to obtain the default "
-                             "macro-group structure (if provided).")
-
-      .def_property_readonly("few_group_condensation_scheme",
-                             &NDLibrary::few_group_condensation_scheme,
-                             "The condensation scheme to obtain the default "
-                             "few-group structure (if provided).")
+      .def_property_readonly(
+          "condensation_scheme", &NDLibrary::condensation_scheme,
+          "The condensation scheme to obtain the default few-group structure "
+          "from the library group structure (if provided).")
 
       .def_property_readonly(
-          "reflector_few_group_condensation_scheme",
-          &NDLibrary::reflector_few_group_condensation_scheme,
-          "The condensation scheme to obtain the default "
-          "few-group structure for the reflector (if provided).");
+          "depletion_chain", &NDLibrary::depletion_chain,
+          "The DepletionChain intended for use with the library.");
 }

@@ -6,7 +6,7 @@
 #include <utils/serialization.hpp>
 #include <utils/simulation_mode.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/memory.hpp>

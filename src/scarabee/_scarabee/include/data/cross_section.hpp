@@ -5,8 +5,8 @@
 #include <data/xs2d.hpp>
 #include <data/diffusion_cross_section.hpp>
 
-#include <xtensor/xtensor.hpp>
-#include <xtensor/xview.hpp>
+#include <xtensor/containers/xtensor.hpp>
+#include <xtensor/views/xview.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/string.hpp>
@@ -58,6 +58,10 @@ class CrossSection {
 
   CrossSection(const XS1D& Et, const XS1D& Dtr, const XS1D& Ea, const XS2D& Es,
                const std::string& name = "");
+
+  void set(const CrossSection& other) {
+    (*this) = other;
+  }
 
   std::size_t ngroups() const { return Etr_.ngroups(); }
 

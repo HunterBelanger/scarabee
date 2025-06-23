@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include <moc/cell.hpp>
 
@@ -39,6 +40,17 @@ void init_Cell(py::module& m) {
            "float\n"
            "     Distance that can be traveled.\n",
            py::arg("r"), py::arg("u"))
+
+      .def("get_all_fsr_ids", &Cell::get_all_fsr_ids,
+           "Returns a set containing the IDs of all flat source regions in the "
+           "cell.\n\n"
+           "Returns\n"
+           "-------\n"
+           "set of int\n"
+           "    IDs of all FSRs in the cell.")
+
+      .def_property_readonly("num_fsrs", &Cell::num_fsrs,
+                             "Number of flat source regions in the cell.")
 
       .def_property_readonly("dx", &Cell::dx, "Width of cell along x.")
 

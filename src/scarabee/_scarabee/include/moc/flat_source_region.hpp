@@ -9,7 +9,7 @@
 
 #include <htl/static_vector.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/memory.hpp>
