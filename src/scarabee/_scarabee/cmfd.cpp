@@ -145,14 +145,13 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
 
   // Allocate cell volume array
   volumes_.resize(nx_ * ny_);
-  for (std::size_t i = 0; i < nx_; i++){
-    for (std::size_t j = 0; j < ny_; j++){
+  for (std::size_t i = 0; i < nx_; i++) {
+    for (std::size_t j = 0; j < ny_; j++) {
       // Store CMFD cell volume
       const auto indx = tile_to_indx(i, j);
       volumes_[indx] = dx_[i] * dy_[j];
     }
   }
-
 
   // Set CMFD fluxes to 1
   flux_cmfd_.resize(ng_ * nx_ * ny_);
@@ -487,24 +486,23 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
         Et_(moc_to_cmfd_group_map_[g], i, j) += fg_xs->Etr(g) * flux_spec(g);
       }
       xt::view(Et_, xt::all(), i, j) /= xt::view(flux_, xt::all(), i, j);
-
-      
     }
   }
 }
 
-void CMFD::homogenize_ext_src(const MOCDriver& moc){
+void CMFD::homogenize_ext_src(const MOCDriver& moc) {
   const std::size_t tot_cells = nx_ * ny_;
   // Loop over all cells
-  for (std::size_t l = 0; l < tot_cells; l++){
+  for (std::size_t l = 0; l < tot_cells; l++) {
     const double invs_V = 1. / volumes_[l];
-    // Loop over MOC groups 
+    // Loop over MOC groups
     for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
-      // Loop over FSRs in cell l 
-        for (auto fsr : fsrs_[l]) {
-          extern_src_[moc_to_cmfd_group_map_[g] * tot_cells + l] += invs_V * moc.volume(fsr) * moc.extern_src(fsr,g);
-        }
+      // Loop over FSRs in cell l
+      for (auto fsr : fsrs_[l]) {
+        extern_src_[moc_to_cmfd_group_map_[g] * tot_cells + l] +=
+            invs_V * moc.volume(fsr) * moc.extern_src(fsr, g);
       }
+    }
   }
 }
 
@@ -687,9 +685,10 @@ double CMFD::get_current(std::size_t i, std::size_t j, std::size_t g,
   return 0.;
 }
 
-void CMFD::larsen_correction(double& D, const double dx, const MOCDriver& moc) const {
-  // Correct Diffusion Coefficient to agree with infinite medium 
-  // for optically thick mesh cells 
+void CMFD::larsen_correction(double& D, const double dx,
+                             const MOCDriver& moc) const {
+  // Correct Diffusion Coefficient to agree with infinite medium
+  // for optically thick mesh cells
   const PolarQuadrature& moc_polq = moc.polar_quadrature();
   const auto& moc_azmq = moc.azimuthal_quadrature();
   const std::size_t n_pol_angles = moc_polq.sin().size();
@@ -697,34 +696,40 @@ void CMFD::larsen_correction(double& D, const double dx, const MOCDriver& moc) c
   const auto& polar_angles = moc_polq.polar_angle();
 
   double rho = 0.;
-  for (std::size_t a = 0; a < moc_azmq.size(); a++){
+  for (std::size_t a = 0; a < moc_azmq.size(); a++) {
     const double& wa = moc_azmq[a].wgt;
     // Loop over polar angles
-    for (std::size_t p = 0; p < n_pol_angles ; p++){
+    for (std::size_t p = 0; p < n_pol_angles; p++) {
       const double f = dx / (3. * D * std::cos(polar_angles[p]));
-      const double alpha = ( (1. + std::exp(-f) ) / (1. - std::exp(-f) ) ) - ( 2. / ( f ) );
+      const double alpha =
+          ((1. + std::exp(-f)) / (1. - std::exp(-f))) - (2. / (f));
       rho += 2.0 * std::cos(polar_angles[p]) * pol_wgts[p] * wa * alpha;
     }
   }
-  // Calculate effective diffusion coefficient 
-  const double D_eff = D * (1. + ( ( dx * rho ) / ( 2. * D ) ) );
+  // Calculate effective diffusion coefficient
+  const double D_eff = D * (1. + ((dx * rho) / (2. * D)));
 
   // Set D to effective diffusion coefficient
   D = D_eff;
 }
 
-void CMFD::optimize_diffusion_coef(double& D, const double dx, const std::size_t i, const std::size_t j, const std::size_t g) const {
-  // This method adds a term to the diffusion coefficient which generalizes CMFD and pCMFD to be the same based on
-  // the optimal diffusion coefficient for a given cell's optical thickness. This method is based on the result from [1].
+void CMFD::optimize_diffusion_coef(double& D, const double dx,
+                                   const std::size_t i, const std::size_t j,
+                                   const std::size_t g) const {
+  // This method adds a term to the diffusion coefficient which generalizes CMFD
+  // and pCMFD to be the same based on the optimal diffusion coefficient for a
+  // given cell's optical thickness. This method is based on the result from
+  // [1].
   const double EtDx = Et_(g, i, j) * dx;
 
-  if (EtDx < 1.){
+  if (EtDx < 1.) {
     return;
   } else if (EtDx < 14 && EtDx >= 1) {
-    const double theta = -5.542780E-02                   + 8.740501E-02*EtDx             +
-                         -2.152599E-02*std::pow(EtDx, 2) + 3.145553E-03*std::pow(EtDx,3) +
-                         -2.683648E-04*std::pow(EtDx,4)  + 1.222516E-05*std::pow(EtDx,5) +
-                         -2.284879E-07*std::pow(EtDx,6);
+    const double theta =
+        -5.542780E-02 + 8.740501E-02 * EtDx +
+        -2.152599E-02 * std::pow(EtDx, 2) + 3.145553E-03 * std::pow(EtDx, 3) +
+        -2.683648E-04 * std::pow(EtDx, 4) + 1.222516E-05 * std::pow(EtDx, 5) +
+        -2.284879E-07 * std::pow(EtDx, 6);
 
     D += theta * dx;
   } else {
@@ -741,16 +746,19 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   const double dx_ij = get_cmfd_tile_width(i, j, surf);
   const double current = get_current(i, j, g, surf);
 
-  // Modify material diffusion coefficient for cell i,j by Larsen's correction or odCMFD
-  if (larsen_correction_){
+  // Modify material diffusion coefficient for cell i,j by Larsen's correction
+  // or odCMFD
+  if (larsen_correction_) {
     larsen_correction(D_ij, dx_ij, moc);
-  } else if (od_cmfd_){
+  } else if (od_cmfd_) {
     optimize_diffusion_coef(D_ij, dx_ij, i, j, g);
   }
 
-  const auto flux_limiting = [current, surf, flx_ij](double& D_surf, double& D_nl, const double flx_next){
-    // Flux limiting condition 
-    if (std::abs(D_nl) > std::abs(D_surf)){
+  const auto flux_limiting = [current, surf, flx_ij](double& D_surf,
+                                                     double& D_nl,
+                                                     const double flx_next) {
+    // Flux limiting condition
+    if (std::abs(D_nl) > std::abs(D_surf)) {
       if (surf == CMFD::TileSurf::XP || surf == CMFD::TileSurf::YP) {
         D_surf = current / (-2. * flx_next);
       } else {
@@ -780,14 +788,14 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
     } else {
       D_nl = -(current + D_surf * flx_ij) / flx_ij;
     }
-    
-    if (flux_limiting_){
-      if (surf == CMFD::TileSurf::XN || surf == CMFD::TileSurf::YN){
-      flux_limiting(D_surf, D_nl, 0.);
+
+    if (flux_limiting_) {
+      if (surf == CMFD::TileSurf::XN || surf == CMFD::TileSurf::YN) {
+        flux_limiting(D_surf, D_nl, 0.);
       }
     }
 
-    if (moc_iteration_ == 0){
+    if (moc_iteration_ == 0) {
       D_nl = 0.0;
     }
 
@@ -802,7 +810,8 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   double D_iijj = xs_(ii, jj)->D(g);
   const double dx_iijj = get_cmfd_tile_width(ii, jj, surf);
 
-  // Modify material diffusion coefficient for cell ii, jj by Larsen's correction or odCMFD
+  // Modify material diffusion coefficient for cell ii, jj by Larsen's
+  // correction or odCMFD
   if (larsen_correction_) {
     larsen_correction(D_iijj, dx_iijj, moc);
   } else if (od_cmfd_) {
@@ -820,12 +829,11 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
     D_nl = (D_surf * (flx_iijj - flx_ij) - current) / (flx_iijj + flx_ij);
   }
 
-  if (flux_limiting_){
+  if (flux_limiting_) {
     flux_limiting(D_surf, D_nl, flx_iijj);
   }
 
-
-  if (moc_iteration_ == 0){
+  if (moc_iteration_ == 0) {
     D_nl = 0.0;
   }
 
@@ -865,7 +873,7 @@ void CMFD::create_loss_matrix(const MOCDriver& moc) {
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::XN, moc);
       auto [Dyn, Dnl_yn] =
           calc_surf_diffusion_coeffs(i, j, g, CMFD::TileSurf::YN, moc);
-      
+
       if (Dnl_xp > Dxp || Dnl_xn > Dxn || Dnl_yp > Dyp || Dnl_yn > Dyn) {
         auto mssg =
             "At least one transport corrected diffusion coefficient is greater "
@@ -1033,11 +1041,11 @@ void CMFD::power_iteration(double keff) {
   keff_ = keff;
 }
 
-void CMFD::fixed_source_solve(){
+void CMFD::fixed_source_solve() {
   // Solve fixed source problem
   // Subtract fission source from loss matrix
   Eigen::SparseMatrix<double> L = M_ - QM_;
-  
+
   Eigen::VectorXd new_flux(ng_ * nx_ * ny_);
 
   // Create a solver for the problem
@@ -1071,7 +1079,6 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
   flux_ /= xt::sum(flux_)();
   flux_cmfd_ /= flux_cmfd_.sum();
 
-
   // Precompute update ratio in each CMFD cell
   std::size_t i = 0;
   std::size_t j = 0;
@@ -1086,9 +1093,10 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       if (ratio > 20.0 && moc_iteration_ > 1) {
         flux_update_warning = true;
       }
-      // Check that the update ratio is valid 
+      // Check that the update ratio is valid
       if (ratio < 0.0) {
-        auto mssg = "Negative CMFD flux update ratio. Try using Larsen correction";
+        auto mssg =
+            "Negative CMFD flux update ratio. Try using Larsen correction";
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
       }
@@ -1103,7 +1111,7 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
         throw ScarabeeException(mssg);
       }
       // Clamp CMFD flux ratio after a certain # of solves
-      if (cmfd_solves_ > unbounded_cmfd_solves_){
+      if (cmfd_solves_ > unbounded_cmfd_solves_) {
         std::clamp(ratio, 0.05, 20.0);
       }
     }
@@ -1127,9 +1135,9 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
 
       // Update scalar flux in each MOC FSR
       for (const auto f : fsrs) {
-        for (std::size_t lj = 0; lj < moc.num_spherical_harmonics(); lj++){
+        for (std::size_t lj = 0; lj < moc.num_spherical_harmonics(); lj++) {
           const double new_flx = moc.flux(f, g, lj) * flx_ratio;
-          moc.set_flux(f, g , new_flx, lj);
+          moc.set_flux(f, g, new_flx, lj);
         }
       }
     }
@@ -1151,14 +1159,14 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       }
     }
   }
-  
-  if (flux_update_warning){
+
+  if (flux_update_warning) {
     const double max_update = update_ratios_.maxCoeff();
     spdlog::warn(
-            "At least one CMFD flux ratio greater than 20, max update ratio is: {:.5f}",
-            max_update);
+        "At least one CMFD flux ratio greater than 20, max update ratio is: "
+        "{:.5f}",
+        max_update);
   }
-  
 }
 
 void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
@@ -1167,27 +1175,29 @@ void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
   cmfd_timer.reset();
   cmfd_timer.start();
   moc_iteration_ = moc_iteration;
-  if (moc.sim_mode() == SimulationMode::Keff){
+  if (moc.sim_mode() == SimulationMode::Keff) {
     mode_ = SimulationMode::Keff;
   } else if (moc.sim_mode() == SimulationMode::FixedSource) {
     mode_ = SimulationMode::FixedSource;
   }
 
-  // Skip user-defined # of MOC iterations 
-  if (moc_iteration > skip_moc_iterations_){
+  // Skip user-defined # of MOC iterations
+  if (moc_iteration > skip_moc_iterations_) {
     cmfd_solves_++;
 
     if (larsen_correction_ && od_cmfd_) {
-      auto mssg = "odCMFD and the Larsen correction are mutally exclusive. Only one can be set to True";
+      auto mssg =
+          "odCMFD and the Larsen correction are mutally exclusive. Only one "
+          "can be set to True";
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
     }
-  
+
     this->normalize_currents();
     this->compute_homogenized_xs_and_flux(moc);
     this->create_loss_matrix(moc);
     this->create_source_matrix();
-    if (mode_ == SimulationMode::Keff){
+    if (mode_ == SimulationMode::Keff) {
       this->power_iteration(keff_);
     } else if (mode_ == SimulationMode::FixedSource) {
       this->fixed_source_solve();
@@ -1213,6 +1223,6 @@ void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
 }  // namespace scarabee
 
 // REFERENCES
-// [1] A. Zhu et al., "An optimally diffusive Coarse Mesh Finite Difference method
-// to accelerate neutron transport calculations," Ann. Nucl. Energy,
-// vol. 95, pp. 116–124, 2016, doi: 10.1016/j.anucene.2016.05.004
+// [1] A. Zhu et al., "An optimally diffusive Coarse Mesh Finite Difference
+// method to accelerate neutron transport calculations," Ann. Nucl. Energy, vol.
+// 95, pp. 116–124, 2016, doi: 10.1016/j.anucene.2016.05.004

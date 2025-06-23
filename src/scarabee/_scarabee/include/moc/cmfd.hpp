@@ -9,7 +9,6 @@
 #include <utils/simulation_mode.hpp>
 #include <utils/openmp_mutex.hpp>
 
-
 #include <xtensor/xtensor.hpp>
 #include <Eigen/Sparse>
 
@@ -97,7 +96,7 @@ class CMFD {
 
   void homogenize_ext_src(const MOCDriver& moc);
 
-  // Setter/Getter functions 
+  // Setter/Getter functions
 
   double keff_tolerance() const { return keff_tol_; }
   void set_keff_tolerance(double ktol);
@@ -116,15 +115,22 @@ class CMFD {
   void set_od_cmfd(bool user_pref) { od_cmfd_ = user_pref; }
   bool get_od_cmfd() const { return od_cmfd_; }
 
-  void set_num_unbounded_solves(std::size_t num_solves) { unbounded_cmfd_solves_ = num_solves; }
-  std::size_t get_num_unbounded_solves() const { return unbounded_cmfd_solves_; }
+  void set_num_unbounded_solves(std::size_t num_solves) {
+    unbounded_cmfd_solves_ = num_solves;
+  }
+  std::size_t get_num_unbounded_solves() const {
+    return unbounded_cmfd_solves_;
+  }
 
-  void set_skip_moc_iterations(int num_iter) { skip_moc_iterations_ = num_iter; }
+  void set_skip_moc_iterations(int num_iter) {
+    skip_moc_iterations_ = num_iter;
+  }
   std::size_t skip_moc_iterations() const { return skip_moc_iterations_; }
 
   std::size_t moc_iteration() const { return moc_iteration_; }
 
-  const double& flux(const std::size_t i, const std::size_t j, const std::size_t g) const;
+  const double& flux(const std::size_t i, const std::size_t j,
+                     const std::size_t g) const;
   double keff() const { return keff_; }
 
   const double& solve_time() const { return solve_time_; }
@@ -172,17 +178,19 @@ class CMFD {
   xt::xtensor<double, 3> flux_;           // g, x, y
   xt::xtensor<double, 2> D_transp_corr_;  // g, surf
 
-  Eigen::VectorXd flux_cmfd_;       // g*nx_*ny_
-  Eigen::VectorXd update_ratios_;   // g*nx_*ny_
-  Eigen::VectorXd volumes_;         // nx_*ny_
+  Eigen::VectorXd flux_cmfd_;      // g*nx_*ny_
+  Eigen::VectorXd update_ratios_;  // g*nx_*ny_
+  Eigen::VectorXd volumes_;        // nx_*ny_
 
   Eigen::SparseMatrix<double> M_;   // Loss Matrix
   Eigen::SparseMatrix<double> QM_;  // Source Matrix
 
-  Eigen::VectorXd extern_src_; // g*nx_*ny_
+  Eigen::VectorXd extern_src_;  // g*nx_*ny_
 
-  void larsen_correction(double& D, const double dx, const MOCDriver& moc) const;
-  void optimize_diffusion_coef(double& D, const double dx, const std::size_t i, const std::size_t j, const std::size_t g) const;
+  void larsen_correction(double& D, const double dx,
+                         const MOCDriver& moc) const;
+  void optimize_diffusion_coef(double& D, const double dx, const std::size_t i,
+                               const std::size_t j, const std::size_t g) const;
   std::pair<double, double> calc_surf_diffusion_coeffs(
       std::size_t i, std::size_t j, std::size_t g, TileSurf surf,
       const MOCDriver& moc) const;
