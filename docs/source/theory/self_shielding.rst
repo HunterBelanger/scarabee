@@ -318,7 +318,7 @@ instead calculate the background dilution as
 .. math::
     :label: ir_dilut
 
-    \sigma_{0,g} = \frac{\displaystyle\sum_{m\ne r}N_m \lambda_{r,g} \sigma_{p,m}}{N_r}.
+    \sigma_{0,g} = \frac{\displaystyle\sum_{m\ne r}N_m \lambda_{m,g} \sigma_{p,m}}{N_r}.
 
 When using the IR approximation, this equation should replace that given by Eq
 :eq:`dilut`. This slightly complicates the self-shielding process, however, as
