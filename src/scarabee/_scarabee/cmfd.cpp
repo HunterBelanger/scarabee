@@ -985,7 +985,7 @@ void CMFD::power_iteration(double keff) {
   // Create a solver for the problem
   Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
   solver.compute(M_);
-  solver.setTolerance(1.E-8);
+  solver.setTolerance(1.E-10);
   if (solver.info() != Eigen::Success) {
     std::stringstream mssg;
     mssg << "Could not initialize CMFD iterative solver";
@@ -1040,7 +1040,7 @@ void CMFD::fixed_source_solve() {
   // Create a solver for the problem
   Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
   solver.compute(L);
-  solver.setTolerance(1.E-8);
+  solver.setTolerance(1.E-10);
 
   if (solver.info() != Eigen::Success) {
     std::stringstream mssg;
