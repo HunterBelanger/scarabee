@@ -114,6 +114,8 @@ class PWRAssembly:
         Symmetry of the fuel assembly.
     assembly_pitch : float
         Spacing between fuel assemblies.
+    fuel_volume_fraction : float
+        Fraction of the assembly occupied by fuel.
     linear_power : float
         Linear power density of the full assembly in kW/cm.
     initial_heavy_metal_linear_mass : float
@@ -240,7 +242,7 @@ class PWRAssembly:
             expx = (expx // 2) + (expx % 2)
         self._simulated_shape = (expx, expy)
 
-        self._initial_heavy_metal_linear_mass = 0.0
+        self._initial_heavy_metal_linear_mass: float = 0.0
 
         self._cells_set = False
         self._cells: List[List[Union[FuelPin, GuideTube]]] = [[]]
@@ -267,6 +269,10 @@ class PWRAssembly:
                     "Provided assembly pitch is smaller than that indicated by the pitch and shape."
                 )
             self._assembly_pitch = assembly_pitch
+
+        # Can only compute the fuel volume fraction once the assembly pitch is known
+        self._fuel_volume_fraction: float = 0.0
+        self._compute_fuel_volume_fraction()
 
         # Check the spacer grid parameters
         self._spacer_grid_width: Optional[float] = None
@@ -474,6 +480,10 @@ class PWRAssembly:
     @property
     def assembly_pitch(self) -> float:
         return self._assembly_pitch
+
+    @property
+    def fuel_volume_fraction(self) -> float:
+        return self._fuel_volume_fraction
 
     @property
     def spacer_grid_width(self) -> Optional[float]:
@@ -830,6 +840,112 @@ class PWRAssembly:
 
         # Convert HM mass from g to kg
         self._initial_heavy_metal_linear_mass *= 1.0e-3
+
+    def _compute_fuel_volume_fraction(self) -> None:
+        """
+        Computes the fraction of the assembly which is fuel.
+        """
+        sum_volume = 0.0
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+
+                if not isinstance(cell, FuelPin):
+                    continue
+
+                pin_volume = np.pi * cell.fuel_radius * cell.fuel_radius
+
+                # First check for quarter symmetry and being corner pin
+                if (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                    and i == 0
+                ):
+                    pin_volume *= 0.25
+                # Next, check for being on the side with a half pin in quarter symmetry
+                elif (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and i == 0
+                ):
+                    pin_volume *= 0.5
+                # Next, check for being on the bottom row with a half pin
+                elif (
+                    self.symmetry != Symmetry.Full
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                ):
+                    pin_volume *= 0.5
+
+                sum_volume += pin_volume
+
+        self._fuel_volume_fraction = sum_volume / (
+            self.assembly_pitch * self.assembly_pitch
+        )
+
+    # ==========================================================================
+    # Interrogation Methods
+
+    def get_average_fuel_nuclide_density(self, t: int, nuclide: str) -> float:
+        """
+        Computes the average density of a nuclide within all the fuel pellets
+        in the assembly at a single depletion time step.
+
+        Parameters
+        ----------
+        t : int
+            Depletion time step index.
+        nuclide : str
+            Name of the nuclide.
+
+        Returns
+        -------
+        float
+            Average density of the nuclide at depletion time step t across all
+            the fuel pellets in units of atoms per barn-cm.
+        """
+        sum_density = 0.0
+        sum_volume = 0.0
+        for j in range(len(self.cells)):
+            for i in range(len(self.cells[j])):
+                cell = self.cells[j][i]
+
+                if not isinstance(cell, FuelPin):
+                    continue
+
+                pin_avg_density = cell.get_average_fuel_nuclide_density(t, nuclide)
+                pin_volume = np.pi * cell.fuel_radius * cell.fuel_radius
+
+                # First check for quarter symmetry and being corner pin
+                if (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                    and i == 0
+                ):
+                    pin_volume *= 0.25
+                # Next, check for being on the side with a half pin in quarter symmetry
+                elif (
+                    self.symmetry == Symmetry.Quarter
+                    and self.shape[0] % 2 == 1
+                    and i == 0
+                ):
+                    pin_volume *= 0.5
+                # Next, check for being on the bottom row with a half pin
+                elif (
+                    self.symmetry != Symmetry.Full
+                    and self.shape[1] % 2 == 1
+                    and j == self._simulated_shape[1] - 1
+                ):
+                    pin_volume *= 0.5
+
+                sum_density += pin_avg_density
+                sum_volume += pin_volume
+
+        return sum_density / sum_volume
 
     # ==========================================================================
     # Dancoff Correction Related Methods

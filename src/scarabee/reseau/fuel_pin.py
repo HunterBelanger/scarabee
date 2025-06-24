@@ -1,3 +1,4 @@
+from matplotlib.streamplot import OutOfBounds
 from .._scarabee import (
     NDLibrary,
     MaterialComposition,
@@ -318,6 +319,60 @@ class FuelPin:
             self.gap.load_nuclides(ndl)
 
         self.clad.load_nuclides(ndl)
+
+    # ==========================================================================
+    # Interrogation Methods
+    def get_fuel_material(self, t: int, r: int = 0) -> Material:
+        """
+        Returns the Material object for a desired fuel ring at a desired
+        depletion time step. Ring index 0 is at the center of the pin.
+
+        Parameters
+        ----------
+        t : int
+            Depletion time step index.
+        r : int
+            Ring index. Default is 0.
+
+        Returns
+        -------
+        Material
+            Material defining the temperature, density, and composition for the
+            desired fuel ring and depletion time step.
+        """
+        if r >= self.num_fuel_rings:
+            raise IndexError(f"Fuel ring index {r} is out of range.")
+
+        if t >= len(self._fuel_ring_materials[r]):
+            raise IndexError(f"Fuel time step index {t} is out of range.")
+
+        return self._fuel_ring_materials[r][t]
+
+    def get_average_fuel_nuclide_density(self, t: int, nuclide: str) -> float:
+        """
+        Computes the average density of a nuclide within the fuel pellet at a
+        single depletion time step.
+
+        Parameters
+        ----------
+        t : int
+            Depletion time step index.
+        nuclide : str
+            Name of the nuclide.
+
+        Returns
+        -------
+        float
+            Average density of the nuclide at depletion time step t across the
+            fuel pellet in units of atoms per barn-cm.
+        """
+        sum_density = 0.0
+
+        for r in range(self.num_fuel_rings):
+            mat = self.get_fuel_material(t, r)
+            sum_density += mat.atom_density(nuclide)
+
+        return sum_density / self.num_fuel_rings
 
     # ==========================================================================
     # Dancoff Correction Related Methods
