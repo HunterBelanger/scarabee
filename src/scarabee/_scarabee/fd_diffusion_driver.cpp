@@ -520,7 +520,7 @@ void FDDiffusionDriver::solve() {
     // if (solver.info() != Eigen::Success) {
     //  spdlog::error("Solution impossible.");
     //  throw ScarabeeException("Solution impossible");
-    //}
+    // }
 
     // Estiamte keff
     double prev_keff = keff_;
