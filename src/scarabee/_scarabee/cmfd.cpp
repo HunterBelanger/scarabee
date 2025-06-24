@@ -67,27 +67,19 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
 
   // Create surfaces
   x_bounds_.reserve(dx_.size() + 1);
-  x_bounds_.emplace_back();
-  x_bounds_.back().type() = Surface::Type::XPlane;
-  x_bounds_.back().x0() = -0.5 * dx_tot;
+  x_bounds_.emplace_back(-0.5 * dx_tot);
   for (const auto& d : dx_) {
     const double new_x0 = x_bounds_.back().x0() + d;
 
-    x_bounds_.emplace_back();
-    x_bounds_.back().type() = Surface::Type::XPlane;
-    x_bounds_.back().x0() = new_x0;
+    x_bounds_.emplace_back(new_x0);
   }
 
   y_bounds_.reserve(dy_.size() + 1);
-  y_bounds_.emplace_back();
-  y_bounds_.back().type() = Surface::Type::YPlane;
-  y_bounds_.back().y0() = -0.5 * dy_tot;
+  y_bounds_.emplace_back(-0.5 * dy_tot);
   for (const auto& d : dy_) {
     const double new_y0 = y_bounds_.back().y0() + d;
 
-    y_bounds_.emplace_back();
-    y_bounds_.back().type() = Surface::Type::YPlane;
-    y_bounds_.back().y0() = new_y0;
+    y_bounds_.emplace_back(new_y0);
   }
 
   nx_surfs_ = x_bounds_.size() * (y_bounds_.size() - 1);

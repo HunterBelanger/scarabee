@@ -8,7 +8,7 @@
 #include <data/diffusion_cross_section.hpp>
 #include <utils/simulation_mode.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 #include <Eigen/Sparse>
 
 #include <array>
@@ -137,8 +137,8 @@ class CMFD {
 
  private:
   std::vector<double> dx_, dy_;
-  std::vector<Surface> x_bounds_;
-  std::vector<Surface> y_bounds_;
+  std::vector<XPlane> x_bounds_;
+  std::vector<YPlane> y_bounds_;
   std::vector<std::size_t> moc_to_cmfd_group_map_;
   std::vector<std::pair<std::size_t, std::size_t>> group_condensation_;
   std::size_t nx_, ny_, ng_;
