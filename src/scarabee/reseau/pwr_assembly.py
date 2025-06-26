@@ -315,7 +315,7 @@ class PWRAssembly:
                         "Grid sleeve width must be < the assembly gap width."
                     )
 
-        # Can only be computed after spacer grid and grid sleeve processing 
+        # Can only be computed after spacer grid and grid sleeve processing
         self._moderator_volume_fraction: float = 0.0
         self._compute_moderator_volume_fraction()
 
@@ -891,11 +891,11 @@ class PWRAssembly:
                     pin_volume *= 0.5
 
                 sum_volume += pin_volume
-        
+
         if self.symmetry == Symmetry.Quarter:
-            sum_volume *= 4.
+            sum_volume *= 4.0
         elif self.symmetry == Symmetry.Half:
-            sum_volume *= 2.
+            sum_volume *= 2.0
 
         self._fuel_volume_fraction = sum_volume / (
             self.assembly_pitch * self.assembly_pitch
@@ -906,10 +906,10 @@ class PWRAssembly:
         Computes the fraction of the assembly which is moderator.
         """
         sum_volume = 0.0
-        
-        pin_cell_volume = self.pitch ** 2.
+
+        pin_cell_volume = self.pitch**2.0
         if self.spacer_grid_width is not None:
-            pin_cell_volume = (self.pitch - self.spacer_grid_width)**2.
+            pin_cell_volume = (self.pitch - 2.0 * self.spacer_grid_width) ** 2.0
 
         for j in range(len(self.cells)):
             for i in range(len(self.cells[j])):
@@ -925,15 +925,26 @@ class PWRAssembly:
                     # Guide tube
 
                     # First, remove volume of the tube
-                    cell_mod_volume -= np.pi * (cell.outer_radius*cell.outer_radius - cell.inner_radius*cell.inner_radius)
+                    cell_mod_volume -= np.pi * (
+                        cell.outer_radius * cell.outer_radius
+                        - cell.inner_radius * cell.inner_radius
+                    )
 
                     # Remove volume of the burnable poison rod (if present)
                     if isinstance(cell.fill, BurnablePoisonRod):
-                        cell_mod_volume -= np.pi * cell.fill.outer_clad_radius*cell.fill.outer_clad_radius
+                        cell_mod_volume -= (
+                            np.pi
+                            * cell.fill.outer_clad_radius
+                            * cell.fill.outer_clad_radius
+                        )
 
                         # Add center volume back if the center is moderator !
                         if cell.fill.center is not None:
-                            cell_mod_volume += np.pi * cell.fill.center_radius * cell.fill.center_radius
+                            cell_mod_volume += (
+                                np.pi
+                                * cell.fill.center_radius
+                                * cell.fill.center_radius
+                            )
 
                 # First check for quarter symmetry and being corner pin
                 if (
@@ -962,16 +973,18 @@ class PWRAssembly:
                 sum_volume += cell_mod_volume
 
         if self.symmetry == Symmetry.Quarter:
-            sum_volume *= 4.
+            sum_volume *= 4.0
         elif self.symmetry == Symmetry.Half:
-            sum_volume *= 2.
+            sum_volume *= 2.0
 
         # Add volume for the gap around the assembly
         if self.grid_sleeve_width is None:
-            sum_volume += self.assembly_pitch**2. - (self.shape[0]*self.pitch)**2.
+            sum_volume += self.assembly_pitch**2.0 - (self.shape[0] * self.pitch) ** 2.0
         else:
-            sum_volume += self.assembly_pitch**2. - (self.shape[0]*self.pitch+2.*self.grid_sleeve_width)**2.
-            
+            sum_volume += (
+                self.assembly_pitch**2.0
+                - (self.shape[0] * self.pitch + 2.0 * self.grid_sleeve_width) ** 2.0
+            )
 
         self._moderator_volume_fraction = sum_volume / (
             self.assembly_pitch * self.assembly_pitch
