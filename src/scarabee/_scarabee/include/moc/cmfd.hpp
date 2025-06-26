@@ -99,6 +99,7 @@ class CMFD {
 
   double keff_tolerance() const { return keff_tol_; }
   void set_keff_tolerance(double ktol);
+  
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
 

@@ -103,7 +103,7 @@ void init_MOCDriver(py::module& m) {
                     "Default value is False.")
 
       .def_property("cmfd", &MOCDriver::cmfd, &MOCDriver::set_cmfd,
-                    "CMFD mesh for convergence acceleration.")
+                    "CMFD object for convergence acceleration.")
 
       .def("flux",
            py::overload_cast<const Vector&, const Direction&, std::size_t,

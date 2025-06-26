@@ -237,8 +237,8 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r,
     surface.is_valid = false;
     return surface;
   }
+  
   surface.is_valid = true;
-
   return surface;
 }
 

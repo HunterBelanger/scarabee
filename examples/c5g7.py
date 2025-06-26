@@ -179,7 +179,7 @@ dx_cmfd = [pitch]*17*3
 moc = MOCDriver(core)
 moc.x_max_bc = BoundaryCondition.Vacuum
 moc.y_min_bc = BoundaryCondition.Vacuum
-moc.cmfd = CMFD(dx_cmfd,dx_cmfd,[[0,1],[2,4],[5,6]])
+moc.cmfd = CMFD(dx_cmfd, dx_cmfd, [[0,1], [2,4], [5,6]])
 moc.generate_tracks(64, 0.05, YamamotoTabuchi6())
 moc.keff_tolerance = 1.E-5
 moc.flux_tolerance = 1.E-5
