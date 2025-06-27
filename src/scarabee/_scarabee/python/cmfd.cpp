@@ -54,25 +54,25 @@ void init_CMFD(py::module& m) {
           "Maximum relative absolute difference in flux for convergence")
 
   .def_property(
-          "flux_limiting", &CMFD::get_flux_limiting,
+          "flux_limiting", &CMFD::flux_limiting,
           &CMFD::set_flux_limiting,
           "Whether or not to use the flux-limiting condition when calculating"
           "the surface and non-linear diffusion coefficients")
 
   .def_property(
-          "larsen_correction", &CMFD::get_larsen_correction,
+          "larsen_correction", &CMFD::larsen_correction,
           &CMFD::set_larsen_correction,
           "Whether or not to use Larsen's corrected diffusion coefficient"
           "for optically thick meshes. Mutally exclusive with odCMFD")
 
   .def_property(
-          "od_cmfd", &CMFD::get_od_cmfd,
+          "od_cmfd", &CMFD::od_cmfd,
           &CMFD::set_od_cmfd,
           "Use optimally diffusive CMFD (odCMFD) to modify the diffusion coeffients"
           "Mutally exclusive with the larsen correction")
 
   .def_property(
-          "damping", &CMFD::get_damping,
+          "damping", &CMFD::damping,
           &CMFD::set_damping,
           "set CMFD damping factor for under-relaxing the nonlinear diffusion coefficient"
           "between iterations.")
@@ -83,8 +83,8 @@ void init_CMFD(py::module& m) {
           "Set # of MOC iterations to skip before using CMFD")
 
   .def_property(
-          "unbounded_cmfd_solves", &CMFD::set_num_unbounded_solves,
-          &CMFD::get_num_unbounded_solves,
+          "unbounded_cmfd_solves", &CMFD::num_unbounded_solves,
+          &CMFD::set_num_unbounded_solves,
           "Set # of CMFD solves before flux update ratios are clamped")
 
   .def("get_surface", &CMFD::get_surface,

@@ -9,7 +9,6 @@
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/memory.hpp>
-#include <cereal/types/optional.hpp>
 
 #include <memory>
 #include <optional>

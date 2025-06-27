@@ -24,8 +24,6 @@ namespace scarabee {
 class MOCDriver;
 
 struct CMFDSurfaceCrossing {
-  // left, right, bottom, top, top right, bottom right, bottom left, top left
-
   enum class Type : std::uint8_t { XN, XP, YN, YP, TR, BR, BL, TL };
   std::size_t cell_index;
   bool is_valid;
@@ -103,23 +101,26 @@ class CMFD {
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
 
+  double damping() const { return damping_; }
   void set_damping(double wd);
-  double get_damping() const { return damping_; }
 
+  bool flux_limiting() const { return flux_limiting_; }
   void set_flux_limiting(bool user_pref) { flux_limiting_ = user_pref; }
-  bool get_flux_limiting() const { return flux_limiting_; }
 
+  bool larsen_correction() const { return larsen_correction_; }
   void set_larsen_correction(bool user_pref) { larsen_correction_ = user_pref; }
-  bool get_larsen_correction() const { return larsen_correction_; }
 
+  bool od_cmfd() const { return od_cmfd_; }
   void set_od_cmfd(bool user_pref) { od_cmfd_ = user_pref; }
-  bool get_od_cmfd() const { return od_cmfd_; }
 
+  bool neutron_balance_check() const { return neutron_balance_check_; }
+  void set_neutron_balance_check(bool user_pref) { neutron_balance_check_ = user_pref; }
+
+  std::size_t num_unbounded_solves() const {
+    return unbounded_cmfd_solves_;
+  }
   void set_num_unbounded_solves(std::size_t num_solves) {
     unbounded_cmfd_solves_ = num_solves;
-  }
-  std::size_t get_num_unbounded_solves() const {
-    return unbounded_cmfd_solves_;
   }
 
   void set_skip_moc_iterations(int num_iter) {
@@ -148,6 +149,7 @@ class CMFD {
   bool flux_limiting_ = true;
   bool larsen_correction_ = false;
   bool od_cmfd_ = false;
+  bool neutron_balance_check_ = false;
   double keff_tol_ = 1E-5;
   double flux_tol_ = 1E-5;
   double damping_ = 0.7;
@@ -185,7 +187,7 @@ class CMFD {
 
   Eigen::VectorXd extern_src_;  // g*nx_*ny_
 
-  void larsen_correction(double& D, const double dx,
+  void apply_larsen_correction(double& D, const double dx,
                          const MOCDriver& moc) const;
   void optimize_diffusion_coef(double& D, const double dx, const std::size_t i,
                                const std::size_t j, const std::size_t g) const;

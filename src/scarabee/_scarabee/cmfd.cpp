@@ -297,11 +297,15 @@ const double& CMFD::flux(const std::size_t i, const std::size_t j,
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
-  if (i >= nx_ || j >= ny_) {
-    auto mssg = "Indexed cell does not exist.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
+  if (i >= nx_ || i < 0) {
+    spdlog::error("Cell index {:d} is out of range", i);
+    throw ScarabeeException("Cell x index is out of range");
   }
+  if (j >= nx_ || j < 0) {
+    spdlog::error("Cell index {:d} is out of range", j);
+    throw ScarabeeException("Cell y index is out of range");
+  }
+  
   const std::size_t cell_index = tile_to_indx(i, j);
 
   return flux_cmfd_(g * nx_ * ny_ + cell_index);
@@ -549,13 +553,7 @@ void CMFD::set_damping(double wd) {
 }
 
 void CMFD::set_flux_tolerance(double ftol) {
-  if (ftol <= 0.) {
-    auto mssg = "Tolerance for flux must be in the interval (0., 0.1).";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  if (ftol >= 0.1) {
+  if (ftol <= 0. || ftol >= 0.1) {
     auto mssg = "Tolerance for flux must be in the interval (0., 0.1).";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -565,13 +563,7 @@ void CMFD::set_flux_tolerance(double ftol) {
 }
 
 void CMFD::set_keff_tolerance(double ktol) {
-  if (ktol <= 0.) {
-    auto mssg = "Tolerance for keff must be in the interval (0., 0.1).";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  if (ktol >= 0.1) {
+  if (ktol <= 0. || ktol >= 0.1) {
     auto mssg = "Tolerance for keff must be in the interval (0., 0.1).";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
@@ -672,7 +664,7 @@ double CMFD::get_current(std::size_t i, std::size_t j, std::size_t g,
   return 0.;
 }
 
-void CMFD::larsen_correction(double& D, const double dx,
+void CMFD::apply_larsen_correction(double& D, const double dx,
                              const MOCDriver& moc) const {
   // Correct Diffusion Coefficient to agree with infinite medium
   // for optically thick mesh cells
@@ -736,12 +728,12 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   // Modify material diffusion coefficient for cell i,j by Larsen's correction
   // or odCMFD
   if (larsen_correction_) {
-    larsen_correction(D_ij, dx_ij, moc);
+    apply_larsen_correction(D_ij, dx_ij, moc);
   } else if (od_cmfd_) {
     optimize_diffusion_coef(D_ij, dx_ij, i, j, g);
   }
 
-  const auto flux_limiting = [current, surf, flx_ij](double& D_surf,
+  const auto apply_flux_limiting = [current, surf, flx_ij](double& D_surf,
                                                      double& D_nl,
                                                      const double flx_next) {
     // Flux limiting condition
@@ -778,7 +770,7 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
 
     if (flux_limiting_) {
       if (surf == CMFD::TileSurf::XN || surf == CMFD::TileSurf::YN) {
-        flux_limiting(D_surf, D_nl, 0.);
+        apply_flux_limiting(D_surf, D_nl, 0.);
       }
     }
 
@@ -800,7 +792,7 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   // Modify material diffusion coefficient for cell ii, jj by Larsen's
   // correction or odCMFD
   if (larsen_correction_) {
-    larsen_correction(D_iijj, dx_iijj, moc);
+    apply_larsen_correction(D_iijj, dx_iijj, moc);
   } else if (od_cmfd_) {
     optimize_diffusion_coef(D_iijj, dx_iijj, ii, jj, g);
   }
@@ -817,7 +809,7 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
   }
 
   if (flux_limiting_) {
-    flux_limiting(D_surf, D_nl, flx_iijj);
+    apply_flux_limiting(D_surf, D_nl, flx_iijj);
   }
 
   if (moc_iteration_ == 0) {
@@ -1088,6 +1080,12 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       if (ratio < 0.0) {
         auto mssg =
             "Negative CMFD flux update ratio. Try using Larsen correction";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+      if (ratio == 0.0){
+        auto mssg =
+            "CMFD flux update is zero.";
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
       }
