@@ -87,6 +87,11 @@ void init_CMFD(py::module& m) {
           &CMFD::set_num_unbounded_solves,
           "Set # of CMFD solves before flux update ratios are clamped")
 
+  .def_property(
+          "check_neutorn_balance", &CMFD::neutron_balance_check,
+          &CMFD::set_neutron_balance_check,
+          "Check neutron balance in each CMFD tile on each CMFD solve")
+
   .def("get_surface", &CMFD::get_surface,
       "Assigns the CMFD surface info to a segement end if it exists\n\n"
       "Parameters\n"

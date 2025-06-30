@@ -297,11 +297,11 @@ const double& CMFD::flux(const std::size_t i, const std::size_t j,
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
-  if (i >= nx_ || i < 0) {
+  if (i >= nx_) {
     spdlog::error("Cell index {:d} is out of range", i);
     throw ScarabeeException("Cell x index is out of range");
   }
-  if (j >= nx_ || j < 0) {
+  if (j >= nx_) {
     spdlog::error("Cell index {:d} is out of range", j);
     throw ScarabeeException("Cell y index is out of range");
   }
@@ -667,7 +667,7 @@ double CMFD::get_current(std::size_t i, std::size_t j, std::size_t g,
 void CMFD::apply_larsen_correction(double& D, const double dx,
                              const MOCDriver& moc) const {
   // Correct Diffusion Coefficient to agree with infinite medium
-  // for optically thick mesh cells
+  // for optically thick mesh cells. Based on the derivation in [1].
   const PolarQuadrature& moc_polq = moc.polar_quadrature();
   const auto& moc_azmq = moc.azimuthal_quadrature();
   const std::size_t n_pol_angles = moc_polq.sin().size();
@@ -698,17 +698,22 @@ void CMFD::optimize_diffusion_coef(double& D, const double dx,
   // This method adds a term to the diffusion coefficient which generalizes CMFD
   // and pCMFD to be the same based on the optimal diffusion coefficient for a
   // given cell's optical thickness. This method is based on the result from
-  // [1].
+  // [2].
   const double EtDx = Et_(g, i, j) * dx;
 
   if (EtDx < 1.) {
     return;
   } else if (EtDx < 14 && EtDx >= 1) {
+    const double EtDx2 = EtDx * EtDx;
+    const double EtDx3 = EtDx2 * EtDx;
+    const double EtDx4 = EtDx3 * EtDx;
+    const double EtDx5 = EtDx4 * EtDx;
+    const double EtDx6 = EtDx5 * EtDx;
     const double theta =
         -5.542780E-02 + 8.740501E-02 * EtDx +
-        -2.152599E-02 * std::pow(EtDx, 2) + 3.145553E-03 * std::pow(EtDx, 3) +
-        -2.683648E-04 * std::pow(EtDx, 4) + 1.222516E-05 * std::pow(EtDx, 5) +
-        -2.284879E-07 * std::pow(EtDx, 6);
+        -2.152599E-02 * EtDx2 + 3.145553E-03 * EtDx3 +
+        -2.683648E-04 * EtDx4 + 1.222516E-05 * EtDx5 +
+        -2.284879E-07 * EtDx6;
 
     D += theta * dx;
   } else {
@@ -1071,7 +1076,6 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       const std::size_t linear_indx = G * tot_cells + l;
       const double invs_flx = 1. / flux_(G, i, j);
       double ratio = flux_cmfd_(linear_indx) * invs_flx;
-      update_ratios_(linear_indx) = ratio;
       // Don't warn on first moc iteration
       if (ratio > 20.0 && moc_iteration_ > 1) {
         flux_update_warning = true;
@@ -1103,6 +1107,7 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       if (cmfd_solves_ > unbounded_cmfd_solves_) {
         std::clamp(ratio, 0.05, 20.0);
       }
+      update_ratios_(linear_indx) = ratio;
     }
     i++;
     if (i == nx_) {
@@ -1194,15 +1199,15 @@ void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
     solved_ = true;
     this->update_moc_fluxes(moc);
 
-    /**
-    for (std::size_t i = 0; i < nx_; i++) {
-      for (std::size_t j = 0; j < ny_; j++) {
-        for (std::size_t g = 0; g < ng_; g++) {
-          this->check_neutron_balance(i, j, g, keff);
+    if (neutron_balance_check_) {
+      for (std::size_t i = 0; i < nx_; i++) {
+        for (std::size_t j = 0; j < ny_; j++) {
+          for (std::size_t g = 0; g < ng_; g++) {
+            this->check_neutron_balance(i, j, g, keff);
+          }
         }
       }
     }
-    */
   }
 
   cmfd_timer.stop();
@@ -1212,6 +1217,10 @@ void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
 }  // namespace scarabee
 
 // REFERENCES
-// [1] A. Zhu et al., "An optimally diffusive Coarse Mesh Finite Difference
+// [1] E. W. Larsen, "Infinite-medium solutions of the transport equation,
+// SN discretization schemes, and the diffusion approximation," Transport Theory and Statistical Physics, 
+// vol. 32, no. 5–7, pp. 623–643, 2003, 
+//
+// [2] A. Zhu et al., "An optimally diffusive Coarse Mesh Finite Difference
 // method to accelerate neutron transport calculations," Ann. Nucl. Energy, vol.
 // 95, pp. 116–124, 2016, doi: 10.1016/j.anucene.2016.05.004
