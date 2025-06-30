@@ -2308,7 +2308,7 @@ class PWRAssembly:
         scarabee_log(LogLevel.Info, 60 * "-")
         self._exposures[-1] = self._exposures[-2] + self.depletion_exposure_steps[-1]
         self._times[-1] = self._times[-2] + dt
-        scarabee_log(LogLevel.Info, "Running Time Step {:}".format(t))
+        scarabee_log(LogLevel.Info, "Running Time Step {:}".format(self._times.size-1))
         scarabee_log(
             LogLevel.Info, "Exposure: {:.3E} MWd/kg".format(self._exposures[-1])
         )
