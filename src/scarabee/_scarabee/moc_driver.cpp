@@ -114,8 +114,14 @@ void MOCDriver::set_cmfd(std::shared_ptr<CMFD> cmfd) {
         "CMFD was set after track tracing. Must call generate_tracks again !");
   }
 
-  // TODO Add check that MOCDriver width is same as CMFD width (to floating
-  // point tolerance)
+  if (this->x_max() != cmfd->x_max() || 
+      this->x_min() != cmfd->x_min() ||
+      this->y_max() != cmfd->y_max() ||
+      this->y_min() != cmfd->y_min()) {
+        auto mssg = "CMFD geometry bounds do not align with MOCDriver geometry bounds";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
 
   cmfd_ = cmfd;
   }
@@ -355,15 +361,10 @@ void MOCDriver::solve_isotropic() {
       }
     }
 
-    if (mode_ == SimulationMode::Keff && !cmfd_) {
-      prev_keff = keff_;
-      keff_ = calc_keff(next_flux, flux_);
-      rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
-    }
-
-    // If MOC iterations are skipped compute Keff
+    // If MOC iterations in CMFD are skipped compute Keff
     // the normal way
-    if (mode_ == SimulationMode::Keff && cmfd_ && !cmfd_->solved()) {
+    if (mode_ == SimulationMode::Keff && 
+    (cmfd_ == nullptr  || (cmfd_ != nullptr && cmfd_->solved() == false))) {
       prev_keff = keff_;
       keff_ = calc_keff(next_flux, flux_);
       rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
@@ -386,7 +387,7 @@ void MOCDriver::solve_isotropic() {
     // Apply CMFD
     if (cmfd_) {
       cmfd_->solve(*this, prev_keff, iteration);
-      if (cmfd_->solved()) {
+      if (cmfd_->solved() && mode_ == SimulationMode::Keff) {
         prev_keff = keff_;
         keff_ = cmfd_->keff();
         rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
@@ -498,15 +499,10 @@ void MOCDriver::solve_anisotropic() {
     if (cmfd_) cmfd_->zero_currents();
     sweep_anisotropic(next_flux, src);
 
-    if (mode_ == SimulationMode::Keff && !cmfd_) {
-      prev_keff = keff_;
-      keff_ = calc_keff(next_flux, flux_);
-      rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
-    }
-
     // If MOC iterations are skipped compute Keff
     // the normal way
-    if (mode_ == SimulationMode::Keff && cmfd_ && !cmfd_->solved()) {
+    if (mode_ == SimulationMode::Keff && 
+    (cmfd_ == nullptr  || (cmfd_ != nullptr && cmfd_->solved() == false))) {
       prev_keff = keff_;
       keff_ = calc_keff(next_flux, flux_);
       rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
@@ -533,7 +529,7 @@ void MOCDriver::solve_anisotropic() {
     // Apply CMFD
     if (cmfd_) {
       cmfd_->solve(*this, prev_keff, iteration);
-      if (cmfd_->solved()) {
+      if (cmfd_->solved() && mode_ == SimulationMode::Keff) {
         prev_keff = keff_;
         keff_ = cmfd_->keff();
         rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
@@ -726,8 +722,6 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
         const Direction u_back = -u_forw;
 
         // Accumulate entry angular flux into CMFD current
-        // TODO : The entry angular flux should also be multiplied by the
-        // spherical harmonic?
         if (cmfd_ && track.begin()->entry_cmfd_surface() &&
             cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
           const auto surf_indx = track.begin()->entry_cmfd_surface();

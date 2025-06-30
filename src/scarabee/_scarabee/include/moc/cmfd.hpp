@@ -11,6 +11,10 @@
 #include <xtensor/containers/xtensor.hpp>
 #include <Eigen/Sparse>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/memory.hpp>
+
 #include <array>
 #include <memory>
 #include <utility>
@@ -47,6 +51,11 @@ class CMFD {
 
   std::size_t nx_surfs() const { return nx_surfs_; }
   std::size_t ny_surfs() const { return ny_surfs_; }
+
+  double x_min() const;
+  double x_max() const;
+  double y_min() const;
+  double y_max() const;
 
   std::optional<std::array<std::size_t, 2>> get_tile(const Vector& r,
                                                      const Direction& u) const;
@@ -209,6 +218,23 @@ class CMFD {
   void compute_homogenized_xs_and_flux(const MOCDriver& moc);
   void check_neutron_balance(const std::size_t i, const std::size_t j,
                              std::size_t g, const double keff) const;
+
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& arc) {
+    arc(CEREAL_NVP(dx_), CEREAL_NVP(dy_), CEREAL_NVP(x_bounds_), CEREAL_NVP(y_bounds_),
+        CEREAL_NVP(moc_to_cmfd_group_map_), CEREAL_NVP(group_condensation_), CEREAL_NVP(nx_),
+        CEREAL_NVP(ny_), CEREAL_NVP(ng_), CEREAL_NVP(nx_surfs_), CEREAL_NVP(ny_surfs_),
+        CEREAL_NVP(flux_limiting_), CEREAL_NVP(larsen_correction_), CEREAL_NVP(od_cmfd_),
+        CEREAL_NVP(neutron_balance_check_), CEREAL_NVP(keff_tol_), CEREAL_NVP(flux_tol_),
+        CEREAL_NVP(damping_), CEREAL_NVP(unbounded_cmfd_solves_), CEREAL_NVP(cmfd_solves_),
+        CEREAL_NVP(skip_moc_iterations_), CEREAL_NVP(moc_iteration_), CEREAL_NVP(keff_),
+        CEREAL_NVP(solve_time_), CEREAL_NVP(solved_), CEREAL_NVP(mode_), CEREAL_NVP(temp_fsrs_),
+        CEREAL_NVP(fsrs_), CEREAL_NVP(surface_currents_), CEREAL_NVP(surface_currents_normalized_),
+        CEREAL_NVP(xs_), CEREAL_NVP(Et_), CEREAL_NVP(flux_), CEREAL_NVP(D_transp_corr_),
+        CEREAL_NVP(flux_cmfd_), CEREAL_NVP(update_ratios_), CEREAL_NVP(volumes_), CEREAL_NVP(M_),
+        CEREAL_NVP(QM_), CEREAL_NVP(extern_src_));
+  }
 };
 
 }  // namespace scarabee

@@ -146,7 +146,7 @@ CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
 
   // Allocate flux update ratio array
   update_ratios_.resize(ng_ * nx_ * ny_);
-  update_ratios_.setZero();
+  update_ratios_.setOnes();
 
   // Allocate external source array
   extern_src_.resize(ng_ * nx_ * ny_);
@@ -231,9 +231,7 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r,
     surface.crossing = CMFDSurfaceCrossing::Type::YP;
   } else if (dy_n < SURFACE_COINCIDENT) {
     surface.crossing = CMFDSurfaceCrossing::Type::YN;
-  }
-
-  else {
+  } else {
     surface.is_valid = false;
     return surface;
   }
@@ -257,6 +255,24 @@ std::array<std::size_t, 2> CMFD::indx_to_tile(std::size_t cell_index) {
   tile[1] = (cell_index - tile[0]) / nx_;
   return tile;
 }
+
+double CMFD::x_min() const {
+  double width_x = std::accumulate(dx_.begin(), dx_.end(), 0.0);
+  return -0.5*width_x;
+}
+double CMFD::x_max() const {
+  double width_x = std::accumulate(dx_.begin(), dx_.end(), 0.0);
+  return 0.5*width_x;
+}
+double CMFD::y_min() const {
+  double width_y = std::accumulate(dy_.begin(), dy_.end(), 0.0);
+  return -0.5*width_y;
+}
+double CMFD::y_max() const {
+  double width_y = std::accumulate(dy_.begin(), dy_.end(), 0.0);
+  return 0.5*width_y;
+}
+
 
 void CMFD::insert_fsr(const std::array<std::size_t, 2>& tile, std::size_t fsr) {
   // Compute linear index
