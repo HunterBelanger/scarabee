@@ -14,6 +14,8 @@
 #include <cereal/cereal.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/memory.hpp>
+#include <cereal/types/utility.hpp>
+#include <utils/serialization.hpp>
 
 #include <array>
 #include <memory>
@@ -106,7 +108,7 @@ class CMFD {
 
   double keff_tolerance() const { return keff_tol_; }
   void set_keff_tolerance(double ktol);
-  
+
   double flux_tolerance() const { return flux_tol_; }
   void set_flux_tolerance(double ftol);
 
@@ -123,11 +125,11 @@ class CMFD {
   void set_od_cmfd(bool user_pref) { od_cmfd_ = user_pref; }
 
   bool neutron_balance_check() const { return neutron_balance_check_; }
-  void set_neutron_balance_check(bool user_pref) { neutron_balance_check_ = user_pref; }
-
-  std::size_t num_unbounded_solves() const {
-    return unbounded_cmfd_solves_;
+  void set_neutron_balance_check(bool user_pref) {
+    neutron_balance_check_ = user_pref;
   }
+
+  std::size_t num_unbounded_solves() const { return unbounded_cmfd_solves_; }
   void set_num_unbounded_solves(std::size_t num_solves) {
     unbounded_cmfd_solves_ = num_solves;
   }
@@ -197,7 +199,7 @@ class CMFD {
   Eigen::VectorXd extern_src_;  // g*nx_*ny_
 
   void apply_larsen_correction(double& D, const double dx,
-                         const MOCDriver& moc) const;
+                               const MOCDriver& moc) const;
   void optimize_diffusion_coef(double& D, const double dx, const std::size_t i,
                                const std::size_t j, const std::size_t g) const;
   std::pair<double, double> calc_surf_diffusion_coeffs(
@@ -219,21 +221,68 @@ class CMFD {
   void check_neutron_balance(const std::size_t i, const std::size_t j,
                              std::size_t g, const double keff) const;
 
+  // Private default constructor, needed for cereal
+  CMFD() = default;
+
   friend class cereal::access;
   template <class Archive>
-  void serialize(Archive& arc) {
-    arc(CEREAL_NVP(dx_), CEREAL_NVP(dy_), CEREAL_NVP(x_bounds_), CEREAL_NVP(y_bounds_),
-        CEREAL_NVP(moc_to_cmfd_group_map_), CEREAL_NVP(group_condensation_), CEREAL_NVP(nx_),
-        CEREAL_NVP(ny_), CEREAL_NVP(ng_), CEREAL_NVP(nx_surfs_), CEREAL_NVP(ny_surfs_),
-        CEREAL_NVP(flux_limiting_), CEREAL_NVP(larsen_correction_), CEREAL_NVP(od_cmfd_),
-        CEREAL_NVP(neutron_balance_check_), CEREAL_NVP(keff_tol_), CEREAL_NVP(flux_tol_),
-        CEREAL_NVP(damping_), CEREAL_NVP(unbounded_cmfd_solves_), CEREAL_NVP(cmfd_solves_),
-        CEREAL_NVP(skip_moc_iterations_), CEREAL_NVP(moc_iteration_), CEREAL_NVP(keff_),
-        CEREAL_NVP(solve_time_), CEREAL_NVP(solved_), CEREAL_NVP(mode_), CEREAL_NVP(temp_fsrs_),
-        CEREAL_NVP(fsrs_), CEREAL_NVP(surface_currents_), CEREAL_NVP(surface_currents_normalized_),
-        CEREAL_NVP(xs_), CEREAL_NVP(Et_), CEREAL_NVP(flux_), CEREAL_NVP(D_transp_corr_),
-        CEREAL_NVP(flux_cmfd_), CEREAL_NVP(update_ratios_), CEREAL_NVP(volumes_), CEREAL_NVP(M_),
-        CEREAL_NVP(QM_), CEREAL_NVP(extern_src_));
+  void save(Archive& arc) const {
+    arc(CEREAL_NVP(dx_), CEREAL_NVP(dy_), CEREAL_NVP(x_bounds_),
+        CEREAL_NVP(y_bounds_), CEREAL_NVP(moc_to_cmfd_group_map_),
+        CEREAL_NVP(group_condensation_), CEREAL_NVP(nx_), CEREAL_NVP(ny_),
+        CEREAL_NVP(ng_), CEREAL_NVP(nx_surfs_), CEREAL_NVP(ny_surfs_),
+        CEREAL_NVP(flux_limiting_), CEREAL_NVP(larsen_correction_),
+        CEREAL_NVP(od_cmfd_), CEREAL_NVP(neutron_balance_check_),
+        CEREAL_NVP(keff_tol_), CEREAL_NVP(flux_tol_), CEREAL_NVP(damping_),
+        CEREAL_NVP(unbounded_cmfd_solves_), CEREAL_NVP(cmfd_solves_),
+        CEREAL_NVP(skip_moc_iterations_), CEREAL_NVP(moc_iteration_),
+        CEREAL_NVP(keff_), CEREAL_NVP(solve_time_), CEREAL_NVP(solved_),
+        CEREAL_NVP(mode_), CEREAL_NVP(fsrs_), CEREAL_NVP(surface_currents_),
+        CEREAL_NVP(surface_currents_normalized_), CEREAL_NVP(xs_),
+        CEREAL_NVP(Et_), CEREAL_NVP(flux_), CEREAL_NVP(D_transp_corr_));
+  }
+
+  template <class Archive>
+  void load(Archive& arc) {
+    arc(CEREAL_NVP(dx_), CEREAL_NVP(dy_), CEREAL_NVP(x_bounds_),
+        CEREAL_NVP(y_bounds_), CEREAL_NVP(moc_to_cmfd_group_map_),
+        CEREAL_NVP(group_condensation_), CEREAL_NVP(nx_), CEREAL_NVP(ny_),
+        CEREAL_NVP(ng_), CEREAL_NVP(nx_surfs_), CEREAL_NVP(ny_surfs_),
+        CEREAL_NVP(flux_limiting_), CEREAL_NVP(larsen_correction_),
+        CEREAL_NVP(od_cmfd_), CEREAL_NVP(neutron_balance_check_),
+        CEREAL_NVP(keff_tol_), CEREAL_NVP(flux_tol_), CEREAL_NVP(damping_),
+        CEREAL_NVP(unbounded_cmfd_solves_), CEREAL_NVP(cmfd_solves_),
+        CEREAL_NVP(skip_moc_iterations_), CEREAL_NVP(moc_iteration_),
+        CEREAL_NVP(keff_), CEREAL_NVP(solve_time_), CEREAL_NVP(solved_),
+        CEREAL_NVP(mode_), CEREAL_NVP(fsrs_), CEREAL_NVP(surface_currents_),
+        CEREAL_NVP(surface_currents_normalized_), CEREAL_NVP(xs_),
+        CEREAL_NVP(Et_), CEREAL_NVP(flux_), CEREAL_NVP(D_transp_corr_));
+
+    // Must instantiate Eigen bits
+    // Set CMFD fluxes to 1
+    flux_cmfd_.resize(ng_ * nx_ * ny_);
+    flux_cmfd_.setOnes();
+
+    // Allocate flux update ratio array
+    update_ratios_.resize(ng_ * nx_ * ny_);
+    update_ratios_.setOnes();
+
+    // Allocate external source array
+    extern_src_.resize(ng_ * nx_ * ny_);
+    extern_src_.setZero();
+
+    // Allocate cell volume array
+    volumes_.resize(nx_ * ny_);
+    for (std::size_t i = 0; i < nx_; i++) {
+      for (std::size_t j = 0; j < ny_; j++) {
+        // Store CMFD cell volume
+        const auto indx = tile_to_indx(i, j);
+        volumes_[indx] = dx_[i] * dy_[j];
+      }
+    }
+
+    // No need to treat M_ and QM_. These will be reallocated and filled when
+    // needed in a CMFD solve.
   }
 };
 
