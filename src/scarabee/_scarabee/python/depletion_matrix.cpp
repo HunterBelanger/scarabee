@@ -109,7 +109,10 @@ void init_DepletionMatrix(py::module& m) {
       .def("__iadd__", &DepletionMatrix::operator+=)
       .def("__isub__", &DepletionMatrix::operator-=)
       .def("__add__", &DepletionMatrix::operator+)
-      .def("__sub__", &DepletionMatrix::operator-);
+      .def("__sub__", &DepletionMatrix::operator-)
+      .def("__mul__", &DepletionMatrix::operator*)
+      .def("__rmul__", [](const DepletionMatrix& M, double c) { return M * c; })
+      .def("__div__", &DepletionMatrix::operator/);
 
   // Module function to build a depletion matrix.
   m.def(

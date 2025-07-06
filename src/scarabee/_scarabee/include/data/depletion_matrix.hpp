@@ -87,6 +87,18 @@ class DepletionMatrix {
     return out;
   }
 
+  DepletionMatrix operator*(double c) const {
+    DepletionMatrix out(*this);
+    out *= c;
+    return out;
+  }
+
+  DepletionMatrix operator/(double c) const {
+    DepletionMatrix out(*this);
+    out /= c;
+    return out;
+  }
+
  private:
   std::vector<std::string> nuclides_;
   Eigen::SparseMatrix<double> matrix_;
