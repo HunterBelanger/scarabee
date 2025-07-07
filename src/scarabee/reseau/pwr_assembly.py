@@ -2227,7 +2227,7 @@ class PWRAssembly:
         self.normalize_flux_to_power()
         self.apply_infinite_spectrum()
 
-    def _predict_depletion(self, dt: float) -> None:
+    def _predict_depletion(self, dt: float, dtm1: Optional[float]) -> None:
         # Do all depletions in parallel
         threads = []
         for j in range(len(self.cells)):
@@ -2235,14 +2235,15 @@ class PWRAssembly:
                 cell = self.cells[j][i]
                 threads.append(
                     Thread(
-                        target=cell.predict_depletion, args=(dt, self._chain, self._ndl)
+                        target=cell.predict_depletion,
+                        args=(self._chain, self._ndl, dt, dtm1),
                     )
                 )
                 threads[-1].start()
         for t in threads:
             t.join()
 
-    def _correct_depletion(self, dt: float) -> None:
+    def _correct_depletion(self, dt: float, dtm1: Optional[float]) -> None:
         # Do all depletions in parallel
         threads = []
         for j in range(len(self.cells)):
@@ -2250,7 +2251,8 @@ class PWRAssembly:
                 cell = self.cells[j][i]
                 threads.append(
                     Thread(
-                        target=cell.correct_depletion, args=(dt, self._chain, self._ndl)
+                        target=cell.correct_depletion,
+                        args=(self._chain, self._ndl, dt, dtm1),
                     )
                 )
                 threads[-1].start()
@@ -2286,6 +2288,10 @@ class PWRAssembly:
             # Convert days to seconds
             dt_sec = dt * 60.0 * 60.0 * 24.0
 
+            dtm1_sec = None
+            if t > 0:
+                dtm1_sec = self.depletion_time_steps[t - 1] * 60.0 * 60.0 * 24.0
+
             scarabee_log(LogLevel.Info, "Predictor:")
             # Run initial calcualtion for this time step
             self._run_assembly_calculation(True)
@@ -2294,21 +2300,23 @@ class PWRAssembly:
             self._diffusion_data.append(self._compute_diffusion_data())
 
             # Predic isotopes at midpoint of step
-            self._predict_depletion(0.5 * dt_sec)
+            self._predict_depletion(dt_sec, dtm1_sec)
 
             scarabee_log(LogLevel.Info, "Corrector:")
             # Run the a new transport calcualtion to get rates
             self._run_assembly_calculation(False)
 
             # Do correction step for isotopes
-            self._correct_depletion(dt_sec)
+            self._correct_depletion(dt_sec, dtm1_sec)
 
         # Run last step at the end to get keff for our final material compositions
         scarabee_log(LogLevel.Info, "")
         scarabee_log(LogLevel.Info, 60 * "-")
         self._exposures[-1] = self._exposures[-2] + self.depletion_exposure_steps[-1]
         self._times[-1] = self._times[-2] + dt
-        scarabee_log(LogLevel.Info, "Running Time Step {:}".format(self._times.size-1))
+        scarabee_log(
+            LogLevel.Info, "Running Time Step {:}".format(self._times.size - 1)
+        )
         scarabee_log(
             LogLevel.Info, "Exposure: {:.3E} MWd/kg".format(self._exposures[-1])
         )

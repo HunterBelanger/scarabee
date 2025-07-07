@@ -105,14 +105,14 @@ void init_DepletionMatrix(py::module& m) {
               double v) { m.ref(indx.first, indx.second) = v; })
 
       .def("__imul__", &DepletionMatrix::operator*=)
-      .def("__idiv__", &DepletionMatrix::operator/=)
+      .def("__itruediv__", &DepletionMatrix::operator/=)
       .def("__iadd__", &DepletionMatrix::operator+=)
       .def("__isub__", &DepletionMatrix::operator-=)
       .def("__add__", &DepletionMatrix::operator+)
       .def("__sub__", &DepletionMatrix::operator-)
       .def("__mul__", &DepletionMatrix::operator*)
       .def("__rmul__", [](const DepletionMatrix& M, double c) { return M * c; })
-      .def("__div__", &DepletionMatrix::operator/);
+      .def("__truediv__", &DepletionMatrix::operator/);
 
   // Module function to build a depletion matrix.
   m.def(

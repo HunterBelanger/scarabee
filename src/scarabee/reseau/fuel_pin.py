@@ -10,6 +10,7 @@ from .._scarabee import (
     MOCDriver,
     MixingFraction,
     DepletionChain,
+    DepletionMatrix,
     mix_materials,
     build_depletion_matrix,
 )
@@ -213,6 +214,14 @@ class FuelPin:
         for r in range(self.num_fuel_rings):
             # All rings initially start with empty flux spectrum list
             self._fuel_ring_flux_spectra.append(np.array([]))
+
+        # Initialize an array to hold the depletion matrices for the previous and current steps.
+        self._fuel_ring_prev_dep_mats: List[Optional[DepletionMatrix]] = []
+        self._fuel_ring_current_dep_mats: List[Optional[DepletionMatrix]] = []
+        for r in range(self.num_fuel_rings):
+            # All rings initially start with empty matrix
+            self._fuel_ring_prev_dep_mats.append(None)
+            self._fuel_ring_current_dep_mats.append(None)
 
         # Holds all the CrossSection objects used for the real transport
         # calculation. These are NOT stored for each depletion step like with
@@ -1161,22 +1170,30 @@ class FuelPin:
             self._fuel_ring_flux_spectra[r] *= f
 
     def predict_depletion(
-        self, dt: float, chain: DepletionChain, ndl: NDLibrary
+        self,
+        chain: DepletionChain,
+        ndl: NDLibrary,
+        dt: float,
+        dtm1: Optional[float] = None,
     ) -> None:
         """
         Performs the predictor in the integration of the Bateman equation.
-        The provided time step should therefore be half of the anticipated full
-        time step. The predicted material compositions are appended to the
-        materials lists.
+        If the argument for the previous time step is not provided, CE/LI will
+        be used. Otherwise, CE/LI is used on the first depletion step, and
+        LE/QI is used for all subsequent time steps. The predicted material
+        compositions are appended to the materials lists.
 
         Paramters
         ---------
-        dt : float
-            Time step for the predictor in seconds.
+
         chain : DepletionChain
             Depletion chain to use for radioactive decay and transmutation.
         ndl : NDLibrary
             Nuclear data library.
+        dt : float
+            Durration of the time step in seconds.
+        dtm1 : float, optional
+            Durration of the previous time step in seconds. Default is None.
         """
         if dt <= 0:
             raise ValueError("Predictor time step must be > 0.")
@@ -1187,22 +1204,49 @@ class FuelPin:
             flux = self._fuel_ring_flux_spectra[r]
             mat = self._fuel_ring_materials[r][-1]  # Use last available mat !
 
-            # Build depletion matrix and multiply by time step
-            dep_matrix = build_depletion_matrix(chain, mat, flux, ndl)
-            dep_matrix *= dt
+            # Build depletion matrix for beginning of time step
+            A0 = build_depletion_matrix(chain, mat, flux, ndl)
+
+            # Save current matrix
+            self._fuel_ring_current_dep_mats[r] = A0
 
             # At this point, we can clear the xs data from the last material as
             # depletion matrix is now built.
             mat.clear_all_micro_xs_data()
 
             # Initialize an array with the initial target number densities
-            N = np.zeros(dep_matrix.size)
-            nuclides = dep_matrix.nuclides
+            N = np.zeros(A0.size)
+            nuclides = A0.nuclides
             for i, nuclide in enumerate(nuclides):
                 N[i] = mat.atom_density(nuclide)
 
-            # Do the matrix exponential
-            dep_matrix.exponential_product(N)
+            if self._fuel_ring_prev_dep_mats[r] is None or dtm1 is None:
+                # Use CE/LI
+                A0 *= dt
+
+                # Do the matrix exponential
+                A0.exponential_product(N)
+
+                # Undo multiplication by time step on the matrix
+                A0 /= dt
+
+            else:
+                # Use LE/QI
+                Am1 = self._fuel_ring_prev_dep_mats[r]
+
+                F1 = (-dt / (12.0 * dtm1)) * Am1 + (
+                    (6.0 * dtm1 + dt) / (12.0 * dtm1)
+                ) * A0
+                F1 *= dt
+
+                F2 = (-5.0 * dt / (12.0 * dtm1)) * Am1 + (
+                    (6.0 * dtm1 + 5.0 * dt) / (12.0 * dtm1)
+                ) * A0
+                F2 *= dt
+
+                # Do the matrix exponentials
+                F2.exponential_product(N)
+                F1.exponential_product(N)
 
             # Now we can build a new material composition
             new_mat_comp = MaterialComposition()
@@ -1215,22 +1259,29 @@ class FuelPin:
             self._fuel_ring_materials[r].append(new_mat)
 
     def correct_depletion(
-        self, dt: float, chain: DepletionChain, ndl: NDLibrary
+        self,
+        chain: DepletionChain,
+        ndl: NDLibrary,
+        dt: float,
+        dtm1: Optional[float] = None,
     ) -> None:
         """
         Performs the corrector in the integration of the Bateman equation.
-        The provided time step should therefore be the full anticipated time
-        step. The corrected material compositions replace the ones where were
-        appended in the corrector step.
+        If the argument for the previous time step is not provided, CE/LI will
+        be used. Otherwise, CE/LI is used on the first depletion step, and
+        LE/QI is used for all subsequent time steps. The corrected material
+        compositions replace the ones where were appended in the corrector step.
 
         Parameters
         ----------
-        dt : float
-            Time step for the predictor in seconds.
         chain : DepletionChain
             Depletion chain to use for radioactive decay and transmutation.
         ndl : NDLibrary
             Nuclear data library.
+        dt : float
+            Durration of the time step in seconds.
+        dtm1 : float, optional
+            Durration of the previous time step in seconds. Default is None.
         """
         if dt <= 0:
             raise ValueError("Corrector time step must be > 0.")
@@ -1241,19 +1292,57 @@ class FuelPin:
             flux = self._fuel_ring_flux_spectra[r]
             mat_pred = self._fuel_ring_materials[r][-1]  # Use last available mat !
 
+            # Get depletion matrix for beginning of time step
+            A0 = self._fuel_ring_current_dep_mats[r]
+
             # Build depletion matrix and multiply by time step
-            dep_matrix = build_depletion_matrix(chain, mat_pred, flux, ndl)
-            dep_matrix *= dt
+            Ap1 = build_depletion_matrix(chain, mat_pred, flux, ndl)
 
             # Initialize an array with the initial target number densities
             mat_old = self._fuel_ring_materials[r][-2]  # Go 2 steps back !!
-            N = np.zeros(dep_matrix.size)
-            nuclides = dep_matrix.nuclides
+            N = np.zeros(Ap1.size)
+            nuclides = Ap1.nuclides
             for i, nuclide in enumerate(nuclides):
                 N[i] = mat_old.atom_density(nuclide)
 
-            # Do the matrix exponential
-            dep_matrix.exponential_product(N)
+            if self._fuel_ring_prev_dep_mats[r] is None or dtm1 is None:
+                # Use CE/LI
+                F1 = (dt / 12.0) * A0 + (5.0 * dt / 12.0) * Ap1
+                F2 = (5.0 * dt / 12.0) * A0 + (dt / 12.0) * Ap1
+
+                F2.exponential_product(N)
+                F1.exponential_product(N)
+
+            else:
+                # Use LE/QI
+
+                # Get previous depletion matrix
+                Am1 = self._fuel_ring_prev_dep_mats[r]
+
+                F3 = (
+                    (-dt * dt / (12.0 * dtm1 * (dtm1 + dt))) * Am1
+                    + (
+                        (5.0 * dtm1 * dtm1 + 6.0 * dtm1 * dt + dt * dt)
+                        / (12.0 * dtm1 * (dtm1 + dt))
+                    )
+                    * A0
+                    + (dtm1 / (12.0 * (dtm1 + dt))) * Ap1
+                )
+                F3 *= dt
+
+                F4 = (
+                    (-dt * dt / (12.0 * dtm1 * (dtm1 + dt))) * Am1
+                    + (
+                        (dtm1 * dtm1 + 2.0 * dtm1 * dt + dt * dt)
+                        / (12.0 * dtm1 * (dtm1 + dt))
+                    )
+                    * A0
+                    + ((5.0 * dtm1 + 4.0 * dt) / (12.0 * (dtm1 + dt))) * Ap1
+                )
+                F4 *= dt
+
+                F4.exponential_product(N)
+                F3.exponential_product(N)
 
             # Now we can build a new material composition
             new_mat_comp = MaterialComposition()
@@ -1264,3 +1353,7 @@ class FuelPin:
             # Make the new material
             new_mat = Material(new_mat_comp, mat_pred.temperature, ndl)
             self._fuel_ring_materials[r][-1] = new_mat
+
+            # Save the current matrix as previous matrix for next step !
+            self._fuel_ring_prev_dep_mats[r] = A0
+            self._fuel_ring_current_dep_mats[r] = None

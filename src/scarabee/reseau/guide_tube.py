@@ -779,52 +779,61 @@ class GuideTube:
             self.fill.normalize_flux_spectrum(f)
 
     def predict_depletion(
-        self, dt: float, chain: DepletionChain, ndl: NDLibrary
+        self,
+        chain: DepletionChain,
+        ndl: NDLibrary,
+        dt: float,
+        dtm1: Optional[float] = None,
     ) -> None:
         """
         Performs the predictor in the integration of the Bateman equation.
-        The provided time step should therefore be half of the anticipated full
-        time step. The predicted material compositions are appended to the
-        materials lists.
-
-        This only has an effect if the guide tube is filled is a burnable
-        poison rod. In that case, the poison will be depleted.
+        If the argument for the previous time step is not provided, CE/LI will
+        be used. Otherwise, CE/LI is used on the first depletion step, and
+        LE/QI is used for all subsequent time steps. The predicted material
+        compositions are appended to the materials lists.
 
         Paramters
         ---------
-        dt : float
-            Time step for the predictor in seconds.
+
         chain : DepletionChain
             Depletion chain to use for radioactive decay and transmutation.
         ndl : NDLibrary
             Nuclear data library.
+        dt : float
+            Durration of the time step in seconds.
+        dtm1 : float, optional
+            Durration of the previous time step in seconds. Default is None.
         """
         if dt <= 0:
             raise ValueError("Predictor time step must be > 0.")
 
         if not self.empty and isinstance(self.fill, BurnablePoisonRod):
-            self.fill.predict_depletion(dt, chain, ndl)
+            self.fill.predict_depletion(chain, ndl, dt, dtm1)
 
     def correct_depletion(
-        self, dt: float, chain: DepletionChain, ndl: NDLibrary
+        self,
+        chain: DepletionChain,
+        ndl: NDLibrary,
+        dt: float,
+        dtm1: Optional[float] = None,
     ) -> None:
         """
         Performs the corrector in the integration of the Bateman equation.
-        The provided time step should therefore be the full anticipated time
-        step. The corrected material compositions replace the ones where were
-        appended in the corrector step.
+        If the argument for the previous time step is not provided, CE/LI will
+        be used. Otherwise, CE/LI is used on the first depletion step, and
+        LE/QI is used for all subsequent time steps. The corrected material
+        compositions replace the ones where were appended in the corrector step.
 
-        This only has an effect if the guide tube is filled is a burnable
-        poison rod. In that case, the poison will be depleted.
-
-        Paramters
-        ---------
-        dt : float
-            Time step for the predictor in seconds.
+        Parameters
+        ----------
         chain : DepletionChain
             Depletion chain to use for radioactive decay and transmutation.
         ndl : NDLibrary
             Nuclear data library.
+        dt : float
+            Durration of the time step in seconds.
+        dtm1 : float, optional
+            Durration of the previous time step in seconds. Default is None.
         """
         if dt <= 0:
             raise ValueError("Corrector time step must be > 0.")
@@ -833,4 +842,4 @@ class GuideTube:
         # need to be depleted !
 
         if not self.empty and isinstance(self.fill, BurnablePoisonRod):
-            self.fill.correct_depletion(dt, chain, ndl)
+            self.fill.correct_depletion(chain, ndl, dt, dtm1)
