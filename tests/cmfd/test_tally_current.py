@@ -13,10 +13,10 @@ test_interior_yn
 test_interior_yp
 
 Tests for interior corners:
-test_interior_TR
-test_interior_BR
-test_interior_BL
-test_interior_TL
+test_interior_I
+test_interior_IV
+test_interior_III
+test_interior_II
 
 Tests for exterior sides:
 test_exterior_xp
@@ -25,18 +25,18 @@ test_exterior_yp
 test_exterior_yn
 
 Tests for exterior corners:
-test_exterior_TR_TrueCorner
-test_exterior_TR_XPCorner
-test_exterior_TR_YPCorner
-test_exterior_BR_TrueCorner
-test_exterior_BR_XPCorner
-test_exterior_BR_YNCorner
-test_exterior_BL_TrueCorner
-test_exterior_BL_XNCorner
-test_exterior_BL_YNCorner
-test_exterior_TL_TrueCorner
-test_exterior_TL_XNCorner
-test_exterior_TL_YPCorner
+test_exterior_I_TrueCorner
+test_exterior_I_XPCorner
+test_exterior_I_YPCorner
+test_exterior_IV_TrueCorner
+test_exterior_IV_XPCorner
+test_exterior_IV_YNCorner
+test_exterior_III_TrueCorner
+test_exterior_III_XNCorner
+test_exterior_III_YNCorner
+test_exterior_II_TrueCorner
+test_exterior_II_XNCorner
+test_exterior_II_YPCorner
 """
 class TestTallyCurrent:
     @pytest.fixture
@@ -115,7 +115,7 @@ class TestTallyCurrent:
 
         assert test_current == -1.0
 
-    def test_interior_TR(self,make_cmfd):
+    def test_interior_I(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -137,7 +137,7 @@ class TestTallyCurrent:
         check.equal(tc_3, 0.5)
         check.equal(tc_4, 0.5)
 
-    def test_interior_BR(self,make_cmfd):
+    def test_interior_IV(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -159,7 +159,7 @@ class TestTallyCurrent:
         check.equal(tc_3, -0.5)
         check.equal(tc_4, 0.5)
 
-    def test_interior_BL(self,make_cmfd):
+    def test_interior_III(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -181,7 +181,7 @@ class TestTallyCurrent:
         check.equal(tc_3, -0.5)
         check.equal(tc_4, -0.5)
 
-    def test_interior_TL(self,make_cmfd):
+    def test_interior_II(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -267,7 +267,7 @@ class TestTallyCurrent:
         check.equal(test_current, 1.0)
         check.equal(surf.is_valid, True)
 
-    def test_exterior_TR_TrueCorner(self,make_cmfd):
+    def test_exterior_I_TrueCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -285,7 +285,7 @@ class TestTallyCurrent:
         check.equal(tc_1, -0.5)
         check.equal(tc_2, -0.5)
     
-    def test_exterior_TR_XPCorner(self,make_cmfd):
+    def test_exterior_I_XPCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -305,7 +305,7 @@ class TestTallyCurrent:
         check.equal(tc_2, -0.5)
         check.equal(tc_3, -0.5)
     
-    def test_exterior_TR_YPCorner(self,make_cmfd):
+    def test_exterior_I_YPCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -325,7 +325,7 @@ class TestTallyCurrent:
         check.equal(tc_2, -0.5)
         check.equal(tc_3, -0.5)
     
-    def test_exterior_BR_TrueCorner(self,make_cmfd):
+    def test_exterior_IV_TrueCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -343,7 +343,7 @@ class TestTallyCurrent:
         check.equal(tc_1, 0.5)
         check.equal(tc_2, -0.5)
     
-    def test_exterior_BR_YNCorner(self,make_cmfd):
+    def test_exterior_IV_YNCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -363,7 +363,7 @@ class TestTallyCurrent:
         check.equal(tc_2, 0.5)
         check.equal(tc_3, 0.5)
     
-    def test_exterior_BR_XPCorner(self,make_cmfd):
+    def test_exterior_IV_XPCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -383,7 +383,7 @@ class TestTallyCurrent:
         check.equal(tc_2, 0.5)
         check.equal(tc_3, -0.5)
     
-    def test_exterior_BL_TrueCorner(self,make_cmfd):
+    def test_exterior_III_TrueCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -401,7 +401,7 @@ class TestTallyCurrent:
         check.equal(tc_1, 0.5)
         check.equal(tc_2, 0.5)
 
-    def test_exterior_BL_YNCorner(self,make_cmfd):
+    def test_exterior_III_YNCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -421,7 +421,7 @@ class TestTallyCurrent:
         check.equal(tc_2, 0.5)
         check.equal(tc_3, 0.5)
     
-    def test_exterior_BL_XNCorner(self,make_cmfd):
+    def test_exterior_III_XNCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -441,7 +441,7 @@ class TestTallyCurrent:
         check.equal(tc_2, 0.5)
         check.equal(tc_3, 0.5)
     
-    def test_exterior_TL_TrueCorner(self,make_cmfd):
+    def test_exterior_II_TrueCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -459,7 +459,7 @@ class TestTallyCurrent:
         check.equal(tc_1, 0.5)
         check.equal(tc_2, -0.5)
     
-    def test_exterior_TL_YPCorner(self,make_cmfd):
+    def test_exterior_II_YPCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0
@@ -479,7 +479,7 @@ class TestTallyCurrent:
         check.equal(tc_2, 0.5)
         check.equal(tc_3, -0.5)
     
-    def test_exterior_TL_XNCorner(self,make_cmfd):
+    def test_exterior_II_XNCorner(self,make_cmfd):
 
         cmfd = make_cmfd
         aflx = 1.0

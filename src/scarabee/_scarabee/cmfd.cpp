@@ -10,9 +10,6 @@
 #include <cmath>
 #include <limits>
 
-#include <fstream>
-#include <iomanip>
-
 namespace scarabee {
 
 CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
@@ -219,13 +216,13 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r,
   // start with corners, then sides
   // top right
   if (dx_p < SURFACE_COINCIDENT && dy_p < SURFACE_COINCIDENT) {
-    surface.crossing = CMFDSurfaceCrossing::Type::TR;
+    surface.crossing = CMFDSurfaceCrossing::Type::I;
   } else if (dx_p < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
-    surface.crossing = CMFDSurfaceCrossing::Type::BR;
+    surface.crossing = CMFDSurfaceCrossing::Type::IV;
   } else if (dx_n < SURFACE_COINCIDENT && dy_n < SURFACE_COINCIDENT) {
-    surface.crossing = CMFDSurfaceCrossing::Type::BL;
+    surface.crossing = CMFDSurfaceCrossing::Type::III;
   } else if (dx_n < SURFACE_COINCIDENT && dy_p < SURFACE_COINCIDENT) {
-    surface.crossing = CMFDSurfaceCrossing::Type::TL;
+    surface.crossing = CMFDSurfaceCrossing::Type::II;
   } else if (dx_p < SURFACE_COINCIDENT) {
     surface.crossing = CMFDSurfaceCrossing::Type::XP;
   } else if (dx_n < SURFACE_COINCIDENT) {
@@ -238,7 +235,7 @@ CMFDSurfaceCrossing CMFD::get_surface(const Vector& r,
     surface.is_valid = false;
     return surface;
   }
-  
+
   surface.is_valid = true;
   return surface;
 }
@@ -261,21 +258,20 @@ std::array<std::size_t, 2> CMFD::indx_to_tile(std::size_t cell_index) {
 
 double CMFD::x_min() const {
   double width_x = std::accumulate(dx_.begin(), dx_.end(), 0.0);
-  return -0.5*width_x;
+  return -0.5 * width_x;
 }
 double CMFD::x_max() const {
   double width_x = std::accumulate(dx_.begin(), dx_.end(), 0.0);
-  return 0.5*width_x;
+  return 0.5 * width_x;
 }
 double CMFD::y_min() const {
   double width_y = std::accumulate(dy_.begin(), dy_.end(), 0.0);
-  return -0.5*width_y;
+  return -0.5 * width_y;
 }
 double CMFD::y_max() const {
   double width_y = std::accumulate(dy_.begin(), dy_.end(), 0.0);
-  return 0.5*width_y;
+  return 0.5 * width_y;
 }
-
 
 void CMFD::insert_fsr(const std::array<std::size_t, 2>& tile, std::size_t fsr) {
   // Compute linear index
@@ -317,14 +313,16 @@ const double& CMFD::flux(const std::size_t i, const std::size_t j,
     throw ScarabeeException(mssg);
   }
   if (i >= nx_) {
-    spdlog::error("Cell index {:d} is out of range", i);
-    throw ScarabeeException("Cell x index is out of range");
+    auto mssg = "Cell x index is out of range";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
   if (j >= nx_) {
-    spdlog::error("Cell index {:d} is out of range", j);
-    throw ScarabeeException("Cell y index is out of range");
+    auto mssg = "Cell y index is out of range";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
   }
-  
+
   const std::size_t cell_index = tile_to_indx(i, j);
 
   return flux_cmfd_(g * nx_ * ny_ + cell_index);
@@ -386,7 +384,7 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
     surf_indexes.push_back(get_y_neg_surf(i, j));
   } else if (surf.crossing == CMFDSurfaceCrossing::Type::YP) {
     surf_indexes.push_back(get_y_pos_surf(i, j));
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TR) {
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::I) {
     is_corner = true;
     surf_indexes.push_back(get_x_pos_surf(i, j));
     surf_indexes.push_back(get_y_pos_surf(i, j));
@@ -396,7 +394,7 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
     if (j + 1 < ny_) {
       surf_indexes.push_back(get_x_pos_surf(i, j + 1));
     }
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BR) {
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::IV) {
     is_corner = true;
     surf_indexes.push_back(get_x_pos_surf(i, j));
     surf_indexes.push_back(get_y_neg_surf(i, j));
@@ -406,7 +404,7 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
     if (j != 0) {
       surf_indexes.push_back(get_x_pos_surf(i, j - 1));
     }
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::BL) {
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::III) {
     is_corner = true;
     surf_indexes.push_back(get_x_neg_surf(i, j));
     surf_indexes.push_back(get_y_neg_surf(i, j));
@@ -416,7 +414,7 @@ void CMFD::tally_current(double aflx, const Direction& u, std::size_t G,
     if (j != 0) {
       surf_indexes.push_back(get_x_neg_surf(i, j - 1));
     }
-  } else if (surf.crossing == CMFDSurfaceCrossing::Type::TL) {
+  } else if (surf.crossing == CMFDSurfaceCrossing::Type::II) {
     is_corner = true;
     surf_indexes.push_back(get_x_neg_surf(i, j));
     surf_indexes.push_back(get_y_pos_surf(i, j));
@@ -501,6 +499,8 @@ void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
 }
 
 void CMFD::homogenize_ext_src(const MOCDriver& moc) {
+  // Reset external source array
+  extern_src_.setZero();
   const std::size_t tot_cells = nx_ * ny_;
   // Loop over all cells
   for (std::size_t l = 0; l < tot_cells; l++) {
@@ -564,7 +564,7 @@ void CMFD::check_neutron_balance(const std::size_t i, const std::size_t j,
 
 void CMFD::set_damping(double wd) {
   if (wd < 0.0 || wd > 1.0) {
-    auto mssg = "Damping factor for CMFD must be between 0.0 and 1.0";
+    auto mssg = "Damping factor for CMFD must be in interval [0.0, 1.0].";
     spdlog::error(mssg);
     throw ScarabeeException(mssg);
   }
@@ -589,6 +589,28 @@ void CMFD::set_keff_tolerance(double ktol) {
   }
 
   keff_tol_ = ktol;
+}
+
+void CMFD::set_larsen_correction(bool user_pref) {
+  if (od_cmfd_) {
+    auto mssg =
+        "odCMFD and Larsen Correction options are mutally exclusive. Disable "
+        "odCMFD with 'od_cmfd = False'.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  larsen_correction_ = user_pref;
+}
+
+void CMFD::set_od_cmfd(bool user_pref) {
+  if (larsen_correction_) {
+    auto mssg =
+        "odCMFD and Larsen Correction options are mutally exclusive. Disable "
+        "Larsen Correction with 'larsen_correction = False'.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+  od_cmfd_ = user_pref;
 }
 
 std::variant<std::array<std::size_t, 2>, BoundaryCondition>
@@ -684,7 +706,7 @@ double CMFD::get_current(std::size_t i, std::size_t j, std::size_t g,
 }
 
 void CMFD::apply_larsen_correction(double& D, const double dx,
-                             const MOCDriver& moc) const {
+                                   const MOCDriver& moc) const {
   // Correct Diffusion Coefficient to agree with infinite medium
   // for optically thick mesh cells. Based on the derivation in [1].
   const PolarQuadrature& moc_polq = moc.polar_quadrature();
@@ -728,11 +750,10 @@ void CMFD::optimize_diffusion_coef(double& D, const double dx,
     const double EtDx4 = EtDx3 * EtDx;
     const double EtDx5 = EtDx4 * EtDx;
     const double EtDx6 = EtDx5 * EtDx;
-    const double theta =
-        -5.542780E-02 + 8.740501E-02 * EtDx +
-        -2.152599E-02 * EtDx2 + 3.145553E-03 * EtDx3 +
-        -2.683648E-04 * EtDx4 + 1.222516E-05 * EtDx5 +
-        -2.284879E-07 * EtDx6;
+    const double theta = -5.542780E-02 + 8.740501E-02 * EtDx +
+                         -2.152599E-02 * EtDx2 + 3.145553E-03 * EtDx3 +
+                         -2.683648E-04 * EtDx4 + 1.222516E-05 * EtDx5 +
+                         -2.284879E-07 * EtDx6;
 
     D += theta * dx;
   } else {
@@ -757,9 +778,9 @@ std::pair<double, double> CMFD::calc_surf_diffusion_coeffs(
     optimize_diffusion_coef(D_ij, dx_ij, i, j, g);
   }
 
-  const auto apply_flux_limiting = [current, surf, flx_ij](double& D_surf,
-                                                     double& D_nl,
-                                                     const double flx_next) {
+  const auto apply_flux_limiting = [current, surf, flx_ij](
+                                       double& D_surf, double& D_nl,
+                                       const double flx_next) {
     // Flux limiting condition
     if (std::abs(D_nl) > std::abs(D_surf)) {
       if (surf == CMFD::TileSurf::XP || surf == CMFD::TileSurf::YP) {
@@ -1105,19 +1126,18 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
       }
-      if (ratio == 0.0){
-        auto mssg =
-            "CMFD flux update is zero.";
+      if (ratio == 0.0) {
+        auto mssg = "CMFD flux update is zero.";
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
       }
       if (std::isinf(ratio)) {
-        auto mssg = "CMFD flux update ratio is inf";
+        auto mssg = "CMFD flux update ratio is inf.";
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
       }
       if (std::isnan(ratio)) {
-        auto mssg = "CMFD flux update ratio is NaN";
+        auto mssg = "CMFD flux update ratio is NaN.";
         spdlog::error(mssg);
         throw ScarabeeException(mssg);
       }
@@ -1183,9 +1203,9 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
 
 void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
   Timer cmfd_timer;
-  solved_ = false;
   cmfd_timer.reset();
   cmfd_timer.start();
+  solved_ = false;
   moc_iteration_ = moc_iteration;
   if (moc.sim_mode() == SimulationMode::Keff) {
     mode_ = SimulationMode::Keff;
@@ -1236,8 +1256,8 @@ void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
 
 // REFERENCES
 // [1] E. W. Larsen, "Infinite-medium solutions of the transport equation,
-// SN discretization schemes, and the diffusion approximation," Transport Theory and Statistical Physics, 
-// vol. 32, no. 5–7, pp. 623–643, 2003, 
+// SN discretization schemes, and the diffusion approximation," Transport Theory
+// and Statistical Physics, vol. 32, no. 5–7, pp. 623–643, 2003,
 //
 // [2] A. Zhu et al., "An optimally diffusive Coarse Mesh Finite Difference
 // method to accelerate neutron transport calculations," Ann. Nucl. Energy, vol.

@@ -30,9 +30,9 @@ namespace scarabee {
 class MOCDriver;
 
 struct CMFDSurfaceCrossing {
-  enum class Type : std::uint8_t { XN, XP, YN, YP, TR, BR, BL, TL };
-  std::size_t cell_index;
-  bool is_valid;
+  enum class Type : std::uint8_t { XN, XP, YN, YP, I, II, III, IV };
+  std::size_t cell_index{0};
+  bool is_valid{false};
   Type crossing;
 
   constexpr explicit operator bool() const noexcept { return is_valid; }
@@ -119,10 +119,10 @@ class CMFD {
   void set_flux_limiting(bool user_pref) { flux_limiting_ = user_pref; }
 
   bool larsen_correction() const { return larsen_correction_; }
-  void set_larsen_correction(bool user_pref) { larsen_correction_ = user_pref; }
+  void set_larsen_correction(bool user_pref);
 
   bool od_cmfd() const { return od_cmfd_; }
-  void set_od_cmfd(bool user_pref) { od_cmfd_ = user_pref; }
+  void set_od_cmfd(bool user_pref);
 
   bool neutron_balance_check() const { return neutron_balance_check_; }
   void set_neutron_balance_check(bool user_pref) {
@@ -159,7 +159,7 @@ class CMFD {
 
   bool flux_limiting_ = true;
   bool larsen_correction_ = false;
-  bool od_cmfd_ = false;
+  bool od_cmfd_ = true;
   bool neutron_balance_check_ = false;
   double keff_tol_ = 1E-5;
   double flux_tol_ = 1E-5;

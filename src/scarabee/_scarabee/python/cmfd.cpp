@@ -15,10 +15,10 @@ void init_CMFD(py::module& m) {
     .value("XP",CMFDSurfaceCrossing::Type::XP)
     .value("YN",CMFDSurfaceCrossing::Type::YN)
     .value("YP",CMFDSurfaceCrossing::Type::YP)
-    .value("TR",CMFDSurfaceCrossing::Type::TR)
-    .value("BR",CMFDSurfaceCrossing::Type::BR)
-    .value("BL",CMFDSurfaceCrossing::Type::BL)
-    .value("TL",CMFDSurfaceCrossing::Type::TL);
+    .value("I",CMFDSurfaceCrossing::Type::I)
+    .value("IV",CMFDSurfaceCrossing::Type::IV)
+    .value("III",CMFDSurfaceCrossing::Type::III)
+    .value("II",CMFDSurfaceCrossing::Type::II);
   
   py::class_<CMFDSurfaceCrossing>(m, "CMFDSurfaceCrossing")
   .def_readonly("is_valid", &CMFDSurfaceCrossing::is_valid,

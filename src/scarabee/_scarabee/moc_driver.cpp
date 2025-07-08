@@ -113,19 +113,19 @@ void MOCDriver::set_cmfd(std::shared_ptr<CMFD> cmfd) {
     spdlog::warn(
         "CMFD was set after track tracing. Must call generate_tracks again !");
   }
-  double tol = 1E-12;
 
-  if ( (this->x_max() > cmfd->x_max() + tol || this->x_max() < cmfd->x_max() - tol  ) || 
-       (this->x_min() > cmfd->x_min() + tol || this->x_min() < cmfd->x_min() - tol  ) ||
-       (this->y_max() > cmfd->y_max() + tol || this->y_max() < cmfd->y_max() - tol  ) ||
-       (this->y_min() > cmfd->y_min() + tol || this->y_min() < cmfd->y_min() - tol  )) {
-        auto mssg = "CMFD geometry bounds do not align with MOCDriver geometry bounds";
-        spdlog::error(mssg);
-        throw ScarabeeException(mssg);
-      }
+  if ((std::abs(this->x_max() - cmfd->x_max())) > SURFACE_COINCIDENT ||
+      (std::abs(this->x_min() - cmfd->x_min())) > SURFACE_COINCIDENT ||
+      (std::abs(this->y_max() - cmfd->y_max())) > SURFACE_COINCIDENT ||
+      (std::abs(this->y_min() - cmfd->y_min())) > SURFACE_COINCIDENT) {
+    auto mssg =
+        "CMFD geometry bounds do not align with MOCDriver geometry bounds";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
 
   cmfd_ = cmfd;
-  }
+}
 
 void MOCDriver::set_fsr_area_tolerance(double atol) {
   if (atol <= 0.) {
@@ -364,8 +364,8 @@ void MOCDriver::solve_isotropic() {
 
     // If MOC iterations in CMFD are skipped compute Keff
     // the normal way
-    if (mode_ == SimulationMode::Keff && 
-    (cmfd_ == nullptr  || (cmfd_ != nullptr && cmfd_->solved() == false))) {
+    if (mode_ == SimulationMode::Keff &&
+        (cmfd_ == nullptr || (cmfd_ != nullptr && cmfd_->solved() == false))) {
       prev_keff = keff_;
       keff_ = calc_keff(next_flux, flux_);
       rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
@@ -502,8 +502,8 @@ void MOCDriver::solve_anisotropic() {
 
     // If MOC iterations are skipped compute Keff
     // the normal way
-    if (mode_ == SimulationMode::Keff && 
-    (cmfd_ == nullptr  || (cmfd_ != nullptr && cmfd_->solved() == false))) {
+    if (mode_ == SimulationMode::Keff &&
+        (cmfd_ == nullptr || (cmfd_ != nullptr && cmfd_->solved() == false))) {
       prev_keff = keff_;
       keff_ = calc_keff(next_flux, flux_);
       rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
@@ -612,7 +612,6 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
-
             if (cmfd_surf) cmfd_flx += tw * polar_quad_.wsin()[p] * angflux[p];
           }  // For all polar angles
 
@@ -666,7 +665,6 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
-
             if (cmfd_surf) cmfd_flx += tw * polar_quad_.wsin()[p] * angflux[p];
           }  // For all polar angles
           if (cmfd_surf &&
@@ -802,8 +800,6 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
 
         // Accumulate entry angular flux into CMFD current for backwards
         // direction
-        // TODO : The entry angular flux should also be multiplied by the
-        // spherical harmonic?
         if (cmfd_ && track.rbegin()->exit_cmfd_surface() &&
             cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
           auto surf_indx = track.rbegin()->exit_cmfd_surface();
@@ -861,7 +857,7 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
             if (cmfd_surf) cmfd_flx += polar_quad_.wsin()[p] * angflux[pp];
 
           }  // For all polar angles
-          
+
           if (cmfd_surf &&
               cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
             cmfd_->tally_current(INVS_4SQRTPI * tw * cmfd_flx, u_back, G,
