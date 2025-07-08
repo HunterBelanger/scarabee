@@ -113,11 +113,12 @@ void MOCDriver::set_cmfd(std::shared_ptr<CMFD> cmfd) {
     spdlog::warn(
         "CMFD was set after track tracing. Must call generate_tracks again !");
   }
+  double tol = 1E-12;
 
-  if (this->x_max() != cmfd->x_max() || 
-      this->x_min() != cmfd->x_min() ||
-      this->y_max() != cmfd->y_max() ||
-      this->y_min() != cmfd->y_min()) {
+  if ( (this->x_max() > cmfd->x_max() + tol || this->x_max() < cmfd->x_max() - tol  ) || 
+       (this->x_min() > cmfd->x_min() + tol || this->x_min() < cmfd->x_min() - tol  ) ||
+       (this->y_max() > cmfd->y_max() + tol || this->y_max() < cmfd->y_max() - tol  ) ||
+       (this->y_min() > cmfd->y_min() + tol || this->y_min() < cmfd->y_min() - tol  )) {
         auto mssg = "CMFD geometry bounds do not align with MOCDriver geometry bounds";
         spdlog::error(mssg);
         throw ScarabeeException(mssg);

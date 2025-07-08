@@ -10,6 +10,9 @@
 #include <cmath>
 #include <limits>
 
+#include <fstream>
+#include <iomanip>
+
 namespace scarabee {
 
 CMFD::CMFD(const std::vector<double>& dx, const std::vector<double>& dy,
@@ -998,7 +1001,7 @@ void CMFD::power_iteration(double keff) {
   // Create a solver for the problem
   Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
   solver.compute(M_);
-  solver.setTolerance(1.E-10);
+  solver.setTolerance(1.E-15);
   if (solver.info() != Eigen::Success) {
     std::stringstream mssg;
     mssg << "Could not initialize CMFD iterative solver";
@@ -1087,8 +1090,7 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
   std::size_t i = 0;
   std::size_t j = 0;
   for (std::size_t l = 0; l < tot_cells; l++) {
-    for (std::size_t g = 0; g < moc_to_cmfd_group_map_.size(); g++) {
-      const std::size_t G = moc_to_cmfd_group_map_[g];
+    for (std::size_t G = 0; G < ng_; G++) {
       const std::size_t linear_indx = G * tot_cells + l;
       const double invs_flx = 1. / flux_(G, i, j);
       double ratio = flux_cmfd_(linear_indx) * invs_flx;
