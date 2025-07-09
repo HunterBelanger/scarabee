@@ -84,13 +84,13 @@ class TestCMFDSurfaces:
             surface = cmfd.get_surface(r,u)
 
 
-    def test_TR_to_BL(self, make_cmfd):
+    def test_I_to_III(self, make_cmfd):
         """
         Tests get_surface() for a point, direction pair that goes from 
         the top right surface of a cell into the bottom left surface of 
         an adjacent cell.
 
-        Should return a valid crossing for the BL surface of cell 3 
+        Should return a valid crossing for the III surface of cell 3 
         """
         cmfd = make_cmfd
         tol = 1e-12
@@ -101,15 +101,15 @@ class TestCMFDSurfaces:
 
         check.equal(surface.is_valid, True)
         check.equal(surface.cell_index, 3)
-        check.equal(surface.crossing, CMFDSurfaceCrossingType.BL)
+        check.equal(surface.crossing, CMFDSurfaceCrossingType.III)
 
-    def test_TL_to_BR(self, make_cmfd):
+    def test_II_to_IV(self, make_cmfd):
         """
         Tests get_surface() for a point, direction pair that goes from 
         the top left surface of a cell into the bottom right surface of 
         an adjacent cell.
 
-        Should return a valid crossing for the BR surface of cell 2
+        Should return a valid crossing for the IV surface of cell 2
         """
         cmfd = make_cmfd
         tol = 1e-12
@@ -120,9 +120,9 @@ class TestCMFDSurfaces:
 
         check.equal(surface.is_valid, True)
         check.equal(surface.cell_index, 2)
-        check.equal(surface.crossing, CMFDSurfaceCrossingType.BR)
+        check.equal(surface.crossing, CMFDSurfaceCrossingType.IV)
 
-    def test_BR_to_TL(self, make_cmfd):
+    def test_IV_to_II(self, make_cmfd):
         """
         Tests get_surface() for a point, direction pair that goes from 
         the bottom right surface of a cell into the top left surface of 
@@ -139,9 +139,9 @@ class TestCMFDSurfaces:
 
         check.equal(surface.is_valid, True)
         check.equal(surface.cell_index, 1)
-        check.equal(surface.crossing, CMFDSurfaceCrossingType.TL)
+        check.equal(surface.crossing, CMFDSurfaceCrossingType.II)
 
-    def test_BL_to_TR(self, make_cmfd):
+    def test_III_to_I(self, make_cmfd):
         """
         Tests get_surface() for a point, direction pair that goes from 
         the bottom left surface of a cell into the top right surface of 
@@ -158,7 +158,7 @@ class TestCMFDSurfaces:
 
         check.equal(surface.is_valid, True)
         check.equal(surface.cell_index, 0)
-        check.equal(surface.crossing, CMFDSurfaceCrossingType.TR)
+        check.equal(surface.crossing, CMFDSurfaceCrossingType.I)
 
 
 

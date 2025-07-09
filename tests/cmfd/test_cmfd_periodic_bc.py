@@ -91,4 +91,4 @@ class TestCMFDPeriodicBC:
         moc.flux_tolerance = 1.E-5
         moc.solve()
 
-        assert moc.keff == pytest.approx(1.33381, 0.0001)
+        assert moc.keff == pytest.approx(1.33386, 1E-5)

@@ -592,7 +592,7 @@ void CMFD::set_keff_tolerance(double ktol) {
 }
 
 void CMFD::set_larsen_correction(bool user_pref) {
-  if (od_cmfd_) {
+  if (od_cmfd_ && user_pref) {
     auto mssg =
         "odCMFD and Larsen Correction options are mutally exclusive. Disable "
         "odCMFD with 'od_cmfd = False'.";
@@ -603,7 +603,7 @@ void CMFD::set_larsen_correction(bool user_pref) {
 }
 
 void CMFD::set_od_cmfd(bool user_pref) {
-  if (larsen_correction_) {
+  if (larsen_correction_ && user_pref) {
     auto mssg =
         "odCMFD and Larsen Correction options are mutally exclusive. Disable "
         "Larsen Correction with 'larsen_correction = False'.";
@@ -1115,9 +1115,10 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       const std::size_t linear_indx = G * tot_cells + l;
       const double invs_flx = 1. / flux_(G, i, j);
       double ratio = flux_cmfd_(linear_indx) * invs_flx;
-      // Don't warn on first moc iteration
-      if (ratio > 20.0 && moc_iteration_ > 1) {
-        flux_update_warning = true;
+      // Don't warn on first moc iteration or if ratio is exactly 0.0
+      if (ratio != 0.0 && moc_iteration_ > 1 &&
+          (ratio < 0.05 || ratio > 20.0)) {
+          flux_update_warning = true;
       }
       // Check that the update ratio is valid
       if (ratio < 0.0) {
@@ -1167,10 +1168,8 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
 
       // Update scalar flux in each MOC FSR
       for (const auto f : fsrs) {
-        for (std::size_t lj = 0; lj < moc.num_spherical_harmonics(); lj++) {
-          const double new_flx = moc.flux(f, g, lj) * flx_ratio;
-          moc.set_flux(f, g, new_flx, lj);
-        }
+        const double new_flx = moc.flux(f, g, 0) * flx_ratio;
+        moc.set_flux(f, g, new_flx, 0);
       }
     }
   }
@@ -1193,11 +1192,8 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
   }
 
   if (flux_update_warning) {
-    const double max_update = update_ratios_.maxCoeff();
     spdlog::warn(
-        "At least one CMFD flux ratio greater than 20, max update ratio is: "
-        "{:.5f}",
-        max_update);
+        "At least one CMFD flux update ratio outside of (0.05, 20.0).");
   }
 }
 

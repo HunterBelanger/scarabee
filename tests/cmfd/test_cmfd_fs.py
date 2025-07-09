@@ -52,7 +52,6 @@ class TestCMFDWaterFS:
         # Works with several damping factors, but may become unstable
         # with larger values
         moc.cmfd.damping = 0.5
-        moc.cmfd.larsen_correction = True
         moc.cmfd.flux_limiting = True
         # Optimal number of MOC iterations to skip for this problem
         moc.cmfd.skip_moc_iterations = 14

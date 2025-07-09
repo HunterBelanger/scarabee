@@ -11,22 +11,22 @@ using namespace scarabee;
 void init_CMFD(py::module& m) {
 
   py::enum_<CMFDSurfaceCrossing::Type>(m,"CMFDSurfaceCrossingType")
-    .value("XN",CMFDSurfaceCrossing::Type::XN)
-    .value("XP",CMFDSurfaceCrossing::Type::XP)
-    .value("YN",CMFDSurfaceCrossing::Type::YN)
-    .value("YP",CMFDSurfaceCrossing::Type::YP)
-    .value("I",CMFDSurfaceCrossing::Type::I)
-    .value("IV",CMFDSurfaceCrossing::Type::IV)
-    .value("III",CMFDSurfaceCrossing::Type::III)
-    .value("II",CMFDSurfaceCrossing::Type::II);
+    .value("XN",CMFDSurfaceCrossing::Type::XN, "CMFD cell x < 0 side.")
+    .value("XP",CMFDSurfaceCrossing::Type::XP, "CMFD cell x > 0 side.")
+    .value("YN",CMFDSurfaceCrossing::Type::YN, "CMFD cell y < 0 side.")
+    .value("YP",CMFDSurfaceCrossing::Type::YP, "CMFD cell y > 0 side.")
+    .value("I",CMFDSurfaceCrossing::Type::I, "Corner of CMFD cell in quadrant I.")
+    .value("II",CMFDSurfaceCrossing::Type::II, "Corner of CMFD cell in quadrant II.")
+    .value("III",CMFDSurfaceCrossing::Type::III, "Corner of CMFD cell in quadrant III.")
+    .value("IV",CMFDSurfaceCrossing::Type::IV, "Corner of CMFD cell in quadrant IV.");
   
   py::class_<CMFDSurfaceCrossing>(m, "CMFDSurfaceCrossing")
   .def_readonly("is_valid", &CMFDSurfaceCrossing::is_valid,
-  "Bool that indicates whether or not the segment end is on a valid CMFD surface")
+  "Bool that indicates whether or not the segment end is on a valid CMFD surface.")
   .def_readonly("cell_index", &CMFDSurfaceCrossing::cell_index,
-  "Int representing the linear cell index")
+  "Int representing the linear cell index.")
   .def_readonly("crossing", &CMFDSurfaceCrossing::crossing,
-  "Defines which corner / side of the cell the segment end passes through");
+  "Defines which side / corner of the cell the segment end passes through.");
 
   py::class_<CMFD, std::shared_ptr<CMFD>>(m, "CMFD")
   .def(py::init<
@@ -35,10 +35,10 @@ void init_CMFD(py::module& m) {
       "A Cartesian mesh for accelerating MOC convergence.\n\n"
       "Parameters\n"
       "----------\n"
-      "dx : list of float\n"
-      "     List of all x widths.\n"
-      "dy : list of float\n"
-      "     List of all y heights.\n"
+      "dx : list of float.\n"
+      "     X widths.\n"
+      "dy : list of float.\n"
+      "     Y heights.\n"
       "groups : list of 2D tuples of ints.\n"
       "         The scheme for condensing energy groups.\n",
       py::arg("dx"), py::arg("dy"), py::arg("groups"))
@@ -46,30 +46,30 @@ void init_CMFD(py::module& m) {
   .def_property(
           "keff_tolerance", &CMFD::keff_tolerance,
           &CMFD::set_keff_tolerance,
-          "Maximum relative absolute difference in keff for convergence")
+          "Maximum relative absolute difference in keff for convergence.")
 
   .def_property(
           "flux_tolerance", &CMFD::flux_tolerance,
           &CMFD::set_flux_tolerance,
-          "Maximum relative absolute difference in flux for convergence")
+          "Maximum relative absolute difference in flux for convergence.")
 
   .def_property(
           "flux_limiting", &CMFD::flux_limiting,
           &CMFD::set_flux_limiting,
           "Whether or not to use the flux-limiting condition when calculating"
-          "the surface and non-linear diffusion coefficients")
+          "the surface and non-linear diffusion coefficients.")
 
   .def_property(
           "larsen_correction", &CMFD::larsen_correction,
           &CMFD::set_larsen_correction,
           "Whether or not to use Larsen's corrected diffusion coefficient"
-          "for optically thick meshes. Mutally exclusive with odCMFD")
+          "for optically thick meshes. Mutally exclusive with odCMFD.")
 
   .def_property(
           "od_cmfd", &CMFD::od_cmfd,
           &CMFD::set_od_cmfd,
           "Use optimally diffusive CMFD (odCMFD) to modify the diffusion coeffients"
-          "Mutally exclusive with the larsen correction")
+          "Mutally exclusive with the larsen correction.")
 
   .def_property(
           "damping", &CMFD::damping,
@@ -80,57 +80,56 @@ void init_CMFD(py::module& m) {
   .def_property(
           "skip_moc_iterations", &CMFD::skip_moc_iterations,
           &CMFD::set_skip_moc_iterations,
-          "Set # of MOC iterations to skip before using CMFD")
+          "Set # of MOC iterations to skip before using CMFD.")
 
   .def_property(
           "unbounded_cmfd_solves", &CMFD::num_unbounded_solves,
           &CMFD::set_num_unbounded_solves,
-          "Set # of CMFD solves before flux update ratios are clamped")
+          "Set # of CMFD solves before flux update ratios are clamped.")
 
   .def_property(
           "check_neutorn_balance", &CMFD::neutron_balance_check,
           &CMFD::set_neutron_balance_check,
-          "Check neutron balance in each CMFD tile on each CMFD solve")
+          "Check neutron balance in each CMFD tile on each CMFD solve.")
 
   .def("get_surface", &CMFD::get_surface,
       "Assigns the CMFD surface info to a segement end if it exists\n\n"
       "Parameters\n"
       "----------\n"
-      "point: list of float\n"
-      "       list of x and y position of segment end\n"
-      "direction: list of float\n"
-      "           list of x and y components of segment direction unit vector\n"
+      "point: list of float.\n"
+      "           X and Y position of segment end.\n"
+      "direction: list of float.\n"
+      "           X and Y components of segment direction unit vector.\n"
       "Returns\n"
       "-------\n"
-      "surface: CMFDSurfaceCrossing object\n"
-      "         Contains the surface crossing information for the segement end\n",
+      "surface: CMFDSurfaceCrossing object.\n"
+      "         Contains the surface crossing information for the segement end.\n",
       py::arg("point"),py::arg("direction"))
-      
   .def("get_tile", &CMFD::get_tile,
       "Finds the tile that a segement end exists in\n\n"
       "Parameters\n"
       "----------\n"
-      "point: list of float\n"
-      "       list of x and y position of segment end\n"
-      "direction: list of float\n"
-      "           list of x and y components of segment direction unit vector\n"
+      "point: list of float.\n"
+      "           X and Y position of segment end.\n"
+      "direction: list of float.\n"
+      "           X and Y components of segment direction unit vector.\n"
       "Returns\n"
       "-------\n"
-      "surface: CMFDSurfaceCrossing object\n"
-      "         Contains the surface crossing information for the segement end\n",
+      "surface: CMFDSurfaceCrossing object.\n"
+      "         Contains the surface crossing information for the segement end.\n",
       py::arg("point"),py::arg("direction"))
   .def("tally_current",&CMFD::tally_current,
-      "Tallies the MOC current onto the appropriate CMFD surface(s)\n\n"
+      "Tallies the MOC current onto the appropriate CMFD surface(s).\n\n"
       "Parameters\n"
       "----------\n"
-      "aflx: float\n"
-      "      value of the angular flux to be tallied"
-      "u: Direction\n"
-          "Direction of the flux\n"
-      "G: unsigned int\n"
-      "   Int which gives the # of the flux energy group"
-      "surf: CMFDSurfaceCrossing"
-      "      CMFDSurfaceCrossing object which gives the information about the surface to tally on\n"
+      "aflx: float.\n"
+      "      value of the angular flux to be tallied."
+      "u: Direction.\n"
+          "Direction of the angular flux\n"
+      "G: int.\n"
+      "   CMFD energy group."
+      "surf: CMFDSurfaceCrossing."
+      "      The surface to tally on.\n"
       "Returns\n"
       "-------\n"
       "None",
@@ -138,46 +137,46 @@ void init_CMFD(py::module& m) {
   .def("current",
       py::overload_cast<const std::size_t, const std::size_t>(
       &CMFD::current, py::const_),
-      "Returns the current on a CMFD cell boundary\n\n"
+      "Returns the current on a CMFD cell boundary.\n\n"
       "Parameters\n"
       "----------\n"
-      "G: unsigned int\n"
-      "   Int which gives the # of the flux energy group"
-      "surf: unsigned int\n"
-      "   Int which gives the CMFD surface index\n"
+      "G: int.\n"
+      "   CMFD energy group."
+      "surf: int.\n"
+      "   CMFD surface index.\n"
       "Returns\n"
       "-------\n"
-      "current: double\n"
-      "    MOC tallied current in group G on surface I",
+      "current: float.\n"
+      "    MOC tallied current in CMFD group G on surface I.",
       py::arg("G"),py::arg("surface"))
   .def("current",
       py::overload_cast<const std::size_t, const std::size_t>(
         &CMFD::current),
-      "Returns the current on a CMFD cell boundary\n\n"
+      "Returns the current on a CMFD cell boundary.\n\n"
       "Parameters\n"
       "----------\n"
-      "G: unsigned int\n"
-      "   Int which gives the # of the flux energy group"
-      "surf: unsigned int\n"
-      "   Int which gives the CMFD surface index\n"
+      "G: int.\n"
+      "    CMFD energy group."
+      "surf: int.\n"
+      "    CMFD surface index.\n"
       "Returns\n"
       "-------\n"
-      "current: double\n"
-      "    MOC tallied current in group G on surface I",
+      "current: float.\n"
+      "    MOC tallied current in CMFD group G on surface surf.",
       py::arg("G"),py::arg("surface"))
    .def("flux",&CMFD::flux,
-      "Gets the CMFD flux at cell i,j in group g \n\n"
+      "Gets the CMFD flux at cell i,j in group g.\n\n"
       "Parameters\n"
       "----------\n"
-      "i: int\n"
-      "      cell x index\n"
-      "j: int\n"
-      "      cell y index\n"
-      "g: int\n"
-      "      cmfd group\n"
+      "i: int.\n"
+      "      cell x index.\n"
+      "j: int.\n"
+      "      cell y index.\n"
+      "g: int.\n"
+      "      CMFD energy group.\n"
       "Returns\n"
       "-------\n"
-      "flux: double\n"
-      "      CMFD scalar flux at cell i,j in group g\n",
+      "flux: float.\n"
+      "      CMFD scalar flux at cell i,j in group g.\n",
       py::arg("i"),py::arg("j"),py::arg("g"));
 }

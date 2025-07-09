@@ -105,11 +105,6 @@ class MOCDriver {
               std::size_t lj = 0) const;
   double flux(std::size_t i, std::size_t g, std::size_t lj = 0) const;
 
-  void set_flux(std::size_t i, std::size_t g, double new_flx,
-                std::size_t lj = 0) {
-    flux_(g, i, lj) = new_flx;
-  }
-
   std::vector<std::vector<Track>>& tracks() { return tracks_; }
 
   const std::vector<AngleInfo>& azimuthal_quadrature() const {
@@ -219,6 +214,15 @@ class MOCDriver {
 
   double calc_keff(const xt::xtensor<double, 3>& flux,
                    const xt::xtensor<double, 3>& old_flux) const;
+
+  friend class CMFD;
+
+  // Used by CMFD to update FSR fluxes
+  void set_flux(std::size_t i, std::size_t g, double new_flx,
+                std::size_t lj = 0) {
+    flux_(g, i, lj) = new_flx;
+  }
+
 
   // Private default constructor for cereal
   MOCDriver() : polar_quad_(YamamotoTabuchi<6>()) {}

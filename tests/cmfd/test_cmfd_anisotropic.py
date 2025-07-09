@@ -155,6 +155,7 @@ class TestCMFDAnisotropic:
         # Use 7->3 group condensation 
         moc.cmfd = CMFD(dx_cmfd, dx_cmfd, [[0,1],[2,4],[5,6]])
         moc.cmfd.damping = 0.6
+        moc.cmfd.od_cmfd = False
         moc.cmfd.larsen_correction = True
         moc.generate_tracks(64, 0.05, YamamotoTabuchi6())
 
@@ -162,4 +163,4 @@ class TestCMFDAnisotropic:
         moc.flux_tolerance = 1.E-5
         moc.solve()
 
-        assert moc.keff == pytest.approx(0.99372, 0.0001)
+        assert moc.keff == pytest.approx(0.99372, 1E-5)
