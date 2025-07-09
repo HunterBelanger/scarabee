@@ -25,7 +25,7 @@ Nx = 5000
 # slab
 dx = thickness / Nx
 
-sn = ReflectorSN(Nx*[fuel], Nx*[dx], True)
+sn = ReflectorSN(Nx*[fuel], Nx*[dx], 128, True)
 print(sn.anisotropic, sn.max_legendre_order)
 sn.solve()
 

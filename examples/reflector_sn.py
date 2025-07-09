@@ -34,5 +34,5 @@ N = 100000
 dx = N * [L/N]
 xsary = N * [xs]
 
-refsn = ReflectorSN(xsary, dx)
+refsn = ReflectorSN(xsary, dx, 12)
 refsn.solve()

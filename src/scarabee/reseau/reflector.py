@@ -130,6 +130,9 @@ class Reflector:
         Width of the core baffle.
     baffle : CrossSection
         Self-shielded cross sections for the core baffle.
+    nangles : int
+        Number of angles used in the Sn solver. Default is 16. Must be one of:
+        2, 4, 6, 8, 10, 12, 14, 16, 32, 64, 128.
     anisotropic : bool
         If True, the reflector calculation is performed with explicit
         anisotropic scattering. Otherwise, the transport correction with
@@ -164,6 +167,7 @@ class Reflector:
         self.gap_width = gap_width
         self.baffle_width = baffle_width
         self.condensation_scheme = ndl.condensation_scheme
+        self.nangles = 16
         self.anisotropic = False
         self.adf = None
         self.diffusion_xs = None
@@ -223,7 +227,7 @@ class Reflector:
         dx += [dr] * NR
         mats += [self.moderator] * NR
 
-        ref_sn = ReflectorSN(mats, dx, self.anisotropic)
+        ref_sn = ReflectorSN(mats, dx, self.nangles, self.anisotropic)
         set_logging_level(LogLevel.Warning)
         ref_sn.solve()
         set_logging_level(LogLevel.Info)

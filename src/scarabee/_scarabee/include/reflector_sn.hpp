@@ -5,7 +5,7 @@
 
 #include <xtensor/containers/xtensor.hpp>
 
-#include <array>
+#include <span>
 #include <memory>
 
 namespace scarabee {
@@ -13,7 +13,10 @@ namespace scarabee {
 class ReflectorSN {
  public:
   ReflectorSN(const std::vector<std::shared_ptr<CrossSection>>& xs,
-              const xt::xtensor<double, 1>& dx, bool anisotropic);
+              const xt::xtensor<double, 1>& dx, std::uint32_t nangles,
+              bool anisotropic);
+
+  std::size_t nangles() const { return mu_.size(); }
 
   void solve();
   bool solved() const { return solved_; }
@@ -76,8 +79,8 @@ class ReflectorSN {
                    const xt::xtensor<double, 3>& new_flux,
                    const double keff) const;
 
-  static const std::array<double, 64> mu_;
-  static const std::array<double, 64> wgt_;
+  std::span<const double> mu_;
+  std::span<const double> wgt_;
 };
 
 }  // namespace scarabee
