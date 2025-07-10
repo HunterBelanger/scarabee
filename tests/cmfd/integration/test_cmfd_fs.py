@@ -60,3 +60,14 @@ class TestCMFDWaterFS:
         moc.flux_tolerance = 1.E-5
         moc.sim_mode = SimulationMode.FixedSource
         moc.solve()
+
+        # Test flux in each group at a single FSR
+        test_point = Vector(0.1,0.1)
+        test_dir = Direction(0.,1.)
+        assert moc.flux(test_point, test_dir, 0) == pytest.approx(0.661793, 1E-4)
+        assert moc.flux(test_point, test_dir, 1) == pytest.approx(0.086848, 1E-4)
+        assert moc.flux(test_point, test_dir, 2) == pytest.approx(0.022218, 1E-4)
+        assert moc.flux(test_point, test_dir, 3) == pytest.approx(0.007779, 1E-4)
+        assert moc.flux(test_point, test_dir, 4) == pytest.approx(0.005393, 1E-4)
+        assert moc.flux(test_point, test_dir, 5) == pytest.approx(0.017878, 1E-4)
+        assert moc.flux(test_point, test_dir, 6) == pytest.approx(0.054445, 1E-4)

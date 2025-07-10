@@ -1168,8 +1168,10 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
 
       // Update scalar flux in each MOC FSR
       for (const auto f : fsrs) {
-        const double new_flx = moc.flux(f, g, 0) * flx_ratio;
-        moc.set_flux(f, g, new_flx, 0);
+        for (std::size_t lj = 0; lj < moc.num_spherical_harmonics(); lj++) {
+          const double new_flx = moc.flux(f, g, lj) * flx_ratio;
+          moc.set_flux(f, g, new_flx, lj);
+        }
       }
     }
   }
@@ -1212,14 +1214,6 @@ void CMFD::solve(MOCDriver& moc, double keff, std::size_t moc_iteration) {
   // Skip user-defined # of MOC iterations
   if (moc_iteration > skip_moc_iterations_) {
     cmfd_solves_++;
-
-    if (larsen_correction_ && od_cmfd_) {
-      auto mssg =
-          "odCMFD and the Larsen correction are mutally exclusive. Only one "
-          "can be set to True";
-      spdlog::error(mssg);
-      throw ScarabeeException(mssg);
-    }
 
     this->normalize_currents();
     this->compute_homogenized_xs_and_flux(moc);
