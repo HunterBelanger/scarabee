@@ -1102,7 +1102,7 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       // Don't warn on first moc iteration or if ratio is exactly 0.0
       if (ratio != 0.0 && moc_iteration_ > 1 &&
           (ratio < 0.05 || ratio > 20.0)) {
-          flux_update_warning = true;
+        flux_update_warning = true;
       }
       // Check that the update ratio is valid
       if (ratio < 0.0) {
