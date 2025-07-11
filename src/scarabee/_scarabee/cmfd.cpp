@@ -1128,7 +1128,7 @@ void CMFD::update_moc_fluxes(MOCDriver& moc) {
       }
       // Clamp CMFD flux ratio after a certain # of solves
       if (cmfd_solves_ > unbounded_cmfd_solves_) {
-        std::clamp(ratio, 0.05, 20.0);
+        ratio = std::clamp(ratio, 0.05, 20.0);
       }
       update_ratios_(linear_indx) = ratio;
     }
