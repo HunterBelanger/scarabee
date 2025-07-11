@@ -328,22 +328,6 @@ const double& CMFD::flux(const std::size_t i, const std::size_t j,
   return flux_cmfd_(g * nx_ * ny_ + cell_index);
 }
 
-double& CMFD::current(const std::size_t G, const std::size_t surface) {
-  if (G >= surface_currents_.shape()[0]) {
-    auto mssg = "Group index out of range.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  if (surface >= surface_currents_.shape()[1]) {
-    auto mssg = "Surface index out of range.";
-    spdlog::error(mssg);
-    throw ScarabeeException(mssg);
-  }
-
-  return surface_currents_(G, surface);
-}
-
 const double& CMFD::current(const std::size_t G,
                             const std::size_t surface) const {
   if (G >= surface_currents_.shape()[0]) {

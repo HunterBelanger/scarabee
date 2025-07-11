@@ -87,7 +87,6 @@ class CMFD {
 
   std::size_t moc_to_cmfd_group(std::size_t g) const;
 
-  double& current(const std::size_t G, const std::size_t surface);
   const double& current(const std::size_t G, const std::size_t surface) const;
 
   void tally_current(double aflx, const Direction& u, std::size_t G,
