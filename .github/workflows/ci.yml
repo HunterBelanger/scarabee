@@ -35,11 +35,6 @@ jobs:
             libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
             libomp-dev mesa-common-dev libgl1-mesa-dev libglu1-mesa-dev
 
-      - name: CMake configure & build
-        run: |
-          cmake -S . -B build
-          cmake --build build --config Release
-
       - name: Install Python module
         run: |
           python -m pip install .
