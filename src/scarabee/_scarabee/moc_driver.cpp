@@ -211,7 +211,7 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   allocate_track_fluxes();
 
   draw_timer.stop();
-  spdlog::info("Time spent dawing tracks: {:.5} s.", draw_timer.elapsed_time());
+  spdlog::info("Time spent drawing tracks: {:.5} s.", draw_timer.elapsed_time());
 }
 
 void MOCDriver::solve() {
