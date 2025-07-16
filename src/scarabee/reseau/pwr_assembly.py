@@ -18,6 +18,7 @@ from .._scarabee import (
     Direction,
     Cartesian2D,
     MOCDriver,
+    CMFD,
     BoundaryCondition,
     SimulationMode,
     YamamotoTabuchi6,
@@ -165,6 +166,15 @@ class PWRAssembly:
         modeled. Default value is False. **If you wish to turn anisotropic
         scattering on, you must set this attribute before calling the solve
         method for the first time.**
+    cmfd : bool
+        If True, Coarse Mesh Finite Difference diffusion will be used to
+        accelerate the assembly calculation. If True, a CMFD energy
+        condensation scheme must be provided (see cmfd_condensation_scheme).
+        Default value is True. **If you wish to turn CMFD off/on, you must set
+        this attribute before calling the solve method for the first time.**
+    cmfd_condensation_scheme : list of list of int
+        Energy condensation scheme for the CMFD acceleration of the assembly
+        calculation.
     condensation_scheme : list of list of int
         Energy condensation scheme to condense from the group structure of the
         library to the few-groups used in the core solver.
@@ -426,6 +436,7 @@ class PWRAssembly:
         self._flux_tolerance: float = 1.0e-5
         self._keff_tolerance: float = 1.0e-5
         self._anisotropic: bool = False
+        self._cmfd: bool = True
 
         self._asmbly_cells = []
         self._asmbly_geom: Optional[Cartesian2D] = None
@@ -451,6 +462,11 @@ class PWRAssembly:
         # Condensation scheme to make few-group cross sections
         self._condensation_scheme: Optional[List[List[int]]] = (
             self._ndl.condensation_scheme
+        )
+
+        # Condensation scheme to used for CMFD acceleration
+        self._cmfd_condensation_scheme: Optional[List[List[int]]] = (
+            self._ndl.cmfd_condensation_scheme
         )
 
         # If a single assembly calculation is performed, this attribute will
@@ -632,6 +648,14 @@ class PWRAssembly:
         self._anisotropic = aniso
 
     @property
+    def cmfd(self) -> bool:
+        return self._cmfd
+
+    @cmfd.setter
+    def cmfd(self, cmfd: bool) -> None:
+        self._cmfd = cmfd
+
+    @property
     def cells(self) -> List[List[Union[FuelPin, GuideTube]]]:
         return self._cells
 
@@ -722,7 +746,11 @@ class PWRAssembly:
         return self._condensation_scheme
 
     @condensation_scheme.setter
-    def condensation_scheme(self, cs: List[List[int]]) -> None:
+    def condensation_scheme(self, cs: Optional[List[List[int]]]) -> None:
+        if cs is None:
+            self._condensation_scheme = None
+            return
+
         if not isinstance(cs, list):
             raise TypeError("Condensation scheme must be a list of lists of ints.")
 
@@ -766,6 +794,62 @@ class PWRAssembly:
                     raise ValueError("The condensation scheme is not continuous")
 
         self._condensation_scheme = copy.deepcopy(cs)
+
+    @property
+    def cmfd_condensation_scheme(self) -> Optional[List[List[int]]]:
+        return self._cmfd_condensation_scheme
+
+    @cmfd_condensation_scheme.setter
+    def cmfd_condensation_scheme(self, cs: Optional[List[List[int]]]) -> None:
+        if cs is None:
+            self._cmfd_condensation_scheme = None
+            return
+
+        if not isinstance(cs, list):
+            raise TypeError("CMFD Condensation scheme must be a list of lists of ints.")
+
+        if len(cs) == 0:
+            raise TypeError("CMFD Condensation scheme must have at least one group.")
+
+        for G in range(len(cs)):
+            if not isinstance(cs[G], list):
+                raise TypeError(
+                    "CMFD Condensation scheme must be a list of lists of ints."
+                )
+
+            if len(cs[G]) != 2:
+                raise TypeError(
+                    "Each entry in CMFD condensation scheme must have 2 entries."
+                )
+
+            try:
+                cs[G][0] = int(cs[G][0])
+                cs[G][1] = int(cs[G][1])
+            except:
+                raise TypeError(
+                    f"Microgroup indices for macrogroup {G} are not convertible to ints."
+                )
+
+            if cs[G][1] < cs[G][0]:
+                raise ValueError(
+                    f"The microgroup indices in macrogroup {G} are not ordered."
+                )
+
+            if G == 0 and cs[G][0] != 0:
+                raise ValueError(
+                    "The first microgroup index of the 0 macrogroup must be 0."
+                )
+            elif G == len(cs) - 1 and cs[G][1] != self._ndl.ngroups - 1:
+                NG = self._ndl.ngroups - 1
+                raise ValueError(
+                    f"The last microgroup index of the last macrogroup must be {NG}."
+                )
+
+            if G > 0:
+                if cs[G][0] != cs[G - 1][1] + 1:
+                    raise ValueError("The CMFD condensation scheme is not continuous")
+
+        self._cmfd_condensation_scheme = copy.deepcopy(cs)
 
     @property
     def diffusion_data(self) -> Optional[Union[DiffusionData, List[DiffusionData]]]:
@@ -1424,6 +1508,39 @@ class PWRAssembly:
         self._asmbly_moc.x_max_bc = self._x_max_bc
         self._asmbly_moc.y_min_bc = self._y_min_bc
         self._asmbly_moc.y_max_bc = self._y_max_bc
+
+        # Apply CMFD if turned on
+        if self.cmfd and self.cmfd_condensation_scheme is None:
+            raise RuntimeError(
+                "CMFD is enabled but no CMFD condensation scheme has been provided."
+            )
+        elif self.cmfd:
+            extra_width = 0.5 * (self.assembly_pitch - self.shape[0] * self.pitch)
+            dx_cmfd = self._simulated_shape[0] * [self.pitch]
+            dy_cmfd = self._simulated_shape[1] * [self.pitch]
+            if self.symmetry != Symmetry.Full and self.shape[1] % 2 == 1:
+                dy_cmfd[0] *= 0.5
+            if self.symmetry == Symmetry.Quarter and self.shape[0] % 2 == 1:
+                dx_cmfd[0] *= 0.5
+
+            if self.symmetry == Symmetry.Full:
+                dx_cmfd[0] += extra_width
+                dx_cmfd[-1] += extra_width
+                dy_cmfd[0] += extra_width
+                dy_cmfd[-1] += extra_width
+            elif self.symmetry == Symmetry.Half:
+                dx_cmfd[0] += extra_width
+                dx_cmfd[-1] += extra_width
+                dy_cmfd[-1] += extra_width
+            else:
+                dx_cmfd[-1] += extra_width
+                dy_cmfd[-1] += extra_width
+
+            self._asmbly_moc.cmfd = CMFD(
+                dx_cmfd, dy_cmfd, self.cmfd_condensation_scheme
+            )
+
+        # Trace tracks
         self._asmbly_moc.generate_tracks(
             self._moc_num_angles,
             self._moc_track_spacing,
