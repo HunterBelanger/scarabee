@@ -102,6 +102,11 @@ class NDLibrary {
     return condensation_scheme_;
   }
 
+  const std::optional<std::vector<std::pair<std::size_t, std::size_t>>>&
+  cmfd_condensation_scheme() const {
+    return cmfd_condensation_scheme_;
+  }
+
   NuclideHandle& get_nuclide(const std::string& name);
   const NuclideHandle& get_nuclide(const std::string& name) const;
 
@@ -134,6 +139,8 @@ class NDLibrary {
   std::vector<double> group_bounds_;
   std::optional<std::vector<std::pair<std::size_t, std::size_t>>>
       condensation_scheme_;
+  std::optional<std::vector<std::pair<std::size_t, std::size_t>>>
+      cmfd_condensation_scheme_;
   std::string library_;
   std::string group_structure_;
   std::size_t ngroups_;
