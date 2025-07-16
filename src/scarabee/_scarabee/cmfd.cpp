@@ -436,8 +436,7 @@ void CMFD::normalize_currents() {
     const double invs_dy = 1. / dy;
 
     for (std::size_t xs = 0; xs < x_bounds_.size(); xs++) {
-      for (std::size_t g = 0; g < ng_; g++)
-        surface_currents_.at(g, s) *= invs_dy;
+      xt::view(surface_currents_, xt::all(), s) *= invs_dy;
       s++;
     }
   }
@@ -448,8 +447,7 @@ void CMFD::normalize_currents() {
     const double invs_dx = 1. / dx;
 
     for (std::size_t ys = 0; ys < y_bounds_.size(); ys++) {
-      for (std::size_t g = 0; g < ng_; g++)
-        surface_currents_.at(g, s) *= invs_dx;
+      xt::view(surface_currents_, xt::all(), s) *= invs_dx;
       s++;
     }
   }
@@ -458,7 +456,10 @@ void CMFD::normalize_currents() {
 }
 
 void CMFD::compute_homogenized_xs_and_flux(const MOCDriver& moc) {
-  for (std::size_t i = 0; i < nx_; i++) {
+#pragma omp parallel for
+  for (int ii = 0; ii < static_cast<int>(nx_); ii++) {
+    std::size_t i = static_cast<std::size_t>(ii);
+
     for (std::size_t j = 0; j < ny_; j++) {
       const auto indx = this->tile_to_indx(i, j);
       const auto fg_xs = moc.homogenize(fsrs_[indx]);
