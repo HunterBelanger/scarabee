@@ -1,6 +1,5 @@
 import frendy as fdy
 import h5py
-import numpy as np
 
 #base = "/mnt/c/Users/hunte/Documents/nuclear_data/ENDF-B-VIII.0/neutrons/"
 #tslbase = "/mnt/c/Users/hunte/Documents/nuclear_data/ENDF-B-VIII.0/thermal_scatt/"
@@ -8,40 +7,23 @@ base = "/mnt/c/Users/BELANH2/Documents/nuclear_data/ENDF-VIII.0/endf/neutrons/"
 tslbase = "/mnt/c/Users/BELANH2/Documents/nuclear_data/ENDF-VIII.0/endf/thermal_scatt/"
 lib_name = "ENDF/B-VIII.0"
 temps = [293., 500., 600., 800., 1000., 1500., 2000.]
-#temps = [293.6]
 
-# Condensation Schemes for SHEM-281 group structure
-# 25 groups (similar to CASMO-25 group structure)
-cond_spec = np.array([[0, 8], [9, 11], [12, 13], [14, 17], [18, 22], [23, 25],
-             [26, 36], [37, 55], [56, 58], [59, 79], [80, 120],
-             [121, 142], [143, 195], [196, 216], [217, 229], [230, 233],
-             [234, 236], [237, 240], [241, 246], [247, 253], [254, 256],
-             [257, 262], [263, 268], [269, 272], [273, 280]])
-
-few_grp_cond_spec = np.array([[0, 18], [19, 24]])
-
-ref_few_grp_cond_spec = np.array([[0, 246], [247, 280]])
 
 # Set the default group strucutre
-fdy.set_default_group_structure("SHEM-361")
+fdy.set_default_group_structure("SCARABEE-125")
 fdy.set_default_max_legendre_moments(3)
-
 print(fdy.get_default_group_structure())
 
-h5 = h5py.File('endf8_shem361.h5', 'w')
-#h5 = h5py.File('endf8_xmas172.h5', 'w')
+# Initialize HDF5 with the library information
+h5 = h5py.File('endf8_scarabee125.h5', 'w')
 h5.attrs['group-structure'] = fdy.get_default_group_structure().name
 h5.attrs['group-bounds'] = fdy.get_default_group_structure().bounds
 h5.attrs['ngroups'] = fdy.get_default_group_structure().ngroups
+h5.attrs['condensation-scheme'] = fdy.get_default_group_structure().condensation_scheme
 h5.attrs['first-resonance-group'] = fdy.get_default_group_structure().first_res_grp
 h5.attrs['last-resonance-group'] = fdy.get_default_group_structure().last_res_grp
 h5.attrs['library'] = lib_name
 
-
-if fdy.get_default_group_structure().name == "SHEM-281":
-    h5.attrs['macro-group-condensation-scheme'] = cond_spec
-    h5.attrs['few-group-condensation-scheme'] = few_grp_cond_spec
-    h5.attrs['reflector-few-group-condensation-scheme'] = ref_few_grp_cond_spec
 
 # We process U235 first so that we can steal its fission spectrum for
 # performing transport correciton calculations
@@ -433,6 +415,94 @@ N.dilutions = [1.E10]
 N.process(h5)
 
 N = fdy.FrendyMG()
+N.name = "Br81"
+N.endf_file = base + "n-035_Br_081.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Kr82"
+N.endf_file = base + "n-036_Kr_082.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Kr83"
+N.endf_file = base + "n-036_Kr_083.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Kr84"
+N.endf_file = base + "n-036_Kr_084.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Kr85"
+N.endf_file = base + "n-036_Kr_085.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Kr86"
+N.endf_file = base + "n-036_Kr_086.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sr89"
+N.endf_file = base + "n-038_Sr_089.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sr90"
+N.endf_file = base + "n-038_Sr_090.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Y89"
+N.endf_file = base + "n-039_Y_089.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Y90"
+N.endf_file = base + "n-039_Y_090.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Y91"
+N.endf_file = base + "n-039_Y_091.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10]
+N.process(h5)
+
+N = fdy.FrendyMG()
 N.name = "Zr90"
 N.endf_file = base + "n-040_Zr_090.endf"
 N.label = N.name + " from ENDF/B-8.0"
@@ -454,6 +524,14 @@ N.temps = temps
 N.process(h5)
 
 N = fdy.FrendyMG()
+N.name = "Zr93"
+N.endf_file = base + "n-040_Zr_093.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
 N.name = "Zr94"
 N.endf_file = base + "n-040_Zr_094.endf"
 N.label = N.name + " from ENDF/B-8.0"
@@ -461,10 +539,26 @@ N.temps = temps
 N.process(h5)
 
 N = fdy.FrendyMG()
+N.name = "Zr95"
+N.endf_file = base + "n-040_Zr_095.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
 N.name = "Zr96"
 N.endf_file = base + "n-040_Zr_096.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Nb95"
+N.endf_file = base + "n-041_Nb_095.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
 N.process(h5)
 
 N = fdy.FrendyMG()
@@ -510,10 +604,145 @@ N.temps = temps
 N.process(h5)
 
 N = fdy.FrendyMG()
+N.name = "Mo99"
+N.endf_file = base + "n-042_Mo_099.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
 N.name = "Mo100"
 N.endf_file = base + "n-042_Mo_100.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Tc99"
+N.endf_file = base + "n-043_Tc_099.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ru99"
+N.endf_file = base + "n-044_Ru_099.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ru100"
+N.endf_file = base + "n-044_Ru_100.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ru101"
+N.endf_file = base + "n-044_Ru_101.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ru102"
+N.endf_file = base + "n-044_Ru_102.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ru103"
+N.endf_file = base + "n-044_Ru_103.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ru104"
+N.endf_file = base + "n-044_Ru_104.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ru105"
+N.endf_file = base + "n-044_Ru_105.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ru106"
+N.endf_file = base + "n-044_Ru_106.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Rh103"
+N.endf_file = base + "n-045_Rh_103.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Rh105"
+N.endf_file = base + "n-045_Rh_105.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pd104"
+N.endf_file = base + "n-046_Pd_104.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pd105"
+N.endf_file = base + "n-046_Pd_105.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pd106"
+N.endf_file = base + "n-046_Pd_106.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pd107"
+N.endf_file = base + "n-046_Pd_107.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pd108"
+N.endf_file = base + "n-046_Pd_108.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
 N.process(h5)
 
 N = fdy.FrendyMG()
@@ -526,6 +755,13 @@ N.process(h5)
 N = fdy.FrendyMG()
 N.name = "Ag109"
 N.endf_file = base + "n-047_Ag_109.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ag110m1"
+N.endf_file = base + "n-047_Ag_110m1.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
 N.process(h5)
@@ -679,10 +915,127 @@ N.temps = temps
 N.process(h5)
 
 N = fdy.FrendyMG()
+N.name = "Sb121"
+N.endf_file = base + "n-051_Sb_121.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sb123"
+N.endf_file = base + "n-051_Sb_123.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sb125"
+N.endf_file = base + "n-051_Sb_125.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Te127m1"
+N.endf_file = base + "n-052_Te_127m1.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Te129m1"
+N.endf_file = base + "n-052_Te_129m1.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Te132"
+N.endf_file = base + "n-052_Te_132.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "I127"
+N.endf_file = base + "n-053_I_127.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "I129"
+N.endf_file = base + "n-053_I_129.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "I131"
+N.endf_file = base + "n-053_I_131.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
 N.name = "I135"
 N.endf_file = base + "n-053_I_135.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Xe128"
+N.endf_file = base + "n-054_Xe_128.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Xe129"
+N.endf_file = base + "n-054_Xe_129.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Xe130"
+N.endf_file = base + "n-054_Xe_130.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Xe131"
+N.endf_file = base + "n-054_Xe_131.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Xe132"
+N.endf_file = base + "n-054_Xe_132.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Xe133"
+N.endf_file = base + "n-054_Xe_133.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
 N.process(h5)
 
 N = fdy.FrendyMG()
@@ -690,6 +1043,7 @@ N.name = "Xe134"
 N.endf_file = base + "n-054_Xe_134.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
+N.dilutions = [1.E10] # Fission Product
 N.process(h5)
 
 N = fdy.FrendyMG()
@@ -697,6 +1051,270 @@ N.name = "Xe135"
 N.endf_file = base + "n-054_Xe_135.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Xe136"
+N.endf_file = base + "n-054_Xe_136.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Cs133"
+N.endf_file = base + "n-055_Cs_133.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Cs134"
+N.endf_file = base + "n-055_Cs_134.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Cs135"
+N.endf_file = base + "n-055_Cs_135.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Cs136"
+N.endf_file = base + "n-055_Cs_136.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Cs137"
+N.endf_file = base + "n-055_Cs_137.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ba134"
+N.endf_file = base + "n-056_Ba_134.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ba137"
+N.endf_file = base + "n-056_Ba_137.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ba140"
+N.endf_file = base + "n-056_Ba_140.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "La139"
+N.endf_file = base + "n-057_La_139.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "La140"
+N.endf_file = base + "n-057_La_140.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ce140"
+N.endf_file = base + "n-058_Ce_140.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ce141"
+N.endf_file = base + "n-058_Ce_141.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ce142"
+N.endf_file = base + "n-058_Ce_142.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ce143"
+N.endf_file = base + "n-058_Ce_143.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ce144"
+N.endf_file = base + "n-058_Ce_144.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pr141"
+N.endf_file = base + "n-059_Pr_141.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pr143"
+N.endf_file = base + "n-059_Pr_143.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Nd142"
+N.endf_file = base + "n-060_Nd_142.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Nd143"
+N.endf_file = base + "n-060_Nd_143.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Nd144"
+N.endf_file = base + "n-060_Nd_144.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Nd145"
+N.endf_file = base + "n-060_Nd_145.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Nd146"
+N.endf_file = base + "n-060_Nd_146.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Nd147"
+N.endf_file = base + "n-060_Nd_147.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Nd148"
+N.endf_file = base + "n-060_Nd_148.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Nd150"
+N.endf_file = base + "n-060_Nd_150.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pm147"
+N.endf_file = base + "n-061_Pm_147.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pm148"
+N.endf_file = base + "n-061_Pm_148.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pm148m1"
+N.endf_file = base + "n-061_Pm_148m1.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pm149"
+N.endf_file = base + "n-061_Pm_149.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pm151"
+N.endf_file = base + "n-061_Pm_151.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sm147"
+N.endf_file = base + "n-062_Sm_147.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sm148"
+N.endf_file = base + "n-062_Sm_148.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
 N.process(h5)
 
 N = fdy.FrendyMG()
@@ -704,6 +1322,84 @@ N.name = "Sm149"
 N.endf_file = base + "n-062_Sm_149.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sm150"
+N.endf_file = base + "n-062_Sm_150.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sm151"
+N.endf_file = base + "n-062_Sm_151.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sm152"
+N.endf_file = base + "n-062_Sm_152.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sm153"
+N.endf_file = base + "n-062_Sm_153.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Sm154"
+N.endf_file = base + "n-062_Sm_154.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Eu151"
+N.endf_file = base + "n-063_Eu_151.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Eu152"
+N.endf_file = base + "n-063_Eu_152.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Eu153"
+N.endf_file = base + "n-063_Eu_153.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Eu154"
+N.endf_file = base + "n-063_Eu_154.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Eu155"
+N.endf_file = base + "n-063_Eu_155.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Eu156"
+N.endf_file = base + "n-063_Eu_156.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
 N.process(h5)
 
 N = fdy.FrendyMG()
@@ -756,8 +1452,268 @@ N.temps = temps
 N.process(h5)
 
 N = fdy.FrendyMG()
+N.name = "Tb159"
+N.endf_file = base + "n-065_Tb_159.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Tb160"
+N.endf_file = base + "n-065_Tb_160.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Tb161"
+N.endf_file = base + "n-065_Tb_161.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Dy160"
+N.endf_file = base + "n-066_Dy_160.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Dy161"
+N.endf_file = base + "n-066_Dy_161.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Dy162"
+N.endf_file = base + "n-066_Dy_162.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Dy163"
+N.endf_file = base + "n-066_Dy_163.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Dy164"
+N.endf_file = base + "n-066_Dy_164.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ho165"
+N.endf_file = base + "n-067_Ho_165.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Er162"
+N.endf_file = base + "n-068_Er_162.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Er164"
+N.endf_file = base + "n-068_Er_164.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Er166"
+N.endf_file = base + "n-068_Er_166.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Er167"
+N.endf_file = base + "n-068_Er_167.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Er168"
+N.endf_file = base + "n-068_Er_168.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Er169"
+N.endf_file = base + "n-068_Er_169.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Er170"
+N.endf_file = base + "n-068_Er_170.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Tm169"
+N.endf_file = base + "n-069_Tm_169.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Tm170"
+N.endf_file = base + "n-069_Tm_170.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Tm171"
+N.endf_file = base + "n-069_Tm_171.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Hf174"
+N.endf_file = base + "n-072_Hf_174.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Hf176"
+N.endf_file = base + "n-072_Hf_176.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Hf177"
+N.endf_file = base + "n-072_Hf_177.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Hf178"
+N.endf_file = base + "n-072_Hf_178.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Hf179"
+N.endf_file = base + "n-072_Hf_179.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Hf180"
+N.endf_file = base + "n-072_Hf_180.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Hf181"
+N.endf_file = base + "n-072_Hf_181.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ta181"
+N.endf_file = base + "n-073_Ta_181.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Ta182"
+N.endf_file = base + "n-073_Ta_182.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.dilutions = [1.E10] # Fission Product
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Th230"
+N.endf_file = base + "n-090_Th_230.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Th231"
+N.endf_file = base + "n-090_Th_231.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
 N.name = "Th232"
 N.endf_file = base + "n-090_Th_232.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Th234"
+N.endf_file = base + "n-090_Th_234.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pa231"
+N.endf_file = base + "n-091_Pa_231.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pa232"
+N.endf_file = base + "n-091_Pa_232.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Pa233"
+N.endf_file = base + "n-091_Pa_233.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "U232"
+N.endf_file = base + "n-092_U_232.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
 N.process(h5)
@@ -784,8 +1740,43 @@ N.temps = temps
 N.process(h5)
 
 N = fdy.FrendyMG()
+N.name = "U237"
+N.endf_file = base + "n-092_U_237.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
 N.name = "U238"
 N.endf_file = base + "n-092_U_238.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Np236"
+N.endf_file = base + "n-093_Np_236.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Np237"
+N.endf_file = base + "n-093_Np_237.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Np238"
+N.endf_file = base + "n-093_Np_238.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Np239"
+N.endf_file = base + "n-093_Np_239.endf"
 N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
 N.process(h5)
@@ -853,5 +1844,60 @@ N.label = N.name + " from ENDF/B-8.0"
 N.temps = temps
 N.process(h5)
 
+N = fdy.FrendyMG()
+N.name = "Am241"
+N.endf_file = base + "n-095_Am_241.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Am242m1"
+N.endf_file = base + "n-095_Am_242m1.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Am243"
+N.endf_file = base + "n-095_Am_243.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Cm242"
+N.endf_file = base + "n-096_Cm_242.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Cm243"
+N.endf_file = base + "n-096_Cm_243.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Cm244"
+N.endf_file = base + "n-096_Cm_244.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Cm245"
+N.endf_file = base + "n-096_Cm_245.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
+
+N = fdy.FrendyMG()
+N.name = "Cm246"
+N.endf_file = base + "n-096_Cm_246.endf"
+N.label = N.name + " from ENDF/B-8.0"
+N.temps = temps
+N.process(h5)
 
 h5.close()

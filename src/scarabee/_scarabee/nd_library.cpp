@@ -3,7 +3,7 @@
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cmath>
 #include <cstdlib>
@@ -235,12 +235,13 @@ void NuclideHandle::unload() {
 NDLibrary::NDLibrary()
     : nuclide_handles_(),
       group_bounds_(),
-      macro_group_condensation_scheme_(std::nullopt),
-      few_group_condensation_scheme_(std::nullopt),
+      condensation_scheme_(std::nullopt),
+      cmfd_condensation_scheme_(std::nullopt),
       library_(),
       group_structure_(),
       ngroups_(0),
-      h5_(nullptr) {
+      h5_(nullptr),
+      depletion_chain_(nullptr) {
   // Get the environment variable
   const char* ndl_env = std::getenv(NDL_ENV_VAR);
   if (ndl_env == nullptr) {
@@ -269,12 +270,13 @@ NDLibrary::NDLibrary()
 NDLibrary::NDLibrary(const std::string& fname)
     : nuclide_handles_(),
       group_bounds_(),
-      macro_group_condensation_scheme_(std::nullopt),
-      few_group_condensation_scheme_(std::nullopt),
+      condensation_scheme_(std::nullopt),
+      cmfd_condensation_scheme_(std::nullopt),
       library_(),
       group_structure_(),
       ngroups_(0),
-      h5_(nullptr) {
+      h5_(nullptr),
+      depletion_chain_(nullptr) {
   // Make sure HDF5 file exists
   if (std::filesystem::exists(fname) == false) {
     std::stringstream mssg;
@@ -321,50 +323,70 @@ void NDLibrary::init() {
     throw ScarabeeException(mssg);
   }
 
-  // Check if default condensation schemes are provided
-  auto get_cond_scheme =
-      [this](const std::string& key,
-             std::optional<std::vector<std::pair<std::size_t, std::size_t>>>&
-                 scheme,
-             const std::string& mssg) {
-        if (h5_->hasAttribute(key)) {
-          const auto attr = h5_->getAttribute(key);
-          const auto dims = attr.getMemSpace().getDimensions();
+  // If a default condensation scheme is provided, load it in now
+  if (h5_->hasAttribute("condensation-scheme")) {
+    const auto attr = h5_->getAttribute("condensation-scheme");
+    const auto dims = attr.getMemSpace().getDimensions();
 
-          if (dims.size() != 2 || dims[1] != 2) {
-            spdlog::error(mssg);
-            throw ScarabeeException(mssg);
-          }
+    // Make sure the dimensions of the array are correct
+    if (dims.size() != 2 || dims[1] != 2) {
+      const auto mssg =
+          "Nuclear data library provided condensation scheme has an invalid "
+          "shape.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
 
-          xt::xtensor<double, 2> cond_scheme =
-              xt::zeros<double>({dims[0], dims[1]});
-          attr.read_raw<double>(cond_scheme.data());
+    // Read in the condensation scheme array
+    xt::xtensor<double, 2> cond_scheme = xt::zeros<double>({dims[0], dims[1]});
+    attr.read_raw<double>(cond_scheme.data());
 
-          scheme =
-              std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
-          for (std::size_t G = 0; G < dims[0]; G++) {
-            (*scheme)[G].first = static_cast<std::size_t>(cond_scheme(G, 0));
-            (*scheme)[G].second = static_cast<std::size_t>(cond_scheme(G, 1));
-          }
-        }
-      };
+    // Reconstruct vector of pairs from the array
+    condensation_scheme_ =
+        std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
+    for (std::size_t G = 0; G < dims[0]; G++) {
+      (*condensation_scheme_)[G].first =
+          static_cast<std::size_t>(cond_scheme(G, 0));
+      (*condensation_scheme_)[G].second =
+          static_cast<std::size_t>(cond_scheme(G, 1));
+    }
+  }
 
-  get_cond_scheme("macro-group-condensation-scheme",
-                  macro_group_condensation_scheme_,
-                  "Nuclear data library provided macro-group condensation "
-                  "scheme has an invalide shape.");
-  get_cond_scheme("few-group-condensation-scheme",
-                  few_group_condensation_scheme_,
-                  "Nuclear data library provided few-group condensation scheme "
-                  "has an invalide shape.");
-  get_cond_scheme("reflector-few-group-condensation-scheme",
-                  reflector_few_group_condensation_scheme_,
-                  "Nuclear data library provided reflector few-group "
-                  "condensation scheme has an invalide shape.");
+  // If a default CMFD condensation scheme is provided, load it in now
+  if (h5_->hasAttribute("cmfd-condensation-scheme")) {
+    const auto attr = h5_->getAttribute("cmfd-condensation-scheme");
+    const auto dims = attr.getMemSpace().getDimensions();
+
+    // Make sure the dimensions of the array are correct
+    if (dims.size() != 2 || dims[1] != 2) {
+      const auto mssg =
+          "Nuclear data library provided CMFD condensation scheme has an "
+          "invalid shape.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    // Read in the condensation scheme array
+    xt::xtensor<double, 2> cond_scheme = xt::zeros<double>({dims[0], dims[1]});
+    attr.read_raw<double>(cond_scheme.data());
+
+    // Reconstruct vector of pairs from the array
+    cmfd_condensation_scheme_ =
+        std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
+    for (std::size_t G = 0; G < dims[0]; G++) {
+      (*cmfd_condensation_scheme_)[G].first =
+          static_cast<std::size_t>(cond_scheme(G, 0));
+      (*cmfd_condensation_scheme_)[G].second =
+          static_cast<std::size_t>(cond_scheme(G, 1));
+    }
+  }
 
   // Read all nuclide handles
   auto nuc_names = h5_->listObjectNames();
   for (const auto& nuc : nuc_names) {
+    // Make sure we don't try to read the depletion chain like a nuclide !
+    if (nuc == "depletion-chain") continue;
+
     auto grp = h5_->getGroup(nuc);
 
     nuclide_handles_.emplace(std::make_pair(nuc, NuclideHandle()));
@@ -386,18 +408,51 @@ void NDLibrary::init() {
       handle.ir_lambda = std::vector<double>(ngroups_, 1.);
     }
 
+    if (grp.hasAttribute("fission-energy")) {
+      handle.fission_energy = grp.getAttribute("fission-energy").read<double>();
+    } else {
+      handle.fission_energy = 0.;
+    }
+
     handle.ZA = grp.getAttribute("ZA").read<std::uint32_t>();
     handle.fissile = grp.getAttribute("fissile").read<bool>();
     handle.resonant = grp.getAttribute("resonant").read<bool>();
     handle.dilutions =
         grp.getAttribute("dilutions").read<std::vector<double>>();
   }
+
+  // Read the depletion chain, if present
+  if (h5_->exist("depletion-chain")) {
+    if (h5_->getObjectType("depletion-chain") != H5::ObjectType::Group) {
+      const auto mssg =
+          "The file member \"depletion-chain\" is present, but is not a group.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    depletion_chain_ = std::make_shared<DepletionChain>();
+    *depletion_chain_ =
+        DepletionChain::from_hdf5_group(h5_->getGroup("depletion-chain"));
+  }
 }
 
 const NuclideHandle& NDLibrary::get_nuclide(const std::string& name) const {
-  if (nuclide_handles_.find(name) == nuclide_handles_.end()) {
+  if (name == "depletion-chain" ||
+      nuclide_handles_.find(name) == nuclide_handles_.end()) {
     std::stringstream mssg;
-    mssg << "Could not find nuclde by name of \"" << name << "\".";
+    mssg << "Could not find nuclide by name of \"" << name << "\".";
+    spdlog::error(mssg.str());
+    throw ScarabeeException(mssg.str());
+  }
+
+  return nuclide_handles_.at(name);
+}
+
+NuclideHandle& NDLibrary::get_nuclide(const std::string& name) {
+  if (name == "depletion-chain" ||
+      nuclide_handles_.find(name) == nuclide_handles_.end()) {
+    std::stringstream mssg;
+    mssg << "Could not find nuclide by name of \"" << name << "\".";
     spdlog::error(mssg.str());
     throw ScarabeeException(mssg.str());
   }
@@ -409,17 +464,6 @@ void NDLibrary::unload() {
   for (auto& nuc_handle : nuclide_handles_) {
     nuc_handle.second.unload();
   }
-}
-
-NuclideHandle& NDLibrary::get_nuclide(const std::string& name) {
-  if (nuclide_handles_.find(name) == nuclide_handles_.end()) {
-    std::stringstream mssg;
-    mssg << "Could not find nuclde by name of \"" << name << "\".";
-    spdlog::error(mssg.str());
-    throw ScarabeeException(mssg.str());
-  }
-
-  return nuclide_handles_.at(name);
 }
 
 std::pair<MicroNuclideXS, MicroDepletionXS> NDLibrary::infinite_dilution_xs(
@@ -451,7 +495,7 @@ std::pair<MicroNuclideXS, MicroDepletionXS> NDLibrary::infinite_dilution_xs(
   if (max_l == 2 && nuc.inf_p2_scatter == nullptr) max_l--;
   if (max_l == 1 && nuc.inf_p1_scatter == nullptr) max_l--;
   xt::xtensor<double, 2> Es =
-      xt::zeros<double>({max_l + 1, nuc.inf_scatter->shape()[2]});
+      xt::zeros<double>({max_l + 1, nuc.inf_scatter->shape()[1]});
 
   //--------------------------------------------------------
   // Do P0 scattering interpolation
@@ -534,9 +578,10 @@ std::pair<MicroNuclideXS, MicroDepletionXS> NDLibrary::infinite_dilution_xs(
   }
 
   if (nuc.inf_n_a) {
-    xt::xtensor<double, 1> n_a = xt::zeros<double>({nuc.inf_n_a->shape()[1]});
-    this->interp_temp(n_a, *nuc.inf_n_a, it, f_temp);
-    dep_xs.n_a = XS1D(n_a);
+    xt::xtensor<double, 1> n_alpha =
+        xt::zeros<double>({nuc.inf_n_a->shape()[1]});
+    this->interp_temp(n_alpha, *nuc.inf_n_a, it, f_temp);
+    dep_xs.n_alpha = XS1D(n_alpha);
   }
 
   if (nuc.inf_n_p) {
@@ -599,7 +644,7 @@ ResonantOneGroupXS NDLibrary::dilution_xs(const std::string& name,
     out.Ef =
         this->interp_temp_dil(*nuc.res_fission, g_res, it, f_temp, id, f_dil);
   }
-  out.n_gamma = 0.;
+  // out.n_gamma is initially nullopt
   if (nuc.res_n_gamma) {
     out.n_gamma =
         this->interp_temp_dil(*nuc.res_n_gamma, g_res, it, f_temp, id, f_dil);

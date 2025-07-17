@@ -179,6 +179,7 @@ void init_CylindricalFluxSolver(py::module& m) {
            py::arg("g"))
 
       .def("solve", &CylindricalFluxSolver::solve,
+           py::call_guard<py::gil_scoped_release>(),
            "Solves the system for the flux and eigenvalue.\n\n"
            "Parameters\n"
            "----------\n"

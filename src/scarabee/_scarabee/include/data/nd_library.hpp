@@ -4,8 +4,10 @@
 #include <data/material.hpp>
 #include <data/cross_section.hpp>
 #include <data/micro_cross_sections.hpp>
+#include <data/depletion_chain.hpp>
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
+
 #include <highfive/highfive.hpp>
 
 namespace H5 = HighFive;
@@ -30,6 +32,7 @@ struct NuclideHandle {
   std::vector<double> ir_lambda;
   double awr;
   double potential_xs;
+  double fission_energy;
   std::uint32_t ZA;
   bool fissile;
   bool resonant;
@@ -90,19 +93,18 @@ class NDLibrary {
 
   const std::vector<double>& group_bounds() const { return group_bounds_; }
 
-  const std::optional<std::vector<std::pair<std::size_t, std::size_t>>>&
-  macro_group_condensation_scheme() const {
-    return macro_group_condensation_scheme_;
+  const std::shared_ptr<DepletionChain>& depletion_chain() const {
+    return depletion_chain_;
   }
 
   const std::optional<std::vector<std::pair<std::size_t, std::size_t>>>&
-  few_group_condensation_scheme() const {
-    return few_group_condensation_scheme_;
+  condensation_scheme() const {
+    return condensation_scheme_;
   }
 
   const std::optional<std::vector<std::pair<std::size_t, std::size_t>>>&
-  reflector_few_group_condensation_scheme() const {
-    return reflector_few_group_condensation_scheme_;
+  cmfd_condensation_scheme() const {
+    return cmfd_condensation_scheme_;
   }
 
   NuclideHandle& get_nuclide(const std::string& name);
@@ -136,17 +138,16 @@ class NDLibrary {
   std::map<std::string, NuclideHandle> nuclide_handles_;
   std::vector<double> group_bounds_;
   std::optional<std::vector<std::pair<std::size_t, std::size_t>>>
-      macro_group_condensation_scheme_;
+      condensation_scheme_;
   std::optional<std::vector<std::pair<std::size_t, std::size_t>>>
-      few_group_condensation_scheme_;
-  std::optional<std::vector<std::pair<std::size_t, std::size_t>>>
-      reflector_few_group_condensation_scheme_;
+      cmfd_condensation_scheme_;
   std::string library_;
   std::string group_structure_;
   std::size_t ngroups_;
   std::size_t first_resonant_group_;
   std::size_t last_resonant_group_;
   std::shared_ptr<H5::File> h5_;
+  std::shared_ptr<DepletionChain> depletion_chain_;
 
   NDLibrary(const NDLibrary&) = delete;
   NDLibrary& operator=(const NDLibrary&) = delete;

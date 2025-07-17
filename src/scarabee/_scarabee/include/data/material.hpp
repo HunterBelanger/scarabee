@@ -9,9 +9,10 @@
 #include <cereal/types/string.hpp>
 #include <cereal/types/vector.hpp>
 
-#include <string>
 #include <memory>
 #include <optional>
+#include <span>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -79,12 +80,22 @@ class Material {
 
   double atoms_per_bcm() const { return atoms_per_bcm_; }
   double grams_per_cm3() const { return grams_per_cm3_; }
+  double fissionable_grams_per_cm3() const;
   double potential_xs() const { return potential_xs_; }
   double temperature() const { return temperature_; }
   void set_temperature(double T);
   double average_molar_mass() const { return average_molar_mass_; }
 
-  void clear_micro_xs_data();
+  void clear_all_micro_xs_data();
+  void clear_transport_micro_xs_data();
+  void clear_depletion_micro_xs_data();
+
+  bool has_transport_micro_xs_data() const {
+    return micro_nuc_xs_data_.size() > 0;
+  }
+  bool has_depletion_micro_xs_data() const {
+    return micro_dep_xs_data_.size() > 0;
+  }
 
   bool fissile() const { return fissile_; }
   bool resonant() const { return resonant_; }
@@ -107,6 +118,14 @@ class Material {
       std::optional<std::size_t> max_l = std::nullopt);
 
   void load_nuclides(std::shared_ptr<NDLibrary> ndl) const;
+
+  double compute_fission_power_density(
+      std::span<const double> flux,
+      const std::shared_ptr<const NDLibrary> ndl) const;
+
+  std::vector<DepletionReactionRates> compute_depletion_reaction_rates(
+      std::span<const double> flux,
+      const std::shared_ptr<const NDLibrary> ndl) const;
 
  private:
   MaterialComposition composition_;

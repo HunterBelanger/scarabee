@@ -5,8 +5,8 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/serialization.hpp>
 
-#include <xtensor/xtensor.hpp>
-#include <xtensor/xview.hpp>
+#include <xtensor/containers/xtensor.hpp>
+#include <xtensor/views/xview.hpp>
 
 #include <cereal/cereal.hpp>
 
@@ -27,6 +27,8 @@ class XS1D {
 
     return xs_(g);
   }
+
+  double xs_fast(const std::size_t g) const { return xs_(g); }
 
   void set_value(const std::size_t g, const double v) {
     if (g >= xs_.size()) {

@@ -1,6 +1,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <xtensor-python/pytensor.hpp>
+
 #include <data/material.hpp>
 #include <data/nd_library.hpp>
 
@@ -196,8 +198,9 @@ void init_Material(py::module& m) {
            "     Escpae cross section.\n"
            "ndl : NDLibrary\n"
            "      Nuclear data library for cross section interpolation.\n"
-           "max_l : int\n"
-           "        Maximum legendre moment (default is 1).\n\n"
+           "max_l : optional int\n"
+           "        Maximum legendre moment. If not provided, the "
+           "max_legendre_order attribute is used. Default is None.\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
@@ -215,8 +218,9 @@ void init_Material(py::module& m) {
            "     Escpae cross section.\n"
            "ndl : NDLibrary\n"
            "      Nuclear data library for cross section interpolation.\n"
-           "max_l : int\n"
-           "        Maximum legendre moment (default is 1).\n\n"
+           "max_l : optional int\n"
+           "        Maximum legendre moment. If not provided, the "
+           "max_legendre_order attribute is used. Default is None.\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
@@ -232,8 +236,9 @@ void init_Material(py::module& m) {
            "       Desired dilution for each nuclide.\n"
            "ndl : NDLibrary\n"
            "      Nuclear data library for cross section interpolation.\n"
-           "max_l : int\n"
-           "        Maximum legendre moment (default is 1).\n\n"
+           "max_l : optional int\n"
+           "        Maximum legendre moment. If not provided, the "
+           "max_legendre_order attribute is used. Default is None.\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
@@ -256,8 +261,9 @@ void init_Material(py::module& m) {
            "     Outer radius of the fuel ring.\n"
            "ndl : NDLibrary\n"
            "      Nuclear data library for cross section interpolation.\n"
-           "max_l : int\n"
-           "        Maximum legendre moment (default is 1).\n\n"
+           "max_l : optional int\n"
+           "        Maximum legendre moment. If not provided, the "
+           "max_legendre_order attribute is used. Default is None.\n\n"
            "Returns\n"
            "-------\n"
            "CrossSection\n"
@@ -265,9 +271,61 @@ void init_Material(py::module& m) {
            py::arg("C"), py::arg("Rfuel"), py::arg("Rin"), py::arg("Rout"),
            py::arg("ndl"), py::arg("max_l") = 1)
 
-      .def("clear_micro_xs_data", &Material::clear_micro_xs_data,
+      .def("clear_all_micro_xs_data", &Material::clear_all_micro_xs_data,
            "Clears all of the previously computed microscopic cross section "
            "data.")
+
+      .def("clear_transport_micro_xs_data",
+           &Material::clear_transport_micro_xs_data,
+           "Clears the previously computed microscopic cross section data "
+           "required for transport calculations.")
+
+      .def("clear_depletion_micro_xs_data",
+           &Material::clear_depletion_micro_xs_data,
+           "Clears the previously computed microscopic cross section data "
+           "required for depletion calculations.")
+
+      .def(
+          "compute_fission_power_density",
+          [](const Material& mat, const xt::pytensor<double, 1>& flx,
+             const std::shared_ptr<const NDLibrary> ndl) {
+            std::span<const double> flx_spn(flx.data(), flx.size());
+            return mat.compute_fission_power_density(flx_spn, ndl);
+          },
+          "Computes the fission power density in units of MeV/cm3/s, based on "
+          "the provided flux spectrum.\n\n"
+          "Parameters\n"
+          "----------\n"
+          "flux : ndarray\n"
+          "    1D array with the flux spectrum.\n"
+          "ndl : NDLibrary\n"
+          "    Nuclear data library for fission energy release.\n\n"
+          "Returns\n"
+          "-------\n"
+          "float\n"
+          "    Computed fission power density.\n",
+          py::arg("flux"), py::arg("ndl"))
+
+      .def(
+          "compute_depletion_reaction_rates",
+          [](const Material& mat, const xt::pytensor<double, 1>& flx,
+             const std::shared_ptr<const NDLibrary> ndl) {
+            std::span<const double> flx_spn(flx.data(), flx.size());
+            return mat.compute_depletion_reaction_rates(flx_spn, ndl);
+          },
+          "Computes the various depletion reaction rates for each nuclide, "
+          "based on the provided flux spectrum.\n\n"
+          "Parameters\n"
+          "----------\n"
+          "flux : ndarray\n"
+          "    1D array with the flux spectrum.\n"
+          "ndl : NDLibrary\n"
+          "    Nuclear data library for fission energy release.\n\n"
+          "Returns\n"
+          "-------\n"
+          "List of DepletionReactionRates\n"
+          "    Computed fission power density.\n",
+          py::arg("flux"), py::arg("ndl"))
 
       .def_property("max_legendre_order", &Material::max_legendre_order,
                     &Material::set_max_legendre_order,
@@ -300,7 +358,24 @@ void init_Material(py::module& m) {
 
       .def_property_readonly(
           "grams_per_cm3", &Material::grams_per_cm3,
-          "Density of the materil in grams per cubic-centimeter.")
+          "Density of the material in grams per cubic-centimeter.")
+
+      .def_property_readonly("fissionable_grams_per_cm3",
+                             &Material::fissionable_grams_per_cm3,
+                             "Density of fissionable matter in the material in "
+                             "grams per cubic-centimeter.")
+
+      .def_property_readonly(
+          "has_transport_micro_xs_data", &Material::has_transport_micro_xs_data,
+          "True if microscopic cross sections for transport calculations are "
+          "present, False otherwise. Should be True after calling a method "
+          "which returns a CrossSection object, unless data has been cleared.")
+
+      .def_property_readonly(
+          "has_depletion_micro_xs_data", &Material::has_depletion_micro_xs_data,
+          "True if microscopic cross sections for depletion calculations are "
+          "present, False otherwise. Should be True after calling a method "
+          "which returns a CrossSection object, unless data has been cleared.")
 
       .def_property_readonly(
           "fissile", &Material::fissile,
@@ -313,7 +388,8 @@ void init_Material(py::module& m) {
       .def_property("name", &Material::name, &Material::set_name,
                     "String with the name of the Material.")
 
-      .def("__deepcopy__", [](const Material& mat) { return Material(mat); });
+      .def("__deepcopy__",
+           [](const Material& mat, py::dict) { return Material(mat); });
 
   py::enum_<MixingFraction>(m, "MixingFraction")
       .value("Atoms", MixingFraction::Atoms,

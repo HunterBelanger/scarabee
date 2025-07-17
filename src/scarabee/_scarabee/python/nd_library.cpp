@@ -44,6 +44,10 @@ void init_NuclideHandle(py::module& m) {
       .def_readonly("fissile", &NuclideHandle::fissile,
                     "True if the nuclide is fissile, False otherwise.")
 
+      .def_readonly(
+          "fission_energy", &NuclideHandle::fission_energy,
+          "Average energy release per fission of the nuclide, in MeV.")
+
       .def_readonly("resonant", &NuclideHandle::resonant,
                     "True if the nuclide is resonant, False otherwise.");
 }
@@ -228,19 +232,17 @@ void init_NDLibrary(py::module& m) {
       .def_property_readonly("group_structure", &NDLibrary::group_structure,
                              "The name of the group structure (if provided).")
 
-      .def_property_readonly("macro_group_condensation_scheme",
-                             &NDLibrary::macro_group_condensation_scheme,
-                             "The condensation scheme to obtain the default "
-                             "macro-group structure (if provided).")
+      .def_property_readonly(
+          "condensation_scheme", &NDLibrary::condensation_scheme,
+          "The condensation scheme to obtain the default few-group structure "
+          "from the library group structure (if provided).")
 
-      .def_property_readonly("few_group_condensation_scheme",
-                             &NDLibrary::few_group_condensation_scheme,
-                             "The condensation scheme to obtain the default "
-                             "few-group structure (if provided).")
+      .def_property_readonly("cmfd_condensation_scheme",
+                             &NDLibrary::cmfd_condensation_scheme,
+                             "The CMFD condensation scheme for acceleration in "
+                             "the MOC calculation (if provided).")
 
       .def_property_readonly(
-          "reflector_few_group_condensation_scheme",
-          &NDLibrary::reflector_few_group_condensation_scheme,
-          "The condensation scheme to obtain the default "
-          "few-group structure for the reflector (if provided).");
+          "depletion_chain", &NDLibrary::depletion_chain,
+          "The DepletionChain intended for use with the library.");
 }

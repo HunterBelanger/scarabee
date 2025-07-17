@@ -5,18 +5,18 @@ namespace scarabee {
 //==============================================================================
 // Implementation for Gauss-Legendre 2 Kronrod 5
 template <>
-const std::vector<double> GaussKronrodQuadrature<5>::glWeights = {
+const std::array<double, 1> GaussKronrodQuadrature<5>::glWeights{
     1.000000000000000000000000000000000e+00};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<5>::abscissae = {
+const std::array<double, 3> GaussKronrodQuadrature<5>::abscissae{
     5.77350269189625764509148780501957456e-01,
     //-----------------------------------------
     0.00000000000000000000000000000000000e+00,
     9.25820099772551461566566776583999523e-01};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<5>::weights = {
+const std::array<double, 3> GaussKronrodQuadrature<5>::weights{
     4.90909090909090909090909090909090909e-01,
     //-----------------------------------------
     6.22222222222222222222222222222222222e-01,
@@ -25,14 +25,14 @@ const std::vector<double> GaussKronrodQuadrature<5>::weights = {
 //==============================================================================
 // Implementation for Gauss-Legendre 7 Kronrod 15
 template <>
-const std::vector<double> GaussKronrodQuadrature<15>::glWeights = {
+const std::array<double, 4> GaussKronrodQuadrature<15>::glWeights{
     4.179591836734693877551020408163265e-01,
     3.818300505051189449503697754889751e-01,
     2.797053914892766679014677714237796e-01,
     1.294849661688696932706114326790820e-01};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<15>::abscissae = {
+const std::array<double, 8> GaussKronrodQuadrature<15>::abscissae{
     0.000000000000000000000000000000000e+00,
     4.058451513773971669066064120769615e-01,
     7.415311855993944398638647732807884e-01,
@@ -44,7 +44,7 @@ const std::vector<double> GaussKronrodQuadrature<15>::abscissae = {
     9.914553711208126392068546975263285e-01};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<15>::weights = {
+const std::array<double, 8> GaussKronrodQuadrature<15>::weights{
     2.094821410847278280129991748917143e-01,
     1.903505780647854099132564024210137e-01,
     1.406532597155259187451895905102379e-01,
@@ -58,7 +58,7 @@ const std::vector<double> GaussKronrodQuadrature<15>::weights = {
 //==============================================================================
 // Implementation for Gauss-Legendre 10 Kronrod 21
 template <>
-const std::vector<double> GaussKronrodQuadrature<21>::glWeights = {
+const std::array<double, 5> GaussKronrodQuadrature<21>::glWeights{
     2.955242247147528701738929946513383e-01,
     2.692667193099963550912269215694694e-01,
     2.190863625159820439955349342281632e-01,
@@ -66,7 +66,7 @@ const std::vector<double> GaussKronrodQuadrature<21>::glWeights = {
     6.667134430868813759356880989333179e-02};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<21>::abscissae = {
+const std::array<double, 11> GaussKronrodQuadrature<21>::abscissae{
     1.488743389816312108848260011297200e-01,
     4.333953941292471907992659431657842e-01,
     6.794095682990244062343273651148736e-01,
@@ -81,7 +81,7 @@ const std::vector<double> GaussKronrodQuadrature<21>::abscissae = {
     9.956571630258080807355272806890028e-01};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<21>::weights = {
+const std::array<double, 11> GaussKronrodQuadrature<21>::weights{
     1.477391049013384913748415159720680e-01,
     1.347092173114733259280540017717068e-01,
     1.093871588022976418992105903258050e-01,
@@ -98,7 +98,7 @@ const std::vector<double> GaussKronrodQuadrature<21>::weights = {
 //==============================================================================
 // Implementation for Gauss-Legendre 15 Kronrod 31
 template <>
-const std::vector<double> GaussKronrodQuadrature<31>::glWeights = {
+const std::array<double, 8> GaussKronrodQuadrature<31>::glWeights{
     2.025782419255612728806201999675193e-01,
     1.984314853271115764561183264438393e-01,
     1.861610000155622110268005618664228e-01,
@@ -109,7 +109,7 @@ const std::vector<double> GaussKronrodQuadrature<31>::glWeights = {
     3.075324199611726835462839357720442e-02};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<31>::abscissae = {
+const std::array<double, 16> GaussKronrodQuadrature<31>::abscissae{
     0.000000000000000000000000000000000e+00,
     2.011940939974345223006283033945962e-01,
     3.941513470775633698972073709810455e-01,
@@ -129,7 +129,7 @@ const std::vector<double> GaussKronrodQuadrature<31>::abscissae = {
     9.980022986933970602851728401522712e-01};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<31>::weights = {
+const std::array<double, 16> GaussKronrodQuadrature<31>::weights{
     1.013300070147915490173747927674925e-01,
     9.917359872179195933239317348460313e-02,
     9.312659817082532122548687274734572e-02,
@@ -151,7 +151,7 @@ const std::vector<double> GaussKronrodQuadrature<31>::weights = {
 //==============================================================================
 // Implementation for Gauss-Legendre 20 Kronrod 41
 template <>
-const std::vector<double> GaussKronrodQuadrature<41>::glWeights = {
+const std::array<double, 10> GaussKronrodQuadrature<41>::glWeights{
     1.527533871307258506980843319550976e-01,
     1.491729864726037467878287370019694e-01,
     1.420961093183820513292983250671649e-01,
@@ -164,7 +164,7 @@ const std::vector<double> GaussKronrodQuadrature<41>::glWeights = {
     1.761400713915211831186196235185282e-02};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<41>::abscissae = {
+const std::array<double, 21> GaussKronrodQuadrature<41>::abscissae{
     7.652652113349733375464040939883821e-02,
     2.277858511416450780804961953685746e-01,
     3.737060887154195606725481770249272e-01,
@@ -189,7 +189,7 @@ const std::vector<double> GaussKronrodQuadrature<41>::abscissae = {
     9.988590315882776638383155765458630e-01};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<41>::weights = {
+const std::array<double, 21> GaussKronrodQuadrature<41>::weights{
     7.637786767208073670550283503806100e-02,
     7.458287540049918898658141836248753e-02,
     7.105442355344406830579036172321017e-02,
@@ -216,7 +216,7 @@ const std::vector<double> GaussKronrodQuadrature<41>::weights = {
 //==============================================================================
 // Implementation for Gauss-Legendre 25 Kronrod 51
 template <>
-const std::vector<double> GaussKronrodQuadrature<51>::glWeights = {
+const std::array<double, 13> GaussKronrodQuadrature<51>::glWeights{
     1.231760537267154512039028730790501e-01,
     1.222424429903100416889595189458515e-01,
     1.194557635357847722281781265129010e-01,
@@ -232,7 +232,7 @@ const std::vector<double> GaussKronrodQuadrature<51>::glWeights = {
     1.139379850102628794790296411323477e-02};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<51>::abscissae = {
+const std::array<double, 26> GaussKronrodQuadrature<51>::abscissae{
     0.000000000000000000000000000000000e+00,
     1.228646926107103963873598188080368e-01,
     2.438668837209884320451903627974516e-01,
@@ -262,7 +262,7 @@ const std::vector<double> GaussKronrodQuadrature<51>::abscissae = {
     9.992621049926098341934574865403406e-01};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<51>::weights = {
+const std::array<double, 26> GaussKronrodQuadrature<51>::weights{
     6.158081806783293507875982424006455e-02,
     6.112850971705304830585903041629271e-02,
     5.972034032417405997909929193256185e-02,
@@ -294,7 +294,7 @@ const std::vector<double> GaussKronrodQuadrature<51>::weights = {
 //==============================================================================
 // Implementation for Gauss-Legendre 30 Kronrod 61
 template <>
-const std::vector<double> GaussKronrodQuadrature<61>::glWeights = {
+const std::array<double, 15> GaussKronrodQuadrature<61>::glWeights{
     1.028526528935588403412856367054150e-01,
     1.017623897484055045964289521685540e-01,
     9.959342058679526706278028210356948e-02,
@@ -312,7 +312,7 @@ const std::vector<double> GaussKronrodQuadrature<61>::glWeights = {
     7.968192496166605615465883474673622e-03};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<61>::abscissae = {
+const std::array<double, 31> GaussKronrodQuadrature<61>::abscissae{
     5.147184255531769583302521316672257e-02,
     1.538699136085835469637946727432559e-01,
     2.546369261678898464398051298178051e-01,
@@ -347,7 +347,7 @@ const std::vector<double> GaussKronrodQuadrature<61>::abscissae = {
     9.994844100504906375713258957058108e-01};
 
 template <>
-const std::vector<double> GaussKronrodQuadrature<61>::weights = {
+const std::array<double, 31> GaussKronrodQuadrature<61>::weights{
     5.142612853745902593386287921578126e-02,
     5.088179589874960649229747304980469e-02,
     4.979568342707420635781156937994233e-02,

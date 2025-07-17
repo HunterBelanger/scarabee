@@ -61,6 +61,7 @@ void init_MOCDriver(py::module& m) {
           "generate_tracks",
           [](MOCDriver& md, std::uint32_t na, double d,
              PolarQuadratureType pq) { return md.generate_tracks(na, d, pq); },
+          py::call_guard<py::gil_scoped_release>(),
           "Traces tracks across the geometry for the calculation.\n\n"
           "Parameters\n"
           "----------\n"
@@ -100,6 +101,9 @@ void init_MOCDriver(py::module& m) {
                     "the true flat source region area. It the check does not "
                     "pass, a warning is issued, but the calculation continues. "
                     "Default value is False.")
+
+      .def_property("cmfd", &MOCDriver::cmfd, &MOCDriver::set_cmfd,
+                    "CMFD object for convergence acceleration.")
 
       .def("flux",
            py::overload_cast<const Vector&, const Direction&, std::size_t,
@@ -209,7 +213,8 @@ void init_MOCDriver(py::module& m) {
       .def_property_readonly("polar_quadrature", &MOCDriver::polar_quadrature,
                              "Quadrature used for polar angle integration.")
 
-      .def("solve", &MOCDriver::solve, "Begins iterations to solve problem.")
+      .def("solve", &MOCDriver::solve, py::call_guard<py::gil_scoped_release>(),
+           "Begins iterations to solve problem.")
 
       .def_property(
           "sim_mode",
@@ -301,6 +306,23 @@ void init_MOCDriver(py::module& m) {
            "list of int\n"
            "    Indices of all flat source regions in the cell.\n",
            py::arg("r"), py::arg("u"))
+
+      .def("get_fsr_indx",
+           py::overload_cast<std::size_t, std::size_t>(&MOCDriver::get_fsr_indx,
+                                                       py::const_),
+           "Obtains the index for a given flat source region ID and "
+           "instance.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fsr_id : int\n"
+           "    Flat source region ID.\n"
+           "instance : int\n"
+           "    Desired instance of the provided FSR ID.\n\n"
+           "Returns\n"
+           "-------\n"
+           "int\n"
+           "    Index in the MOCDriver of the specified FSR instance.\n",
+           py::arg("fsr_id"), py::arg("instance"))
 
       .def("set_extern_src",
            py::overload_cast<const Vector&, const Direction&, std::size_t,
@@ -429,6 +451,22 @@ void init_MOCDriver(py::module& m) {
            "flux : ndarray of floats\n"
            "       Criticality spectrum from a P1 or B1 calculation.\n",
            py::arg("flux"))
+
+      .def("trace_fsr_segments", &MOCDriver::trace_fsr_segments,
+           "Starting from a given position and direction, this function traces "
+           "across the geometry until leaving the problem domain, returning a "
+           "list of FSR index - distance pairs.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "r_start : Vector\n"
+           "    Starting position.\n"
+           "u : Direction\n"
+           "    Direction to trace segments.\n\n"
+           "Returns\n"
+           "-------\n"
+           "list of pairs of int and float\n"
+           "    All the FSR index - distance pairs.\n",
+           py::arg("r_start"), py::arg("u"))
 
       .def(
           "plot",

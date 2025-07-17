@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.29)
 project(${SKBUILD_PROJECT_NAME}
         VERSION ${SKBUILD_PROJECT_VERSION}
         LANGUAGES CXX)
@@ -9,11 +9,11 @@ option(SCARABEE_USE_OMP "Compile Scarabée with OpenMP for shared memory paralle
 include(FetchContent)
 
 #===============================================================================
-# Get Eigen version 3.4.0
+# Get Eigen version 3.4.0 + 
 message(STATUS "Downloading Eigen")
 FetchContent_Declare(eigen
-  GIT_REPOSITORY https://gitlab.com/HunterBelanger/eigen.git
-  GIT_TAG        fix/uninstall-target
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+  GIT_TAG        2cd47d743e8e921629c066f3543d58cf6ba724de  # April 8 2025
   EXCLUDE_FROM_ALL
 )
 set(BUILD_TESTING OFF)
@@ -23,10 +23,10 @@ FetchContent_MakeAvailable(eigen)
 
 #===============================================================================
 # Get SPDLOG
-message(STATUS "Downloading spdlog v1.13.0")
+message(STATUS "Downloading spdlog v1.15.2")
 FetchContent_Declare(spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG        v1.13.0
+  GIT_TAG        v1.15.2
   EXCLUDE_FROM_ALL
 )
 set(SPDLOG_BUILD_PIC ON CACHE BOOL "Build position independent code (-fPIC)")
@@ -44,30 +44,30 @@ FetchContent_MakeAvailable(htl)
 
 #===============================================================================
 # Get XTL
-message(STATUS "Downloading xtl v0.7.7")
+message(STATUS "Downloading xtl v0.8.0")
 FetchContent_Declare(xtl
   GIT_REPOSITORY https://github.com/xtensor-stack/xtl.git
-  GIT_TAG        0.7.7
+  GIT_TAG        0.8.0
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(xtl)
 
 #===============================================================================
 # Get XSIMD
-message(STATUS "Downloading xsimd v12.1.1")
+message(STATUS "Downloading xsimd v13.2.0")
 FetchContent_Declare(xsimd
   GIT_REPOSITORY https://github.com/xtensor-stack/xsimd.git
-  GIT_TAG        12.1.1
+  GIT_TAG        13.2.0
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(xsimd)
 
 #===============================================================================
 # Get XTENSOR
-message(STATUS "Downloading xtensor v0.25.0")
+message(STATUS "Downloading xtensor v0.26.0")
 FetchContent_Declare(xtensor
   GIT_REPOSITORY https://github.com/xtensor-stack/xtensor.git
-  GIT_TAG        0.25.0
+  GIT_TAG        0.26.0
   EXCLUDE_FROM_ALL
 )
 set(XTENSOR_USE_XSIMD ON CACHE BOOL "Enable SIMD acceleration.")
@@ -79,33 +79,30 @@ set(PYBIND11_NEWPYTHON ON)
 find_package(pybind11 CONFIG QUIET)
 if (NOT pybind11_FOUND)
   set(PYBIND11_FINDPYTHON ON)
-  message(STATUS "Downloading pybind11 v2.12.0")
+  message(STATUS "Downloading pybind11 v2.13.6")
   FetchContent_Declare(pybind11
-    GIT_REPOSITORY https://github.com/pybind/pybind11
-    GIT_TAG        v2.12.0
+    GIT_REPOSITORY https://github.com/pybind/pybind11.git
+    GIT_TAG        v2.13.6
   )
   FetchContent_MakeAvailable(pybind11)
+  if (NOT pybind11_VERSION)
+    set(pybind11_VERSION 2.13.6)
+  endif()
 endif()
-
-execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/get_numpy_includes.py
-                OUTPUT_VARIABLE NUMPY_INCLUDE_DIRS
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-               )
 
 #===============================================================================
 # Get XTENSOR-PYTHON
-message(STATUS "Downloading xtensor-python v0.27.0")
+message(STATUS "Downloading xtensor-python v0.28.0 with Hunter's NumPy fix")
 FetchContent_Declare(xtensor-python
-  GIT_REPOSITORY https://github.com/xtensor-stack/xtensor-python.git
-  GIT_TAG        0.27.0
+  GIT_REPOSITORY https://github.com/HunterBelanger/xtensor-python.git
+  GIT_TAG        fix/find_numpy
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(xtensor-python)
-message(STATUS "Numpy includes: ${NUMPY_INCLUDE_DIRS}")
 
 #===============================================================================
 # Get HDF5
-message(STATUS "Downloading HDF5 v1.14.3")
+message(STATUS "Downloading HDF5 v1.14.6")
 set(HDF5_ENABLE_Z_LIB_SUPPORT OFF)
 set(HDF5_EXTERNALLY_CONFIGURED  1)
 set(HDF5_ENABLE_SZIP_SUPPORT  OFF)
@@ -116,7 +113,7 @@ set(HDF5_BUILD_HL_LIB         OFF)
 set(BUILD_SHARED_LIBS         OFF)
 FetchContent_Declare(hdf5
   GIT_REPOSITORY https://github.com/HDFGroup/hdf5.git
-  GIT_TAG        hdf5-1_14_3
+  GIT_TAG        hdf5_1.14.6
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(hdf5)
@@ -130,8 +127,8 @@ set(HIGHFIVE_EXAMPLES OFF)
 set(HIGHFIVE_BUILD_DOCS OFF)
 set(HIGHFIVE_FIND_HDF5 OFF)
 FetchContent_Declare(HighFive
-  GIT_REPOSITORY https://github.com/BlueBrain/HighFive.git
-  GIT_TAG        master
+  GIT_REPOSITORY https://github.com/highfive-devs/highfive.git
+  GIT_TAG        main
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(HighFive)
@@ -162,8 +159,10 @@ FetchContent_MakeAvailable(cereal)
 #===============================================================================
 # Make python library
 pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
+                              src/scarabee/_scarabee/nuclide_names.cpp
                               src/scarabee/_scarabee/water.cpp
                               src/scarabee/_scarabee/logging.cpp
+                              src/scarabee/_scarabee/gauss_legendre.cpp
                               src/scarabee/_scarabee/gauss_kronrod.cpp
                               src/scarabee/_scarabee/chebyshev.cpp
                               src/scarabee/_scarabee/math.cpp
@@ -183,6 +182,7 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/simple_bwr_corner_pin_cell.cpp
                               src/scarabee/_scarabee/bwr_corner_pin_cell.cpp
                               src/scarabee/_scarabee/cartesian_2d.cpp
+                              src/scarabee/_scarabee/cmfd.cpp
                               src/scarabee/_scarabee/track.cpp
                               src/scarabee/_scarabee/legendre.cpp
                               src/scarabee/_scarabee/yamamoto_tabuchi.cpp
@@ -193,14 +193,13 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/diffusion_geometry.cpp
                               src/scarabee/_scarabee/fd_diffusion_driver.cpp
                               src/scarabee/_scarabee/nem_diffusion_driver.cpp
-                              src/scarabee/_scarabee/fuel_pin.cpp
-                              src/scarabee/_scarabee/guide_tube.cpp
-                              src/scarabee/_scarabee/burnable_poison_pin.cpp
-                              src/scarabee/_scarabee/pwr_assembly.cpp
                               src/scarabee/_scarabee/reflector_sn.cpp
                               src/scarabee/_scarabee/spherical_harmonics.cpp
+                              src/scarabee/_scarabee/depletion_chain.cpp
+                              src/scarabee/_scarabee/depletion_matrix.cpp
                               #=================================================
                               src/scarabee/_scarabee/python/scarabee.cpp
+                              src/scarabee/_scarabee/python/nuclide_names.cpp
                               src/scarabee/_scarabee/python/vector.cpp
                               src/scarabee/_scarabee/python/direction.cpp
                               src/scarabee/_scarabee/python/logging.cpp
@@ -226,16 +225,17 @@ pybind11_add_module(_scarabee src/scarabee/_scarabee/constants.cpp
                               src/scarabee/_scarabee/python/simple_bwr_corner_pin_cell.cpp
                               src/scarabee/_scarabee/python/bwr_corner_pin_cell.cpp
                               src/scarabee/_scarabee/python/cartesian_2d.cpp
+                              src/scarabee/_scarabee/python/cmfd.cpp
                               src/scarabee/_scarabee/python/moc_driver.cpp
                               src/scarabee/_scarabee/python/criticality_spectrum.cpp
                               src/scarabee/_scarabee/python/diffusion_data.cpp
                               src/scarabee/_scarabee/python/diffusion_geometry.cpp
                               src/scarabee/_scarabee/python/fd_diffusion_driver.cpp
                               src/scarabee/_scarabee/python/nem_diffusion_driver.cpp
-                              src/scarabee/_scarabee/python/pins.cpp
-                              src/scarabee/_scarabee/python/pwr_assembly.cpp
                               src/scarabee/_scarabee/python/reflector_sn.cpp
                               src/scarabee/_scarabee/python/water.cpp
+                              src/scarabee/_scarabee/python/depletion_chain.cpp
+                              src/scarabee/_scarabee/python/depletion_matrix.cpp
                             )
 
 target_include_directories(_scarabee PRIVATE include)
@@ -243,7 +243,6 @@ target_compile_features(_scarabee PRIVATE cxx_std_20)
 target_link_libraries(_scarabee PUBLIC xtl xtensor xtensor-python htl HighFive hdf5-static Eigen3::Eigen spdlog::spdlog ImApp::ImApp cereal::cereal)
 target_include_directories(_scarabee PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/scarabee/_scarabee/include>
-  $<BUILD_INTERFACE:${NUMPY_INCLUDE_DIRS}>
 )
 target_compile_definitions(_scarabee PRIVATE SCARABEE_MAJOR_VERSION=${PROJECT_VERSION_MAJOR})
 target_compile_definitions(_scarabee PRIVATE SCARABEE_MINOR_VERSION=${PROJECT_VERSION_MINOR})

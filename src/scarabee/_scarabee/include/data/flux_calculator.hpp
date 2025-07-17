@@ -1,7 +1,7 @@
 #ifndef SCARABEE_FLUX_CALCULATOR_H
 #define SCARABEE_FLUX_CALCULATOR_H
 
-#include <xtensor/xtensor.hpp>
+#include <xtensor/containers/xtensor.hpp>
 
 #include <cstdint>
 #include <vector>

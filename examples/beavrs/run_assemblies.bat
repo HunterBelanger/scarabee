@@ -15,3 +15,5 @@ python assembly_31_15.py
 python assembly_31_16.py
 
 python assembly_31_20.py
+
+python core.py

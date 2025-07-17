@@ -10,10 +10,12 @@ using namespace scarabee;
 
 void init_DiffusionData(py::module& m) {
   py::enum_<DiffusionData::ADF>(m, "ADF")
-      .value("YP", DiffusionData::ADF::YP, "Assembly y > 0 side.")
+      .value("XN", DiffusionData::ADF::XN, "Assembly x < 0 side.")
       .value("XP", DiffusionData::ADF::XP, "Assembly x > 0 side.")
       .value("YN", DiffusionData::ADF::YN, "Assembly y < 0 side.")
-      .value("XN", DiffusionData::ADF::XN, "Assembly x < 0 side.");
+      .value("YP", DiffusionData::ADF::YP, "Assembly y > 0 side.")
+      .value("ZN", DiffusionData::ADF::ZN, "Assembly z < 0 side.")
+      .value("ZP", DiffusionData::ADF::ZP, "Assembly z > 0 side.");
 
   py::enum_<DiffusionData::CDF>(m, "CDF")
       .value("I", DiffusionData::CDF::I, "Corner of assembly in quadrant I.")
@@ -190,7 +192,7 @@ void init_DiffusionData(py::module& m) {
            "    Energy group.",
            py::arg("g"))
 
-      .def("adf_yp", &DiffusionData::adf_xp,
+      .def("adf_yp", &DiffusionData::adf_yp,
            "The ADS for the y+ surface in group g.\n\n"
            "Parameters\n"
            "----------\n"
@@ -200,6 +202,22 @@ void init_DiffusionData(py::module& m) {
 
       .def("adf_yn", &DiffusionData::adf_yn,
            "The ADS for the y- surface in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
+           py::arg("g"))
+
+      .def("adf_zp", &DiffusionData::adf_zp,
+           "The ADS for the z+ surface in group g.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "g : int\n"
+           "    Energy group.",
+           py::arg("g"))
+
+      .def("adf_zn", &DiffusionData::adf_zn,
+           "The ADS for the z- surface in group g.\n\n"
            "Parameters\n"
            "----------\n"
            "g : int\n"

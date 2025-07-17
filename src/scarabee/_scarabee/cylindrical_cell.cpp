@@ -5,7 +5,7 @@
 #include <utils/scarabee_exception.hpp>
 #include <utils/logging.hpp>
 
-#include <xtensor/xbuilder.hpp>
+#include <xtensor/generators/xbuilder.hpp>
 
 #include <Eigen/Dense>
 
@@ -351,6 +351,10 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
 
   double S_ij = 0.;
 
+  // Initialize a vector for the x coordinates
+  std::vector<double> x;
+  x.reserve(j + 1);
+
   for (std::size_t k = 0; k <= i; k++) {
     // We do the integral from radii_[k-1] to radii_[k]. If k == 0, then we
     // start the integral from the center of the cylinder.
@@ -359,7 +363,8 @@ double CylindricalCell::calculate_S_ij(std::size_t i, std::size_t j,
     const double Rmax = radii_[k];
 
     // Initialize a vector for the x coordinates
-    std::vector<double> x(j + 1 - k, 0.);
+    x.clear();
+    x.resize(j + 1 - k, 0.);
 
     // Create a lambda for the integrand
     auto integrand = [this, &x, k, i, j, g](double y) {

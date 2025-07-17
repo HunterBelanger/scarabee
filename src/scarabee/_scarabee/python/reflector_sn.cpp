@@ -13,7 +13,7 @@ void init_ReflectorSN(py::module& m) {
   py::class_<ReflectorSN>(m, "ReflectorSN")
       .def(py::init<const std::vector<std::shared_ptr<CrossSection>>& /*xs*/,
                     const xt::xtensor<double, 1>& /*dx*/,
-                    bool /*anisotropic*/>(),
+                    std::size_t /*nangles*/, bool /*anisotropic*/>(),
            "Creates a ReflectorSN object to perform a 1D Sn calculation with "
            "a reflective boundary at the -x side and a vacuum boundary on the "
            "+x side.\n\n"
@@ -23,12 +23,19 @@ void init_ReflectorSN(py::module& m) {
            "  1D iterable for the cross section in each bin.\n"
            "dx : iterable of float\n"
            "  1D iterable of the widths of each bin along x.\n"
+           "nangles : int\n"
+           "  Number of angles tracked. Must be one of the following:\n"
+           "  2, 4, 6, 8, 10, 12, 14, 16, 32, 64, 128.\n"
            "anisotropic : bool\n"
            "  True to use anisotropic scattering, False to use the transport "
            "correction (default value is True).\n",
-           py::arg("xs"), py::arg("dx"), py::arg("anisotropic") = true)
+           py::arg("xs"), py::arg("dx"), py::arg("nangles"),
+           py::arg("anisotropic") = true)
 
       .def("solve", &ReflectorSN::solve)
+
+      .def_property_readonly("nangles", &ReflectorSN::nangles,
+                             "Number of discrete angles tracked.")
 
       .def_property_readonly(
           "solved", &ReflectorSN::solved,

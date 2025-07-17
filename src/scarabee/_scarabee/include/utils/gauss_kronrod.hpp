@@ -2,9 +2,9 @@
 #define SCARABEE_GAUSSKRONROD_H
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <functional>
-#include <vector>
 
 namespace scarabee {
 
@@ -132,9 +132,10 @@ struct GaussKronrodQuadrature {
 
   static constexpr std::size_t order() { return 3 * NK + 1; }
 
-  static const std::vector<double> abscissae;
-  static const std::vector<double> weights;
-  static const std::vector<double> glWeights;
+  static const std::array<double, NK / 2 + NK % 2> abscissae;
+  static const std::array<double, NK / 2 + NK % 2> weights;
+  static const std::array<double, ((NK - 1) / 2) / 2 + (((NK - 1) / 2) % 2)>
+      glWeights;
 };
 
 }  // namespace scarabee

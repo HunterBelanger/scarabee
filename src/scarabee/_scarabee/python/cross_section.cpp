@@ -218,6 +218,13 @@ void init_CrossSection(py::module& m) {
                              &CrossSection::max_legendre_order,
                              "Maximum legendre order for scattering.")
 
+      .def("set", &CrossSection::set,
+           "Reinitializes to be copy of another cross section.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "other : CrossSection\n"
+           "    Cross section used to reinitialize the current data.\n")
+
       .def("Etr",
            py::overload_cast<std::size_t>(&CrossSection::Etr, py::const_),
            "Transport corrected total cross section in group g.\n\n"
@@ -342,7 +349,8 @@ void init_CrossSection(py::module& m) {
       .def("condense", &CrossSection::condense,
            "Condenses the cross sections to a new energy group structure. The "
            "condensation group structure is provided as a list of pairs "
-           "(2D tuples), indicating the lower and upper bounds (inclusive) of "
+           "(2D tuples), indicating the lower and upper group indices "
+           "(inclusive) of "
            "a macro energy group. \n\n"
            "Parameters\n"
            "----------\n"
@@ -389,5 +397,8 @@ void init_CrossSection(py::module& m) {
       .def("__rmul__", [](const CrossSection& xs, double N) { return xs * N; })
       .def("__add__", &CrossSection::operator+)
       .def("__imul__", &CrossSection::operator*=)
-      .def("__iadd__", &CrossSection::operator+=);
+      .def("__iadd__", &CrossSection::operator+=)
+
+      .def("__deepcopy__",
+           [](const CrossSection& xs, py::dict) { return CrossSection(xs); });
 }

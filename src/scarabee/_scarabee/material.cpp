@@ -2,6 +2,7 @@
 #include <data/nd_library.hpp>
 #include <utils/constants.hpp>
 #include <utils/logging.hpp>
+#include <utils/nuclide_names.hpp>
 #include <utils/scarabee_exception.hpp>
 
 #include <algorithm>
@@ -9,16 +10,6 @@
 #include <sstream>
 
 namespace scarabee {
-
-std::string nuclide_name_to_simple_name(const std::string& name) {
-  // Must remove any _ from nuclide name (for TSLs like H1_H2O)
-  std::string simp_name = name;
-  auto loc_undr_scr = simp_name.find('_');
-  if (loc_undr_scr != std::string::npos) {
-    simp_name.resize(loc_undr_scr);
-  }
-  return simp_name;
-}
 
 MaterialComposition::MaterialComposition(Fraction f, const std::string& name)
     : nuclides(), fractions(f), name(name) {}
@@ -317,6 +308,40 @@ void Material::set_temperature(double T) {
   temperature_ = T;
 }
 
+double Material::fissionable_grams_per_cm3() const {
+  double fiss_density = 0.;
+
+  for (const auto& comp : composition_.nuclides) {
+    // Get the element symbol
+    const std::string elem_symb = nuclide_name_to_element_symbol(comp.name);
+
+    // Get the element number
+    int Z = 0;
+    for (int iZ = 1; iZ < static_cast<int>(ELEMENTS.size()); iZ++) {
+      if (elem_symb == ELEMENTS[iZ].symbol) {
+        Z = iZ;
+        break;
+      }
+    }
+
+    if (Z == 0) {
+      const auto mssg =
+          "Could not find element with symbol \"" + elem_symb + "\".";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    if (Z >= 90) {
+      const double AM = ISOTOPE_MASSES.at(comp.name);
+      fiss_density += comp.fraction * AM;
+    }
+  }
+
+  fiss_density *= atoms_per_bcm_ / N_AVAGADRO;
+
+  return fiss_density;
+}
+
 double Material::atom_density(const std::string& name) const {
   for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
     if (composition_.nuclides[i].name == name) {
@@ -324,12 +349,7 @@ double Material::atom_density(const std::string& name) const {
     }
   }
 
-  std::stringstream mssg;
-  mssg << "Could not find nuclide with name \"" << name << "\".";
-  spdlog::error(mssg.str());
-  throw ScarabeeException(mssg.str());
-
-  // NEVER GETS HERE
+  // Nuclide not in the material, so we just return zero
   return 0.;
 }
 
@@ -553,6 +573,167 @@ std::shared_ptr<CrossSection> Material::two_term_xs(
   return this->create_xs_from_micro_data();
 }
 
+double Material::compute_fission_power_density(
+    std::span<const double> flux,
+    const std::shared_ptr<const NDLibrary> ndl) const {
+  double pd = 0.;
+
+  for (std::size_t i = 0; i < composition_.nuclides.size(); i++) {
+    const auto& comp = composition_.nuclides[i];
+    const auto& nuc = ndl->get_nuclide(comp.name);
+
+    if (nuc.fissile == false) continue;
+
+    const double Ni = comp.fraction * atoms_per_bcm_;
+    const double Q = nuc.fission_energy;
+
+    if (micro_dep_xs_data_[i].n_fission.has_value() == false) {
+      const auto mssg = "Fissile nuclide " + comp.name +
+                        " has no loaded fission cross section.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    const XS1D& sig_f = micro_dep_xs_data_[i].n_fission.value();
+
+    double sig_f_flx_inner_prod = 0.;
+    for (std::size_t g = 0; g < flux.size(); g++) {
+      sig_f_flx_inner_prod += sig_f(g) * flux[g];
+    }
+
+    pd += Q * Ni * sig_f_flx_inner_prod;
+  }
+
+  return pd;
+}
+
+std::vector<DepletionReactionRates> Material::compute_depletion_reaction_rates(
+    std::span<const double> flux,
+    const std::shared_ptr<const NDLibrary> ndl) const {
+  if (this->has_depletion_micro_xs_data() == false) {
+    const auto mssg =
+        "No depletion cross section information is loaded in the material.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  // Initialize vector to hold all nuclide reaction rates.
+  std::vector<DepletionReactionRates> dep_rrs;
+  dep_rrs.reserve(composition_.nuclides.size());
+
+  // Loop over all nuclides
+  for (std::size_t ni = 0; ni < composition_.nuclides.size(); ni++) {
+    // Add new reaction rate to the end
+    dep_rrs.emplace_back();
+
+    // Save nuclide name and number density
+    dep_rrs.back().nuclide = composition_.nuclides[ni].name;
+    dep_rrs.back().number_density =
+        composition_.nuclides[ni].fraction * atoms_per_bcm_;
+
+    // Get the depletion xs object
+    const auto& nucxs = micro_dep_xs_data_[ni];
+
+    if (nucxs.n_gamma) {
+      const auto& xs = nucxs.n_gamma.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,gamma) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_gamma;
+      for (std::size_t g = 0; g < xs.ngroups(); g++)
+        rr += xs.xs_fast(g) * flux[g];
+      rr *= CM2_PER_BARN;
+    }
+
+    if (nucxs.n_2n) {
+      const auto& xs = nucxs.n_2n.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,2n) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_2n;
+      for (std::size_t g = 0; g < xs.ngroups(); g++)
+        rr += xs.xs_fast(g) * flux[g];
+      rr *= CM2_PER_BARN;
+    }
+
+    if (nucxs.n_3n) {
+      const auto& xs = nucxs.n_3n.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,3n) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_3n;
+      for (std::size_t g = 0; g < xs.ngroups(); g++)
+        rr += xs.xs_fast(g) * flux[g];
+      rr *= CM2_PER_BARN;
+    }
+
+    if (nucxs.n_p) {
+      const auto& xs = nucxs.n_p.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,p) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_p;
+      for (std::size_t g = 0; g < xs.ngroups(); g++)
+        rr += xs.xs_fast(g) * flux[g];
+      rr *= CM2_PER_BARN;
+    }
+
+    if (nucxs.n_alpha) {
+      const auto& xs = nucxs.n_alpha.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,alpha) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_alpha;
+      for (std::size_t g = 0; g < xs.ngroups(); g++)
+        rr += xs.xs_fast(g) * flux[g];
+      rr *= CM2_PER_BARN;
+    }
+
+    if (nucxs.n_fission) {
+      const auto& xs = nucxs.n_fission.value();
+      if (xs.ngroups() > flux.size()) {
+        const auto mssg =
+            "The number of (n,fission) xs values exceeds the flux size.";
+        spdlog::error(mssg);
+        throw ScarabeeException(mssg);
+      }
+
+      double& rr = dep_rrs.back().n_fission;
+      double Err = 0.;
+      for (std::size_t g = 0; g < xs.ngroups(); g++) {
+        const double Ef_flx_g = xs.xs_fast(g) * flux[g];
+        rr += Ef_flx_g;
+        Err += std::sqrt(ndl->group_bounds()[g] * ndl->group_bounds()[g + 1]) *
+               Ef_flx_g;
+      }
+      dep_rrs.back().average_fission_energy = Err / rr;
+      rr *= CM2_PER_BARN;
+    }
+  }
+
+  return dep_rrs;
+}
+
 void Material::assign_resonant_xs(const std::size_t i, const std::size_t g,
                                   const ResonantOneGroupXS& res_data) {
   micro_nuc_xs_data_[i].Dtr.set_value(g, res_data.Dtr);
@@ -627,14 +808,24 @@ double Material::lambda_pot_xs(std::shared_ptr<NDLibrary> ndl, std::size_t g) {
   return lmbd_pot_xs;
 }
 
-void Material::clear_micro_xs_data() {
+void Material::clear_transport_micro_xs_data() {
   micro_nuc_xs_data_.clear();
+  micro_nuc_xs_data_.shrink_to_fit();
+}
+
+void Material::clear_depletion_micro_xs_data() {
   micro_dep_xs_data_.clear();
+  micro_dep_xs_data_.shrink_to_fit();
+}
+
+void Material::clear_all_micro_xs_data() {
+  this->clear_transport_micro_xs_data();
+  this->clear_depletion_micro_xs_data();
 }
 
 void Material::initialize_inf_dil_xs(std::shared_ptr<NDLibrary> ndl,
                                      std::size_t max_l) {
-  this->clear_micro_xs_data();
+  this->clear_all_micro_xs_data();
   micro_nuc_xs_data_.reserve(composition_.nuclides.size());
   micro_dep_xs_data_.reserve(composition_.nuclides.size());
 
@@ -653,7 +844,7 @@ std::shared_ptr<Material> mix_materials(
 
   // Make sure all fractions are positive
   for (const auto& v : fracs) {
-    if (v <= 0.) {
+    if (v < 0.) {
       auto mssg = "All fractions must be > 0.";
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
@@ -689,6 +880,11 @@ std::shared_ptr<Material> mix_materials(
 
   // First, we normalize the fractions
   double norm = std::accumulate(fracs.begin(), fracs.end(), 0.);
+  if (norm == 0.) {
+    auto mssg = "Sum of material fractions must be > 0.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
   for (auto& v : fracs) v /= norm;
 
   std::vector<double> wgts(mats.size(), 0.);
@@ -724,7 +920,7 @@ std::shared_ptr<Material> mix_materials(
     for (std::size_t n = 0; n < mat->composition().nuclides.size(); n++) {
       const auto& nuc_info = mat->composition().nuclides[n];
       const std::string nuc_name = nuc_info.name;
-      const std::string simp_name = nuclide_name_to_simple_name(nuc_name);
+      const std::string simp_name = nuclide_name_to_internal_name(nuc_name);
       const double atms_per_bcm = mat->atom_density(nuc_name);
       const double atms_per_cc = wgt * 1.E24 * atms_per_bcm;
       atoms_per_cc[nuc_name] += atms_per_cc;

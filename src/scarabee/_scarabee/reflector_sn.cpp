@@ -1,17 +1,20 @@
 #include <reflector_sn.hpp>
+#include <utils/gauss_legendre.hpp>
 #include <utils/math.hpp>
 #include <utils/logging.hpp>
 #include <utils/scarabee_exception.hpp>
 #include <utils/timer.hpp>
 
-#include <xtensor/xio.hpp>
+#include <xtensor/io/xio.hpp>
 
 #include <sstream>
+#include "spdlog/spdlog.h"
 
 namespace scarabee {
 
 ReflectorSN::ReflectorSN(const std::vector<std::shared_ptr<CrossSection>>& xs,
-                         const xt::xtensor<double, 1>& dx, bool anisotropic)
+                         const xt::xtensor<double, 1>& dx,
+                         std::uint32_t nangles, bool anisotropic)
     : xs_(xs), dx_(dx), anisotropic_(anisotropic) {
   if (xs_.size() != dx_.size()) {
     auto mssg = "Number of cross sections and regions do not agree.";
@@ -56,6 +59,76 @@ ReflectorSN::ReflectorSN(const std::vector<std::shared_ptr<CrossSection>>& xs,
   // Must allocate with zeros in case someone calls the flux method
   flux_ = xt::zeros<double>({ngroups_, xs_.size(), max_L_ + 1});
   J_ = xt::zeros<double>({ngroups_, xs_.size() + 1});
+
+  // Now we need to set the spans for the angular quadrature
+  switch (nangles) {
+    case 2:
+      mu_ = std::span<const double>(gl_2_abscissa.begin(), gl_2_abscissa.end());
+      wgt_ = std::span<const double>(gl_2_weights.begin(), gl_2_weights.end());
+      break;
+    case 4:
+      mu_ = std::span<const double>(gl_4_abscissa.begin(), gl_4_abscissa.end());
+      wgt_ = std::span<const double>(gl_4_weights.begin(), gl_4_weights.end());
+      break;
+    case 6:
+      mu_ = std::span<const double>(gl_6_abscissa.begin(), gl_6_abscissa.end());
+      wgt_ = std::span<const double>(gl_6_weights.begin(), gl_6_weights.end());
+      break;
+    case 8:
+      mu_ = std::span<const double>(gl_8_abscissa.begin(), gl_8_abscissa.end());
+      wgt_ = std::span<const double>(gl_8_weights.begin(), gl_8_weights.end());
+      break;
+    case 10:
+      mu_ =
+          std::span<const double>(gl_10_abscissa.begin(), gl_10_abscissa.end());
+      wgt_ =
+          std::span<const double>(gl_10_weights.begin(), gl_10_weights.end());
+      break;
+    case 12:
+      mu_ =
+          std::span<const double>(gl_12_abscissa.begin(), gl_12_abscissa.end());
+      wgt_ =
+          std::span<const double>(gl_12_weights.begin(), gl_12_weights.end());
+      break;
+    case 14:
+      mu_ =
+          std::span<const double>(gl_14_abscissa.begin(), gl_14_abscissa.end());
+      wgt_ =
+          std::span<const double>(gl_14_weights.begin(), gl_14_weights.end());
+      break;
+    case 16:
+      mu_ =
+          std::span<const double>(gl_16_abscissa.begin(), gl_16_abscissa.end());
+      wgt_ =
+          std::span<const double>(gl_16_weights.begin(), gl_16_weights.end());
+      break;
+    case 32:
+      mu_ =
+          std::span<const double>(gl_32_abscissa.begin(), gl_32_abscissa.end());
+      wgt_ =
+          std::span<const double>(gl_32_weights.begin(), gl_32_weights.end());
+      break;
+    case 64:
+      mu_ =
+          std::span<const double>(gl_64_abscissa.begin(), gl_64_abscissa.end());
+      wgt_ =
+          std::span<const double>(gl_64_weights.begin(), gl_64_weights.end());
+      break;
+    case 128:
+      mu_ = std::span<const double>(gl_128_abscissa.begin(),
+                                    gl_128_abscissa.end());
+      wgt_ =
+          std::span<const double>(gl_128_weights.begin(), gl_128_weights.end());
+      break;
+    default: {
+      std::stringstream mssg;
+      mssg << "Invalid nangles argument of " << nangles << " .\n";
+      mssg << "Please use one of the following: 2, 4, 6, 8, 10, 12, 14, 16, "
+              "32, 64, 128.";
+      spdlog::error(mssg.str());
+      throw ScarabeeException(mssg.str());
+    } break;
+  }
 }
 
 void ReflectorSN::set_flux_tolerance(double ftol) {
@@ -208,10 +281,10 @@ void ReflectorSN::solve_iso() {
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative source values set to zero");
+      spdlog::info("Negative source values set to zero");
     }
     if (set_neg_flux_to_zero) {
-      spdlog::warn("Negative flux values set to zero");
+      spdlog::info("Negative flux values set to zero");
     }
   }
 
@@ -428,10 +501,10 @@ void ReflectorSN::solve_aniso() {
 
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
-      spdlog::warn("Negative source values set to zero");
+      spdlog::info("Negative source values set to zero");
     }
     if (set_neg_flux_to_zero) {
-      spdlog::warn("Negative flux values set to zero");
+      spdlog::info("Negative flux values set to zero");
     }
   }
 
@@ -798,73 +871,6 @@ xt::xtensor<double, 1> ReflectorSN::homogenize_flux_spectrum(
   return spectrum;
 }
 
-const std::array<double, 64> ReflectorSN::mu_{
-    -9.99305041735772139457e-01, -9.96340116771955279347e-01,
-    -9.91013371476744320739e-01, -9.83336253884625956931e-01,
-    -9.73326827789910963742e-01, -9.61008799652053718919e-01,
-    -9.46411374858402816062e-01, -9.29569172131939575821e-01,
-    -9.10522137078502805756e-01, -8.89315445995114105853e-01,
-    -8.65999398154092819761e-01, -8.40629296252580362752e-01,
-    -8.13265315122797559742e-01, -7.83972358943341407610e-01,
-    -7.52819907260531896612e-01, -7.19881850171610826849e-01,
-    -6.85236313054233242564e-01, -6.48965471254657339858e-01,
-    -6.11155355172393250249e-01, -5.71895646202634034284e-01,
-    -5.31279464019894545658e-01, -4.89403145707052957479e-01,
-    -4.46366017253464087985e-01, -4.02270157963991603696e-01,
-    -3.57220158337668115950e-01, -3.11322871990210956158e-01,
-    -2.64687162208767416374e-01, -2.17423643740007084150e-01,
-    -1.69644420423992818037e-01, -1.21462819296120554470e-01,
-    -7.29931217877990394495e-02, -2.43502926634244325090e-02,
-    2.43502926634244325090e-02,  7.29931217877990394495e-02,
-    1.21462819296120554470e-01,  1.69644420423992818037e-01,
-    2.17423643740007084150e-01,  2.64687162208767416374e-01,
-    3.11322871990210956158e-01,  3.57220158337668115950e-01,
-    4.02270157963991603696e-01,  4.46366017253464087985e-01,
-    4.89403145707052957479e-01,  5.31279464019894545658e-01,
-    5.71895646202634034284e-01,  6.11155355172393250249e-01,
-    6.48965471254657339858e-01,  6.85236313054233242564e-01,
-    7.19881850171610826849e-01,  7.52819907260531896612e-01,
-    7.83972358943341407610e-01,  8.13265315122797559742e-01,
-    8.40629296252580362752e-01,  8.65999398154092819761e-01,
-    8.89315445995114105853e-01,  9.10522137078502805756e-01,
-    9.29569172131939575821e-01,  9.46411374858402816062e-01,
-    9.61008799652053718919e-01,  9.73326827789910963742e-01,
-    9.83336253884625956931e-01,  9.91013371476744320739e-01,
-    9.96340116771955279347e-01,  9.99305041735772139457e-01};
-
-const std::array<double, 64> ReflectorSN::wgt_{
-    1.78328072169643294730e-03, 4.14703326056246763529e-03,
-    6.50445796897836285612e-03, 8.84675982636394772303e-03,
-    1.11681394601311288186e-02, 1.34630478967186425981e-02,
-    1.57260304760247193220e-02, 1.79517157756973430850e-02,
-    2.01348231535302093723e-02, 2.22701738083832541593e-02,
-    2.43527025687108733382e-02, 2.63774697150546586717e-02,
-    2.83396726142594832275e-02, 3.02346570724024788680e-02,
-    3.20579283548515535855e-02, 3.38051618371416093916e-02,
-    3.54722132568823838107e-02, 3.70551285402400460404e-02,
-    3.85501531786156291290e-02, 3.99537411327203413867e-02,
-    4.12625632426235286102e-02, 4.24735151236535890073e-02,
-    4.35837245293234533768e-02, 4.45905581637565630601e-02,
-    4.54916279274181444798e-02, 4.62847965813144172960e-02,
-    4.69681828162100173253e-02, 4.75401657148303086623e-02,
-    4.79993885964583077281e-02, 4.83447622348029571698e-02,
-    4.85754674415034269348e-02, 4.86909570091397203834e-02,
-    4.86909570091397203834e-02, 4.85754674415034269348e-02,
-    4.83447622348029571698e-02, 4.79993885964583077281e-02,
-    4.75401657148303086623e-02, 4.69681828162100173253e-02,
-    4.62847965813144172960e-02, 4.54916279274181444798e-02,
-    4.45905581637565630601e-02, 4.35837245293234533768e-02,
-    4.24735151236535890073e-02, 4.12625632426235286102e-02,
-    3.99537411327203413867e-02, 3.85501531786156291290e-02,
-    3.70551285402400460404e-02, 3.54722132568823838107e-02,
-    3.38051618371416093916e-02, 3.20579283548515535855e-02,
-    3.02346570724024788680e-02, 2.83396726142594832275e-02,
-    2.63774697150546586717e-02, 2.43527025687108733382e-02,
-    2.22701738083832541593e-02, 2.01348231535302093723e-02,
-    1.79517157756973430850e-02, 1.57260304760247193220e-02,
-    1.34630478967186425981e-02, 1.11681394601311288186e-02,
-    8.84675982636394772303e-03, 6.50445796897836285612e-03,
-    4.14703326056246763529e-03, 1.78328072169643294730e-03};
 }  // namespace scarabee
 
 // REFERENCES

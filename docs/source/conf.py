@@ -36,7 +36,7 @@ extensions = [
   'sphinx.ext.intersphinx',
   'sphinx.ext.autosummary',
   'sphinx.ext.napoleon',
-  #'sphinx.ext.autosectionlabel',
+  'sphinx.ext.autosectionlabel',
   'sphinx.ext.todo',
   'sphinx.ext.coverage',
   'sphinx.ext.mathjax',
@@ -44,6 +44,22 @@ extensions = [
   'sphinx.ext.viewcode',
   'nbsphinx'
 ]
+
+# Helps reduce duplicate label warnings from autosectionlabel
+autosectionlabel_prefix_document = True
+
+autosectionlabel_maxdepth = 4
+
+#suppress_warnings = [
+#    'autosectionlabel.*',
+#]
+
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'alphabetical',
+    'special-members': '__init__',
+    'inherited-members': True,
+}
 
 # Napoleon settings
 napoleon_google_docstring = True
