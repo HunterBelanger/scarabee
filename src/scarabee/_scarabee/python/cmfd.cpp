@@ -130,7 +130,7 @@ void init_CMFD(py::module& m) {
            "Parameters\n"
            "----------\n"
            "aflx: float\n"
-           "    value of the angular flux to be tallied."
+           "    Value of the angular flux to be tallied.\n"
            "u: Direction\n"
            "    Direction of the angular flux.\n"
            "g: int\n"
@@ -144,13 +144,13 @@ void init_CMFD(py::module& m) {
            "Parameters\n"
            "----------\n"
            "g: int\n"
-           "    CMFD energy group."
+           "    CMFD energy group.\n"
            "surf: int\n"
            "    CMFD surface index.\n\n"
            "Returns\n"
            "-------\n"
            "float.\n"
-           "    Tallied current in CMFD group g on surface surf.",
+           "    Tallied current in CMFD group g on surface surf.\n",
            py::arg("g"), py::arg("surf"))
 
       .def("flux", &CMFD::flux,
