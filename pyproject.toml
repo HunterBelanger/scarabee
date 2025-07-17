@@ -41,7 +41,7 @@ classifiers = [
 [project.urls]
 homepage = "https://scarabee.readthedocs.io/en/latest/"
 documentation = "https://scarabee.readthedocs.io/en/latest/"
-source = "https://github.com/HunterBelanger/scarabee"
+source = "https://github.com/scarabee-dev/scarabee"
 
 [tool.cibuildwheel]
 skip = ["*musllinux*", "pp*"]
