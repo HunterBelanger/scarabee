@@ -102,6 +102,9 @@ void init_MOCDriver(py::module& m) {
                     "pass, a warning is issued, but the calculation continues. "
                     "Default value is False.")
 
+      .def_property("cmfd", &MOCDriver::cmfd, &MOCDriver::set_cmfd,
+                    "CMFD object for convergence acceleration.")
+
       .def("flux",
            py::overload_cast<const Vector&, const Direction&, std::size_t,
                              std::size_t>(&MOCDriver::flux, py::const_),

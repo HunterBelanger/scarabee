@@ -92,10 +92,9 @@ class Surface {
 class XPlane : public Surface {
  public:
   XPlane(double x0) : Surface(Type::XPlane) { this->x0() = x0; }
+  XPlane() : Surface(Type::XPlane) { this->x0() = 0.; }
 
  private:
-  XPlane() : Surface(Type::XPlane) {}
-
   friend class cereal::access;
   template <class Archive>
   void serialize(Archive& arc) {
@@ -106,10 +105,9 @@ class XPlane : public Surface {
 class YPlane : public Surface {
  public:
   YPlane(double y0) : Surface(Type::YPlane) { this->y0() = y0; }
+  YPlane() : Surface(Type::YPlane) { this->y0() = 0.; }
 
  private:
-  YPlane() : Surface(Type::YPlane) {}
-
   friend class cereal::access;
   template <class Archive>
   void serialize(Archive& arc) {

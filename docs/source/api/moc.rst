@@ -11,6 +11,8 @@ Method of Characteristics
 .. autoclass:: SimulationMode
     :members:
 
+.. autoclass:: CMFD
+
 .. autoclass:: P1CriticalitySpectrum
 
 .. autoclass:: B1CriticalitySpectrum

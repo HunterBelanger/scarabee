@@ -2,6 +2,7 @@
 #define MOC_DRIVER_H
 
 #include <moc/cartesian_2d.hpp>
+#include <moc/cmfd.hpp>
 #include <moc/boundary_condition.hpp>
 #include <moc/flat_source_region.hpp>
 #include <moc/track.hpp>
@@ -31,7 +32,27 @@ class MOCDriver {
             BoundaryCondition ymax = BoundaryCondition::Reflective,
             bool anisotropic = false);
 
+  struct AngleInfo {
+    double phi;                  // Azimuthal angle for track
+    double d;                    // Spacing for trackings of this angle
+    double wgt;                  // Weight for tracks with this angle
+    std::uint32_t nx;            // Number of tracks starting on the -y boundary
+    std::uint32_t ny;            // Number of tracks starting on the -x boundary
+    std::size_t forward_index;   // azimuthal angle index in forward
+    std::size_t backward_index;  // azimuthal angle index in backward
+
+    template <class Archive>
+    void serialize(Archive& arc) {
+      arc(CEREAL_NVP(phi), CEREAL_NVP(d), CEREAL_NVP(wgt), CEREAL_NVP(nx),
+          CEREAL_NVP(ny), CEREAL_NVP(forward_index),
+          CEREAL_NVP(backward_index));
+    }
+  };
+
   std::shared_ptr<Cartesian2D> geometry() const { return geometry_; }
+
+  const std::shared_ptr<CMFD>& cmfd() const { return cmfd_; }
+  void set_cmfd(std::shared_ptr<CMFD> cmfd);
 
   bool drawn() const { return !angle_info_.empty(); }
 
@@ -84,6 +105,12 @@ class MOCDriver {
               std::size_t lj = 0) const;
   double flux(std::size_t i, std::size_t g, std::size_t lj = 0) const;
 
+  std::vector<std::vector<Track>>& tracks() { return tracks_; }
+
+  const std::vector<AngleInfo>& azimuthal_quadrature() const {
+    return angle_info_;
+  }
+
   double volume(const Vector& r, const Direction& u) const;
   double volume(std::size_t i) const;
 
@@ -130,26 +157,10 @@ class MOCDriver {
   static std::shared_ptr<MOCDriver> load_bin(const std::string& fname);
 
  private:
-  struct AngleInfo {
-    double phi;                  // Azimuthal angle for track
-    double d;                    // Spacing for trackings of this angle
-    double wgt;                  // Weight for tracks with this angle
-    std::uint32_t nx;            // Number of tracks starting on the -y boundary
-    std::uint32_t ny;            // Number of tracks starting on the -x boundary
-    std::size_t forward_index;   // azimuthal angle index in forward
-    std::size_t backward_index;  // azimuthal angle index in backward
-
-    template <class Archive>
-    void serialize(Archive& arc) {
-      arc(CEREAL_NVP(phi), CEREAL_NVP(d), CEREAL_NVP(wgt), CEREAL_NVP(nx),
-          CEREAL_NVP(ny), CEREAL_NVP(forward_index),
-          CEREAL_NVP(backward_index));
-    }
-  };
-
   std::vector<AngleInfo> angle_info_;       // Information for all angles
   std::vector<std::vector<Track>> tracks_;  // All tracks, indexed by angle
   std::shared_ptr<Cartesian2D> geometry_;   // Geometry for the problem
+  std::shared_ptr<CMFD> cmfd_;              // CMFD for acceleration
   PolarQuadrature polar_quad_;              // Polar quadrature
   SphericalHarmonics sph_harm_;             // Spherical harmonics
   xt::xtensor<double, 3>
@@ -204,15 +215,27 @@ class MOCDriver {
   double calc_keff(const xt::xtensor<double, 3>& flux,
                    const xt::xtensor<double, 3>& old_flux) const;
 
-  friend class cereal::access;
+  friend class CMFD;
+
+  // Used by CMFD to update FSR fluxes
+  void set_flux(std::size_t i, std::size_t g, double new_flx,
+                std::size_t lj = 0) {
+    flux_(g, i, lj) = new_flx;
+  }
+
+
+  // Private default constructor for cereal
   MOCDriver() : polar_quad_(YamamotoTabuchi<6>()) {}
+
+  friend class cereal::access;
+
   template <class Archive>
   void save(Archive& arc) const {
     arc(CEREAL_NVP(angle_info_), CEREAL_NVP(tracks_), CEREAL_NVP(geometry_),
-        CEREAL_NVP(polar_quad_), CEREAL_NVP(sph_harm_), CEREAL_NVP(flux_),
-        CEREAL_NVP(extern_src_), CEREAL_NVP(ngroups_), CEREAL_NVP(nfsrs_),
-        CEREAL_NVP(n_pol_angles_), CEREAL_NVP(flux_tol_), CEREAL_NVP(keff_tol_),
-        CEREAL_NVP(keff_), CEREAL_NVP(check_fsr_areas_),
+        CEREAL_NVP(cmfd_), CEREAL_NVP(polar_quad_), CEREAL_NVP(sph_harm_),
+        CEREAL_NVP(flux_), CEREAL_NVP(extern_src_), CEREAL_NVP(ngroups_),
+        CEREAL_NVP(nfsrs_), CEREAL_NVP(n_pol_angles_), CEREAL_NVP(flux_tol_),
+        CEREAL_NVP(keff_tol_), CEREAL_NVP(keff_), CEREAL_NVP(check_fsr_areas_),
         CEREAL_NVP(fsr_area_tol_), CEREAL_NVP(x_min_bc_), CEREAL_NVP(x_max_bc_),
         CEREAL_NVP(y_min_bc_), CEREAL_NVP(y_max_bc_), CEREAL_NVP(max_L_),
         CEREAL_NVP(N_lj_), CEREAL_NVP(anisotropic_), CEREAL_NVP(mode_),
@@ -222,10 +245,10 @@ class MOCDriver {
   template <class Archive>
   void load(Archive& arc) {
     arc(CEREAL_NVP(angle_info_), CEREAL_NVP(tracks_), CEREAL_NVP(geometry_),
-        CEREAL_NVP(polar_quad_), CEREAL_NVP(sph_harm_), CEREAL_NVP(flux_),
-        CEREAL_NVP(extern_src_), CEREAL_NVP(ngroups_), CEREAL_NVP(nfsrs_),
-        CEREAL_NVP(n_pol_angles_), CEREAL_NVP(flux_tol_), CEREAL_NVP(keff_tol_),
-        CEREAL_NVP(keff_), CEREAL_NVP(check_fsr_areas_),
+        CEREAL_NVP(cmfd_), CEREAL_NVP(polar_quad_), CEREAL_NVP(sph_harm_),
+        CEREAL_NVP(flux_), CEREAL_NVP(extern_src_), CEREAL_NVP(ngroups_),
+        CEREAL_NVP(nfsrs_), CEREAL_NVP(n_pol_angles_), CEREAL_NVP(flux_tol_),
+        CEREAL_NVP(keff_tol_), CEREAL_NVP(keff_), CEREAL_NVP(check_fsr_areas_),
         CEREAL_NVP(fsr_area_tol_), CEREAL_NVP(x_min_bc_), CEREAL_NVP(x_max_bc_),
         CEREAL_NVP(y_min_bc_), CEREAL_NVP(y_max_bc_), CEREAL_NVP(max_L_),
         CEREAL_NVP(N_lj_), CEREAL_NVP(anisotropic_), CEREAL_NVP(mode_),

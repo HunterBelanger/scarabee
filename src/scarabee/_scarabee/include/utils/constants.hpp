@@ -13,6 +13,7 @@ namespace scarabee {
 constexpr double SQRT_2{1.41421356237309504880168872420969808};
 constexpr double PI{3.14159265358979323846264338327950288};
 constexpr double PI_2{0.5 * PI};
+constexpr double INVS_4SQRTPI{0.14104739588693907173701986289019315};
 constexpr double LN_2{0.6931471805599453094172321214581765680755};
 constexpr double INF{std::numeric_limits<double>::max()};
 constexpr double SURFACE_COINCIDENT{1E-11};

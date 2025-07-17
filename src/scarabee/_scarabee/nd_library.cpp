@@ -236,6 +236,7 @@ NDLibrary::NDLibrary()
     : nuclide_handles_(),
       group_bounds_(),
       condensation_scheme_(std::nullopt),
+      cmfd_condensation_scheme_(std::nullopt),
       library_(),
       group_structure_(),
       ngroups_(0),
@@ -270,6 +271,7 @@ NDLibrary::NDLibrary(const std::string& fname)
     : nuclide_handles_(),
       group_bounds_(),
       condensation_scheme_(std::nullopt),
+      cmfd_condensation_scheme_(std::nullopt),
       library_(),
       group_structure_(),
       ngroups_(0),
@@ -328,20 +330,54 @@ void NDLibrary::init() {
 
     // Make sure the dimensions of the array are correct
     if (dims.size() != 2 || dims[1] != 2) {
-      const auto mssg = "Nuclear data library provided macro-group condensation scheme has an invalid shape.";
+      const auto mssg =
+          "Nuclear data library provided condensation scheme has an invalid "
+          "shape.";
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
     }
-    
+
     // Read in the condensation scheme array
     xt::xtensor<double, 2> cond_scheme = xt::zeros<double>({dims[0], dims[1]});
     attr.read_raw<double>(cond_scheme.data());
-    
+
     // Reconstruct vector of pairs from the array
-    condensation_scheme_ = std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
+    condensation_scheme_ =
+        std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
     for (std::size_t G = 0; G < dims[0]; G++) {
-      (*condensation_scheme_)[G].first = static_cast<std::size_t>(cond_scheme(G, 0));
-      (*condensation_scheme_)[G].second = static_cast<std::size_t>(cond_scheme(G, 1));
+      (*condensation_scheme_)[G].first =
+          static_cast<std::size_t>(cond_scheme(G, 0));
+      (*condensation_scheme_)[G].second =
+          static_cast<std::size_t>(cond_scheme(G, 1));
+    }
+  }
+
+  // If a default CMFD condensation scheme is provided, load it in now
+  if (h5_->hasAttribute("cmfd-condensation-scheme")) {
+    const auto attr = h5_->getAttribute("cmfd-condensation-scheme");
+    const auto dims = attr.getMemSpace().getDimensions();
+
+    // Make sure the dimensions of the array are correct
+    if (dims.size() != 2 || dims[1] != 2) {
+      const auto mssg =
+          "Nuclear data library provided CMFD condensation scheme has an "
+          "invalid shape.";
+      spdlog::error(mssg);
+      throw ScarabeeException(mssg);
+    }
+
+    // Read in the condensation scheme array
+    xt::xtensor<double, 2> cond_scheme = xt::zeros<double>({dims[0], dims[1]});
+    attr.read_raw<double>(cond_scheme.data());
+
+    // Reconstruct vector of pairs from the array
+    cmfd_condensation_scheme_ =
+        std::vector<std::pair<std::size_t, std::size_t>>(dims[0], {0, 0});
+    for (std::size_t G = 0; G < dims[0]; G++) {
+      (*cmfd_condensation_scheme_)[G].first =
+          static_cast<std::size_t>(cond_scheme(G, 0));
+      (*cmfd_condensation_scheme_)[G].second =
+          static_cast<std::size_t>(cond_scheme(G, 1));
     }
   }
 

@@ -237,6 +237,11 @@ void init_NDLibrary(py::module& m) {
           "The condensation scheme to obtain the default few-group structure "
           "from the library group structure (if provided).")
 
+      .def_property_readonly("cmfd_condensation_scheme",
+                             &NDLibrary::cmfd_condensation_scheme,
+                             "The CMFD condensation scheme for acceleration in "
+                             "the MOC calculation (if provided).")
+
       .def_property_readonly(
           "depletion_chain", &NDLibrary::depletion_chain,
           "The DepletionChain intended for use with the library.");

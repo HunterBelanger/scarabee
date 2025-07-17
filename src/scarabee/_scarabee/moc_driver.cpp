@@ -13,7 +13,8 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
-#include "spdlog/spdlog.h"
+#include <vector>
+#include <set>
 
 namespace scarabee {
 
@@ -24,6 +25,7 @@ MOCDriver::MOCDriver(std::shared_ptr<Cartesian2D> geometry,
     : angle_info_(),
       tracks_(),
       geometry_(geometry),
+      cmfd_(nullptr),
       polar_quad_(YamamotoTabuchi<6>()),
       flux_(),
       extern_src_(),
@@ -102,6 +104,27 @@ void MOCDriver::set_keff_tolerance(double ktol) {
   }
 
   keff_tol_ = ktol;
+}
+
+void MOCDriver::set_cmfd(std::shared_ptr<CMFD> cmfd) {
+  if ((this->drawn())) {
+    angle_info_.clear();
+    tracks_.clear();
+    spdlog::warn(
+        "CMFD was set after track tracing. Must call generate_tracks again !");
+  }
+
+  if ((std::abs(this->x_max() - cmfd->x_max())) > SURFACE_COINCIDENT ||
+      (std::abs(this->x_min() - cmfd->x_min())) > SURFACE_COINCIDENT ||
+      (std::abs(this->y_max() - cmfd->y_max())) > SURFACE_COINCIDENT ||
+      (std::abs(this->y_min() - cmfd->y_min())) > SURFACE_COINCIDENT) {
+    auto mssg =
+        "CMFD geometry bounds do not align with MOCDriver geometry bounds";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  cmfd_ = cmfd;
 }
 
 void MOCDriver::set_fsr_area_tolerance(double atol) {
@@ -188,7 +211,7 @@ void MOCDriver::generate_tracks(std::uint32_t n_angles, double d,
   allocate_track_fluxes();
 
   draw_timer.stop();
-  spdlog::info("Time spent dawing tracks: {:.5} s.", draw_timer.elapsed_time());
+  spdlog::info("Time spent drawing tracks: {:.5} s.", draw_timer.elapsed_time());
 }
 
 void MOCDriver::solve() {
@@ -229,6 +252,11 @@ void MOCDriver::solve() {
       auto mssg = "Must have at least one non-zero external source.";
       spdlog::error(mssg);
       throw ScarabeeException(mssg);
+    }
+
+    // Homogenize external source for CMFD
+    if (cmfd_) {
+      cmfd_->homogenize_ext_src(*this);
     }
   }
 
@@ -321,6 +349,7 @@ void MOCDriver::solve_isotropic() {
     }
 
     next_flux.fill(0.);
+    if (cmfd_) cmfd_->zero_currents();
     sweep(next_flux, src);
 
     // Apply stabalization (see [1])
@@ -333,7 +362,10 @@ void MOCDriver::solve_isotropic() {
       }
     }
 
-    if (mode_ == SimulationMode::Keff) {
+    // If MOC iterations in CMFD are skipped compute Keff
+    // the normal way
+    if (mode_ == SimulationMode::Keff &&
+        (cmfd_ == nullptr || (cmfd_ != nullptr && cmfd_->solved() == false))) {
       prev_keff = keff_;
       keff_ = calc_keff(next_flux, flux_);
       rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
@@ -353,6 +385,16 @@ void MOCDriver::solve_isotropic() {
 
     flux_ = next_flux;
 
+    // Apply CMFD
+    if (cmfd_) {
+      cmfd_->solve(*this, prev_keff, iteration);
+      if (cmfd_->solved() && mode_ == SimulationMode::Keff) {
+        prev_keff = keff_;
+        keff_ = cmfd_->keff();
+        rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+      }
+    }
+
     iteration_timer.stop();
     spdlog::info("-------------------------------------");
     if (mode_ == SimulationMode::Keff) {
@@ -364,7 +406,9 @@ void MOCDriver::solve_isotropic() {
     spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
     spdlog::info("     iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
-
+    if (cmfd_ && cmfd_->solved()) {
+      spdlog::info("CMFD solve time: {:.5E} s", cmfd_->solve_time());
+    }
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
       spdlog::info("Negative source values set to zero");
@@ -453,9 +497,13 @@ void MOCDriver::solve_anisotropic() {
     }
 
     next_flux.fill(0.);
+    if (cmfd_) cmfd_->zero_currents();
     sweep_anisotropic(next_flux, src);
 
-    if (mode_ == SimulationMode::Keff) {
+    // If MOC iterations are skipped compute Keff
+    // the normal way
+    if (mode_ == SimulationMode::Keff &&
+        (cmfd_ == nullptr || (cmfd_ != nullptr && cmfd_->solved() == false))) {
       prev_keff = keff_;
       keff_ = calc_keff(next_flux, flux_);
       rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
@@ -479,6 +527,16 @@ void MOCDriver::solve_anisotropic() {
 
     flux_ = next_flux;
 
+    // Apply CMFD
+    if (cmfd_) {
+      cmfd_->solve(*this, prev_keff, iteration);
+      if (cmfd_->solved() && mode_ == SimulationMode::Keff) {
+        prev_keff = keff_;
+        keff_ = cmfd_->keff();
+        rel_diff_keff = std::abs(keff_ - prev_keff) / keff_;
+      }
+    }
+
     iteration_timer.stop();
     spdlog::info("-------------------------------------");
     if (mode_ == SimulationMode::Keff) {
@@ -490,7 +548,9 @@ void MOCDriver::solve_anisotropic() {
     spdlog::info("     max flux difference: {:.5E}", max_flx_diff);
     spdlog::info("     iteration time: {:.5E} s",
                  iteration_timer.elapsed_time());
-
+    if (cmfd_ && cmfd_->solved()) {
+      spdlog::info("CMFD solve time: {:.5E} s", cmfd_->solve_time());
+    }
     // Write warnings about negative flux and source
     if (set_neg_src_to_zero) {
       spdlog::info("Negative zero-moment-source values set to zero.");
@@ -507,6 +567,10 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
   for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
     std::size_t g = static_cast<std::size_t>(ig);
 
+    // Get the group for CMFD
+    std::size_t G = g;
+    if (cmfd_) G = cmfd_->moc_to_cmfd_group(g);
+
     for (auto& tracks : tracks_) {
       for (std::size_t t = 0; t < tracks.size(); t++) {
         auto& track = tracks[t];
@@ -522,20 +586,40 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
         for (std::size_t p = 0; p < n_pol_angles_; p++)
           angflux.push_back(track.entry_flux()(g, p));
 
+        // Accumulate entry angular flux into CMFD current
+        if (cmfd_ && track.begin()->entry_cmfd_surface() &&
+            cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
+          const auto surf_indx = track.begin()->entry_cmfd_surface();
+          double cmfd_flx = 0.;
+          for (std::size_t p = 0; p < n_pol_angles_; p++) {
+            cmfd_flx += tw * polar_quad_.wsin()[p] * angflux[p];
+          }
+          cmfd_->tally_current(cmfd_flx, u_forw, G, surf_indx);
+        }
+
         // Follow track in forward direction
         for (auto& seg : track) {
+          const auto cmfd_surf = seg.exit_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
           const double lEt = l * Et;
           const double Q = src(g, i);
           double delta_sum = 0.;
+          double cmfd_flx = 0.;
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             double exp_m1 = mexp(lEt * polar_quad_.invs_sin()[p]);
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
+            if (cmfd_surf) cmfd_flx += tw * polar_quad_.wsin()[p] * angflux[p];
           }  // For all polar angles
+
+          if (cmfd_surf &&
+              cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
+            cmfd_->tally_current(cmfd_flx, u_forw, G, cmfd_surf);
+          }
+
           sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
 
@@ -553,21 +637,41 @@ void MOCDriver::sweep(xt::xtensor<double, 3>& sflux,
         for (std::size_t p = 0; p < n_pol_angles_; p++)
           angflux[p] = track.exit_flux()(g, p);
 
+        // Accumulate entry angular flux into CMFD current for backwards
+        // direction
+        if (cmfd_ && track.rbegin()->exit_cmfd_surface() &&
+            cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
+          auto surf_indx = track.rbegin()->exit_cmfd_surface();
+          double cmfd_flx = 0.;
+          for (std::size_t p = 0; p < n_pol_angles_; p++) {
+            cmfd_flx += tw * polar_quad_.wsin()[p] * angflux[p];
+          }
+          cmfd_->tally_current(cmfd_flx, u_back, G, surf_indx);
+        }
+
         // Iterate over segments in backwards direction
         for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
           auto& seg = *seg_it;
+          const auto cmfd_surf = seg.entry_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
           const double Et = seg.xs()->Etr(g);
           const double lEt = l * Et;
           const double Q = src(g, i);
           double delta_sum = 0.;
+          double cmfd_flx = 0.;
           for (std::size_t p = 0; p < n_pol_angles_; p++) {
             double exp_m1 = mexp(lEt * polar_quad_.invs_sin()[p]);
             const double delta_flx = (angflux[p] - (Q / Et)) * exp_m1;
             angflux[p] -= delta_flx;
             delta_sum += polar_quad_.wsin()[p] * delta_flx;
+            if (cmfd_surf) cmfd_flx += tw * polar_quad_.wsin()[p] * angflux[p];
           }  // For all polar angles
+          if (cmfd_surf &&
+              cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
+            cmfd_->tally_current(cmfd_flx, u_back, G, cmfd_surf);
+          }
+
           sflux(g, i, 0) += tw * delta_sum;
         }  // For all segments along forward direction of track
 
@@ -598,6 +702,11 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
 #pragma omp parallel for
   for (int ig = 0; ig < static_cast<int>(ngroups_); ig++) {
     std::size_t g = static_cast<std::size_t>(ig);
+
+    // Get the group for CMFD
+    std::size_t G = g;
+    if (cmfd_) G = cmfd_->moc_to_cmfd_group(g);
+
     for (auto& tracks : tracks_) {
       for (std::size_t t = 0; t < tracks.size(); t++) {
         auto& track = tracks[t];
@@ -607,14 +716,37 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
         const double tw = 4. * PI * track.wgt() *
                           track.width();  // Azimuthal weight * track width
 
+        // Get the azimuthal angle (phi) and its cosine for CMFD current
+        const Direction u_forw = track.dir();
+        const Direction u_back = -u_forw;
+
+        // Accumulate entry angular flux into CMFD current
+        if (cmfd_ && track.begin()->entry_cmfd_surface() &&
+            cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
+          const auto surf_indx = track.begin()->entry_cmfd_surface();
+          double cmfd_flx = 0.;
+          std::size_t p = 0;
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
+            if (pp < n_pol_angles_ / 2) {
+              p = pp;
+            } else {
+              p = pp - n_pol_angles_ / 2;
+            }
+            cmfd_flx += polar_quad_.wsin()[p] * angflux[pp];
+          }
+          cmfd_->tally_current(INVS_4SQRTPI * tw * cmfd_flx, u_forw, G,
+                               surf_indx);
+        }
+
         // Follow track in forward direction
         for (auto& seg : track) {
+          const auto cmfd_surf = seg.exit_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
           const double Et = seg.xs()->Et(g);
           const double lEt = l * Et;
           const std::size_t phi_forward_index = track.phi_index_forward();
-
+          double cmfd_flx = 0.;
           // loop over all polar angles
           std::size_t p = 0;  // index for polar angle
           for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
@@ -641,7 +773,16 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
                                     (delta_sum + l * Q * polar_quad_.wgt()[p]) *
                                     Y_ljs[it_lj] * 0.5;
             }
+
+            if (cmfd_surf) cmfd_flx += polar_quad_.wsin()[p] * angflux[pp];
+
           }  // For all polar angles
+
+          if (cmfd_surf &&
+              cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
+            cmfd_->tally_current(INVS_4SQRTPI * tw * cmfd_flx, u_forw, G,
+                                 cmfd_surf);
+          }
         }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
@@ -657,14 +798,34 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
         for (std::size_t pp = 0; pp < n_pol_angles_; pp++)
           angflux[pp] = track.exit_flux()(g, pp);
 
+        // Accumulate entry angular flux into CMFD current for backwards
+        // direction
+        if (cmfd_ && track.rbegin()->exit_cmfd_surface() &&
+            cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
+          auto surf_indx = track.rbegin()->exit_cmfd_surface();
+          double cmfd_flx = 0.;
+          std::size_t p = 0;
+          for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
+            if (pp < n_pol_angles_ / 2) {
+              p = pp;
+            } else {
+              p = pp - n_pol_angles_ / 2;
+            }
+            cmfd_flx += polar_quad_.wsin()[p] * angflux[pp];
+          }
+          cmfd_->tally_current(INVS_4SQRTPI * tw * cmfd_flx, u_back, G,
+                               surf_indx);
+        }
+
         for (auto seg_it = track.rbegin(); seg_it != track.rend(); seg_it++) {
           auto& seg = *seg_it;
+          const auto cmfd_surf = seg.entry_cmfd_surface();
           const std::size_t i = seg.fsr_indx();
           const double l = seg.length();
           const double Et = seg.xs()->Et(g);
           const double lEt = l * Et;
           const std::size_t phi_backward_index = track.phi_index_backward();
-
+          double cmfd_flx = 0.;
           // loop over all polar angles
           std::size_t p = 0;
           for (std::size_t pp = 0; pp < n_pol_angles_; pp++) {
@@ -692,7 +853,16 @@ void MOCDriver::sweep_anisotropic(xt::xtensor<double, 3>& sflux,
                                     (delta_sum + l * Q * polar_quad_.wgt()[p]) *
                                     Y_ljs[it_lj] * 0.5;
             }
+
+            if (cmfd_surf) cmfd_flx += polar_quad_.wsin()[p] * angflux[pp];
+
           }  // For all polar angles
+
+          if (cmfd_surf &&
+              cmfd_->moc_iteration() >= cmfd_->skip_moc_iterations()) {
+            cmfd_->tally_current(INVS_4SQRTPI * tw * cmfd_flx, u_back, G,
+                                 cmfd_surf);
+          }
         }  // For all segments along forward direction of track
 
         // Set incoming flux for next track
@@ -890,101 +1060,189 @@ void MOCDriver::trace_tracks() {
 
   tracks_.resize(n_track_angles_);
 
-#pragma omp parallel for
-  for (int ii = 0; ii < static_cast<int>(n_track_angles_); ii++) {
-    const std::size_t i = static_cast<std::size_t>(ii);
+#pragma omp parallel
+  {
+    std::vector<std::set<std::size_t>> thread_cmfd_tile_fsrs;
+    if (cmfd_) thread_cmfd_tile_fsrs.resize(cmfd_->nx() * cmfd_->ny());
 
-    const auto& ai = angle_info_[i];
+#pragma omp for
+    for (int ii = 0; ii < static_cast<int>(n_track_angles_); ii++) {
+      const std::size_t i = static_cast<std::size_t>(ii);
 
-    // Allocate space for tracks associated with this angle
-    tracks_[i].reserve(ai.nx + ai.ny);
+      const auto& ai = angle_info_[i];
 
-    // Get direction for the track
-    Direction u(ai.phi);
+      // Allocate space for tracks associated with this angle
+      tracks_[i].reserve(ai.nx + ai.ny);
 
-    // spacing between starts in x
-    const double dx = Dx / static_cast<double>(ai.nx);
-    // spacing between starts in y
-    const double dy = Dy / static_cast<double>(ai.ny);
+      // Get direction for the track
+      Direction u(ai.phi);
 
-    // Depending on angle, we either start on the -x bound, or the +x bound
-    if (ai.phi < 0.5 * PI) {
-      // Start on -x boundary in upper left corner and move down
-      double x = geometry_->x_min();
-      double y =
-          dy * (static_cast<double>(ai.ny - 1) + 0.5) + geometry_->y_min();
-      for (std::uint32_t t = 0; t < (ai.nx + ai.ny); t++) {
-        if (t == ai.ny) {
-          // Next, we move across the -y boundary
-          y = geometry_->y_min();
-          x = 0.5 * dx + geometry_->x_min();
+      // spacing between starts in x
+      const double dx = Dx / static_cast<double>(ai.nx);
+      // spacing between starts in y
+      const double dy = Dy / static_cast<double>(ai.ny);
+
+      // Depending on angle, we either start on the -x bound, or the +x bound
+      if (ai.phi < 0.5 * PI) {
+        // Start on -x boundary in upper left corner and move down
+        double x = geometry_->x_min();
+        double y =
+            dy * (static_cast<double>(ai.ny - 1) + 0.5) + geometry_->y_min();
+        for (std::uint32_t t = 0; t < (ai.nx + ai.ny); t++) {
+          if (t == ai.ny) {
+            // Next, we move across the -y boundary
+            y = geometry_->y_min();
+            x = 0.5 * dx + geometry_->x_min();
+          }
+
+          Vector r_start(x, y);
+          Vector r_end = r_start;
+          std::vector<Segment> segments;
+          std::pair<UniqueFSR, Vector> fsr_r =
+              geometry_->get_fsr_r_local(r_end, u);
+          auto ti = geometry_->get_tile_index(r_end, u);
+          while (fsr_r.first.fsr && ti) {
+            const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
+            segments.emplace_back(fsr_r.first.fsr, d,
+                                  this->get_fsr_indx(fsr_r.first));
+
+            if (cmfd_) {
+              auto& seg = segments.back();
+              seg.entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+              thread_cmfd_tile_fsrs[seg.entry_cmfd_surface().cell_index].insert(
+                  seg.fsr_indx());
+            }
+
+            r_end = r_end + d * u;
+
+            if (cmfd_) {
+              segments.back().exit_cmfd_surface() =
+                  cmfd_->get_surface(r_end, -u);
+            }
+
+            ti = geometry_->get_tile_index(r_end, u);
+            if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
+          }
+
+          tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
+                                  segments, ai.forward_index,
+                                  ai.backward_index);
+
+          if (cmfd_) {
+            // Assign CMFD cells to exit/entry of tracks for angular flux
+            // updating later
+            auto& moc_track = tracks_[i].back();
+            auto entry_cell =
+                cmfd_->get_tile(moc_track.entry_pos(), moc_track.dir());
+            auto exit_cell =
+                cmfd_->get_tile(moc_track.exit_pos(), -moc_track.dir());
+            if (entry_cell.has_value() == false ||
+                exit_cell.has_value() == false) {
+              auto mssg =
+                  "Could not find entry/exit CMFD cells for track during "
+                  "tracing";
+              spdlog::error(mssg);
+              throw ScarabeeException(mssg);
+            }
+
+            moc_track.entry_cmfd_cell() = cmfd_->tile_to_indx(*entry_cell);
+            moc_track.exit_cmfd_cell() = cmfd_->tile_to_indx(*exit_cell);
+          }
+
+          if (t < ai.ny) {
+            y -= dy;
+          } else {
+            x += dx;
+          }
         }
+      } else {
+        // Start on -y boundary in lower left corner and move across and up
+        double x = 0.5 * dx + geometry_->x_min();
+        double y = geometry_->y_min();
+        for (std::uint32_t t = 0; t < (ai.nx + ai.ny); t++) {
+          if (t == ai.nx) {
+            // Next, we move across the -y boundary
+            x = geometry_->x_max();
+            y = 0.5 * dy + geometry_->y_min();
+          }
 
-        Vector r_start(x, y);
-        Vector r_end = r_start;
-        std::vector<Segment> segments;
-        std::pair<UniqueFSR, Vector> fsr_r =
-            geometry_->get_fsr_r_local(r_end, u);
-        auto ti = geometry_->get_tile_index(r_end, u);
-        while (fsr_r.first.fsr && ti) {
-          const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
-          segments.emplace_back(fsr_r.first.fsr, d,
-                                this->get_fsr_indx(fsr_r.first));
+          Vector r_start(x, y);
+          Vector r_end = r_start;
+          std::vector<Segment> segments;
+          std::pair<UniqueFSR, Vector> fsr_r =
+              geometry_->get_fsr_r_local(r_end, u);
+          auto ti = geometry_->get_tile_index(r_end, u);
+          while (fsr_r.first.fsr && ti) {
+            const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
+            segments.emplace_back(fsr_r.first.fsr, d,
+                                  this->get_fsr_indx(fsr_r.first));
 
-          r_end = r_end + d * u;
+            if (cmfd_) {
+              auto& seg = segments.back();
+              seg.entry_cmfd_surface() = cmfd_->get_surface(r_end, u);
+              thread_cmfd_tile_fsrs[seg.entry_cmfd_surface().cell_index].insert(
+                  seg.fsr_indx());
+            }
 
-          ti = geometry_->get_tile_index(r_end, u);
-          if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
-        }
+            r_end = r_end + d * u;
 
-        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
-                                segments, ai.forward_index, ai.backward_index);
+            if (cmfd_) {
+              segments.back().exit_cmfd_surface() =
+                  cmfd_->get_surface(r_end, -u);
+            }
 
-        if (t < ai.ny) {
-          y -= dy;
-        } else {
-          x += dx;
-        }
-      }
-    } else {
-      // Start on -y boundary in lower left corner and move across and up
-      double x = 0.5 * dx + geometry_->x_min();
-      double y = geometry_->y_min();
-      for (std::uint32_t t = 0; t < (ai.nx + ai.ny); t++) {
-        if (t == ai.nx) {
-          // Next, we move across the -y boundary
-          x = geometry_->x_max();
-          y = 0.5 * dy + geometry_->y_min();
-        }
+            ti = geometry_->get_tile_index(r_end, u);
+            if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
+          }
 
-        Vector r_start(x, y);
-        Vector r_end = r_start;
-        std::vector<Segment> segments;
-        std::pair<UniqueFSR, Vector> fsr_r =
-            geometry_->get_fsr_r_local(r_end, u);
-        auto ti = geometry_->get_tile_index(r_end, u);
-        while (fsr_r.first.fsr && ti) {
-          const double d = fsr_r.first.fsr->distance(fsr_r.second, u);
-          segments.emplace_back(fsr_r.first.fsr, d,
-                                this->get_fsr_indx(fsr_r.first));
+          tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
+                                  segments, ai.forward_index,
+                                  ai.backward_index);
 
-          r_end = r_end + d * u;
+          if (cmfd_) {
+            // Assign CMFD cells to exit/entry of tracks for angular flux
+            // updating later
+            auto& moc_track = tracks_[i].back();
+            auto entry_cell =
+                cmfd_->get_tile(moc_track.entry_pos(), moc_track.dir());
+            auto exit_cell =
+                cmfd_->get_tile(moc_track.exit_pos(), -moc_track.dir());
+            if (entry_cell.has_value() == false ||
+                exit_cell.has_value() == false) {
+              auto mssg =
+                  "Could not find entry/exit CMFD cells for track during "
+                  "tracing";
+              spdlog::error(mssg);
+              throw ScarabeeException(mssg);
+            }
 
-          ti = geometry_->get_tile_index(r_end, u);
-          if (ti) fsr_r = geometry_->get_fsr_r_local(r_end, u);
-        }
+            moc_track.entry_cmfd_cell() = cmfd_->tile_to_indx(*entry_cell);
+            moc_track.exit_cmfd_cell() = cmfd_->tile_to_indx(*exit_cell);
+          }
 
-        tracks_[i].emplace_back(r_start, r_end, u, ai.phi, ai.wgt, ai.d,
-                                segments, ai.forward_index, ai.backward_index);
-
-        if (t < ai.nx) {
-          x += dx;
-        } else {
-          y += dy;
+          if (t < ai.nx) {
+            x += dx;
+          } else {
+            y += dy;
+          }
         }
       }
     }
-  }
+
+#pragma omp critical
+    {
+      if (cmfd_) {
+        for (std::size_t ti = 0; ti < thread_cmfd_tile_fsrs.size(); ti++) {
+          for (const auto& fsr : thread_cmfd_tile_fsrs[ti]) {
+            cmfd_->insert_fsr(ti, fsr);
+          }
+        }
+      }
+    }
+
+  }  // Parallel section
+
+  if (cmfd_) cmfd_->pack_fsr_lists();
 }
 
 std::vector<std::pair<std::size_t, double>> MOCDriver::trace_fsr_segments(
@@ -1158,8 +1416,8 @@ void MOCDriver::set_bcs() {
 void MOCDriver::allocate_track_fluxes() {
   for (auto& tracks : tracks_) {
     for (auto& track : tracks) {
-      track.entry_flux().resize({ngroups_, n_pol_angles_});
-      track.exit_flux().resize({ngroups_, n_pol_angles_});
+      track.entry_flux() = xt::zeros<double>({ngroups_, n_pol_angles_});
+      track.exit_flux() = xt::zeros<double>({ngroups_, n_pol_angles_});
     }
   }
 }
@@ -1559,7 +1817,7 @@ std::shared_ptr<CrossSection> MOCDriver::homogenize(
     const auto& mat = this->xs(i);
     const double V = this->volume(i);
     for (std::size_t g = 0; g < NG; g++) {
-      fiss_prod[j] += mat->vEf(g) * flux(i, g) * V;
+      fiss_prod[j] += mat->vEf(g) * this->flux(i, g) * V;
     }
     j++;
   }
