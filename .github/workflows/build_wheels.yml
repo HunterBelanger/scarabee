@@ -1,13 +1,9 @@
-name: Build
+name: Build Wheels
 
 on:
   # allows us to run workflows manually
   workflow_dispatch:
 
-  pull_request:
-    branches:
-      - develop
-      - master
   push:
     branches:
       - develop
