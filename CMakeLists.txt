@@ -138,7 +138,7 @@ FetchContent_MakeAvailable(HighFive)
 message(STATUS "Downloading ImApp")
 FetchContent_Declare(ImApp
   GIT_REPOSITORY https://github.com/HunterBelanger/ImApp.git
-  GIT_TAG        master
+  GIT_TAG        12b3dd6 # Master branch on July 19, 2025
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(ImApp)
