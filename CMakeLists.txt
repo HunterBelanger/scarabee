@@ -64,10 +64,10 @@ FetchContent_MakeAvailable(xsimd)
 
 #===============================================================================
 # Get XTENSOR
-message(STATUS "Downloading xtensor v0.26.0")
+message(STATUS "Downloading xtensor v0.27.0")
 FetchContent_Declare(xtensor
   GIT_REPOSITORY https://github.com/xtensor-stack/xtensor.git
-  GIT_TAG        0.26.0
+  GIT_TAG        0.27.0
   EXCLUDE_FROM_ALL
 )
 set(XTENSOR_USE_XSIMD ON CACHE BOOL "Enable SIMD acceleration.")
@@ -79,14 +79,14 @@ set(PYBIND11_NEWPYTHON ON)
 find_package(pybind11 CONFIG QUIET)
 if (NOT pybind11_FOUND)
   set(PYBIND11_FINDPYTHON ON)
-  message(STATUS "Downloading pybind11 v2.13.6")
+  message(STATUS "Downloading pybind11 v3.0.0")
   FetchContent_Declare(pybind11
     GIT_REPOSITORY https://github.com/pybind/pybind11.git
-    GIT_TAG        v2.13.6
+    GIT_TAG        v3.0.0
   )
   FetchContent_MakeAvailable(pybind11)
   if (NOT pybind11_VERSION)
-    set(pybind11_VERSION 2.13.6)
+    set(pybind11_VERSION 3.0.0)
   endif()
 endif()
 

@@ -8,6 +8,7 @@
 #include <xtensor/views/xview.hpp>
 
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <fstream>
 
@@ -297,7 +298,8 @@ void FissionYields::remove_nuclide(const std::string& nuclide) {
 
     // We have the index, now we remove it from the array.
     // To do this, we first make a view
-    auto view = xt::view(yields_, xt::all(), xt::drop(i));
+    std::array<std::size_t, 1> dropped_ind{i};
+    auto view = xt::view(yields_, xt::all(), xt::drop(dropped_ind));
     xt::xtensor<double, 2> temp_yields = view;
     yields_ = temp_yields;
   }
